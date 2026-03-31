@@ -377,7 +377,7 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
                 <span class="filter-source"
                   >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp;</span
                 >
-                <span class="filter-value">{{ truncateFilterValue(filter.value, 40) }}</span>
+                <span class="filter-value">{{ filter.value }}</span>
               </span>
               <button
                 v-if="editMode && filter.source !== 'global'"
@@ -602,7 +602,9 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   align-items: center;
   justify-content: flex-end;
   min-width: 0;
-  flex: 1;
+  flex: 0 1 auto;
+  max-width: 55%;
+  overflow: hidden;
 }
 
 @media (min-width: 769px) {
@@ -919,12 +921,18 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   margin-left: auto;
 }
 
+/* Tooltip wrappers inside filter list must shrink with the container */
+.header-filters > * {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .header-filter-chip {
   display: flex;
   align-items: center;
   gap: 4px;
   min-width: 0;
-  max-width: 220px;
+  /* max-width: 300px; */
   padding: 1px 7px;
   font-size: 10px;
   letter-spacing: var(--ui-label-letter-spacing);

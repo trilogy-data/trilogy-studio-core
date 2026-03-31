@@ -8,7 +8,7 @@
     <slot></slot>
     <Teleport to="body">
       <Transition appear>
-        <span v-if="visible" class="tooltip-popup" :style="tooltipStyle">{{ content }}</span>
+        <span v-if="visible" ref="tooltipRef" class="tooltip-popup" :style="tooltipStyle">{{ content }}</span>
       </Transition>
     </Teleport>
   </div>
@@ -38,10 +38,12 @@ export default {
     }
   },
   methods: {
-    onMouseEnter() {
-      this.hoverTimeout = setTimeout(() => {
+    async onMouseEnter() {
+      this.hoverTimeout = setTimeout(async () => {
         this.computePosition()
         this.visible = true
+        await this.$nextTick()
+        this.clampToViewport()
       }, 100)
     },
     onMouseLeave() {
@@ -113,6 +115,27 @@ export default {
           top: `${rect.top + rect.height / 2}px`,
           transform: 'translateY(-50%)',
         }
+      }
+    },
+    clampToViewport() {
+      const tooltipEl = this.$refs.tooltipRef as HTMLElement
+      if (!tooltipEl) return
+
+      // getBoundingClientRect already accounts for CSS transform, so tipRect
+      // reflects the actual painted position. We shift left/top by the overflow
+      // amount on each edge without touching transform.
+      const tipRect = tooltipEl.getBoundingClientRect()
+      const MARGIN = 8
+
+      const overflowRight = Math.max(0, tipRect.right - (window.innerWidth - MARGIN))
+      const overflowLeft = Math.max(0, MARGIN - tipRect.left)
+      const overflowBottom = Math.max(0, tipRect.bottom - (window.innerHeight - MARGIN))
+      const overflowTop = Math.max(0, MARGIN - tipRect.top)
+
+      if (overflowRight || overflowLeft || overflowBottom || overflowTop) {
+        const left = parseFloat(this.tooltipStyle.left) - overflowRight + overflowLeft
+        const top = parseFloat(this.tooltipStyle.top) - overflowBottom + overflowTop
+        this.tooltipStyle = { ...this.tooltipStyle, left: `${left}px`, top: `${top}px` }
       }
     },
   },

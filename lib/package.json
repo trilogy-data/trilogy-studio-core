@@ -30,7 +30,7 @@
     },
     "./stores": {
       "types": "./dist/stores.d.ts",
-      "import": "./dist/stores.js",
+      "import": "./dist/stores.js",05766
       "default": "./dist/stores.js"
     },
     "./connections": {
