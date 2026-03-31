@@ -13,8 +13,8 @@ import {
 
 export interface DimensionClick {
   source: string
-  filters: Record<string, string>
-  chart: Record<string, string>
+  filters: Record<string, string | unknown[]>
+  chart: Record<string, string | unknown[]>
   append: boolean
 }
 export interface DashboardImport {

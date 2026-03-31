@@ -1,7 +1,7 @@
 import { computed, ref, type MaybeRefOrGetter, toValue } from 'vue'
 import { objectToSqlExpression } from './conditions'
 
-export type CrossFilterValueMap = Record<string, string>
+export type CrossFilterValueMap = Record<string, string | unknown[]>
 export type CrossFilterOperation = 'add' | 'append' | 'remove'
 
 export interface CrossFilterSelection {
@@ -68,13 +68,20 @@ function cloneValueMap(value: CrossFilterValueMap): CrossFilterValueMap {
   return { ...value }
 }
 
+function areValuesEqual(a: string | unknown[], b: string | unknown[]): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((v, i) => v === b[i])
+  }
+  return a === b
+}
+
 function areValueMapsEqual(left: CrossFilterValueMap, right: CrossFilterValueMap): boolean {
   const leftKeys = Object.keys(left).sort()
   const rightKeys = Object.keys(right).sort()
   if (leftKeys.length !== rightKeys.length) {
     return false
   }
-  return leftKeys.every((key, index) => key === rightKeys[index] && left[key] === right[key])
+  return leftKeys.every((key, index) => key === rightKeys[index] && areValuesEqual(left[key], right[key]))
 }
 
 function normalizeFieldName(
@@ -103,7 +110,7 @@ function normalizeFieldName(
 }
 
 export function filterAllowedDimensionFilters(
-  filters: Record<string, string>,
+  filters: CrossFilterValueMap,
   validFields: Iterable<string> = [],
   options: { normalizeLocalFields?: boolean } = {},
 ): CrossFilterValueMap {
@@ -111,7 +118,7 @@ export function filterAllowedDimensionFilters(
   const normalizeLocalFields = options.normalizeLocalFields ?? false
 
   return Object.entries(filters).reduce((acc, [field, value]) => {
-    if (typeof value !== 'string') {
+    if (typeof value !== 'string' && !Array.isArray(value)) {
       return acc
     }
 
