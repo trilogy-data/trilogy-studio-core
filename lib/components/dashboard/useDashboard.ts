@@ -622,7 +622,7 @@ export function useDashboard(
     const finalFilters = filterAllowedDimensionFilters(info.filters, globalFields)
 
     if (!finalFilters || Object.keys(finalFilters).length === 0) {
-      console.log('No valid filters to apply from cross-filter event, given ', info.filters)
+      console.log('No valid filters to apply from cross-filter event, given ', info.filters, globalFields)
       return
     }
 

@@ -131,6 +131,50 @@ describe('cross filter helpers', () => {
     ).toEqual("(species='''Acer rubrum''' OR species='''Acer saccharum''')")
   })
 
+  it('passes array values through for between operations', () => {
+    expect(
+      filterAllowedDimensionFilters(
+        { 'order.date.month_start': ['2024-01-01', '2024-03-01'] },
+        ['order.date.month_start'],
+      ),
+    ).toEqual({ 'order.date.month_start': ['2024-01-01', '2024-03-01'] })
+  })
+
+  it('generates BETWEEN SQL for array-valued cross filters', () => {
+    const controller = createCrossFilterController({
+      validFields: ['order.date.month_start'],
+    })
+
+    controller.applyDimensionClick({
+      source: 'date-chart',
+      filters: { 'order.date.month_start': ['2024-01-01', '2024-03-01'] },
+    })
+
+    expect(controller.getSqlFiltersFor('other-chart')).toEqual([
+      "order.date.month_start between '2024-01-01' and '2024-03-01'",
+    ])
+  })
+
+  it('toggles exact array matches in append mode', () => {
+    const controller = createCrossFilterController({
+      validFields: ['order.date.month_start'],
+    })
+
+    controller.applyDimensionClick({
+      source: 'date-chart',
+      filters: { 'order.date.month_start': ['2024-01-01', '2024-03-01'] },
+      append: true,
+    })
+    expect(controller.getChartSelectionsFor('date-chart')).toHaveLength(1)
+
+    controller.applyDimensionClick({
+      source: 'date-chart',
+      filters: { 'order.date.month_start': ['2024-01-01', '2024-03-01'] },
+      append: true,
+    })
+    expect(controller.getChartSelectionsFor('date-chart')).toHaveLength(0)
+  })
+
   it('extracts unique eligible fields from completion items in order', () => {
     expect(
       extractEligibleCrossFilterFields([

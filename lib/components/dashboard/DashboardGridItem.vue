@@ -4,6 +4,7 @@ import DashboardChart from './DashboardChart.vue'
 import DashboardMarkdown from './DashboardMarkdown.vue'
 import DashboardTable from './DashboardTable.vue'
 import DashboardFilter from './DashboardFilter.vue'
+import Tooltip from '../Tooltip.vue'
 import { useClickOutside } from '../../composables/useClickOutside'
 import {
   type GridItemDataResponse,
@@ -45,14 +46,6 @@ const devToolbarRef = ref<HTMLElement | null>(null)
 
 function cleanFilterValue(value: string): string {
   return value.replace(/'''/g, "'").replace('local.', '')
-}
-
-function truncateFilterValue(value: string, maxLength: number = 1000): string {
-  const cleanValue = cleanFilterValue(value)
-  if (cleanValue.length <= maxLength) {
-    return cleanValue
-  }
-  return cleanValue.substring(0, maxLength) + '...'
 }
 
 function startTitleEditing(): void {
@@ -365,35 +358,39 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
 
       <div class="grid-item-header-right">
         <div v-if="supportsFilters && filterCount > 0" class="header-filters no-drag">
-          <div
+          <Tooltip
             v-for="(filter, index) in visibleHeaderFilters"
             :key="`${filter.source}-${filter.value}-${index}`"
-            class="header-filter-chip"
-            :title="cleanFilterValue(filter.value)"
+            :content="cleanFilterValue(filter.value)"
+            position="bottom"
           >
-            <span class="filter-content">
-              <span class="filter-source"
-                >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp;</span
+            <div class="header-filter-chip">
+              <span class="filter-content">
+                <span class="filter-source"
+                  >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp;</span
+                >
+                <span class="filter-value">{{ filter.value }}</span>
+              </span>
+              <button
+                v-if="editMode && filter.source !== 'global'"
+                class="filter-remove-btn"
+                @click="removeFilter(filter.source)"
+                :title="`Remove ${filter.source} filter`"
               >
-              <span class="filter-value">{{ truncateFilterValue(filter.value, 40) }}</span>
-            </span>
-            <button
-              v-if="editMode && filter.source !== 'global'"
-              class="filter-remove-btn"
-              @click="removeFilter(filter.source)"
-              :title="`Remove ${filter.source} filter`"
-            >
-              x
-            </button>
-          </div>
+                x
+              </button>
+            </div>
+          </Tooltip>
 
-          <div
+          <Tooltip
             v-if="hiddenFilterCount > 0"
-            class="header-filter-chip filter-overflow"
-            :title="`${hiddenFilterCount} more filter(s)`"
+            :content="`${hiddenFilterCount} more filter(s)`"
+            position="bottom"
           >
-            +{{ hiddenFilterCount }}
-          </div>
+            <div class="header-filter-chip filter-overflow">
+              +{{ hiddenFilterCount }}
+            </div>
+          </Tooltip>
         </div>
       </div>
     </div>
@@ -597,7 +594,9 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   align-items: center;
   justify-content: flex-end;
   min-width: 0;
-  flex: 1;
+  flex: 0 1 auto;
+  max-width: 55%;
+  overflow: hidden;
 }
 
 @media (min-width: 769px) {
@@ -914,12 +913,18 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   margin-left: auto;
 }
 
+/* Tooltip wrappers inside filter list must shrink with the container */
+.header-filters > * {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .header-filter-chip {
   display: flex;
   align-items: center;
   gap: 4px;
   min-width: 0;
-  max-width: 220px;
+  /* max-width: 300px; */
   padding: 1px 7px;
   font-size: 10px;
   letter-spacing: var(--ui-label-letter-spacing);
