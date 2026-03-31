@@ -10,6 +10,7 @@ import {
   removeCrossFilterSourceFromGridItems,
   syncCrossFilterSqlForItem,
   type CrossFilterValue,
+  type CrossFilterValueMap,
 } from './crossFilters'
 
 export interface DimensionClick {
