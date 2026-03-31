@@ -508,8 +508,8 @@ export class DashboardModel implements Dashboard {
 
   updateItemCrossFilters(
     itemId: string,
-    conceptMap: Record<string, string>,
-    chartMap: Record<string, string>,
+    conceptMap: CrossFilterValueMap,
+    chartMap: CrossFilterValueMap,
     operation: 'add' | 'append' | 'remove',
   ): string[] {
     const updated = applyCrossFilterOperationToGridItems(

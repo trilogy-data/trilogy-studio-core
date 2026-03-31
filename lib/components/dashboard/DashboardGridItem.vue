@@ -48,14 +48,6 @@ function cleanFilterValue(value: string): string {
   return value.replace(/'''/g, "'").replace('local.', '')
 }
 
-function truncateFilterValue(value: string, maxLength: number = 1000): string {
-  const cleanValue = cleanFilterValue(value)
-  if (cleanValue.length <= maxLength) {
-    return cleanValue
-  }
-  return cleanValue.substring(0, maxLength) + '...'
-}
-
 function startTitleEditing(): void {
   if (!props.editMode) return
 
