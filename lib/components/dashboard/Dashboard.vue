@@ -11,6 +11,7 @@ import DashboardCTA from './DashboardCTA.vue'
 import { useDashboard } from './useDashboard'
 import { useDashboardStore } from '../../stores/dashboardStore'
 import { type DashboardState } from '../../dashboards/base'
+import { resolveMdiIconPath } from '../../icons/registerMdiIcons'
 export interface DashboardProps {
   name: string
   connectionId?: string
@@ -99,6 +100,198 @@ const {
 const editable = computed(() => dashboard.value?.state === 'editing' || false)
 const loaded = ref(false)
 const isExportingImage = ref(false)
+const gridContentRef = ref<HTMLElement | null>(null)
+
+interface ExportItemMetric {
+  id: string
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+interface ExportLayoutMetrics {
+  width: number
+  height: number
+  items: ExportItemMetric[]
+}
+
+function waitForAnimationFrames(frameCount: number = 2): Promise<void> {
+  return new Promise((resolve) => {
+    const runFrame = (remaining: number) => {
+      if (remaining <= 0) {
+        resolve()
+        return
+      }
+
+      requestAnimationFrame(() => runFrame(remaining - 1))
+    }
+
+    runFrame(frameCount)
+  })
+}
+
+function sanitizeDownloadName(name: string | undefined): string {
+  const normalized = (name || 'dashboard')
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  return normalized || 'dashboard'
+}
+
+function collectExportLayoutMetrics(gridContent: HTMLElement): ExportLayoutMetrics {
+  const gridContentRect = gridContent.getBoundingClientRect()
+  const gridLayout = gridContent.querySelector<HTMLElement>('.vue-grid-layout')
+  const items = Array.from(gridContent.querySelectorAll<HTMLElement>('.vue-grid-item[data-i]'))
+    .map((item) => {
+      const id = item.dataset.i
+      if (!id) {
+        return null
+      }
+
+      const rect = item.getBoundingClientRect()
+      return {
+        id,
+        left: Math.max(0, Math.round(rect.left - gridContentRect.left)),
+        top: Math.max(0, Math.round(rect.top - gridContentRect.top)),
+        width: Math.max(1, Math.round(rect.width)),
+        height: Math.max(1, Math.round(rect.height)),
+      }
+    })
+    .filter((item): item is ExportItemMetric => item !== null)
+
+  const width = Math.max(
+    Math.ceil(gridContent.scrollWidth),
+    Math.ceil(gridContent.clientWidth),
+    Math.ceil(gridLayout?.scrollWidth || 0),
+    ...items.map((item) => item.left + item.width),
+  )
+
+  const height = Math.max(
+    Math.ceil(gridContent.scrollHeight),
+    Math.ceil(gridContent.clientHeight),
+    Math.ceil(gridLayout?.scrollHeight || 0),
+    ...items.map((item) => item.top + item.height),
+  )
+
+  return { width, height, items }
+}
+
+function applyExportCloneLayout(
+  clonedGridContent: HTMLElement,
+  metrics: ExportLayoutMetrics,
+): void {
+  const itemMetrics = new Map(metrics.items.map((item) => [item.id, item]))
+
+  clonedGridContent.classList.add('image-export-mode', 'image-export-render')
+  clonedGridContent.style.width = `${metrics.width}px`
+  clonedGridContent.style.maxWidth = `${metrics.width}px`
+  clonedGridContent.style.height = 'auto'
+  clonedGridContent.style.minHeight = `${metrics.height}px`
+  clonedGridContent.style.overflow = 'visible'
+  clonedGridContent.style.padding = '0'
+  clonedGridContent.style.margin = '0'
+
+  const clonedGridLayout = clonedGridContent.querySelector<HTMLElement>('.vue-grid-layout')
+  if (clonedGridLayout) {
+    clonedGridLayout.style.position = 'relative'
+    clonedGridLayout.style.width = `${metrics.width}px`
+    clonedGridLayout.style.height = `${metrics.height}px`
+    clonedGridLayout.style.minHeight = `${metrics.height}px`
+    clonedGridLayout.style.maxHeight = 'none'
+    clonedGridLayout.style.overflow = 'visible'
+  }
+
+  clonedGridContent
+    .querySelectorAll<HTMLElement>(
+      '.vue-grid-placeholder, .content-edit-overlay, .dev-toolbar-shell, .vue-resizable-handle, .controls-toggle, .drag-handle-icon, .edit-indicator, .filter-remove-btn',
+    )
+    .forEach((element) => {
+      element.style.display = 'none'
+    })
+
+  clonedGridContent.querySelectorAll<HTMLElement>('.vue-grid-item').forEach((element) => {
+    const metric = itemMetrics.get(element.dataset.i || '')
+    if (!metric) {
+      return
+    }
+
+    element.style.position = 'absolute'
+    element.style.transform = 'none'
+    element.style.left = `${metric.left}px`
+    element.style.top = `${metric.top}px`
+    element.style.width = `${metric.width}px`
+    element.style.height = `${metric.height}px`
+    element.style.margin = '0'
+  })
+
+  clonedGridContent
+    .querySelectorAll<HTMLElement>('.grid-item-content:not(.grid-item-section-header-style)')
+    .forEach((element) => {
+      element.style.boxShadow = 'none'
+      element.style.border =
+        '1px solid var(--trilogy-embed-border-light, var(--border-light, #e1e6ed))'
+      element.style.backgroundColor =
+        'var(--trilogy-embed-dashboard-background, var(--dashboard-background, #ffffff))'
+      element.style.overflow = 'hidden'
+    })
+
+  clonedGridContent.querySelectorAll<HTMLElement>('.vega-container').forEach((element) => {
+    if (!element.classList.contains('vega-active')) {
+      element.style.display = 'none'
+      return
+    }
+
+    element.style.opacity = '1'
+    element.style.pointerEvents = 'none'
+  })
+
+  const clonedWindow = clonedGridContent.ownerDocument.defaultView
+
+  clonedGridContent.querySelectorAll<HTMLElement>('.mdi').forEach((element) => {
+    const path = resolveMdiIconPath(element.classList)
+    if (!path) {
+      return
+    }
+
+    const computedStyle = clonedWindow?.getComputedStyle(element)
+    const fontSize = computedStyle?.fontSize || '16px'
+    const color = computedStyle?.color || 'currentColor'
+    const lineHeight = computedStyle?.lineHeight || '1'
+
+    const svg = clonedGridContent.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    svg.setAttribute('viewBox', '0 0 24 24')
+    svg.setAttribute('width', fontSize)
+    svg.setAttribute('height', fontSize)
+    svg.setAttribute('aria-hidden', 'true')
+    svg.style.display = 'block'
+    svg.style.width = fontSize
+    svg.style.height = fontSize
+    svg.style.fill = color
+    svg.style.flexShrink = '0'
+
+    const pathElement = clonedGridContent.ownerDocument.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'path',
+    )
+    pathElement.setAttribute('d', path)
+    pathElement.setAttribute('fill', 'currentColor')
+    svg.appendChild(pathElement)
+
+    element.replaceChildren(svg)
+    element.classList.add('mdi-export-inline')
+    element.style.display = 'inline-flex'
+    element.style.alignItems = 'center'
+    element.style.justifyContent = 'center'
+    element.style.width = fontSize
+    element.style.height = fontSize
+    element.style.minWidth = fontSize
+    element.style.minHeight = fontSize
+    element.style.lineHeight = lineHeight
+    element.style.color = color
+  })
+}
 
 // Desktop-specific methods
 function updateItemDimensions(itemId: string): void {
@@ -157,7 +350,7 @@ function handleToggleMode(mode: DashboardState) {
 
 // Image Export functionality
 async function exportToImage() {
-  if (!dashboard.value) return
+  if (!dashboard.value || isExportingImage.value) return
 
   isExportingImage.value = true
 
@@ -166,7 +359,7 @@ async function exportToImage() {
     const { default: html2canvas } = await import('html2canvas')
 
     // Find the dashboard content element
-    const dashboardElement = document.querySelector('.grid-content')
+    const dashboardElement = gridContentRef.value
     if (!dashboardElement) {
       throw new Error('Dashboard content not found')
     }
@@ -174,39 +367,64 @@ async function exportToImage() {
     // Temporarily disable any hover effects and transitions for cleaner capture
     dashboardElement.classList.add('image-export-mode')
 
-    // Wait a moment for any pending renders
+    // Wait for pending layout, font, and chart renders to settle.
     await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await waitForAnimationFrames(3)
+
+    if ('fonts' in document) {
+      await document.fonts.ready
+    }
+
+    const exportMetrics = collectExportLayoutMetrics(dashboardElement)
 
     // Capture the dashboard as canvas
     const canvas = await html2canvas(dashboardElement as HTMLElement, {
       backgroundColor: '#ffffff',
-      scale: 2, // Higher scale for better quality
+      scale: Math.max(2, Math.min(window.devicePixelRatio || 1, 3)),
       useCORS: true,
       allowTaint: true,
       logging: false,
-      width: dashboardElement.scrollWidth,
-      height: dashboardElement.scrollHeight,
+      width: exportMetrics.width,
+      height: exportMetrics.height,
+      windowWidth: exportMetrics.width,
+      windowHeight: exportMetrics.height,
+      scrollX: 0,
+      scrollY: 0,
+      onclone: (clonedDocument) => {
+        const clonedGridContent = clonedDocument.querySelector<HTMLElement>('.grid-content')
+        if (!clonedGridContent) {
+          return
+        }
+
+        applyExportCloneLayout(clonedGridContent, exportMetrics)
+      },
     })
 
-    // Convert canvas to image and download
-    const imgData = canvas.toDataURL('image/png')
+    const imageBlob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/png')
+    })
+
+    if (!imageBlob) {
+      throw new Error('Failed to create dashboard image')
+    }
+
+    const downloadUrl = URL.createObjectURL(imageBlob)
 
     // Create download link
     const link = document.createElement('a')
-    link.download = `${dashboard.value.name || 'dashboard'}_${new Date().toISOString().split('T')[0]}.png`
-    link.href = imgData
+    link.download = `${sanitizeDownloadName(dashboard.value.name)}_${new Date().toISOString().split('T')[0]}.png`
+    link.href = downloadUrl
 
     // Trigger download
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(downloadUrl)
   } catch (error) {
     console.error('Error exporting image:', error)
     alert('Failed to export image. Please try again.')
   } finally {
-    // Remove export mode class
-    const dashboardElement = document.querySelector('.grid-content')
+    const dashboardElement = gridContentRef.value
     if (dashboardElement) {
       dashboardElement.classList.remove('image-export-mode')
     }
@@ -224,7 +442,7 @@ async function exportToImage() {
       :filterError="filterError"
       :globalCompletion="globalCompletion"
       :validateFilter="validateFilter"
-      :is-exporting-image="isExportingImage"
+      :export-image-action="exportToImage"
       @connection-change="onConnectionChange"
       @filter-change="handleFilterChange"
       @import-change="handleImportChange"
@@ -242,7 +460,11 @@ async function exportToImage() {
     </div>
 
     <div v-else class="grid-container">
-      <div class="grid-content" :style="{ maxWidth: dashboardMaxWidth + 'px' }">
+      <div
+        ref="gridContentRef"
+        class="grid-content"
+        :style="{ maxWidth: dashboardMaxWidth + 'px' }"
+      >
         <GridLayout
           :col-num="20"
           :row-height="30"
@@ -372,8 +594,46 @@ async function exportToImage() {
   animation: none !important;
 }
 
+.grid-content.image-export-mode {
+  overflow: visible !important;
+}
+
+.grid-content.image-export-mode :deep(.vue-grid-layout) {
+  overflow: visible !important;
+}
+
 .grid-content.image-export-mode .vue-grid-item:hover {
   transform: none !important;
+}
+
+.grid-content.image-export-mode .content-edit-overlay,
+.grid-content.image-export-mode .dev-toolbar-shell,
+.grid-content.image-export-mode :deep(.vue-resizable-handle),
+.grid-content.image-export-mode .drag-handle-icon,
+.grid-content.image-export-mode .edit-indicator,
+.grid-content.image-export-mode .controls-toggle,
+.grid-content.image-export-mode .filter-remove-btn {
+  display: none !important;
+}
+
+.grid-content.image-export-mode .vega-container:not(.vega-active) {
+  display: none !important;
+}
+
+.grid-content.image-export-mode .mdi-export-inline::before,
+.grid-content.image-export-mode .mdi-export-inline::after {
+  display: none !important;
+  content: none !important;
+}
+
+.grid-content.image-export-mode .grid-item-content:not(.grid-item-section-header-style) {
+  box-shadow: none !important;
+  border: 1px solid var(--trilogy-embed-border-light, var(--border-light, #e1e6ed)) !important;
+  background: var(
+    --trilogy-embed-dashboard-background,
+    var(--dashboard-background, #ffffff)
+  ) !important;
+  overflow: hidden !important;
 }
 
 .vue-grid-layout {
