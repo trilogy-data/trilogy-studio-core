@@ -66,4 +66,35 @@ describe('TrilogyResolver', () => {
       }),
     )
   })
+
+  it('warms the resolver only once per normalized base URL', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ generated_sql: 'select 1' }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const resolver = new TrilogyResolver({
+      settings: { trilogyResolver: 'http://localhost:6790/api/' },
+    } as any)
+
+    await Promise.all([resolver.warmResolver(), resolver.warmResolver()])
+    await resolver.warmResolver()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:6790/api/generate_query',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    )
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toMatchObject({
+      query: 'select 1 as resolver_warmup;',
+      dialect: 'duckdb',
+      full_model: { name: '', sources: [] },
+      imports: [],
+      extra_filters: [],
+      parameters: {},
+      current_filename: '__resolver_warmup__.preql',
+    })
+  })
 })
