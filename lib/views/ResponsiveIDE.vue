@@ -14,6 +14,10 @@ import {
   useChatStore,
 } from '../stores'
 
+function shouldWarmResolver(url: string): boolean {
+  return !/^https?:\/\/(localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/i.test(url)
+}
+
 let defaultResolver = 'https://trilogy-service.fly.dev'
 let userSettingsStore = useUserSettingsStore()
 userSettingsStore.loadSettings()
@@ -48,6 +52,9 @@ if (userSettingsStore.settings.trilogyResolver === '') {
 userSettingsStore.toggleTheme()
 
 let resolver = new TrilogyResolver(userSettingsStore)
+if (shouldWarmResolver(userSettingsStore.settings.trilogyResolver)) {
+  void resolver.warmResolver()
+}
 
 let localStorage = new LocalStorage()
 

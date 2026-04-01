@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, type Ref, ref } from 'vue'
+import { computed, type PropType, type Ref, ref } from 'vue'
 import { useConnectionStore, useEditorStore, useScreenNavigation } from '../../stores'
 import DashboardImportSelector from './DashboardImportSelector.vue'
 import DashboardSharePopup from './DashboardSharePopup.vue'
@@ -27,6 +27,10 @@ const props = defineProps({
   validateFilter: {
     type: Function,
     default: () => true,
+  },
+  exportImageAction: {
+    type: Function as unknown as PropType<(() => Promise<void>) | null>,
+    default: null,
   },
 })
 
@@ -66,9 +70,12 @@ function handleFilterApply(newValue: string) {
 }
 
 async function handleDownloadAction() {
+  if (props.exportImageAction) {
+    await props.exportImageAction()
+    return
+  }
+
   emit('export-image')
-  await new Promise((resolve) => setTimeout(resolve, 5000))
-  return Promise.resolve()
 }
 
 function handleModeChange(event: Event) {

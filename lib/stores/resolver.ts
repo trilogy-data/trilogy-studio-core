@@ -2,6 +2,19 @@ import { ModelConfig } from '../models'
 
 import { type UserSettingsStoreType } from './userSettingsStore'
 
+const warmedResolverUrls = new Set<string>()
+const resolverWarmups = new Map<string, Promise<void>>()
+
+const RESOLVER_WARMUP_REQUEST = {
+  query: 'select 1 as resolver_warmup;',
+  dialect: 'duckdb',
+  full_model: { name: '', sources: [] },
+  imports: [],
+  extra_filters: [],
+  parameters: {},
+  current_filename: '__resolver_warmup__.preql',
+}
+
 // Define a generic LRU Cache
 class LRUCache<T> {
   private capacity: number
@@ -567,6 +580,38 @@ export default class TrilogyResolver {
     this.modelCache.set(cacheKey, modelConfig)
 
     return modelConfig
+  }
+
+  async warmResolver(): Promise<void> {
+    const baseUrl = this.settingStore.settings.trilogyResolver.replace(/\/+$/, '')
+    if (!baseUrl || warmedResolverUrls.has(baseUrl)) {
+      return
+    }
+
+    const existingWarmup = resolverWarmups.get(baseUrl)
+    if (existingWarmup) {
+      return existingWarmup
+    }
+
+    const warmupPromise = this.fetchWithErrorHandling(`${baseUrl}/generate_query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(RESOLVER_WARMUP_REQUEST),
+    })
+      .then(() => {
+        warmedResolverUrls.add(baseUrl)
+      })
+      .catch((error) => {
+        console.warn('Resolver warm-up request failed:', error)
+      })
+      .finally(() => {
+        resolverWarmups.delete(baseUrl)
+      })
+
+    resolverWarmups.set(baseUrl, warmupPromise)
+    return warmupPromise
   }
 
   // Cache management methods
