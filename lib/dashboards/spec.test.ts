@@ -657,6 +657,93 @@ describe('generateVegaSpec', () => {
     })
   })
 
+  describe('Discrete Time Traits on Bar Chart X-Axis', () => {
+    const makeTimeData = (field: string, values: number[]) =>
+      values.map((v) => ({ [field]: v, sales: v * 10 }))
+
+    const makeTimeColumns = (
+      field: string,
+      trait: string,
+    ): Map<string, ResultColumn> =>
+      new Map([
+        [
+          field,
+          { name: field, type: ColumnType.INTEGER, description: field, traits: [trait] },
+        ],
+        [
+          'sales',
+          { name: 'sales', type: ColumnType.NUMBER, description: 'Sales' },
+        ],
+      ])
+
+    const timeTraits: [string, number[]][] = [
+      ['decade', [1970, 1980, 1990, 2000, 2010, 2020]],
+      ['year', [2018, 2019, 2020, 2021]],
+      ['month', [1, 2, 3, 4, 5, 6]],
+      ['week', [1, 2, 3, 4]],
+      ['day', [1, 2, 3, 4, 5]],
+      ['hour', [0, 6, 12, 18]],
+      ['minute', [0, 15, 30, 45]],
+      ['second', [0, 10, 20, 30]],
+      ['day_of_week', [0, 1, 2, 3, 4, 5, 6]],
+    ]
+
+    it.each(timeTraits)(
+      'bar chart with %s trait uses ordinal type and no timeUnit/format',
+      (trait, values) => {
+        const data = makeTimeData(trait, values)
+        const columns = makeTimeColumns(trait, trait)
+        const config: ChartConfig = { chartType: 'bar', xField: trait, yField: 'sales' }
+
+        const spec = generateVegaSpec(data, config, columns, null)
+
+        expect(validateVegaLiteSpec(spec)).toBe(true)
+        expect(spec.encoding.x.type).toBe('ordinal')
+        expect(spec.encoding.x.timeUnit).toBeUndefined()
+        expect(spec.encoding.x.format).toBeUndefined()
+      },
+    )
+
+    it('year values are NOT converted to Date objects for bar charts', () => {
+      const data = [{ year: 2020, sales: 100 }, { year: 2021, sales: 200 }]
+      const columns = makeTimeColumns('year', 'year')
+      const config: ChartConfig = { chartType: 'bar', xField: 'year', yField: 'sales' }
+
+      const spec = generateVegaSpec(data, config, columns, null)
+
+      // Data values must remain integers, not Date objects
+      expect(typeof spec.data.values[0].year).toBe('number')
+      expect(spec.data.values[0].year).toBe(2020)
+    })
+
+    it('year values ARE converted to Date objects for line charts (temporal still works)', () => {
+      const data = [{ year: 2020, sales: 100 }, { year: 2021, sales: 200 }]
+      const columns = makeTimeColumns('year', 'year')
+      const config: ChartConfig = { chartType: 'line', xField: 'year', yField: 'sales' }
+
+      const spec = generateVegaSpec(data, config, columns, null)
+
+      // For line charts, year should be a Date object for proper temporal axis
+      expect(spec.data.values[0].year).toBeInstanceOf(Date)
+    })
+
+    it('combo bar+line chart with year x-axis uses ordinal for both layers', () => {
+      const data = makeTimeData('year', [2018, 2019, 2020, 2021])
+      const columns = new Map([
+        ['year', { name: 'year', type: ColumnType.INTEGER, description: 'Year', traits: ['year'] }],
+        ['sales', { name: 'sales', type: ColumnType.NUMBER, description: 'Sales' }],
+        ['pct', { name: 'pct', type: ColumnType.NUMBER, description: 'Pct', traits: ['percent'] }],
+      ])
+      const config: ChartConfig = { chartType: 'bar', xField: 'year', yField: 'sales', yField2: 'pct' }
+
+      const spec = generateVegaSpec(data, config, columns, null)
+
+      expect(spec.layer).toHaveLength(2)
+      expect(spec.layer[0].encoding.x.type).toBe('ordinal')
+      expect(spec.layer[1].encoding.x.type).toBe('ordinal')
+    })
+  })
+
   describe('Data Type Handling', () => {
     it('should handle temporal columns correctly', () => {
       const config: ChartConfig = {

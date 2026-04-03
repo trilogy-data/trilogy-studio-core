@@ -7,7 +7,30 @@ import { type FieldEncodingOutput } from './types'
 
 export const HIGHLIGHT_COLOR = '#FF7F7F'
 
-const temporalTraits = ['year', 'week', 'day', 'hour', 'minute', 'second', 'quarter']
+const temporalTraits = ['decade', 'year', 'week', 'day', 'hour', 'minute', 'second', 'quarter']
+
+// Discrete time traits: integer/string buckets that should use ordinal scale on bar charts
+// (continuous/temporal scale makes bars too thin)
+export const discreteTimeTraits = [
+  'decade',
+  'year',
+  'month',
+  'week',
+  'day',
+  'hour',
+  'minute',
+  'second',
+  'day_of_week',
+]
+
+export const hasDiscreteTimeTrait = (
+  fieldName: string,
+  columns: Map<string, ResultColumn>,
+): boolean => {
+  const column = columns.get(fieldName)
+  if (!column || !column.traits) return false
+  return column.traits.some((t) => discreteTimeTraits.some((dt) => t === dt || t.endsWith('_' + dt)))
+}
 
 const geoTraits = ['us_state', 'us_state_short', 'country', 'latitude', 'longitude']
 

@@ -17,3 +17,9 @@ dependencies = [
     "sse-starlette>=1.6.1",
     "uvicorn>=0.23.1; sys_platform != 'emscripten'",
 ]
+
+[dependency-groups]
+dev = [
+    "matplotlib>=3.10.8",
+    "numpy>=2.2.6",
+]
