@@ -140,8 +140,9 @@ def _concept_type_for_param(
                 concept = env.concepts.get(concept_addr) or env.concepts.get(
                     f"local.{concept_addr}"
                 )
-                if concept:
+                if concept and isinstance(concept.datatype, DataType):
                     return _DATATYPE_TO_TRILOGY_PARAM_TYPE.get(concept.datatype)
+    return None
 
 
 def filters_to_conditional(
