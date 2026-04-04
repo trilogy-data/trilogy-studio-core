@@ -11,7 +11,6 @@ export type CrossFilterValueMap = Record<string, CrossFilterEntry>
 
 // CrossFilterChartMap holds raw values used only for chart-side visual state
 // (e.g. Vega brush highlighting).  These never touch SQL.
-export type CrossFilterScalar = string | number | Date
 export type CrossFilterChartValue = CrossFilterScalar | CrossFilterScalar[]
 export type CrossFilterChartMap = Record<string, CrossFilterChartValue>
 

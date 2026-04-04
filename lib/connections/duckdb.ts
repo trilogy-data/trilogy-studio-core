@@ -475,7 +475,7 @@ export default class DuckDBConnection extends BaseConnection {
           const value =
             paramName in parameters ? parameters[paramName] : parameters[`:${paramName}`]
           if (value !== undefined) {
-            modifiedSql = modifiedSql.replaceAll(`:${paramName}`, '?')
+            modifiedSql = modifiedSql.split(`:${paramName}`).join('?')
           }
         }
 

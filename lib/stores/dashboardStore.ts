@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { CrossFilterValueMap } from '../dashboards/crossFilters'
+import type { CrossFilterValueMap, CrossFilterChartMap } from '../dashboards/crossFilters'
 import type { LayoutItem, CellType, DashboardImport, DashboardState } from '../dashboards/base'
 import {
   CELL_TYPES,
@@ -427,7 +427,7 @@ export const useDashboardStore = defineStore('dashboards', {
       dashboardId: string,
       itemId: string,
       conceptMap: CrossFilterValueMap,
-      chartMap: CrossFilterValueMap,
+      chartMap: CrossFilterChartMap,
       operation: 'add' | 'append' | 'remove',
     ): string[] {
       // add/remove the filter to all items in the dashboard who do not match the itemId

@@ -11,6 +11,9 @@ import {
   syncCrossFilterSqlForItem,
   type CrossFilterValueMap,
   type CrossFilterChartMap,
+  type CrossFilterInputLike,
+  type CrossFilterChartInputLike,
+  type SqlFilterLike,
 } from './crossFilters'
 
 export interface DimensionClick {
@@ -64,9 +67,9 @@ export interface GridItemData {
   height?: number
   chartConfig?: ChartConfig
   drilldownChartConfig?: ChartConfig | null
-  conceptFilters?: FilterInput[]
-  chartFilters?: FilterInput[]
-  filters?: Filter[]
+  conceptFilters?: CrossFilterInputLike[]
+  chartFilters?: CrossFilterChartInputLike[]
+  filters?: SqlFilterLike[]
   parameters?: Record<string, unknown>
   results?: Results | null
   loading?: boolean
@@ -86,9 +89,9 @@ export interface GridItemDataResponse {
   chartConfig?: ChartConfig
   connectionName?: string
   imports?: DashboardImport[]
-  conceptFilters?: FilterInput[]
-  chartFilters?: FilterInput[]
-  filters?: Filter[]
+  conceptFilters?: CrossFilterInputLike[]
+  chartFilters?: CrossFilterChartInputLike[]
+  filters?: SqlFilterLike[]
   parameters?: Record<string, unknown>
   onRefresh?: (itemId: string) => void
   results?: Results | null
@@ -126,9 +129,9 @@ export interface ItemPropertyUpdates {
   chartConfig?: ChartConfig
   drilldown?: string | MarkdownData | null
   drilldownChartConfig?: ChartConfig | null
-  conceptFilters?: FilterInput[]
-  chartFilters?: FilterInput[]
-  filters?: Filter[]
+  conceptFilters?: CrossFilterInputLike[]
+  chartFilters?: CrossFilterChartInputLike[]
+  filters?: SqlFilterLike[]
   parameters?: Record<string, unknown>
   results?: Results | null
   loading?: boolean

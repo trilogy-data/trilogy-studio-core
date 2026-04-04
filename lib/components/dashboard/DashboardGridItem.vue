@@ -58,7 +58,6 @@ function resolveFilterValue(
     const sorted = Object.keys(parameters).sort((a, b) => b.length - a.length)
     for (const key of sorted) {
       const val = parameters[key]
-      const escaped = String(val).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       // key looks like ":param_name" — escape the colon for regex
       const keyPattern = new RegExp(key.replace(':', '\\:'), 'g')
       resolved = resolved.replace(keyPattern, String(val))
