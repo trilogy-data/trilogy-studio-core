@@ -102,8 +102,14 @@ export class ChromaChartHelpers {
       }
       this.eventHandlers.onDimensionClick({
         filters: {
-          [xField.address]: { op: 'range', value: [xRange[0], xRange[xRange.length - 1]] } as CrossFilterEntry,
-          [yField.address]: { op: 'range', value: [yRange[0], yRange[yRange.length - 1]] } as CrossFilterEntry,
+          [xField.address]: {
+            op: 'range',
+            value: [xRange[0], xRange[xRange.length - 1]],
+          } as CrossFilterEntry,
+          [yField.address]: {
+            op: 'range',
+            value: [yRange[0], yRange[yRange.length - 1]],
+          } as CrossFilterEntry,
         } as CrossFilterValueMap,
         chart: { [config.xField]: xRange, [config.yField]: yRange },
         append: false,

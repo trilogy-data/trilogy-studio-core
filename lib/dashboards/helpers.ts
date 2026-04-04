@@ -29,7 +29,9 @@ export const hasDiscreteTimeTrait = (
 ): boolean => {
   const column = columns.get(fieldName)
   if (!column || !column.traits) return false
-  return column.traits.some((t) => discreteTimeTraits.some((dt) => t === dt || t.endsWith('_' + dt)))
+  return column.traits.some((t) =>
+    discreteTimeTraits.some((dt) => t === dt || t.endsWith('_' + dt)),
+  )
 }
 
 const geoTraits = ['us_state', 'us_state_short', 'country', 'latitude', 'longitude']

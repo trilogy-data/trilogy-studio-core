@@ -1,6 +1,6 @@
 import { computed, ref, type MaybeRefOrGetter, toValue } from 'vue'
 import { buildFilterExpression } from './conditions'
-import type { CrossFilterEntry } from './conditions'
+import type { CrossFilterEntry, CrossFilterScalar } from './conditions'
 
 export type { CrossFilterScalar, CrossFilterEntry } from './conditions'
 
@@ -107,9 +107,7 @@ function areEntriesEqual(a: CrossFilterEntry, b: CrossFilterEntry): boolean {
     }
     case 'in': {
       const bIn = b as { op: 'in'; value: CrossFilterScalar[] }
-      return (
-        a.value.length === bIn.value.length && a.value.every((v, i) => v === bIn.value[i])
-      )
+      return a.value.length === bIn.value.length && a.value.every((v, i) => v === bIn.value[i])
     }
   }
 }
@@ -194,26 +192,23 @@ export function filterAllowedDimensionFilters(
   const valid = new Set(validFields)
   const normalizeLocalFields = options.normalizeLocalFields ?? false
 
-  return Object.entries(filters).reduce(
-    (acc, [field, entry]) => {
-      // Skip values that are not valid CrossFilterEntry objects
-      if (
-        typeof entry !== 'object' ||
-        entry === null ||
-        !['eq', 'range', 'in', 'is_null'].includes((entry as any).op)
-      ) {
-        return acc
-      }
-
-      const normalized = normalizeFieldName(field, valid, normalizeLocalFields)
-      if (!normalized) {
-        return acc
-      }
-      acc[normalized] = entry
+  return Object.entries(filters).reduce((acc, [field, entry]) => {
+    // Skip values that are not valid CrossFilterEntry objects
+    if (
+      typeof entry !== 'object' ||
+      entry === null ||
+      !['eq', 'range', 'in', 'is_null'].includes((entry as any).op)
+    ) {
       return acc
-    },
-    {} as CrossFilterValueMap,
-  )
+    }
+
+    const normalized = normalizeFieldName(field, valid, normalizeLocalFields)
+    if (!normalized) {
+      return acc
+    }
+    acc[normalized] = entry
+    return acc
+  }, {} as CrossFilterValueMap)
 }
 
 /**

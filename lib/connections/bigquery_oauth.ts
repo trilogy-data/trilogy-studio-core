@@ -472,11 +472,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
 
     try {
       // Initial query submission
-      const initialResult = await this.fetchEndpoint(
-        'queries',
-        queryBody,
-        'POST',
-      )
+      const initialResult = await this.fetchEndpoint('queries', queryBody, 'POST')
 
       // Store the job ID with the query identifier for potential cancellation
       if (initialResult.jobReference && initialResult.jobReference.jobId) {

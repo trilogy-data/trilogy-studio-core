@@ -661,19 +661,10 @@ describe('generateVegaSpec', () => {
     const makeTimeData = (field: string, values: number[]) =>
       values.map((v) => ({ [field]: v, sales: v * 10 }))
 
-    const makeTimeColumns = (
-      field: string,
-      trait: string,
-    ): Map<string, ResultColumn> =>
+    const makeTimeColumns = (field: string, trait: string): Map<string, ResultColumn> =>
       new Map([
-        [
-          field,
-          { name: field, type: ColumnType.INTEGER, description: field, traits: [trait] },
-        ],
-        [
-          'sales',
-          { name: 'sales', type: ColumnType.NUMBER, description: 'Sales' },
-        ],
+        [field, { name: field, type: ColumnType.INTEGER, description: field, traits: [trait] }],
+        ['sales', { name: 'sales', type: ColumnType.NUMBER, description: 'Sales' }],
       ])
 
     const timeTraits: [string, number[]][] = [
@@ -705,7 +696,10 @@ describe('generateVegaSpec', () => {
     )
 
     it('year values are NOT converted to Date objects for bar charts', () => {
-      const data = [{ year: 2020, sales: 100 }, { year: 2021, sales: 200 }]
+      const data = [
+        { year: 2020, sales: 100 },
+        { year: 2021, sales: 200 },
+      ]
       const columns = makeTimeColumns('year', 'year')
       const config: ChartConfig = { chartType: 'bar', xField: 'year', yField: 'sales' }
 
@@ -717,7 +711,10 @@ describe('generateVegaSpec', () => {
     })
 
     it('year values ARE converted to Date objects for line charts (temporal still works)', () => {
-      const data = [{ year: 2020, sales: 100 }, { year: 2021, sales: 200 }]
+      const data = [
+        { year: 2020, sales: 100 },
+        { year: 2021, sales: 200 },
+      ]
       const columns = makeTimeColumns('year', 'year')
       const config: ChartConfig = { chartType: 'line', xField: 'year', yField: 'sales' }
 
@@ -734,7 +731,12 @@ describe('generateVegaSpec', () => {
         ['sales', { name: 'sales', type: ColumnType.NUMBER, description: 'Sales' }],
         ['pct', { name: 'pct', type: ColumnType.NUMBER, description: 'Pct', traits: ['percent'] }],
       ])
-      const config: ChartConfig = { chartType: 'bar', xField: 'year', yField: 'sales', yField2: 'pct' }
+      const config: ChartConfig = {
+        chartType: 'bar',
+        xField: 'year',
+        yField: 'sales',
+        yField2: 'pct',
+      }
 
       const spec = generateVegaSpec(data, config, columns, null)
 

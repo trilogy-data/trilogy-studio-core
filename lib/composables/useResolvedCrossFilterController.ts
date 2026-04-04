@@ -11,8 +11,7 @@ import {
 } from './useCrossFilterEligibility'
 import type { EligibleCrossFilterFieldsOptions } from '../stores/queryExecutionService'
 
-export interface UseResolvedCrossFilterControllerOptions
-  extends EligibleCrossFilterFieldsOptions {
+export interface UseResolvedCrossFilterControllerOptions extends EligibleCrossFilterFieldsOptions {
   queryExecutionService: CrossFilterEligibilityService
   connectionId: MaybeRefOrGetter<string>
   enabled?: MaybeRefOrGetter<boolean>
@@ -21,11 +20,11 @@ export interface UseResolvedCrossFilterControllerOptions
   staticValidFields?: MaybeRefOrGetter<Iterable<string>>
 }
 
-export function useResolvedCrossFilterController(
-  options: UseResolvedCrossFilterControllerOptions,
-) {
+export function useResolvedCrossFilterController(options: UseResolvedCrossFilterControllerOptions) {
   const eligibility = useCrossFilterEligibility(options)
-  const staticValidFields = computed(() => Array.from(toValue(options.staticValidFields ?? []) ?? []))
+  const staticValidFields = computed(() =>
+    Array.from(toValue(options.staticValidFields ?? []) ?? []),
+  )
 
   const controller = useCrossFilterController({
     validFields: () => [...eligibility.eligibleFields.value, ...staticValidFields.value],

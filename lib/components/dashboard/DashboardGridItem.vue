@@ -48,10 +48,7 @@ function cleanFilterValue(value: string): string {
   return value.replace(/'''/g, "'").replace('local.', '')
 }
 
-function resolveFilterValue(
-  value: string,
-  parameters?: Record<string, string | number>,
-): string {
+function resolveFilterValue(value: string, parameters?: Record<string, string | number>): string {
   let resolved = cleanFilterValue(value)
   if (parameters) {
     // Replace longest param names first to avoid partial matches
@@ -391,7 +388,9 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
                 <span class="filter-source"
                   >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp;</span
                 >
-                <span class="filter-value">{{ resolveFilterValue(filter.value, filter.parameters) }}</span>
+                <span class="filter-value">{{
+                  resolveFilterValue(filter.value, filter.parameters)
+                }}</span>
               </span>
               <button
                 class="filter-copy-btn"
@@ -416,9 +415,7 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
             :content="`${hiddenFilterCount} more filter(s)`"
             position="bottom"
           >
-            <div class="header-filter-chip filter-overflow">
-              +{{ hiddenFilterCount }}
-            </div>
+            <div class="header-filter-chip filter-overflow">+{{ hiddenFilterCount }}</div>
           </Tooltip>
         </div>
       </div>

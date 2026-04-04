@@ -139,11 +139,7 @@ describe('QueryExecutionService', () => {
         data: {
           items: [],
           imports: [],
-          completion_items: [
-            { label: 'species' },
-            { label: 'tree_count' },
-            { label: 'species' },
-          ],
+          completion_items: [{ label: 'species' }, { label: 'tree_count' }, { label: 'species' }],
         },
       })),
     } as any

@@ -292,7 +292,9 @@ export class DashboardQueryExecutor {
       let filters = batchItemFilters.map((filter) => filter.value)
       const batchFilterParameters: Record<string, string | number> = Object.assign(
         {},
-        ...batchItemFilters.map((f: { parameters?: Record<string, string | number> }) => f.parameters || {}),
+        ...batchItemFilters.map(
+          (f: { parameters?: Record<string, string | number> }) => f.parameters || {},
+        ),
       )
       let query = inputs.structured_content.query
       if (query.trim().length === 0) {
@@ -312,7 +314,10 @@ export class DashboardQueryExecutor {
         queryInput: {
           text: inputs.structured_content ? inputs.structured_content.query : inputs.content,
           extraFilters: filters,
-          parameters: { ...(inputs.parameters || {}), ...batchFilterParameters } as Record<string, any>,
+          parameters: { ...(inputs.parameters || {}), ...batchFilterParameters } as Record<
+            string,
+            any
+          >,
           extraContent: inputs.rootContent || [],
         },
         priority: this.getDefaultPriority(itemId),

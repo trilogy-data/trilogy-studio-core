@@ -51,7 +51,9 @@ describe('cross filter controller', () => {
       chart: { species: 'Acer rubrum' },
     })
 
-    expect(controller.getSqlParametersFor('native-chart')).toEqual({ ':species_x7sdl': 'Acer rubrum' })
+    expect(controller.getSqlParametersFor('native-chart')).toEqual({
+      ':species_x7sdl': 'Acer rubrum',
+    })
   })
 
   it('toggles exact matches in append mode', () => {
@@ -89,7 +91,9 @@ describe('cross filter controller', () => {
       filters: { 'local.is_evergreen': eq('true') },
     })
 
-    expect(controller.getSqlFiltersFor('other-chart')).toEqual(['is_evergreen = :is_evergreen_jgbzg'])
+    expect(controller.getSqlFiltersFor('other-chart')).toEqual([
+      'is_evergreen = :is_evergreen_jgbzg',
+    ])
   })
 })
 
@@ -114,7 +118,10 @@ describe('cross filter helpers', () => {
 
   it('drops non-CrossFilterEntry values silently', () => {
     // @ts-ignore — testing runtime guard
-    const result = filterAllowedDimensionFilters({ species: 'raw-string', count: 42 }, ['species', 'count'])
+    const result = filterAllowedDimensionFilters({ species: 'raw-string', count: 42 }, [
+      'species',
+      'count',
+    ])
     expect(result).toEqual({})
   })
 

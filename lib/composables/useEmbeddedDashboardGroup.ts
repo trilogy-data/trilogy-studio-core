@@ -1,12 +1,23 @@
 import { reactive } from 'vue'
 import type { ChartConfig } from '../editors/results'
-import { CELL_TYPES, type Dashboard, type DashboardImport, type GridItemDataResponse } from '../dashboards/base'
+import {
+  CELL_TYPES,
+  type Dashboard,
+  type DashboardImport,
+  type GridItemDataResponse,
+} from '../dashboards/base'
 import { DashboardQueryExecutor } from '../dashboards/dashboardQueryExecutor'
 import type { ContentInput } from '../stores/resolver'
 import type { DashboardExecutionService } from '../stores/queryExecutionService'
+import type {
+  CrossFilterInputLike,
+  CrossFilterChartInputLike,
+  SqlFilterLike,
+} from '../dashboards/crossFilters'
 
-type DashboardFilterEntry = Array<{ source: string; value: string }>
-type DashboardValueFilterEntry = Array<{ source: string; value: Record<string, string> }>
+type DashboardFilterEntry = SqlFilterLike[]
+type DashboardValueFilterEntry = CrossFilterInputLike[]
+type DashboardChartFilterEntry = CrossFilterChartInputLike[]
 
 interface EmbeddedDashboardGroupItemState {
   type: typeof CELL_TYPES.CHART
@@ -19,7 +30,7 @@ interface EmbeddedDashboardGroupItemState {
   chartConfig?: ChartConfig
   drilldownChartConfig: ChartConfig | null
   conceptFilters: DashboardValueFilterEntry
-  chartFilters: DashboardValueFilterEntry
+  chartFilters: DashboardChartFilterEntry
   filters: DashboardFilterEntry
   parameters: Record<string, unknown>
   rootContent: ContentInput[]
@@ -39,7 +50,7 @@ export interface EmbeddedDashboardGroupItemOptions {
   chartConfig?: ChartConfig
   allowCrossFilter?: boolean
   filters?: DashboardFilterEntry
-  chartFilters?: DashboardValueFilterEntry
+  chartFilters?: DashboardChartFilterEntry
   conceptFilters?: DashboardValueFilterEntry
   parameters?: Record<string, unknown>
   rootContent?: ContentInput[]
@@ -54,7 +65,9 @@ export interface UseEmbeddedDashboardGroupOptions {
   maxConcurrentQueries?: number
 }
 
-function createItemState(options: EmbeddedDashboardGroupItemOptions): EmbeddedDashboardGroupItemState {
+function createItemState(
+  options: EmbeddedDashboardGroupItemOptions,
+): EmbeddedDashboardGroupItemState {
   return reactive({
     type: CELL_TYPES.CHART,
     content: options.query,
@@ -133,7 +146,9 @@ export function useEmbeddedDashboardGroup(options: UseEmbeddedDashboardGroupOpti
   function registerItem(itemOptions: EmbeddedDashboardGroupItemOptions) {
     const priority = itemOptions.priority ?? 0
     ensureLayout(itemOptions.itemId, priority)
-    const existing = dashboard.gridItems[itemOptions.itemId] as EmbeddedDashboardGroupItemState | undefined
+    const existing = dashboard.gridItems[itemOptions.itemId] as unknown as
+      | EmbeddedDashboardGroupItemState
+      | undefined
     if (!existing) {
       dashboard.gridItems[itemOptions.itemId] = createItemState(itemOptions)
       return
@@ -195,7 +210,9 @@ export function useEmbeddedDashboardGroup(options: UseEmbeddedDashboardGroupOpti
       throw new Error(`Unexpected dashboard id ${dashboardId}`)
     }
 
-    const item = dashboard.gridItems[itemId] as EmbeddedDashboardGroupItemState | undefined
+    const item = dashboard.gridItems[itemId] as unknown as
+      | EmbeddedDashboardGroupItemState
+      | undefined
     if (!item) {
       return {
         type: CELL_TYPES.CHART,
@@ -237,14 +254,17 @@ export function useEmbeddedDashboardGroup(options: UseEmbeddedDashboardGroupOpti
       return
     }
 
-    const item = dashboard.gridItems[itemId] as EmbeddedDashboardGroupItemState | undefined
+    const item = dashboard.gridItems[itemId] as unknown as
+      | EmbeddedDashboardGroupItemState
+      | undefined
     if (!item) {
       return
     }
 
     if ('name' in data) item.name = (data.name as string) ?? item.name
     if ('content' in data) item.content = (data.content as string) ?? item.content
-    if ('chartConfig' in data) item.chartConfig = (data.chartConfig as ChartConfig | undefined) ?? undefined
+    if ('chartConfig' in data)
+      item.chartConfig = (data.chartConfig as ChartConfig | undefined) ?? undefined
     if ('drilldown' in data) item.drilldown = (data.drilldown as string | null) ?? null
     if ('drilldownChartConfig' in data)
       item.drilldownChartConfig = (data.drilldownChartConfig as ChartConfig | null) ?? null
@@ -252,7 +272,8 @@ export function useEmbeddedDashboardGroup(options: UseEmbeddedDashboardGroupOpti
     if ('width' in data) item.width = Number(data.width ?? item.width)
     if ('height' in data) item.height = Number(data.height ?? item.height)
     if ('filters' in data) item.filters = (data.filters as DashboardFilterEntry) ?? []
-    if ('chartFilters' in data) item.chartFilters = (data.chartFilters as DashboardValueFilterEntry) ?? []
+    if ('chartFilters' in data)
+      item.chartFilters = (data.chartFilters as DashboardChartFilterEntry) ?? []
     if ('conceptFilters' in data)
       item.conceptFilters = (data.conceptFilters as DashboardValueFilterEntry) ?? []
     if ('parameters' in data) item.parameters = (data.parameters as Record<string, unknown>) ?? {}

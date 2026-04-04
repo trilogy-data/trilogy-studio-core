@@ -257,7 +257,7 @@ export default class QueryExecutionService {
     editorType: EditorType,
     imports: Import[] = [],
     extraFilters: string[],
-    parameters: Record<string, any> = {},
+    _parameters: Record<string, any> = {},
     startTime: number,
     controller: AbortController,
     onStarted?: () => void,
