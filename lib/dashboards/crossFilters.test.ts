@@ -35,7 +35,7 @@ describe('cross filter controller', () => {
     ])
     expect(controller.getSqlFiltersFor('native-chart', ["city = 'USBTV'"])).toEqual([
       "city = 'USBTV'",
-      'species = :species',
+      'species = :species_x7sdl',
     ])
     expect(controller.getChartSelectionsFor('species-chart')).toEqual([{ species: 'Acer rubrum' }])
   })
@@ -51,7 +51,7 @@ describe('cross filter controller', () => {
       chart: { species: 'Acer rubrum' },
     })
 
-    expect(controller.getSqlParametersFor('native-chart')).toEqual({ ':species': 'Acer rubrum' })
+    expect(controller.getSqlParametersFor('native-chart')).toEqual({ ':species_x7sdl': 'Acer rubrum' })
   })
 
   it('toggles exact matches in append mode', () => {
@@ -89,7 +89,7 @@ describe('cross filter controller', () => {
       filters: { 'local.is_evergreen': eq('true') },
     })
 
-    expect(controller.getSqlFiltersFor('other-chart')).toEqual(['is_evergreen = :is_evergreen'])
+    expect(controller.getSqlFiltersFor('other-chart')).toEqual(['is_evergreen = :is_evergreen_jgbzg'])
   })
 })
 
@@ -154,8 +154,8 @@ describe('cross filter helpers', () => {
     expect(items.peer.filters).toEqual([
       {
         source: 'cross',
-        value: 'species = :species',
-        parameters: { ':species': 'Acer rubrum' },
+        value: 'species = :species_x7sdl',
+        parameters: { ':species_x7sdl': 'Acer rubrum' },
       },
     ])
     expect(items.locked.conceptFilters).toEqual([])
@@ -167,11 +167,11 @@ describe('cross filter helpers', () => {
       { source: 'a', value: { species: eq('Acer saccharum') } },
     ])
     expect(result.filterStrings).toEqual([
-      '(species = :species_or0 OR species = :species_or1)',
+      '(species = :species_x7sdl_or0 OR species = :species_x7sdl_or1)',
     ])
     expect(result.parameters).toEqual({
-      ':species_or0': 'Acer rubrum',
-      ':species_or1': 'Acer saccharum',
+      ':species_x7sdl_or0': 'Acer rubrum',
+      ':species_x7sdl_or1': 'Acer saccharum',
     })
   })
 
@@ -195,11 +195,11 @@ describe('cross filter helpers', () => {
     })
 
     expect(controller.getSqlFiltersFor('other-chart')).toEqual([
-      'order.date.month_start between :order_date_month_start_min and :order_date_month_start_max',
+      'order.date.month_start between :order_date_month_start_cgjum_min and :order_date_month_start_cgjum_max',
     ])
     expect(controller.getSqlParametersFor('other-chart')).toEqual({
-      ':order_date_month_start_min': '2024-01-01',
-      ':order_date_month_start_max': '2024-03-01',
+      ':order_date_month_start_cgjum_min': '2024-01-01',
+      ':order_date_month_start_cgjum_max': '2024-03-01',
     })
   })
 

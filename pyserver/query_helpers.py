@@ -1,3 +1,4 @@
+import re
 import time
 
 
@@ -75,12 +76,72 @@ def get_traits(concept: Concept) -> list[str]:
     return []
 
 
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}")
+
+# Maps Trilogy DataType → the keyword used in `parameter x <type>;` declarations
+_DATATYPE_TO_TRILOGY_PARAM_TYPE: dict[DataType, str] = {
+    DataType.DATE: "date",
+    DataType.DATETIME: "datetime",
+    DataType.TIMESTAMP: "datetime",  # Trilogy parameter keyword; both map to datetime
+    DataType.INTEGER: "int",
+    DataType.BIGINT: "int",
+    DataType.NUMBER: "int",
+    DataType.FLOAT: "float",
+    DataType.NUMERIC: "float",
+    DataType.BOOL: "bool",
+    DataType.STRING: "string",
+}
+
+# Matches the concept address that a parameter is compared against in a filter expression.
+# Handles: concept OP :param, concept BETWEEN :p1 AND :p2
+_CONCEPT_PARAM_RE = re.compile(
+    r"([\w.]+)\s*(?:=|>=|<=|>|<)\s*{param}"
+    r"|([\w.]+)\s+between\s+[\w_]+\s+and\s+{param}"
+    r"|([\w.]+)\s+between\s+{param}\s+and\s",
+    re.IGNORECASE,
+)
+
+
 def _trilogy_type_for(value: str | int | float) -> str:
+    """Infer a Trilogy parameter type from a scalar value."""
     if isinstance(value, str):
+        if _DATE_RE.match(value):
+            return "date"
+        if _TIMESTAMP_RE.match(value):
+            return "datetime"
         return "string"
     if isinstance(value, float):
         return "float"
     return "int"
+
+
+def _concept_type_for_param(
+    param_name: str,
+    filter_strings: list[str],
+    env: "Environment",
+) -> str | None:
+    """Return the Trilogy type that matches the concept being filtered by param_name.
+
+    Scans each filter string for comparisons involving param_name and looks up
+    the concept on the other side to determine its DataType.
+    """
+    pattern = re.compile(
+        rf"([\w.]+)\s*(?:=|>=|<=|>|<)\s*{re.escape(param_name)}\b"
+        rf"|([\w.]+)\s+between\s+[\w_]+\s+and\s+{re.escape(param_name)}\b"
+        rf"|([\w.]+)\s+between\s+{re.escape(param_name)}\s+and\s",
+        re.IGNORECASE,
+    )
+    for fs in filter_strings:
+        m = pattern.search(fs)
+        if m:
+            concept_addr = next((g for g in m.groups() if g), None)
+            if concept_addr:
+                concept = env.concepts.get(concept_addr) or env.concepts.get(
+                    f"local.{concept_addr}"
+                )
+                if concept:
+                    return _DATATYPE_TO_TRILOGY_PARAM_TYPE.get(concept.datatype)
 
 
 def filters_to_conditional(
@@ -94,10 +155,27 @@ def filters_to_conditional(
     # never touch the parse string — no escaping needed.
     param_declarations = ""
     param_kwargs: dict[str, str | int | float] = {}
+    # Build a version of extra_filters with colons stripped so the concept-type
+    # lookup sees bare param names (matching what the filter will actually use).
+    stripped_filters = [
+        fs for fs in extra_filters
+        if fs.strip()
+    ]
+    for key in parameters:
+        stripped_filters = [fs.replace(key, key.lstrip(":")) for fs in stripped_filters]
+
     for key, value in parameters.items():
         # keys arrive as :paramN — strip the colon for use in Trilogy source
         name = key.lstrip(":")
-        param_declarations += f"\nparameter {name} {_trilogy_type_for(value)};"
+        # Prefer the type derived from the concept being filtered (most accurate);
+        # fall back to inference from the value string.
+        param_type = _concept_type_for_param(name, stripped_filters, env) or _trilogy_type_for(value)
+        param_declarations += f"\nparameter {name} {param_type};"
+        # Normalize value to match the declared type — e.g. Luxon DateTime
+        # serialises as a full ISO timestamp ('1992-12-20T22:19:57.462Z') but
+        # set_parameters only accepts 'YYYY-MM-DD' for date parameters.
+        if param_type == "date" and isinstance(value, str):
+            value = _DATE_RE.match(value[:10]) and value[:10] or value
         param_kwargs[name] = value
 
     for idx, filter_string in enumerate(extra_filters):

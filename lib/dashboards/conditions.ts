@@ -18,12 +18,28 @@ function sanitizeParamName(field: string): string {
   return field.replace(/[^a-zA-Z0-9_]/g, '_')
 }
 
+/** Short deterministic hash of the full concept address to prevent name collisions
+ *  between differently-namespaced concepts that sanitize to the same string. */
+function shortHash(s: string): string {
+  let h = 0
+  for (let i = 0; i < s.length; i++) {
+    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0
+  }
+  return Math.abs(h).toString(36).slice(0, 5)
+}
+
 function serializeScalar(v: CrossFilterScalar): string | number {
   if (v instanceof Date) {
     const year = v.getFullYear()
     const month = String(v.getMonth() + 1).padStart(2, '0')
     const day = String(v.getDate()).padStart(2, '0')
     return `${year}-${month}-${day}`
+  }
+  // Luxon DateTime (returned by DuckDB WASM for date/datetime columns) is not
+  // a plain JS Date. Use toISODate() so it serializes as YYYY-MM-DD rather than
+  // a full ISO timestamp string, which would confuse the backend type inference.
+  if (v !== null && typeof v === 'object' && typeof (v as any).toISODate === 'function') {
+    return (v as any).toISODate() as string
   }
   return v as string | number
 }
@@ -42,7 +58,7 @@ export function buildFilterExpression(
   entry: CrossFilterEntry,
   nameSuffix: string = '',
 ): { filterString: string; parameters: Record<string, string | number> } {
-  const pname = sanitizeParamName(key) + nameSuffix
+  const pname = sanitizeParamName(key) + '_' + shortHash(key) + nameSuffix
   switch (entry.op) {
     case 'eq': {
       const serialized = serializeScalar(entry.value)

@@ -106,8 +106,8 @@ describe('DashboardModel transient state persistence', () => {
     expect(dashboard.gridItems.peer.filters).toEqual([
       {
         source: 'cross',
-        value: 'species = :species',
-        parameters: { ':species': 'Acer rubrum' },
+        value: 'species = :species_x7sdl',
+        parameters: { ':species_x7sdl': 'Acer rubrum' },
       },
     ])
   })

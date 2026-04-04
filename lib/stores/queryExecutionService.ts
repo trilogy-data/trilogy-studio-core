@@ -371,11 +371,19 @@ export default class QueryExecutionService {
         for (let i = 0; i < batchResponse.data.queries.length; i++) {
           const queryResult = batchResponse.data.queries[i]
           if (queryResult.generated_sql) {
-            // Execute each SQL query
+            // Execute each SQL query — merge Trilogy list-constant params with
+            // per-query filter binding params from the original input.
+            const batchExecParams = {
+              ...(queries[i]?.parameters || {}),
+              ...(queryResult.parameters || {}),
+            }
+            const batchExecParamsOrNull = Object.keys(batchExecParams).length
+              ? batchExecParams
+              : null
             try {
               //@ts-ignore
               const sqlResponse: Results = await Promise.race([
-                conn.executeSql(queryResult.generated_sql, queryResult.parameters ?? null),
+                conn.executeSql(queryResult.generated_sql, batchExecParamsOrNull),
                 new Promise((_, reject) => {
                   controller.signal.addEventListener('abort', () =>
                     reject(new Error('Query execution cancelled by user')),
@@ -928,12 +936,17 @@ export default class QueryExecutionService {
 
       const headers = resolveResponse.data.columns
 
-      // Second step: Execute query — use SQL-binding parameters from the resolver
-      // response (the values bound to :param placeholders by the backend), not the
-      // input parameters (which were for filter/WHERE clause construction).
+      // Second step: Execute query — merge SQL-binding parameters from the resolver
+      // response (Trilogy list constants) with the input filter binding parameters
+      // (cross-filter :param placeholders that appear in the generated WHERE clause).
+      const execParams = {
+        ...(queryInput.parameters || {}),
+        ...(resolveResponse.data.parameters || {}),
+      }
+      const execParamsOrNull = Object.keys(execParams).length ? execParams : null
       //@ts-ignore
       const sqlResponse: Results = await Promise.race([
-        conn.executeSql(generatedSql, resolveResponse.data.parameters ?? null),
+        conn.executeSql(generatedSql, execParamsOrNull),
         new Promise((_, reject) => {
           controller.signal.addEventListener('abort', () =>
             reject(new Error('Query cancelled by user')),

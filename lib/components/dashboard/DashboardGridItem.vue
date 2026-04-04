@@ -48,6 +48,29 @@ function cleanFilterValue(value: string): string {
   return value.replace(/'''/g, "'").replace('local.', '')
 }
 
+function resolveFilterValue(
+  value: string,
+  parameters?: Record<string, string | number>,
+): string {
+  let resolved = cleanFilterValue(value)
+  if (parameters) {
+    // Replace longest param names first to avoid partial matches
+    const sorted = Object.keys(parameters).sort((a, b) => b.length - a.length)
+    for (const key of sorted) {
+      const val = parameters[key]
+      const escaped = String(val).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      // key looks like ":param_name" — escape the colon for regex
+      const keyPattern = new RegExp(key.replace(':', '\\:'), 'g')
+      resolved = resolved.replace(keyPattern, String(val))
+    }
+  }
+  return resolved
+}
+
+function copyFilterValue(value: string, parameters?: Record<string, string | number>): void {
+  navigator.clipboard.writeText(resolveFilterValue(value, parameters))
+}
+
 function startTitleEditing(): void {
   if (!props.editMode) return
 
@@ -361,7 +384,7 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
           <Tooltip
             v-for="(filter, index) in visibleHeaderFilters"
             :key="`${filter.source}-${filter.value}-${index}`"
-            :content="cleanFilterValue(filter.value)"
+            :content="resolveFilterValue(filter.value, filter.parameters)"
             position="bottom"
           >
             <div class="header-filter-chip">
@@ -369,8 +392,15 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
                 <span class="filter-source"
                   >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp;</span
                 >
-                <span class="filter-value">{{ filter.value }}</span>
+                <span class="filter-value">{{ resolveFilterValue(filter.value, filter.parameters) }}</span>
               </span>
+              <button
+                class="filter-copy-btn"
+                @click.stop="copyFilterValue(filter.value, filter.parameters)"
+                title="Copy filter value"
+              >
+                ⎘
+              </button>
               <button
                 v-if="editMode && filter.source !== 'global'"
                 class="filter-remove-btn"
@@ -956,6 +986,27 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+}
+
+.filter-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 3px;
+  border: none;
+  background: none;
+  color: var(--trilogy-embed-special-text, var(--special-text, #2563eb));
+  opacity: 0.6;
+  cursor: pointer;
+  font-size: 11px;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+}
+
+.filter-copy-btn:hover {
+  opacity: 1;
+  background-color: rgba(148, 163, 184, 0.08);
 }
 
 .filter-remove-btn {

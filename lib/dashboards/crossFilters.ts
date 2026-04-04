@@ -29,6 +29,14 @@ export interface CrossFilterInputLike {
   value: CrossFilterValueMap
 }
 
+// Chart filters carry raw chart values (for Vega highlighting), not CrossFilterEntry.
+// Keeping these separate prevents CrossFilterEntry objects from leaking into
+// the Vega comparison logic.
+export interface CrossFilterChartInputLike {
+  source: string
+  value: CrossFilterChartMap
+}
+
 export interface SqlFilterLike {
   source: string
   value: string
@@ -38,7 +46,7 @@ export interface SqlFilterLike {
 export interface CrossFilterItemLike {
   allowCrossFilter?: boolean
   conceptFilters?: CrossFilterInputLike[]
-  chartFilters?: CrossFilterInputLike[]
+  chartFilters?: CrossFilterChartInputLike[]
   filters?: SqlFilterLike[]
 }
 
@@ -116,6 +124,42 @@ function areValueMapsEqual(left: CrossFilterValueMap, right: CrossFilterValueMap
   return leftKeys.every(
     (key, index) => key === rightKeys[index] && areEntriesEqual(left[key], right[key]),
   )
+}
+
+function areChartValuesEqual(a: CrossFilterChartValue, b: CrossFilterChartValue): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((v, i) => v === b[i])
+  }
+  return a === b
+}
+
+function areChartMapsEqual(left: CrossFilterChartMap, right: CrossFilterChartMap): boolean {
+  const leftKeys = Object.keys(left).sort()
+  const rightKeys = Object.keys(right).sort()
+  if (leftKeys.length !== rightKeys.length) return false
+  return leftKeys.every(
+    (key, index) => key === rightKeys[index] && areChartValuesEqual(left[key], right[key]),
+  )
+}
+
+function applyChartSelectionOperation(
+  existing: CrossFilterChartInputLike[],
+  source: string,
+  value: CrossFilterChartMap,
+  operation: CrossFilterOperation,
+): CrossFilterChartInputLike[] {
+  const withoutSource = existing.filter((f) => f.source !== source)
+  const forSource = existing.filter((f) => f.source === source)
+
+  if (operation === 'remove') return withoutSource
+  if (operation === 'add') return [...withoutSource, { source, value: cloneChartMap(value) }]
+
+  const hasExactMatch = forSource.some((f) => areChartMapsEqual(f.value, value))
+  const nextForSource = hasExactMatch
+    ? forSource.filter((f) => !areChartMapsEqual(f.value, value))
+    : [...forSource, { source, value: cloneChartMap(value) }]
+
+  return [...withoutSource, ...nextForSource]
 }
 
 function normalizeFieldName(
@@ -273,21 +317,13 @@ export function applyCrossFilterOperationToGridItems(
 
   Object.entries(gridItems).forEach(([itemId, item]) => {
     if (itemId === sourceId) {
-      // For the source item, update chart-only filters for visual highlighting
-      // We store chart values as fake eq entries so the existing applySelectionOperation
-      // toggle logic can work; the chart map is tracked separately.
-      const nextChartFilters = applySelectionOperation(
+      // For the source item, update chart-only filters for visual highlighting.
+      // chartFilters uses CrossFilterChartInputLike (raw values) so DashboardChart.vue
+      // can pass them directly to Vega without unwrapping CrossFilterEntry objects.
+      const nextChartFilters = applyChartSelectionOperation(
         item.chartFilters || [],
         sourceId,
-        // Convert chartMap raw values to eq entries for storage purposes
-        Object.fromEntries(
-          Object.entries(chartMap).map(([k, v]) => [
-            k,
-            Array.isArray(v)
-              ? ({ op: 'range', value: [v[0], v[v.length - 1]] } as CrossFilterEntry)
-              : ({ op: 'eq', value: v as CrossFilterScalar } as CrossFilterEntry),
-          ]),
-        ) as CrossFilterValueMap,
+        chartMap,
         operation,
       )
       if (JSON.stringify(nextChartFilters) !== JSON.stringify(item.chartFilters || [])) {

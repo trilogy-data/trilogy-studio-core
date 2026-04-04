@@ -449,13 +449,33 @@ export default class DuckDBConnection extends BaseConnection {
         const paramRegex = /(?<!:):([a-zA-Z_]\w*)/g
         let modifiedSql = sql
 
-        const matches = Array.from(sql.matchAll(paramRegex))
+        // Collect unique param names in the order they first appear
+        const seen = new Set<string>()
+        const orderedParams: string[] = []
+        for (const match of sql.matchAll(paramRegex)) {
+          const name = match[1]
+          if (!seen.has(name)) {
+            seen.add(name)
+            orderedParams.push(name)
+          }
+        }
 
-        for (const match of matches) {
-          const paramName = match[1]  // capture group 1: name without leading colon
-          if (paramName in parameters) {
-            modifiedSql = modifiedSql.replace(`:${paramName}`, '?')
-            params.push(parameters[paramName])
+        // Build positional values in occurrence order so interleaved placeholders
+        // like :a, :b, :a map to [a_val, b_val, a_val] not [a_val, a_val, b_val].
+        for (const match of sql.matchAll(paramRegex)) {
+          const name = match[1]
+          const value = name in parameters ? parameters[name] : parameters[`:${name}`]
+          if (value !== undefined) {
+            params.push(value)
+          }
+        }
+
+        // Replace all occurrences of each known param with ?
+        for (const paramName of orderedParams) {
+          const value =
+            paramName in parameters ? parameters[paramName] : parameters[`:${paramName}`]
+          if (value !== undefined) {
+            modifiedSql = modifiedSql.replaceAll(`:${paramName}`, '?')
           }
         }
 

@@ -426,9 +426,11 @@ export default class BigQueryOauthConnection extends BaseConnection {
     const seen = new Set<string>()
     for (const match of sql.matchAll(paramRegex)) {
       const name = match[1]
-      if (seen.has(name) || !(name in parameters)) continue
+      if (seen.has(name)) continue
+      // Accept keys with or without leading colon (mirrors duckdb.ts convention)
+      const value = name in parameters ? parameters[name] : parameters[`:${name}`]
+      if (value === undefined) continue
       seen.add(name)
-      const value = parameters[name]
       let parameterType: { type: string }
       if (typeof value === 'number') {
         parameterType = { type: Number.isInteger(value) ? 'INT64' : 'FLOAT64' }

@@ -306,7 +306,7 @@ export class ChromaChartHelpers {
     eligible.forEach((field) => {
       let fieldAddress = columns.get(field)?.address
       if (!fieldAddress) return
-      if (item.datum[field] && eligible.includes(field)) {
+      if (item.datum[field] != null && item.datum[field] !== '' && eligible.includes(field)) {
         let filterValue = item.datum[field]
 
         if (DATETIME_COLS.includes(columns.get(field)?.type as ColumnType)) {
