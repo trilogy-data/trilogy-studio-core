@@ -202,6 +202,35 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
     }
     return val
   }
+  private buildSnowflakeBindings(
+    sql: string,
+    parameters: Record<string, any>,
+  ): { rewrittenSql: string; bindings: Record<string, { type: string; value: string }> } {
+    // Rewrite :name → ? (positional) for Snowflake V2 API, building 1-indexed bindings.
+    // Negative lookbehind avoids ::type casts.
+    const paramRegex = /(?<!:):([a-zA-Z_]\w*)/g
+    const orderedNames: string[] = []
+    const rewrittenSql = sql.replace(paramRegex, (_match, name) => {
+      orderedNames.push(name)
+      return '?'
+    })
+    const bindings: Record<string, { type: string; value: string }> = {}
+    orderedNames.forEach((name, idx) => {
+      if (!(name in parameters)) return
+      const value = parameters[name]
+      let type: string
+      if (typeof value === 'number') {
+        type = Number.isInteger(value) ? 'FIXED' : 'REAL'
+      } else if (typeof value === 'boolean') {
+        type = 'BOOLEAN'
+      } else {
+        type = 'TEXT'
+      }
+      bindings[String(idx + 1)] = { type, value: String(value) }
+    })
+    return { rewrittenSql, bindings }
+  }
+
   async query_core(
     sql: string,
     parameters: Record<string, any> | null = null,
@@ -214,8 +243,17 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
     }
 
     try {
+      // Build positional bindings if named parameters are provided
+      let execSql = sql
+      let bindings: Record<string, { type: string; value: string }> | undefined
+      if (parameters && Object.keys(parameters).length > 0) {
+        const built = this.buildSnowflakeBindings(sql, parameters)
+        execSql = built.rewrittenSql
+        bindings = built.bindings
+      }
+
       // Submit the query and get results - implementation depends on auth type
-      let resultData = await this.executeQuery(sql)
+      let resultData = await this.executeQuery(execSql, bindings)
       if (resultData.statementHandles) {
         resultData = await this.fetchQueryResults(
           resultData.statementHandles[resultData.statementHandles.length - 1],
@@ -281,7 +319,10 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
   }
 
   // Helper methods for subclasses to implement/override as needed
-  protected abstract executeQuery(sql: string): Promise<SnowflakeQueryResult>
+  protected abstract executeQuery(
+    sql: string,
+    bindings?: Record<string, { type: string; value: string }>,
+  ): Promise<SnowflakeQueryResult>
   protected abstract fetchQueryResults(statementHandle: string): Promise<SnowflakeQueryResult>
   protected abstract extractMetadata(resultData: any): any[]
   protected abstract extractRows(resultData: any): any[][]
@@ -643,22 +684,29 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
     return await response.json()
   }
 
-  protected async executeQuery(sql: string): Promise<any> {
+  protected async executeQuery(
+    sql: string,
+    bindings?: Record<string, { type: string; value: string }>,
+  ): Promise<any> {
     // Submit the SQL statement (v2 API)
+    const body: Record<string, any> = {
+      statement: sql,
+      timeout: this.maxTotalWaitTimeMs / 1000,
+      database: this.config.database,
+      schema: this.config.schema,
+      warehouse: this.config.warehouse,
+      role: this.config.role,
+      parameters: {
+        MULTI_STATEMENT_COUNT: '0',
+      },
+    }
+    if (bindings && Object.keys(bindings).length > 0) {
+      body.bindings = bindings
+    }
     const submitResponse = await fetch(`${this.baseURL()}/api/v2/statements/`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
-      body: JSON.stringify({
-        statement: sql,
-        timeout: this.maxTotalWaitTimeMs / 1000,
-        database: this.config.database,
-        schema: this.config.schema,
-        warehouse: this.config.warehouse,
-        role: this.config.role,
-        parameters: {
-          MULTI_STATEMENT_COUNT: '0',
-        },
-      }),
+      body: JSON.stringify(body),
     })
 
     if (!submitResponse.ok) {

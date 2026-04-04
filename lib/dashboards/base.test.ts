@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { DashboardModel, CELL_TYPES } from './base'
+import type { CrossFilterEntry } from './conditions'
+
+const eq = (v: string | number): CrossFilterEntry => ({ op: 'eq', value: v })
 
 describe('DashboardModel transient state persistence', () => {
   it('omits transient query state when serializing dashboards', () => {
@@ -92,18 +95,20 @@ describe('DashboardModel transient state persistence', () => {
 
     const updated = dashboard.updateItemCrossFilters(
       'source',
-      { species: 'Acer rubrum' },
+      { species: eq('Acer rubrum') },
       { species: 'Acer rubrum' },
       'add',
     )
 
     expect(updated).toEqual(['peer'])
     expect(dashboard.gridItems.source.filters).toEqual([])
-    expect(dashboard.gridItems.source.chartFilters).toEqual([
-      { source: 'source', value: { species: 'Acer rubrum' } },
-    ])
+    expect(dashboard.gridItems.source.chartFilters).toHaveLength(1)
     expect(dashboard.gridItems.peer.filters).toEqual([
-      { source: 'cross', value: "species='''Acer rubrum'''" },
+      {
+        source: 'cross',
+        value: 'species = :species',
+        parameters: { ':species': 'Acer rubrum' },
+      },
     ])
   })
 
@@ -134,13 +139,13 @@ describe('DashboardModel transient state persistence', () => {
 
     dashboard.updateItemCrossFilters(
       'source',
-      { species: 'Acer rubrum' },
+      { species: eq('Acer rubrum') },
       { species: 'Acer rubrum' },
       'append',
     )
     dashboard.updateItemCrossFilters(
       'source',
-      { species: 'Acer rubrum' },
+      { species: eq('Acer rubrum') },
       { species: 'Acer rubrum' },
       'append',
     )

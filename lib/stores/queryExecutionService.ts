@@ -375,7 +375,7 @@ export default class QueryExecutionService {
             try {
               //@ts-ignore
               const sqlResponse: Results = await Promise.race([
-                conn.executeSql(queryResult.generated_sql, parameters),
+                conn.executeSql(queryResult.generated_sql, queryResult.parameters ?? null),
                 new Promise((_, reject) => {
                   controller.signal.addEventListener('abort', () =>
                     reject(new Error('Query execution cancelled by user')),
@@ -928,10 +928,12 @@ export default class QueryExecutionService {
 
       const headers = resolveResponse.data.columns
 
-      // Second step: Execute query
+      // Second step: Execute query — use SQL-binding parameters from the resolver
+      // response (the values bound to :param placeholders by the backend), not the
+      // input parameters (which were for filter/WHERE clause construction).
       //@ts-ignore
       const sqlResponse: Results = await Promise.race([
-        conn.executeSql(generatedSql, queryInput.parameters),
+        conn.executeSql(generatedSql, resolveResponse.data.parameters ?? null),
         new Promise((_, reject) => {
           controller.signal.addEventListener('abort', () =>
             reject(new Error('Query cancelled by user')),

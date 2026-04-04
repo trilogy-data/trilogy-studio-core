@@ -250,7 +250,7 @@ describe('ChromaChartHelpers', () => {
 
       expect(onDimensionClick).toHaveBeenCalledTimes(1)
       expect(onDimensionClick).toHaveBeenCalledWith({
-        filters: { 'local.tree_category': 'broadleaf' },
+        filters: { 'local.tree_category': { op: 'eq', value: 'broadleaf' } },
         chart: { tree_category: 'broadleaf' },
         append: false,
       })

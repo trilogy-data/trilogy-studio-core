@@ -6,6 +6,17 @@ import {
   buildCrossFilterExpression,
   extractEligibleCrossFilterFields,
 } from './crossFilters'
+import type { CrossFilterEntry } from './conditions'
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+const eq = (value: string | number): CrossFilterEntry => ({ op: 'eq', value })
+const range = (lo: string | number, hi: string | number): CrossFilterEntry => ({
+  op: 'range',
+  value: [lo, hi],
+})
+
+// ── controller tests ─────────────────────────────────────────────────────────
 
 describe('cross filter controller', () => {
   it('derives peer SQL filters and excludes the source chart from its own query filters', () => {
@@ -15,7 +26,7 @@ describe('cross filter controller', () => {
 
     controller.applyDimensionClick({
       source: 'species-chart',
-      filters: { species: 'Acer rubrum' },
+      filters: { species: eq('Acer rubrum') },
       chart: { species: 'Acer rubrum' },
     })
 
@@ -24,9 +35,23 @@ describe('cross filter controller', () => {
     ])
     expect(controller.getSqlFiltersFor('native-chart', ["city = 'USBTV'"])).toEqual([
       "city = 'USBTV'",
-      "species='''Acer rubrum'''",
+      'species = :species',
     ])
     expect(controller.getChartSelectionsFor('species-chart')).toEqual([{ species: 'Acer rubrum' }])
+  })
+
+  it('includes parameters for the SQL filter', () => {
+    const controller = createCrossFilterController({
+      validFields: ['species'],
+    })
+
+    controller.applyDimensionClick({
+      source: 'species-chart',
+      filters: { species: eq('Acer rubrum') },
+      chart: { species: 'Acer rubrum' },
+    })
+
+    expect(controller.getSqlParametersFor('native-chart')).toEqual({ ':species': 'Acer rubrum' })
   })
 
   it('toggles exact matches in append mode', () => {
@@ -36,7 +61,7 @@ describe('cross filter controller', () => {
 
     controller.applyDimensionClick({
       source: 'species-chart',
-      filters: { species: 'Acer rubrum' },
+      filters: { species: eq('Acer rubrum') },
       chart: { species: 'Acer rubrum' },
       append: true,
     })
@@ -45,7 +70,7 @@ describe('cross filter controller', () => {
 
     controller.applyDimensionClick({
       source: 'species-chart',
-      filters: { species: 'Acer rubrum' },
+      filters: { species: eq('Acer rubrum') },
       chart: { species: 'Acer rubrum' },
       append: true,
     })
@@ -61,28 +86,36 @@ describe('cross filter controller', () => {
 
     controller.applyDimensionClick({
       source: 'evergreen-chart',
-      filters: { 'local.is_evergreen': 'true' },
+      filters: { 'local.is_evergreen': eq('true') },
     })
 
-    expect(controller.getSqlFiltersFor('other-chart')).toEqual(["is_evergreen='''true'''"])
+    expect(controller.getSqlFiltersFor('other-chart')).toEqual(['is_evergreen = :is_evergreen'])
   })
 })
+
+// ── helper function tests ─────────────────────────────────────────────────────
 
 describe('cross filter helpers', () => {
   it('filters allowed dimension fields and optionally strips local prefixes', () => {
     expect(
       filterAllowedDimensionFilters(
-        { 'local.species': 'Acer saccharum', ignored: 'x' },
+        { 'local.species': eq('Acer saccharum'), ignored: eq('x') },
         ['species'],
         { normalizeLocalFields: true },
       ),
-    ).toEqual({ species: 'Acer saccharum' })
+    ).toEqual({ species: eq('Acer saccharum') })
 
     expect(
-      filterAllowedDimensionFilters({ 'local.species': 'Acer saccharum', ignored: 'x' }, [
+      filterAllowedDimensionFilters({ 'local.species': eq('Acer saccharum'), ignored: eq('x') }, [
         'species',
       ]),
-    ).toEqual({ 'local.species': 'Acer saccharum' })
+    ).toEqual({ 'local.species': eq('Acer saccharum') })
+  })
+
+  it('drops non-CrossFilterEntry values silently', () => {
+    // @ts-ignore — testing runtime guard
+    const result = filterAllowedDimensionFilters({ species: 'raw-string', count: 42 }, ['species', 'count'])
+    expect(result).toEqual({})
   })
 
   it('applies source and peer cross filters consistently for dashboard-like items', () => {
@@ -106,70 +139,85 @@ describe('cross filter helpers', () => {
     const updated = applyCrossFilterOperationToGridItems(
       items,
       'source',
-      { species: 'Acer rubrum' },
+      { species: eq('Acer rubrum') },
       { species: 'Acer rubrum' },
       'add',
     )
 
     expect(updated).toEqual(['peer'])
-    expect(items.source.chartFilters).toEqual([
-      { source: 'source', value: { species: 'Acer rubrum' } },
-    ])
+    // Source gets chart filters only
+    expect(items.source.chartFilters).toHaveLength(1)
+    // Peer gets concept filters and SQL filter with :param placeholder
     expect(items.peer.conceptFilters).toEqual([
-      { source: 'source', value: { species: 'Acer rubrum' } },
+      { source: 'source', value: { species: eq('Acer rubrum') } },
     ])
-    expect(items.peer.filters).toEqual([{ source: 'cross', value: "species='''Acer rubrum'''" }])
+    expect(items.peer.filters).toEqual([
+      {
+        source: 'cross',
+        value: 'species = :species',
+        parameters: { ':species': 'Acer rubrum' },
+      },
+    ])
     expect(items.locked.conceptFilters).toEqual([])
   })
 
   it('builds SQL with OR semantics for multiple values of the same field', () => {
-    expect(
-      buildCrossFilterExpression([
-        { source: 'a', value: { species: 'Acer rubrum' } },
-        { source: 'a', value: { species: 'Acer saccharum' } },
-      ]),
-    ).toEqual("(species='''Acer rubrum''' OR species='''Acer saccharum''')")
+    const result = buildCrossFilterExpression([
+      { source: 'a', value: { species: eq('Acer rubrum') } },
+      { source: 'a', value: { species: eq('Acer saccharum') } },
+    ])
+    expect(result.filterStrings).toEqual([
+      '(species = :species_or0 OR species = :species_or1)',
+    ])
+    expect(result.parameters).toEqual({
+      ':species_or0': 'Acer rubrum',
+      ':species_or1': 'Acer saccharum',
+    })
   })
 
-  it('passes array values through for between operations', () => {
+  it('passes range entries through for BETWEEN operations', () => {
     expect(
       filterAllowedDimensionFilters(
-        { 'order.date.month_start': ['2024-01-01', '2024-03-01'] },
+        { 'order.date.month_start': range('2024-01-01', '2024-03-01') },
         ['order.date.month_start'],
       ),
-    ).toEqual({ 'order.date.month_start': ['2024-01-01', '2024-03-01'] })
+    ).toEqual({ 'order.date.month_start': range('2024-01-01', '2024-03-01') })
   })
 
-  it('generates BETWEEN SQL for array-valued cross filters', () => {
+  it('generates parameterized BETWEEN SQL for range-valued cross filters', () => {
     const controller = createCrossFilterController({
       validFields: ['order.date.month_start'],
     })
 
     controller.applyDimensionClick({
       source: 'date-chart',
-      filters: { 'order.date.month_start': ['2024-01-01', '2024-03-01'] },
+      filters: { 'order.date.month_start': range('2024-01-01', '2024-03-01') },
     })
 
     expect(controller.getSqlFiltersFor('other-chart')).toEqual([
-      "order.date.month_start between '2024-01-01' and '2024-03-01'",
+      'order.date.month_start between :order_date_month_start_min and :order_date_month_start_max',
     ])
+    expect(controller.getSqlParametersFor('other-chart')).toEqual({
+      ':order_date_month_start_min': '2024-01-01',
+      ':order_date_month_start_max': '2024-03-01',
+    })
   })
 
-  it('toggles exact array matches in append mode', () => {
+  it('toggles exact range matches in append mode', () => {
     const controller = createCrossFilterController({
       validFields: ['order.date.month_start'],
     })
 
     controller.applyDimensionClick({
       source: 'date-chart',
-      filters: { 'order.date.month_start': ['2024-01-01', '2024-03-01'] },
+      filters: { 'order.date.month_start': range('2024-01-01', '2024-03-01') },
       append: true,
     })
     expect(controller.getChartSelectionsFor('date-chart')).toHaveLength(1)
 
     controller.applyDimensionClick({
       source: 'date-chart',
-      filters: { 'order.date.month_start': ['2024-01-01', '2024-03-01'] },
+      filters: { 'order.date.month_start': range('2024-01-01', '2024-03-01') },
       append: true,
     })
     expect(controller.getChartSelectionsFor('date-chart')).toHaveLength(0)

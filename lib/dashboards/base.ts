@@ -9,14 +9,14 @@ import {
   removeCrossFilterFromItem,
   removeCrossFilterSourceFromGridItems,
   syncCrossFilterSqlForItem,
-  type CrossFilterValue,
   type CrossFilterValueMap,
+  type CrossFilterChartMap,
 } from './crossFilters'
 
 export interface DimensionClick {
   source: string
-  filters: Record<string, CrossFilterValue>
-  chart: Record<string, CrossFilterValue>
+  filters: CrossFilterValueMap
+  chart: CrossFilterChartMap
   append: boolean
 }
 export interface DashboardImport {
@@ -510,7 +510,7 @@ export class DashboardModel implements Dashboard {
   updateItemCrossFilters(
     itemId: string,
     conceptMap: CrossFilterValueMap,
-    chartMap: CrossFilterValueMap,
+    chartMap: CrossFilterChartMap,
     operation: 'add' | 'append' | 'remove',
   ): string[] {
     const updated = applyCrossFilterOperationToGridItems(

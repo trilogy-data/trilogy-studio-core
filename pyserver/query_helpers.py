@@ -30,7 +30,8 @@ from trilogy.core.statements.execute import (
     ProcessedValidateStatement,
     PROCESSED_STATEMENT_TYPES,
 )
-from trilogy.core.models.core import TraitDataType
+from trilogy.core.models.core import TraitDataType, ListWrapper
+from copy import deepcopy
 from logging import getLogger
 
 from env_helpers import (
@@ -74,16 +75,12 @@ def get_traits(concept: Concept) -> list[str]:
     return []
 
 
-def get_variable_string_prefix(variables: dict[str, str | int | float]) -> str:
-    variable_prefix = ""
-    for key, variable in variables.items():
-        if isinstance(variable, str):
-            if "'''" in variable:
-                raise ValueError("cannot safely parse strings with triple quotes")
-            variable_prefix += f"\n const {key[1:]} <- '''{variable}''';"
-        else:
-            variable_prefix += f"\n const {key[1:]} <- {variable};"
-    return variable_prefix
+def _trilogy_type_for(value: str | int | float) -> str:
+    if isinstance(value, str):
+        return "string"
+    if isinstance(value, float):
+        return "float"
+    return "int"
 
 
 def filters_to_conditional(
@@ -92,22 +89,35 @@ def filters_to_conditional(
     env: Environment,
     base_filter_idx: int = 0,
 ) -> WhereClause | None:
-    base = ""
-    variable_prefix = get_variable_string_prefix(parameters)
     final = []
+    # Build parameter declarations. Values are injected via set_parameters so they
+    # never touch the parse string — no escaping needed.
+    param_declarations = ""
+    param_kwargs: dict[str, str | int | float] = {}
+    for key, value in parameters.items():
+        # keys arrive as :paramN — strip the colon for use in Trilogy source
+        name = key.lstrip(":")
+        param_declarations += f"\nparameter {name} {_trilogy_type_for(value)};"
+        param_kwargs[name] = value
+
     for idx, filter_string in enumerate(extra_filters):
         if not filter_string.strip():
             continue
-        base = "" + variable_prefix
-        for v in parameters:
-            # remove the prefix
-            filter_string = filter_string.replace(v[0], v[0][1:])
+        # Replace :paramN tokens in filter expressions with bare names
+        for key in parameters:
+            filter_string = filter_string.replace(key, key.lstrip(":"))
         final.append(f"({filter_string})")
+
     if not final:
         return None
+
+    # Register parameter values on the real env so the concepts are available when
+    # the actual query is generated. Parse into the same env so the WhereClause
+    # references the same concept instances.
+    env.set_parameters(**param_kwargs)
     final_conditions = " AND ".join(final)
     _, fparsed = parse_text(
-        f"{base}\nWHERE {final_conditions} SELECT 1 as __ftest_{base_filter_idx*100+idx};",
+        f"{param_declarations}\nWHERE {final_conditions} SELECT 1 as __ftest_{base_filter_idx*100+idx};",
         env,
         parse_config=PARSE_CONFIG,
     )
@@ -501,8 +511,16 @@ def query_to_output(
         )
     else:
         compile_start = time.time()
-        sql = dialect.compile_statement(target)
+        sql, bound_params = dialect.compile_statement_with_params(target)
         compile_time = time.time() - compile_start
+        # Serialize params: scalars pass through, ListWrapper exposes .data as a plain list
+        serializable_params: dict[str, str | int | float | list] | None = None
+        if bound_params:
+            serializable_params = {
+                k: list(v) if isinstance(v, ListWrapper) else v
+                for k, v in bound_params.items()
+                if isinstance(v, (str, int, float, ListWrapper))
+            } or None
 
         output = QueryOut(
             generated_sql=sql,
@@ -510,6 +528,7 @@ def query_to_output(
             columns=columns,
             label=label,
             select_count=select_count,
+            parameters=serializable_params or None,
         )
 
         if enable_performance_logging:

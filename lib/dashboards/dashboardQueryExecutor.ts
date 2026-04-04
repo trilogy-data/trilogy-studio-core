@@ -186,8 +186,13 @@ export class DashboardQueryExecutor {
    */
   public runSingle(itemId: string): string {
     let inputs = this.getItemData(itemId, this.dashboardId)
-    let filters = (this.getItemData(itemId, this.dashboardId).filters || []).map(
-      (filter) => filter.value,
+    const itemFilters = this.getItemData(itemId, this.dashboardId).filters || []
+    let filters = itemFilters.map((filter) => filter.value)
+    // Collect parameterised values from cross-filter entries and merge with any
+    // item-level parameters so they all travel to the backend together.
+    const filterParameters: Record<string, string | number> = Object.assign(
+      {},
+      ...itemFilters.map((f) => f.parameters || {}),
     )
     this.setItemData(itemId, this.dashboardId, {
       loading: true,
@@ -199,7 +204,7 @@ export class DashboardQueryExecutor {
       queryInput: {
         text: inputs.structured_content ? inputs.structured_content.query : inputs.content,
         extraFilters: filters,
-        parameters: (inputs.parameters || {}) as Record<string, any>,
+        parameters: { ...(inputs.parameters || {}), ...filterParameters } as Record<string, any>,
         extraContent: inputs.rootContent || [],
       },
       priority: this.getDefaultPriority(itemId),
@@ -283,7 +288,12 @@ export class DashboardQueryExecutor {
     // Process each itemId similar to runSingle
     itemIds.forEach((itemId) => {
       let inputs = this.getItemData(itemId, this.dashboardId)
-      let filters = (inputs.filters || []).map((filter) => filter.value)
+      const batchItemFilters = inputs.filters || []
+      let filters = batchItemFilters.map((filter) => filter.value)
+      const batchFilterParameters: Record<string, string | number> = Object.assign(
+        {},
+        ...batchItemFilters.map((f: { parameters?: Record<string, string | number> }) => f.parameters || {}),
+      )
       let query = inputs.structured_content.query
       if (query.trim().length === 0) {
         this.setItemData(itemId, this.dashboardId, {
@@ -302,7 +312,7 @@ export class DashboardQueryExecutor {
         queryInput: {
           text: inputs.structured_content ? inputs.structured_content.query : inputs.content,
           extraFilters: filters,
-          parameters: (inputs.parameters || {}) as Record<string, any>,
+          parameters: { ...(inputs.parameters || {}), ...batchFilterParameters } as Record<string, any>,
           extraContent: inputs.rootContent || [],
         },
         priority: this.getDefaultPriority(itemId),

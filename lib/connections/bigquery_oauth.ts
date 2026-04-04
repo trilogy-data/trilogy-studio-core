@@ -414,27 +414,65 @@ export default class BigQueryOauthConnection extends BaseConnection {
     return sql.replace(new RegExp(EscapePlaceholder, 'g'), "\\'")
   }
 
+  private buildBigQueryParameters(
+    sql: string,
+    parameters: Record<string, any>,
+  ): { rewrittenSql: string; queryParameters: object[] } {
+    // Rewrite :name → @name and build queryParameters array for BigQuery REST API.
+    // Negative lookbehind avoids matching ::type casts.
+    const paramRegex = /(?<!:):([a-zA-Z_]\w*)/g
+    const rewrittenSql = sql.replace(paramRegex, '@$1')
+    const queryParameters: object[] = []
+    const seen = new Set<string>()
+    for (const match of sql.matchAll(paramRegex)) {
+      const name = match[1]
+      if (seen.has(name) || !(name in parameters)) continue
+      seen.add(name)
+      const value = parameters[name]
+      let parameterType: { type: string }
+      if (typeof value === 'number') {
+        parameterType = { type: Number.isInteger(value) ? 'INT64' : 'FLOAT64' }
+      } else if (typeof value === 'boolean') {
+        parameterType = { type: 'BOOL' }
+      } else {
+        parameterType = { type: 'STRING' }
+      }
+      queryParameters.push({
+        name,
+        parameterType,
+        parameterValue: { value: String(value) },
+      })
+    }
+    return { rewrittenSql, queryParameters }
+  }
+
   async query_core(
     sql: string,
     parameters: Record<string, any> | null = null,
     identifier: string | null = null,
   ): Promise<Results> {
-    //@ts-ignore
-    let _ = parameters
-
     if (!this.projectId) {
       throw new Error('Cannot run BigQuery queries without a billing project set.')
     }
     const queryId =
       identifier || `query_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+
+    // Build parameterized query body if parameters are provided
+    let querySql = sql
+    const queryBody: Record<string, any> = { useLegacySql: false }
+    if (parameters && Object.keys(parameters).length > 0) {
+      const { rewrittenSql, queryParameters } = this.buildBigQueryParameters(sql, parameters)
+      querySql = rewrittenSql
+      queryBody.queryParameters = queryParameters
+      queryBody.parameterMode = 'NAMED'
+    }
+    queryBody.query = querySql
+
     try {
       // Initial query submission
       const initialResult = await this.fetchEndpoint(
         'queries',
-        {
-          query: sql,
-          useLegacySql: false,
-        },
+        queryBody,
         'POST',
       )
 

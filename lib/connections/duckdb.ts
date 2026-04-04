@@ -445,13 +445,14 @@ export default class DuckDBConnection extends BaseConnection {
       let result
       if (parameters) {
         let params = []
-        const paramRegex = /(:[\w]+)/g
+        // Negative lookbehind (?<!:) avoids matching ::type casts (e.g. ::date, ::integer).
+        const paramRegex = /(?<!:):([a-zA-Z_]\w*)/g
         let modifiedSql = sql
 
         const matches = Array.from(sql.matchAll(paramRegex))
 
         for (const match of matches) {
-          const paramName = match[1]
+          const paramName = match[1]  // capture group 1: name without leading colon
           if (paramName in parameters) {
             modifiedSql = modifiedSql.replace(`:${paramName}`, '?')
             params.push(parameters[paramName])

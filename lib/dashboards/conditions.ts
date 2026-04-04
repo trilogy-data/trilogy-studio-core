@@ -1,5 +1,83 @@
 import { EscapePlaceholder } from '../connections/base'
 
+// ── Cross-filter entry types ───────────────────────────────────────────────
+// CrossFilterScalar and CrossFilterEntry live here (imported by crossFilters.ts)
+// so that conditions.ts never needs to import from crossFilters.ts (avoids circular dep).
+
+export type CrossFilterScalar = string | number | Date
+
+export type CrossFilterEntry =
+  | { op: 'eq'; value: CrossFilterScalar }
+  | { op: 'range'; value: [CrossFilterScalar, CrossFilterScalar] }
+  | { op: 'in'; value: CrossFilterScalar[] }
+  | { op: 'is_null' }
+
+// ── Parameterized filter builder ──────────────────────────────────────────
+
+function sanitizeParamName(field: string): string {
+  return field.replace(/[^a-zA-Z0-9_]/g, '_')
+}
+
+function serializeScalar(v: CrossFilterScalar): string | number {
+  if (v instanceof Date) {
+    const year = v.getFullYear()
+    const month = String(v.getMonth() + 1).padStart(2, '0')
+    const day = String(v.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  return v as string | number
+}
+
+/**
+ * Builds a parameterized filter expression for a single CrossFilterEntry.
+ * Returns a filter string with :param placeholders and a parameters dict
+ * (keys include the leading colon, e.g. ":species", matching the backend
+ * filters_to_conditional convention).
+ *
+ * nameSuffix is appended to the sanitized param name to avoid collisions
+ * when the same field appears in multiple OR branches.
+ */
+export function buildFilterExpression(
+  key: string,
+  entry: CrossFilterEntry,
+  nameSuffix: string = '',
+): { filterString: string; parameters: Record<string, string | number> } {
+  const pname = sanitizeParamName(key) + nameSuffix
+  switch (entry.op) {
+    case 'eq': {
+      const serialized = serializeScalar(entry.value)
+      return {
+        filterString: `${key} = :${pname}`,
+        parameters: { [`:${pname}`]: serialized },
+      }
+    }
+    case 'range': {
+      const loVal = serializeScalar(entry.value[0])
+      const hiVal = serializeScalar(entry.value[1])
+      return {
+        filterString: `${key} between :${pname}_min and :${pname}_max`,
+        parameters: {
+          [`:${pname}_min`]: loVal,
+          [`:${pname}_max`]: hiVal,
+        },
+      }
+    }
+    case 'in': {
+      const paramEntries: Record<string, string | number> = {}
+      const placeholders = entry.value.map((v, i) => {
+        paramEntries[`:${pname}_${i}`] = serializeScalar(v)
+        return `:${pname}_${i}`
+      })
+      return {
+        filterString: `${key} in (${placeholders.join(', ')})`,
+        parameters: paramEntries,
+      }
+    }
+    case 'is_null':
+      return { filterString: `${key} IS NULL`, parameters: {} }
+  }
+}
+
 /**
  * Converts an object or array of objects to a SQL WHERE clause expression
  * If multiple objects have the same key, they will be grouped with OR in parentheses

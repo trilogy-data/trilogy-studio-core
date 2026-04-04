@@ -46,7 +46,7 @@ logger = getLogger(__name__)
 perf_logger = getLogger("trilogy.performance")
 
 
-NON_PARAMETER_RENDERING = Rendering(parameters=False)
+PARAMETER_RENDERING = Rendering(parameters=True)
 
 
 def _build_http_error_payload(status_code: int, detail: str) -> dict:
@@ -241,7 +241,7 @@ def _generate_queries_task(queries_data: dict, enable_perf_logging: bool) -> dic
     try:
         dialect = get_dialect_generator(
             queries.dialect,
-            rendering=NON_PARAMETER_RENDERING,
+            rendering=PARAMETER_RENDERING,
         )
 
         if enable_perf_logging:
@@ -301,7 +301,7 @@ def _generate_query_task(query_data: dict, enable_perf_logging: bool) -> dict:
         dialect_start = time.perf_counter()
         dialect = get_dialect_generator(
             query.dialect,
-            rendering=NON_PARAMETER_RENDERING,
+            rendering=PARAMETER_RENDERING,
         )
         dialect_time = time.perf_counter() - dialect_start
 

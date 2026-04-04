@@ -160,6 +160,7 @@ class QueryOut(BaseModel):
     error: str | None = None
     label: str | None = None
     select_count: int | None = None
+    parameters: dict[str, str | int | float | list] | None = None
 
 
 class MultiQueryOutSchema(BaseModel):
