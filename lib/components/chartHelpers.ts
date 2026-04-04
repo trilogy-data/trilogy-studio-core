@@ -329,6 +329,26 @@ export class ChromaChartHelpers {
       }
     })
 
+    // Prune properties whose keys are already covered by another filter.
+    // e.g. if region_name has keys=[region_id] and region_id is in baseFilters,
+    // filtering on region_name is redundant.
+    const coveredByKeys = new Set<string>()
+    for (const field of eligible) {
+      const col = columns.get(field)
+      if (!col?.keys?.length || !col.address) continue
+      for (const keyAddress of col.keys) {
+        if (Object.prototype.hasOwnProperty.call(baseFilters, keyAddress)) {
+          coveredByKeys.add(col.address)
+          break
+        }
+      }
+    }
+    if (coveredByKeys.size > 0) {
+      baseFilters = Object.fromEntries(
+        Object.entries(baseFilters).filter(([addr]) => !coveredByKeys.has(addr)),
+      )
+    }
+
     if (control) {
       console.log('Drilldown filters:', baseFilters)
       this.eventHandlers.onDrilldownClick({

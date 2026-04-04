@@ -151,6 +151,7 @@ class QueryOutColumn(BaseModel):
     purpose: Purpose
     traits: List[str] | None = None
     description: str | None = None
+    keys: List[str] | None = None
 
 
 class QueryOut(BaseModel):

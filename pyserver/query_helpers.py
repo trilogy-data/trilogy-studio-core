@@ -330,6 +330,7 @@ def generate_single_query(
             purpose=env.concepts[x.address].purpose,
             traits=get_traits(env.concepts[x.address]),
             description=env.concepts[x.address].metadata.description,
+            keys=list(env.concepts[x.address].keys or []) or None,
         )
         for x in final_select.output_components
     ]

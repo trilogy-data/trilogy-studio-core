@@ -255,5 +255,98 @@ describe('ChromaChartHelpers', () => {
         append: false,
       })
     })
+
+    it('prunes property fields whose keys are already in the filter set', () => {
+      const onDimensionClick = vi.fn()
+      chartHelpers = new ChromaChartHelpers({
+        onDimensionClick,
+        onPointClick: () => {},
+        onBackgroundClick: () => {},
+        onDrilldownClick: () => {},
+      })
+
+      // region_id is a key; region_name is a property with keys=[region_id address]
+      testColumns.set('region_id', {
+        name: 'region_id',
+        type: ColumnType.INTEGER,
+        address: 'order.customer.nation.region.id',
+        traits: [],
+        purpose: 'key',
+        keys: [],
+      })
+      testColumns.set('region_name', {
+        name: 'region_name',
+        type: ColumnType.STRING,
+        address: 'order.customer.nation.region.name',
+        traits: [],
+        keys: ['order.customer.nation.region.id'],
+      })
+
+      const config: ChartConfig = {
+        chartType: 'bar',
+        xField: 'region_name',
+        yField: 'revenue',
+        colorField: 'region_id',
+        showTitle: false,
+      }
+
+      chartHelpers.handlePointClick(
+        { shiftKey: false, ctrlKey: false } as MouseEvent,
+        {
+          datum: {
+            region_id: 0,
+            region_name: 'AFRICA',
+            revenue: 60969908,
+          },
+        },
+        config,
+        testColumns,
+      )
+
+      expect(onDimensionClick).toHaveBeenCalledTimes(1)
+      const call = onDimensionClick.mock.calls[0][0]
+      // region_name should be pruned because region_id (its key) is present
+      expect(call.filters).not.toHaveProperty('order.customer.nation.region.name')
+      expect(call.filters).toHaveProperty('order.customer.nation.region.id')
+      expect(call.filters['order.customer.nation.region.id']).toEqual({ op: 'eq', value: 0 })
+    })
+
+    it('keeps property fields when their key is not in the filter set', () => {
+      const onDimensionClick = vi.fn()
+      chartHelpers = new ChromaChartHelpers({
+        onDimensionClick,
+        onPointClick: () => {},
+        onBackgroundClick: () => {},
+        onDrilldownClick: () => {},
+      })
+
+      // region_name has a key but region_id is NOT in the eligible/clicked columns
+      testColumns.set('region_name', {
+        name: 'region_name',
+        type: ColumnType.STRING,
+        address: 'order.customer.nation.region.name',
+        traits: [],
+        keys: ['order.customer.nation.region.id'],
+      })
+
+      const config: ChartConfig = {
+        chartType: 'bar',
+        xField: 'region_name',
+        yField: 'revenue',
+        showTitle: false,
+      }
+
+      chartHelpers.handlePointClick(
+        { shiftKey: false, ctrlKey: false } as MouseEvent,
+        { datum: { region_name: 'AFRICA', revenue: 60969908 } },
+        config,
+        testColumns,
+      )
+
+      expect(onDimensionClick).toHaveBeenCalledTimes(1)
+      const call = onDimensionClick.mock.calls[0][0]
+      // region_name must NOT be pruned — its key is absent from filters
+      expect(call.filters).toHaveProperty('order.customer.nation.region.name')
+    })
   })
 })

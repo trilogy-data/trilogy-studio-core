@@ -1038,6 +1038,7 @@ export default class QueryExecutionService {
         column.traits = header.traits || []
         column.address = header.name
         column.purpose = header.purpose
+        column.keys = header.keys || []
         sqlResponse.headers.set(column.name, column)
       }
     }
