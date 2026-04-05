@@ -54,7 +54,9 @@ describe('useEmbeddedDashboardGroup', () => {
 
     expect(executeQueriesBatch).toHaveBeenCalledTimes(1)
     expect(executeQueriesBatch.mock.calls[0][1]).toHaveLength(2)
-    expect(executeQueriesBatch.mock.calls[0][1].map((query: { query: string }) => query.query)).toEqual([
+    expect(
+      executeQueriesBatch.mock.calls[0][1].map((query: { query: string }) => query.query),
+    ).toEqual([
       'select species, count(*) as tree_count;',
       'select native_status, count(*) as tree_count;',
     ])

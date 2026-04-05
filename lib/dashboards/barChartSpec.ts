@@ -5,6 +5,7 @@ import {
   createFieldEncoding,
   createInteractionEncodings,
   getSortOrder,
+  hasDiscreteTimeTrait,
 } from './helpers'
 import { lightDefaultColor, darkDefaultColor } from './constants'
 
@@ -33,6 +34,24 @@ export const createBarChartSpec = (
 
   // Set the label angle based on the count
   const labelAngle = xValueCount > 7 ? -45 : 0
+
+  // For discrete time traits (year, month, week, etc.) used as x-axis, force ordinal type so
+  // Vega-Lite allocates a proper band width for each bar instead of using a continuous scale.
+  const xField = config.xField || ''
+  const xIsDiscreteTime = hasDiscreteTimeTrait(xField, columns)
+  const buildXEncoding = (angle: number) => {
+    const enc: any = {
+      ...createFieldEncoding(xField, columns, { axis: { labelAngle: angle } }),
+      ...getSortOrder(xField, columns, config.yField),
+    }
+    if (xIsDiscreteTime) {
+      enc.type = 'ordinal'
+      delete enc.timeUnit
+      delete enc.format
+    }
+    return enc
+  }
+
   const barLayer = {
     params: [
       {
@@ -58,10 +77,7 @@ export const createBarChartSpec = (
       color: currentTheme === 'light' ? lightDefaultColor : darkDefaultColor,
     },
     encoding: {
-      x: {
-        ...createFieldEncoding(config.xField || '', columns, { axis: { labelAngle } }),
-        ...getSortOrder(config.xField || '', columns, config.yField),
-      },
+      x: buildXEncoding(labelAngle),
       y: createFieldEncoding(config.yField || '', columns, {
         axis: { ...getFormatHint(config.yField, columns) },
       }),
@@ -84,10 +100,7 @@ export const createBarChartSpec = (
       strokeWidth: 2,
     },
     encoding: {
-      x: {
-        ...createFieldEncoding(config.xField || '', columns, { axis: { labelAngle } }),
-        ...getSortOrder(config.xField || '', columns, config.yField),
-      },
+      x: buildXEncoding(labelAngle),
       y: createFieldEncoding(config.yField2, columns, {
         axis: {
           ...getFormatHint(config.yField2, columns),

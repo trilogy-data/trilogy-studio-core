@@ -90,7 +90,7 @@ describe('QueryExecutionService', () => {
       undefined,
       null,
     )
-    expect(executeSql).toHaveBeenCalledWith('select 1 as value', undefined)
+    expect(executeSql).toHaveBeenCalledWith('select 1 as value', null)
     expect(result.success).toBe(true)
     expect(result.results?.data).toEqual([{ value: 1 }])
   })
@@ -139,11 +139,7 @@ describe('QueryExecutionService', () => {
         data: {
           items: [],
           imports: [],
-          completion_items: [
-            { label: 'species' },
-            { label: 'tree_count' },
-            { label: 'species' },
-          ],
+          completion_items: [{ label: 'species' }, { label: 'tree_count' }, { label: 'species' }],
         },
       })),
     } as any

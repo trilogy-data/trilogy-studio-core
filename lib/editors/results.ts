@@ -47,6 +47,7 @@ export interface ResultColumn {
   traits?: string[]
   description?: string
   purpose?: string
+  keys?: string[]
 }
 
 export interface ResultsInterface {

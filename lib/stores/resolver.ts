@@ -76,6 +76,7 @@ export interface QueryAtom {
   error: string | null
   label?: string
   select_count?: number
+  parameters?: Record<string, string | number | (string | number)[]> | null
 }
 
 export interface QueryResponse {

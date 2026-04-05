@@ -4,6 +4,7 @@ import type { ResultColumn, ChartConfig, FieldKey, BoolFieldKey } from '../edito
 import { ColumnType } from '../editors/results'
 import type { ScenegraphEvent, SignalValue } from 'vega'
 import { convertTimestampToISODate, filteredColumns, isHexColumn } from '../dashboards/helpers'
+import type { CrossFilterEntry, CrossFilterValueMap } from '../dashboards/crossFilters'
 
 const DATETIME_COLS = [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP]
 const COORDINATION_TIMEOUT = 750 // ms to wait before processing a brush clear as background click
@@ -100,8 +101,16 @@ export class ChromaChartHelpers {
         return
       }
       this.eventHandlers.onDimensionClick({
-        filters: { [xField.address]: xRange, [yField.address]: yRange },
-        // TODO: be able to set brush ranges properly
+        filters: {
+          [xField.address]: {
+            op: 'range',
+            value: [xRange[0], xRange[xRange.length - 1]],
+          } as CrossFilterEntry,
+          [yField.address]: {
+            op: 'range',
+            value: [yRange[0], yRange[yRange.length - 1]],
+          } as CrossFilterEntry,
+        } as CrossFilterValueMap,
         chart: { [config.xField]: xRange, [config.yField]: yRange },
         append: false,
       })
@@ -149,8 +158,11 @@ export class ChromaChartHelpers {
       if (DATETIME_COLS.includes(timeField?.type)) {
         this.eventHandlers.onDimensionClick({
           filters: {
-            [timeAddress]: [convertTimestampToISODate(start), convertTimestampToISODate(end)],
-          },
+            [timeAddress]: {
+              op: 'range',
+              value: [convertTimestampToISODate(start), convertTimestampToISODate(end)],
+            } as CrossFilterEntry,
+          } as CrossFilterValueMap,
           chart: { [config.xField]: [start, end] },
           append: false,
         })
@@ -158,17 +170,22 @@ export class ChromaChartHelpers {
         if (isYear) {
           this.eventHandlers.onDimensionClick({
             filters: {
-              [timeAddress]: [
-                convertTimestampToISODate(start).getFullYear(),
-                convertTimestampToISODate(end).getFullYear(),
-              ],
-            },
+              [timeAddress]: {
+                op: 'range',
+                value: [
+                  convertTimestampToISODate(start).getFullYear(),
+                  convertTimestampToISODate(end).getFullYear(),
+                ],
+              } as CrossFilterEntry,
+            } as CrossFilterValueMap,
             chart: { [config.xField]: [start, end] },
             append: false,
           })
         } else {
           this.eventHandlers.onDimensionClick({
-            filters: { [timeAddress]: [start, end] },
+            filters: {
+              [timeAddress]: { op: 'range', value: [start, end] } as CrossFilterEntry,
+            } as CrossFilterValueMap,
             chart: { [config.xField]: [start, end] },
             append: false,
           })
@@ -248,7 +265,9 @@ export class ChromaChartHelpers {
         [geoConcept]: item.datum[config.geoField],
       })
       this.eventHandlers.onDrilldownClick({
-        filters: { [geoConcept]: item.datum[config.geoField] },
+        filters: {
+          [geoConcept]: { op: 'eq', value: item.datum[config.geoField] } as CrossFilterEntry,
+        } as CrossFilterValueMap,
       })
       return
     }
@@ -256,7 +275,9 @@ export class ChromaChartHelpers {
       [geoConcept]: item.datum[config.geoField],
     })
     this.eventHandlers.onDimensionClick({
-      filters: { [geoConcept]: item.datum[config.geoField] },
+      filters: {
+        [geoConcept]: { op: 'eq', value: item.datum[config.geoField] } as CrossFilterEntry,
+      } as CrossFilterValueMap,
       chart: { [config.geoField]: item.datum[config.geoField] },
       append,
     })
@@ -272,8 +293,8 @@ export class ChromaChartHelpers {
     append: boolean,
     control: boolean,
   ): void {
-    let baseFilters = {}
-    let baseChart = {}
+    let baseFilters: CrossFilterValueMap = {}
+    let baseChart: Record<string, any> = {}
 
     let baseCols = [config.xField, config.yField, config.colorField, config.annotationField]
     if (config.chartType === 'headline') {
@@ -291,7 +312,7 @@ export class ChromaChartHelpers {
     eligible.forEach((field) => {
       let fieldAddress = columns.get(field)?.address
       if (!fieldAddress) return
-      if (item.datum[field] && eligible.includes(field)) {
+      if (item.datum[field] != null && item.datum[field] !== '' && eligible.includes(field)) {
         let filterValue = item.datum[field]
 
         if (DATETIME_COLS.includes(columns.get(field)?.type as ColumnType)) {
@@ -306,15 +327,38 @@ export class ChromaChartHelpers {
           filterValue = convertTimestampToISODate(item.datum[field]).getFullYear()
         }
 
-        baseFilters = { ...baseFilters, [fieldAddress]: filterValue }
+        baseFilters = {
+          ...baseFilters,
+          [fieldAddress]: { op: 'eq', value: filterValue } as CrossFilterEntry,
+        }
         baseChart = { ...baseChart, [field]: item.datum[field] }
       }
     })
 
+    // Prune properties whose keys are already covered by another filter.
+    // e.g. if region_name has keys=[region_id] and region_id is in baseFilters,
+    // filtering on region_name is redundant.
+    const coveredByKeys = new Set<string>()
+    for (const field of eligible) {
+      const col = columns.get(field)
+      if (!col?.keys?.length || !col.address) continue
+      for (const keyAddress of col.keys) {
+        if (Object.prototype.hasOwnProperty.call(baseFilters, keyAddress)) {
+          coveredByKeys.add(col.address)
+          break
+        }
+      }
+    }
+    if (coveredByKeys.size > 0) {
+      baseFilters = Object.fromEntries(
+        Object.entries(baseFilters).filter(([addr]) => !coveredByKeys.has(addr)),
+      )
+    }
+
     if (control) {
       console.log('Drilldown filters:', baseFilters)
       this.eventHandlers.onDrilldownClick({
-        filters: baseFilters,
+        filters: baseFilters as CrossFilterValueMap,
         chart: baseChart,
         append,
       })
@@ -322,7 +366,7 @@ export class ChromaChartHelpers {
     }
     console.log('Point click filters:', baseFilters)
     this.eventHandlers.onDimensionClick({
-      filters: baseFilters,
+      filters: baseFilters as CrossFilterValueMap,
       chart: baseChart,
       append,
     })

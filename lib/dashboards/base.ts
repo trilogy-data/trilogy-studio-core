@@ -9,14 +9,17 @@ import {
   removeCrossFilterFromItem,
   removeCrossFilterSourceFromGridItems,
   syncCrossFilterSqlForItem,
-  type CrossFilterValue,
   type CrossFilterValueMap,
+  type CrossFilterChartMap,
+  type CrossFilterInputLike,
+  type CrossFilterChartInputLike,
+  type SqlFilterLike,
 } from './crossFilters'
 
 export interface DimensionClick {
   source: string
-  filters: Record<string, CrossFilterValue>
-  chart: Record<string, CrossFilterValue>
+  filters: CrossFilterValueMap
+  chart: CrossFilterChartMap
   append: boolean
 }
 export interface DashboardImport {
@@ -64,9 +67,9 @@ export interface GridItemData {
   height?: number
   chartConfig?: ChartConfig
   drilldownChartConfig?: ChartConfig | null
-  conceptFilters?: FilterInput[]
-  chartFilters?: FilterInput[]
-  filters?: Filter[]
+  conceptFilters?: CrossFilterInputLike[]
+  chartFilters?: CrossFilterChartInputLike[]
+  filters?: SqlFilterLike[]
   parameters?: Record<string, unknown>
   results?: Results | null
   loading?: boolean
@@ -86,9 +89,9 @@ export interface GridItemDataResponse {
   chartConfig?: ChartConfig
   connectionName?: string
   imports?: DashboardImport[]
-  conceptFilters?: FilterInput[]
-  chartFilters?: FilterInput[]
-  filters?: Filter[]
+  conceptFilters?: CrossFilterInputLike[]
+  chartFilters?: CrossFilterChartInputLike[]
+  filters?: SqlFilterLike[]
   parameters?: Record<string, unknown>
   onRefresh?: (itemId: string) => void
   results?: Results | null
@@ -126,9 +129,9 @@ export interface ItemPropertyUpdates {
   chartConfig?: ChartConfig
   drilldown?: string | MarkdownData | null
   drilldownChartConfig?: ChartConfig | null
-  conceptFilters?: FilterInput[]
-  chartFilters?: FilterInput[]
-  filters?: Filter[]
+  conceptFilters?: CrossFilterInputLike[]
+  chartFilters?: CrossFilterChartInputLike[]
+  filters?: SqlFilterLike[]
   parameters?: Record<string, unknown>
   results?: Results | null
   loading?: boolean
@@ -510,7 +513,7 @@ export class DashboardModel implements Dashboard {
   updateItemCrossFilters(
     itemId: string,
     conceptMap: CrossFilterValueMap,
-    chartMap: CrossFilterValueMap,
+    chartMap: CrossFilterChartMap,
     operation: 'add' | 'append' | 'remove',
   ): string[] {
     const updated = applyCrossFilterOperationToGridItems(

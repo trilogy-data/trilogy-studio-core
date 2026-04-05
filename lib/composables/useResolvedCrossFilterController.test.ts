@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { useResolvedCrossFilterController } from './useResolvedCrossFilterController'
+import type { CrossFilterEntry } from '../dashboards/conditions'
+
+const eq = (v: string | number): CrossFilterEntry => ({ op: 'eq', value: v })
 
 function flushPromises() {
   return new Promise((resolve) => setTimeout(resolve, 0))
@@ -28,7 +31,7 @@ describe('useResolvedCrossFilterController', () => {
 
     controller.applyDimensionClick({
       source: 'species-chart',
-      filters: { species: 'Acer rubrum' },
+      filters: { species: eq('Acer rubrum') },
       chart: { species: 'Acer rubrum' },
       append: false,
     })
@@ -41,7 +44,7 @@ describe('useResolvedCrossFilterController', () => {
 
     controller.applyDimensionClick({
       source: 'species-chart',
-      filters: { species: 'Acer rubrum' },
+      filters: { species: eq('Acer rubrum') },
       chart: { species: 'Acer rubrum' },
       append: false,
     })
@@ -49,7 +52,7 @@ describe('useResolvedCrossFilterController', () => {
     expect(controller.getSelections()).toEqual([
       {
         source: 'species-chart',
-        filters: { species: 'Acer rubrum' },
+        filters: { species: eq('Acer rubrum') },
         chart: { species: 'Acer rubrum' },
         append: false,
       },
@@ -73,8 +76,8 @@ describe('useResolvedCrossFilterController', () => {
     controller.applyDimensionClick({
       source: 'mixed-chart',
       filters: {
-        species: 'Acer rubrum',
-        tree_count: '42',
+        species: eq('Acer rubrum'),
+        tree_count: eq('42'),
       },
       chart: {
         species: 'Acer rubrum',
@@ -86,7 +89,7 @@ describe('useResolvedCrossFilterController', () => {
     expect(controller.getSelections()).toEqual([
       {
         source: 'mixed-chart',
-        filters: { species: 'Acer rubrum' },
+        filters: { species: eq('Acer rubrum') },
         chart: {
           species: 'Acer rubrum',
           tree_count: '42',
@@ -109,7 +112,7 @@ describe('useResolvedCrossFilterController', () => {
 
     controller.applyDimensionClick({
       source: 'species-chart',
-      filters: { species: 'Acer rubrum' },
+      filters: { species: eq('Acer rubrum') },
       chart: { species: 'Acer rubrum' },
       append: false,
     })
@@ -117,7 +120,7 @@ describe('useResolvedCrossFilterController', () => {
     expect(controller.getSelections()).toEqual([
       {
         source: 'species-chart',
-        filters: { species: 'Acer rubrum' },
+        filters: { species: eq('Acer rubrum') },
         chart: { species: 'Acer rubrum' },
         append: false,
       },

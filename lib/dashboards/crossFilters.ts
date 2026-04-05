@@ -1,15 +1,25 @@
 import { computed, ref, type MaybeRefOrGetter, toValue } from 'vue'
-import { objectToSqlExpression } from './conditions'
+import { buildFilterExpression } from './conditions'
+import type { CrossFilterEntry, CrossFilterScalar } from './conditions'
 
-export type CrossFilterScalar = string | number | Date
-export type CrossFilterValue = CrossFilterScalar | CrossFilterScalar[]
-export type CrossFilterValueMap = Record<string, CrossFilterValue>
+export type { CrossFilterScalar, CrossFilterEntry } from './conditions'
+
+// CrossFilterValueMap uses the discriminated-union CrossFilterEntry so that every
+// filter carries an explicit op ('eq' | 'range' | 'in' | 'is_null').  This lets
+// conditions.ts build parameterised SQL placeholders instead of embedding values.
+export type CrossFilterValueMap = Record<string, CrossFilterEntry>
+
+// CrossFilterChartMap holds raw values used only for chart-side visual state
+// (e.g. Vega brush highlighting).  These never touch SQL.
+export type CrossFilterChartValue = CrossFilterScalar | CrossFilterScalar[]
+export type CrossFilterChartMap = Record<string, CrossFilterChartValue>
+
 export type CrossFilterOperation = 'add' | 'append' | 'remove'
 
 export interface CrossFilterSelection {
   source: string
   filters: CrossFilterValueMap
-  chart?: CrossFilterValueMap
+  chart?: CrossFilterChartMap
   append?: boolean
 }
 
@@ -18,15 +28,24 @@ export interface CrossFilterInputLike {
   value: CrossFilterValueMap
 }
 
+// Chart filters carry raw chart values (for Vega highlighting), not CrossFilterEntry.
+// Keeping these separate prevents CrossFilterEntry objects from leaking into
+// the Vega comparison logic.
+export interface CrossFilterChartInputLike {
+  source: string
+  value: CrossFilterChartMap
+}
+
 export interface SqlFilterLike {
   source: string
   value: string
+  parameters?: Record<string, string | number>
 }
 
 export interface CrossFilterItemLike {
   allowCrossFilter?: boolean
   conceptFilters?: CrossFilterInputLike[]
-  chartFilters?: CrossFilterInputLike[]
+  chartFilters?: CrossFilterChartInputLike[]
   filters?: SqlFilterLike[]
 }
 
@@ -61,20 +80,36 @@ export interface CrossFilterController {
   clearAll(): void
   hasSelectionFrom(source: string): boolean
   getSqlFilterInputsFor(itemId: string): CrossFilterInputLike[]
-  getChartSelectionsFor(itemId: string): CrossFilterValueMap[]
+  getChartSelectionsFor(itemId: string): CrossFilterChartMap[]
   getFilterExpressionFor(itemId: string): string
   getSqlFiltersFor(itemId: string, baseFilters?: string[]): string[]
+  getSqlParametersFor(itemId: string): Record<string, string | number>
 }
 
 function cloneValueMap(value: CrossFilterValueMap): CrossFilterValueMap {
   return { ...value }
 }
 
-function areValuesEqual(a: CrossFilterValue, b: CrossFilterValue): boolean {
-  if (Array.isArray(a) && Array.isArray(b)) {
-    return a.length === b.length && a.every((v, i) => v === b[i])
+function cloneChartMap(value: CrossFilterChartMap): CrossFilterChartMap {
+  return { ...value }
+}
+
+function areEntriesEqual(a: CrossFilterEntry, b: CrossFilterEntry): boolean {
+  if (a.op !== b.op) return false
+  switch (a.op) {
+    case 'is_null':
+      return true
+    case 'eq':
+      return a.value === (b as { op: 'eq'; value: CrossFilterScalar }).value
+    case 'range': {
+      const bRange = b as { op: 'range'; value: [CrossFilterScalar, CrossFilterScalar] }
+      return a.value[0] === bRange.value[0] && a.value[1] === bRange.value[1]
+    }
+    case 'in': {
+      const bIn = b as { op: 'in'; value: CrossFilterScalar[] }
+      return a.value.length === bIn.value.length && a.value.every((v, i) => v === bIn.value[i])
+    }
   }
-  return a === b
 }
 
 function areValueMapsEqual(left: CrossFilterValueMap, right: CrossFilterValueMap): boolean {
@@ -83,7 +118,45 @@ function areValueMapsEqual(left: CrossFilterValueMap, right: CrossFilterValueMap
   if (leftKeys.length !== rightKeys.length) {
     return false
   }
-  return leftKeys.every((key, index) => key === rightKeys[index] && areValuesEqual(left[key], right[key]))
+  return leftKeys.every(
+    (key, index) => key === rightKeys[index] && areEntriesEqual(left[key], right[key]),
+  )
+}
+
+function areChartValuesEqual(a: CrossFilterChartValue, b: CrossFilterChartValue): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((v, i) => v === b[i])
+  }
+  return a === b
+}
+
+function areChartMapsEqual(left: CrossFilterChartMap, right: CrossFilterChartMap): boolean {
+  const leftKeys = Object.keys(left).sort()
+  const rightKeys = Object.keys(right).sort()
+  if (leftKeys.length !== rightKeys.length) return false
+  return leftKeys.every(
+    (key, index) => key === rightKeys[index] && areChartValuesEqual(left[key], right[key]),
+  )
+}
+
+function applyChartSelectionOperation(
+  existing: CrossFilterChartInputLike[],
+  source: string,
+  value: CrossFilterChartMap,
+  operation: CrossFilterOperation,
+): CrossFilterChartInputLike[] {
+  const withoutSource = existing.filter((f) => f.source !== source)
+  const forSource = existing.filter((f) => f.source === source)
+
+  if (operation === 'remove') return withoutSource
+  if (operation === 'add') return [...withoutSource, { source, value: cloneChartMap(value) }]
+
+  const hasExactMatch = forSource.some((f) => areChartMapsEqual(f.value, value))
+  const nextForSource = hasExactMatch
+    ? forSource.filter((f) => !areChartMapsEqual(f.value, value))
+    : [...forSource, { source, value: cloneChartMap(value) }]
+
+  return [...withoutSource, ...nextForSource]
 }
 
 function normalizeFieldName(
@@ -119,8 +192,13 @@ export function filterAllowedDimensionFilters(
   const valid = new Set(validFields)
   const normalizeLocalFields = options.normalizeLocalFields ?? false
 
-  return Object.entries(filters).reduce((acc, [field, value]) => {
-    if (typeof value !== 'string' && typeof value !== 'number' && !(value instanceof Date) && !Array.isArray(value)) {
+  return Object.entries(filters).reduce((acc, [field, entry]) => {
+    // Skip values that are not valid CrossFilterEntry objects
+    if (
+      typeof entry !== 'object' ||
+      entry === null ||
+      !['eq', 'range', 'in', 'is_null'].includes((entry as any).op)
+    ) {
       return acc
     }
 
@@ -128,26 +206,67 @@ export function filterAllowedDimensionFilters(
     if (!normalized) {
       return acc
     }
-    acc[normalized] = value
+    acc[normalized] = entry
     return acc
   }, {} as CrossFilterValueMap)
 }
 
-export function buildCrossFilterExpression(filters: CrossFilterInputLike[]): string {
+/**
+ * Builds parameterised filter expressions from an array of cross-filter inputs.
+ * Returns { filterStrings, parameters } where each filterString uses :param
+ * placeholders and parameters is the dict of colon-prefixed values (e.g.
+ * { ":species": "Acer rubrum" }) that must be sent alongside to the backend.
+ */
+export function buildCrossFilterExpression(filters: CrossFilterInputLike[]): {
+  filterStrings: string[]
+  parameters: Record<string, string | number>
+} {
   if (!filters.length) {
-    return ''
+    return { filterStrings: [], parameters: {} }
   }
-  return objectToSqlExpression(filters.map((filter) => filter.value))
+
+  // Group CrossFilterEntry values by field key across all filter maps
+  const keyGroups: Record<string, CrossFilterEntry[]> = {}
+  for (const filter of filters) {
+    for (const [key, entry] of Object.entries(filter.value)) {
+      if (!keyGroups[key]) keyGroups[key] = []
+      keyGroups[key].push(entry)
+    }
+  }
+
+  const filterStrings: string[] = []
+  let allParameters: Record<string, string | number> = {}
+
+  for (const [key, entries] of Object.entries(keyGroups)) {
+    if (entries.length > 1) {
+      // Multiple entries for the same field → OR them together, unique param names per branch
+      const orConditions: string[] = []
+      for (let i = 0; i < entries.length; i++) {
+        const { filterString, parameters } = buildFilterExpression(key, entries[i], `_or${i}`)
+        orConditions.push(filterString)
+        allParameters = { ...allParameters, ...parameters }
+      }
+      filterStrings.push(`(${orConditions.join(' OR ')})`)
+    } else {
+      const { filterString, parameters } = buildFilterExpression(key, entries[0])
+      filterStrings.push(filterString)
+      allParameters = { ...allParameters, ...parameters }
+    }
+  }
+
+  return { filterStrings, parameters: allParameters }
 }
 
 export function syncCrossFilterSqlForItem(item: CrossFilterItemLike): boolean {
   const conceptFilters = item.conceptFilters || []
   const nextFilters = (item.filters || []).filter((filter) => filter.source !== 'cross')
-  const crossExpression = buildCrossFilterExpression(conceptFilters)
+  const { filterStrings, parameters } = buildCrossFilterExpression(conceptFilters)
+  const crossExpression = filterStrings.join(' AND ')
   if (crossExpression) {
     nextFilters.push({
       source: 'cross',
       value: crossExpression,
+      parameters: Object.keys(parameters).length ? parameters : undefined,
     })
   }
 
@@ -185,14 +304,17 @@ export function applyCrossFilterOperationToGridItems(
   gridItems: Record<string, CrossFilterItemLike>,
   sourceId: string,
   conceptMap: CrossFilterValueMap,
-  chartMap: CrossFilterValueMap,
+  chartMap: CrossFilterChartMap,
   operation: CrossFilterOperation,
 ): string[] {
   const updated: string[] = []
 
   Object.entries(gridItems).forEach(([itemId, item]) => {
     if (itemId === sourceId) {
-      const nextChartFilters = applySelectionOperation(
+      // For the source item, update chart-only filters for visual highlighting.
+      // chartFilters uses CrossFilterChartInputLike (raw values) so DashboardChart.vue
+      // can pass them directly to Vega without unwrapping CrossFilterEntry objects.
+      const nextChartFilters = applyChartSelectionOperation(
         item.chartFilters || [],
         sourceId,
         chartMap,
@@ -327,7 +449,7 @@ export function createCrossFilterController(
     return {
       source: selection.source,
       filters: filtered,
-      chart: cloneValueMap(selection.chart || filtered),
+      chart: cloneChartMap(selection.chart || {}),
       append: selection.append,
     }
   }
@@ -339,7 +461,7 @@ export function createCrossFilterController(
         .map((selection) => ({
           source: selection.source,
           filters: cloneValueMap(selection.filters),
-          chart: cloneValueMap(selection.chart || selection.filters),
+          chart: cloneChartMap(selection.chart || {}),
           append: selection.append,
         }))
     },
@@ -403,16 +525,19 @@ export function createCrossFilterController(
         )
     },
     getChartSelectionsFor(itemId) {
-      return (selections.get(itemId) || []).map((entry) =>
-        cloneValueMap(entry.chart || entry.filters),
-      )
+      return (selections.get(itemId) || []).map((entry) => cloneChartMap(entry.chart || {}))
     },
     getFilterExpressionFor(itemId) {
-      return buildCrossFilterExpression(this.getSqlFilterInputsFor(itemId))
+      const { filterStrings } = buildCrossFilterExpression(this.getSqlFilterInputsFor(itemId))
+      return filterStrings.join(' AND ')
     },
     getSqlFiltersFor(itemId, baseFilters = []) {
       const expression = this.getFilterExpressionFor(itemId)
       return expression ? [...baseFilters, expression] : [...baseFilters]
+    },
+    getSqlParametersFor(itemId) {
+      const { parameters } = buildCrossFilterExpression(this.getSqlFilterInputsFor(itemId))
+      return parameters
     },
   }
 }
@@ -469,6 +594,10 @@ export function useCrossFilterController(
     getSqlFiltersFor(itemId: string, baseFilters: string[] = []) {
       version.value
       return controller.getSqlFiltersFor(itemId, baseFilters)
+    },
+    getSqlParametersFor(itemId: string) {
+      version.value
+      return controller.getSqlParametersFor(itemId)
     },
   }
 }

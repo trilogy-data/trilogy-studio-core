@@ -171,3 +171,49 @@ auto count <- parent_source.count;
 
     assert "count" in sql.lower()
     assert columns[0].name == "nested_test.count"
+
+
+def test_query_out_column_includes_keys_for_property():
+    """QueryOutColumn.keys should be populated for a property concept."""
+    query = QueryInSchema.model_validate(
+        {
+            "imports": [{"name": "region", "alias": None}],
+            "query": "SELECT id, name;",
+            "dialect": "duckdb",
+            "full_model": {
+                "name": "",
+                "sources": [
+                    {
+                        "alias": "region",
+                        "contents": """
+key id int;
+property id.name string;
+
+datasource regions (
+    region_id:id,
+    region_name:name,
+)
+grain (id)
+address regions;
+""",
+                    }
+                ],
+            },
+        }
+    )
+
+    _, columns, _, _ = generate_query_core(query, DuckDBDialect())
+
+    col_by_name = {c.name: c for c in columns}
+
+    # The key concept should have no keys of its own
+    id_col = col_by_name.get("id")
+    assert id_col is not None
+    assert not id_col.keys
+
+    # The property concept should list its key's address
+    name_col = col_by_name.get("name")
+    assert name_col is not None
+    assert name_col.keys is not None
+    assert len(name_col.keys) == 1
+    assert "id" in name_col.keys[0]

@@ -141,7 +141,7 @@ SELECT
 ;""", response.json()["text"]
 
 
-def test_generate_query_inlines_duckdb_constants(test_client: TestClient):
+def test_generate_query_uses_parameterized_rendering(test_client: TestClient):
     request = QueryInSchema(
         imports=[],
         query="""
@@ -157,8 +157,8 @@ select unnest(x) as rows;
     response = test_client.post("/generate_query", json=request.model_dump(mode="json"))
 
     assert response.status_code == 200
-    assert "unnest([1, 2, 3, 4, 5])" in response.json()["generated_sql"]
-    assert ":x" not in response.json()["generated_sql"]
+    # With parameterized rendering, list constants become :x placeholders in SQL
+    assert ":x" in response.json()["generated_sql"]
 
 
 def test_generate_query_worker_serializes_errors():

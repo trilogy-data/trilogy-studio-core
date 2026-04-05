@@ -63,14 +63,39 @@ export default class MotherDuckConnection extends BaseConnection {
     return true
   }
 
-  // Example of a custom method for MotherDuck
-  async query(sql: string): Promise<Results> {
-    const result = await this.connection.evaluateQuery(sql)
+  // MotherDuck overrides query() rather than query_core() because the MDConnection
+  // WASM client exposes evaluateQuery() rather than prepare().  Parameters are
+  // substituted positionally via replaceEscapedStrings + manual ? substitution
+  // when provided; if the WASM client gains native prepare() support this should
+  // be refactored to use query_core() instead.
+  async query(
+    sql: string,
+    parameters: Record<string, any> | null = null,
+    _identifier: string | null = null,
+  ): Promise<Results> {
+    let execSql = this.replaceEscapedStrings(sql)
+
+    if (parameters && Object.keys(parameters).length > 0) {
+      // Substitute :name placeholders with quoted values as a best-effort fallback.
+      // Negative lookbehind avoids ::type casts.
+      const paramRegex = /(?<!:):([a-zA-Z_]\w*)/g
+      execSql = execSql.replace(paramRegex, (_match, name) => {
+        if (!(name in parameters)) return `:${name}`
+        const v = parameters[name]
+        if (typeof v === 'string') return `'${v.replace(/'/g, "''")}'`
+        return String(v)
+      })
+    }
+
+    const result = await this.connection.evaluateQuery(execSql)
     let headers = new Map(
       result.data
         .columnNames()
         //@ts-ignore
-        .map((header) => [header, { name: header, type: ColumnType.STRING, description: '' }]),
+        .map((header: string) => [
+          header,
+          { name: header, type: ColumnType.STRING, description: '' },
+        ]),
     )
     //rows are simple arrays of json objects
     // @ts-ignore

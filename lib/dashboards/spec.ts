@@ -125,7 +125,10 @@ export const generateVegaSpec = (
   //   .filter(([_, col]) => col.traits?.includes('datetime'))
   //   .map(([colName, _]) => colName)
   let localData = data ? toJsonSafeRows(data) : []
-  if (yearColumns.length > 0 && localData) {
+  // Only convert year integers to Date for temporal charts (line/area).
+  // Bar/barh use ordinal scale for discrete time traits — keep as integers so labels render cleanly.
+  const isBarChart = config.chartType === 'bar' || config.chartType === 'barh'
+  if (yearColumns.length > 0 && localData && !isBarChart) {
     localData.forEach((row) => {
       yearColumns.forEach((colName) => {
         const yearValue = row[colName]

@@ -37,12 +37,15 @@ export function useCrossFilterEligibility(options: UseCrossFilterEligibilityOpti
     error.value = null
 
     try {
-      const fields = await options.queryExecutionService.getEligibleCrossFilterFields(connectionId, {
-        imports: toValue(options.imports) ?? [],
-        extraFilters: toValue(options.extraFilters) ?? [],
-        extraContent: toValue(options.extraContent) ?? [],
-        currentFilename: toValue(options.currentFilename) ?? undefined,
-      })
+      const fields = await options.queryExecutionService.getEligibleCrossFilterFields(
+        connectionId,
+        {
+          imports: toValue(options.imports) ?? [],
+          extraFilters: toValue(options.extraFilters) ?? [],
+          extraContent: toValue(options.extraContent) ?? [],
+          currentFilename: toValue(options.currentFilename) ?? undefined,
+        },
+      )
 
       if (currentRequest === requestId) {
         eligibleFields.value = fields

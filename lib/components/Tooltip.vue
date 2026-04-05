@@ -8,7 +8,9 @@
     <slot></slot>
     <Teleport to="body">
       <Transition appear>
-        <span v-if="visible" ref="tooltipRef" class="tooltip-popup" :style="tooltipStyle">{{ content }}</span>
+        <span v-if="visible" ref="tooltipRef" class="tooltip-popup" :style="tooltipStyle">{{
+          content
+        }}</span>
       </Transition>
     </Teleport>
   </div>

@@ -1,3 +1,4 @@
+import re
 import time
 
 
@@ -30,7 +31,8 @@ from trilogy.core.statements.execute import (
     ProcessedValidateStatement,
     PROCESSED_STATEMENT_TYPES,
 )
-from trilogy.core.models.core import TraitDataType
+from trilogy.core.models.core import TraitDataType, ListWrapper
+from copy import deepcopy
 from logging import getLogger
 
 from env_helpers import (
@@ -74,16 +76,73 @@ def get_traits(concept: Concept) -> list[str]:
     return []
 
 
-def get_variable_string_prefix(variables: dict[str, str | int | float]) -> str:
-    variable_prefix = ""
-    for key, variable in variables.items():
-        if isinstance(variable, str):
-            if "'''" in variable:
-                raise ValueError("cannot safely parse strings with triple quotes")
-            variable_prefix += f"\n const {key[1:]} <- '''{variable}''';"
-        else:
-            variable_prefix += f"\n const {key[1:]} <- {variable};"
-    return variable_prefix
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}")
+
+# Maps Trilogy DataType → the keyword used in `parameter x <type>;` declarations
+_DATATYPE_TO_TRILOGY_PARAM_TYPE: dict[DataType, str] = {
+    DataType.DATE: "date",
+    DataType.DATETIME: "datetime",
+    DataType.TIMESTAMP: "datetime",  # Trilogy parameter keyword; both map to datetime
+    DataType.INTEGER: "int",
+    DataType.BIGINT: "int",
+    DataType.NUMBER: "int",
+    DataType.FLOAT: "float",
+    DataType.NUMERIC: "float",
+    DataType.BOOL: "bool",
+    DataType.STRING: "string",
+}
+
+# Matches the concept address that a parameter is compared against in a filter expression.
+# Handles: concept OP :param, concept BETWEEN :p1 AND :p2
+_CONCEPT_PARAM_RE = re.compile(
+    r"([\w.]+)\s*(?:=|>=|<=|>|<)\s*{param}"
+    r"|([\w.]+)\s+between\s+[\w_]+\s+and\s+{param}"
+    r"|([\w.]+)\s+between\s+{param}\s+and\s",
+    re.IGNORECASE,
+)
+
+
+def _trilogy_type_for(value: str | int | float) -> str:
+    """Infer a Trilogy parameter type from a scalar value."""
+    if isinstance(value, str):
+        if _DATE_RE.match(value):
+            return "date"
+        if _TIMESTAMP_RE.match(value):
+            return "datetime"
+        return "string"
+    if isinstance(value, float):
+        return "float"
+    return "int"
+
+
+def _concept_type_for_param(
+    param_name: str,
+    filter_strings: list[str],
+    env: "Environment",
+) -> str | None:
+    """Return the Trilogy type that matches the concept being filtered by param_name.
+
+    Scans each filter string for comparisons involving param_name and looks up
+    the concept on the other side to determine its DataType.
+    """
+    pattern = re.compile(
+        rf"([\w.]+)\s*(?:=|>=|<=|>|<)\s*{re.escape(param_name)}\b"
+        rf"|([\w.]+)\s+between\s+[\w_]+\s+and\s+{re.escape(param_name)}\b"
+        rf"|([\w.]+)\s+between\s+{re.escape(param_name)}\s+and\s",
+        re.IGNORECASE,
+    )
+    for fs in filter_strings:
+        m = pattern.search(fs)
+        if m:
+            concept_addr = next((g for g in m.groups() if g), None)
+            if concept_addr:
+                concept = env.concepts.get(concept_addr) or env.concepts.get(
+                    f"local.{concept_addr}"
+                )
+                if concept and isinstance(concept.datatype, DataType):
+                    return _DATATYPE_TO_TRILOGY_PARAM_TYPE.get(concept.datatype)
+    return None
 
 
 def filters_to_conditional(
@@ -92,22 +151,52 @@ def filters_to_conditional(
     env: Environment,
     base_filter_idx: int = 0,
 ) -> WhereClause | None:
-    base = ""
-    variable_prefix = get_variable_string_prefix(parameters)
     final = []
+    # Build parameter declarations. Values are injected via set_parameters so they
+    # never touch the parse string — no escaping needed.
+    param_declarations = ""
+    param_kwargs: dict[str, str | int | float] = {}
+    # Build a version of extra_filters with colons stripped so the concept-type
+    # lookup sees bare param names (matching what the filter will actually use).
+    stripped_filters = [
+        fs for fs in extra_filters
+        if fs.strip()
+    ]
+    for key in parameters:
+        stripped_filters = [fs.replace(key, key.lstrip(":")) for fs in stripped_filters]
+
+    for key, value in parameters.items():
+        # keys arrive as :paramN — strip the colon for use in Trilogy source
+        name = key.lstrip(":")
+        # Prefer the type derived from the concept being filtered (most accurate);
+        # fall back to inference from the value string.
+        param_type = _concept_type_for_param(name, stripped_filters, env) or _trilogy_type_for(value)
+        param_declarations += f"\nparameter {name} {param_type};"
+        # Normalize value to match the declared type — e.g. Luxon DateTime
+        # serialises as a full ISO timestamp ('1992-12-20T22:19:57.462Z') but
+        # set_parameters only accepts 'YYYY-MM-DD' for date parameters.
+        if param_type == "date" and isinstance(value, str):
+            value = _DATE_RE.match(value[:10]) and value[:10] or value
+        param_kwargs[name] = value
+
     for idx, filter_string in enumerate(extra_filters):
         if not filter_string.strip():
             continue
-        base = "" + variable_prefix
-        for v in parameters:
-            # remove the prefix
-            filter_string = filter_string.replace(v[0], v[0][1:])
+        # Replace :paramN tokens in filter expressions with bare names
+        for key in parameters:
+            filter_string = filter_string.replace(key, key.lstrip(":"))
         final.append(f"({filter_string})")
+
     if not final:
         return None
+
+    # Register parameter values on the real env so the concepts are available when
+    # the actual query is generated. Parse into the same env so the WhereClause
+    # references the same concept instances.
+    env.set_parameters(**param_kwargs)
     final_conditions = " AND ".join(final)
     _, fparsed = parse_text(
-        f"{base}\nWHERE {final_conditions} SELECT 1 as __ftest_{base_filter_idx*100+idx};",
+        f"{param_declarations}\nWHERE {final_conditions} SELECT 1 as __ftest_{base_filter_idx*100+idx};",
         env,
         parse_config=PARSE_CONFIG,
     )
@@ -242,6 +331,7 @@ def generate_single_query(
             purpose=env.concepts[x.address].purpose,
             traits=get_traits(env.concepts[x.address]),
             description=env.concepts[x.address].metadata.description,
+            keys=list(env.concepts[x.address].keys or []) or None,
         )
         for x in final_select.output_components
     ]
@@ -501,8 +591,16 @@ def query_to_output(
         )
     else:
         compile_start = time.time()
-        sql = dialect.compile_statement(target)
+        sql, bound_params = dialect.compile_statement_with_params(target)
         compile_time = time.time() - compile_start
+        # Serialize params: scalars pass through, ListWrapper exposes .data as a plain list
+        serializable_params: dict[str, str | int | float | list] | None = None
+        if bound_params:
+            serializable_params = {
+                k: list(v) if isinstance(v, ListWrapper) else v
+                for k, v in bound_params.items()
+                if isinstance(v, (str, int, float, ListWrapper))
+            } or None
 
         output = QueryOut(
             generated_sql=sql,
@@ -510,6 +608,7 @@ def query_to_output(
             columns=columns,
             label=label,
             select_count=select_count,
+            parameters=serializable_params or None,
         )
 
         if enable_performance_logging:

@@ -5,6 +5,7 @@ import {
   createFieldEncoding,
   createInteractionEncodings,
   getSortOrder,
+  hasDiscreteTimeTrait,
 } from './helpers'
 import { lightDefaultColor, darkDefaultColor } from './constants'
 
@@ -42,15 +43,24 @@ export const createBarHChartSpec = (
       color: currentTheme === 'light' ? lightDefaultColor : darkDefaultColor,
     },
     encoding: {
-      y: {
-        ...createFieldEncoding(config.yField || '', columns),
-        ...getSortOrder(config.yField || '', columns, config.xField),
-        axis: {
-          labelExpr: isMobile
-            ? "datum.label.length > 13 ? slice(datum.label, 0, 10) + '...' : datum.label"
-            : 'datum.label',
-        },
-      },
+      y: (() => {
+        const yField = config.yField || ''
+        const enc: any = {
+          ...createFieldEncoding(yField, columns),
+          ...getSortOrder(yField, columns, config.xField),
+          axis: {
+            labelExpr: isMobile
+              ? "datum.label.length > 13 ? slice(datum.label, 0, 10) + '...' : datum.label"
+              : 'datum.label',
+          },
+        }
+        if (hasDiscreteTimeTrait(yField, columns)) {
+          enc.type = 'ordinal'
+          delete enc.timeUnit
+          delete enc.format
+        }
+        return enc
+      })(),
       x: createFieldEncoding(
         config.xField || '',
         columns,
