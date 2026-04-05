@@ -444,40 +444,33 @@ export default class DuckDBConnection extends BaseConnection {
     try {
       let result
       if (parameters) {
-        let params = []
-        // Negative lookbehind (?<!:) avoids matching ::type casts (e.g. ::date, ::integer).
+        // Single ordered pass: replace each :param occurrence with ? (scalar) or
+        // [?, ?, ?] (array), pushing values in the same order so DuckDB's positional
+        // binding matches correctly. Negative lookbehind skips ::type casts.
         const paramRegex = /(?<!:):([a-zA-Z_]\w*)/g
-        let modifiedSql = sql
-
-        // Collect unique param names in the order they first appear
-        const seen = new Set<string>()
-        const orderedParams: string[] = []
-        for (const match of sql.matchAll(paramRegex)) {
-          const name = match[1]
-          if (!seen.has(name)) {
-            seen.add(name)
-            orderedParams.push(name)
-          }
-        }
-
-        // Build positional values in occurrence order so interleaved placeholders
-        // like :a, :b, :a map to [a_val, b_val, a_val] not [a_val, a_val, b_val].
-        for (const match of sql.matchAll(paramRegex)) {
+        const params: unknown[] = []
+        let modifiedSql = ''
+        let lastIndex = 0
+        let match: RegExpExecArray | null
+        while ((match = paramRegex.exec(sql)) !== null) {
           const name = match[1]
           const value = name in parameters ? parameters[name] : parameters[`:${name}`]
+          modifiedSql += sql.slice(lastIndex, match.index)
           if (value !== undefined) {
-            params.push(value)
+            if (Array.isArray(value)) {
+              // Expand array to [?, ?, ?] — every element goes through binding, no literals
+              modifiedSql += '[' + value.map(() => '?').join(', ') + ']'
+              params.push(...value)
+            } else {
+              modifiedSql += '?'
+              params.push(value)
+            }
+          } else {
+            modifiedSql += match[0]
           }
+          lastIndex = match.index + match[0].length
         }
-
-        // Replace all occurrences of each known param with ?
-        for (const paramName of orderedParams) {
-          const value =
-            paramName in parameters ? parameters[paramName] : parameters[`:${paramName}`]
-          if (value !== undefined) {
-            modifiedSql = modifiedSql.split(`:${paramName}`).join('?')
-          }
-        }
+        modifiedSql += sql.slice(lastIndex)
 
         let prepared = await this.connection.prepare(modifiedSql)
         result = await prepared.query(...params)
