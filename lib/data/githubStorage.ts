@@ -5,6 +5,7 @@ import {
   DuckDBConnection,
   MotherDuckConnection,
   SnowflakeJwtConnection,
+  SQLiteConnection,
 } from '../connections'
 import {
   LLMProvider,
@@ -169,7 +170,7 @@ export default class GitHubStorage extends AbstractStorage {
 
   async saveConnections(
     connections: Array<
-      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeJwtConnection
+      BigQueryOauthConnection | DuckDBConnection | SQLiteConnection | MotherDuckConnection | SnowflakeJwtConnection
     >,
   ): Promise<void> {
     await this.saveFile(this.connectionStorageFile, connections)
@@ -178,14 +179,14 @@ export default class GitHubStorage extends AbstractStorage {
   async loadConnections(): Promise<
     Record<
       string,
-      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeJwtConnection
+      BigQueryOauthConnection | DuckDBConnection | SQLiteConnection | MotherDuckConnection | SnowflakeJwtConnection
     >
   > {
     const response = await this.fetchFile(this.connectionStorageFile)
     const raw = response?.content || []
     const connections: Record<
       string,
-      BigQueryOauthConnection | DuckDBConnection | MotherDuckConnection | SnowflakeJwtConnection
+      BigQueryOauthConnection | DuckDBConnection | SQLiteConnection | MotherDuckConnection | SnowflakeJwtConnection
     > = {}
 
     // Process each connection sequentially
@@ -198,6 +199,10 @@ export default class GitHubStorage extends AbstractStorage {
         case 'duckdb':
           // @ts-ignore
           connections[connection.name] = reactive(DuckDBConnection.fromJSON(connection))
+          break
+        case 'sqlite':
+          // @ts-ignore
+          connections[connection.name] = reactive(SQLiteConnection.fromJSON(connection))
           break
         case 'motherduck':
           // @ts-ignore

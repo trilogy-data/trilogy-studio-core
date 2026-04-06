@@ -6,6 +6,7 @@ import {
   DuckDBConnection,
   MotherDuckConnection,
   SnowflakeJwtConnection,
+  SQLiteConnection,
 } from '../connections'
 import {
   LLMProvider,
@@ -127,6 +128,10 @@ export default class LocalStorage extends AbstractStorage {
         case 'duckdb':
           // @ts-ignore
           connections[connection.name] = reactive(DuckDBConnection.fromJSON(connection))
+          break
+        case 'sqlite':
+          // @ts-ignore
+          connections[connection.name] = reactive(SQLiteConnection.fromJSON(connection))
           break
         case 'motherduck':
           // Handle the async operation properly

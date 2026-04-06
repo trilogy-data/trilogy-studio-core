@@ -52,7 +52,7 @@ export function buildConnectionTree(
     })
 
     if (collapsed[connection.name] === false) {
-      if (['duckdb'].includes(connection.type)) {
+      if (['duckdb', 'sqlite'].includes(connection.type)) {
         list.push({
           id: `${connection.name}-upload`,
           name: 'Upload',
