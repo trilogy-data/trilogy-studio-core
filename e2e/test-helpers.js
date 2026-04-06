@@ -1,9 +1,25 @@
 import { expect } from '@playwright/test'
 
+const LOCAL_RESOLVER = 'http://127.0.0.1:5678'
+const DOCKER_RESOLVER = '/api'
+
+/**
+ * Resolve the trilogy backend URL based on environment.
+ * - Explicit VITE_RESOLVER_URL always wins.
+ * - 'prod' uses the app's built-in resolver (empty string → trilogy-service.fly.dev).
+ * - 'docker' uses the nginx reverse proxy baked into the container.
+ * - Everything else (local dev) falls back to LOCAL_RESOLVER.
+ */
+export function getResolverUrl(env = process.env) {
+  if (env.VITE_RESOLVER_URL) return env.VITE_RESOLVER_URL
+  const testEnv = env.TEST_ENV || ''
+  if (testEnv === 'prod') return ''
+  if (testEnv === 'docker') return DOCKER_RESOLVER
+  return LOCAL_RESOLVER
+}
+
 export async function prepareTestPage(page) {
-  const resolverUrl =
-    process.env.VITE_RESOLVER_URL ||
-    (process.env.TEST_ENV === 'docker' ? '' : 'http://127.0.0.1:5678')
+  const resolverUrl = getResolverUrl()
 
   await page.addInitScript((url) => {
     if (window.localStorage.getItem('__playwright_prepared') === 'true') {

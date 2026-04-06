@@ -144,23 +144,24 @@ def _concept_type_for_param(
     return None
 
 
-def filters_to_conditional(
+def prepare_filter_params(
     extra_filters: list[str],
     parameters: dict[str, str | int | float],
-    env: Environment,
-    base_filter_idx: int = 0,
-) -> WhereClause | None:
-    final = []
-    # Build parameter declarations. Values are injected via set_parameters so they
-    # never touch the parse string — no escaping needed.
+    env: "Environment | None" = None,
+) -> tuple[str, list[str], dict[str, str | int | float]]:
+    """Shared logic for processing parameterized filter expressions.
+
+    Returns (param_declarations, cleaned_filters, param_kwargs) where:
+    - param_declarations: Trilogy ``parameter`` statements to prepend to a parse string
+    - cleaned_filters: filter strings with ``:param`` tokens replaced by bare names
+    - param_kwargs: parameter values keyed by bare name (for ``env.set_parameters``)
+    """
     param_declarations = ""
     param_kwargs: dict[str, str | int | float] = {}
+
     # Build a version of extra_filters with colons stripped so the concept-type
     # lookup sees bare param names (matching what the filter will actually use).
-    stripped_filters = [
-        fs for fs in extra_filters
-        if fs.strip()
-    ]
+    stripped_filters = [fs for fs in extra_filters if fs.strip()]
     for key in parameters:
         stripped_filters = [fs.replace(key, key.lstrip(":")) for fs in stripped_filters]
 
@@ -169,7 +170,10 @@ def filters_to_conditional(
         name = key.lstrip(":")
         # Prefer the type derived from the concept being filtered (most accurate);
         # fall back to inference from the value string.
-        param_type = _concept_type_for_param(name, stripped_filters, env) or _trilogy_type_for(value)
+        param_type = (
+            (_concept_type_for_param(name, stripped_filters, env) if env else None)
+            or _trilogy_type_for(value)
+        )
         param_declarations += f"\nparameter {name} {param_type};"
         # Normalize value to match the declared type — e.g. Luxon DateTime
         # serialises as a full ISO timestamp ('1992-12-20T22:19:57.462Z') but
@@ -178,22 +182,38 @@ def filters_to_conditional(
             value = _DATE_RE.match(value[:10]) and value[:10] or value
         param_kwargs[name] = value
 
-    for idx, filter_string in enumerate(extra_filters):
+    cleaned: list[str] = []
+    for filter_string in extra_filters:
         if not filter_string.strip():
             continue
-        # Replace :paramN tokens in filter expressions with bare names
         for key in parameters:
             filter_string = filter_string.replace(key, key.lstrip(":"))
-        final.append(f"({filter_string})")
+        cleaned.append(filter_string)
 
-    if not final:
+    return param_declarations, cleaned, param_kwargs
+
+
+def filters_to_conditional(
+    extra_filters: list[str],
+    parameters: dict[str, str | int | float],
+    env: Environment,
+    base_filter_idx: int = 0,
+) -> WhereClause | None:
+    param_declarations, cleaned, param_kwargs = prepare_filter_params(
+        extra_filters, parameters, env
+    )
+
+    if not cleaned:
         return None
+
+    final = [f"({fs})" for fs in cleaned]
 
     # Register parameter values on the real env so the concepts are available when
     # the actual query is generated. Parse into the same env so the WhereClause
     # references the same concept instances.
     env.set_parameters(**param_kwargs)
     final_conditions = " AND ".join(final)
+    idx = len(cleaned) - 1
     _, fparsed = parse_text(
         f"{param_declarations}\nWHERE {final_conditions} SELECT 1 as __ftest_{base_filter_idx*100+idx};",
         env,

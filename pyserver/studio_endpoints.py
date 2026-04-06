@@ -37,6 +37,7 @@ from query_helpers import (
     PARSE_CONFIG,
     generate_multi_query_core,
     generate_query_core,
+    prepare_filter_params,
     query_to_output,
     safe_format_query,
 )
@@ -182,23 +183,12 @@ def _validate_query_task(query_data: dict) -> dict:
     query = ValidateQueryInSchema.model_validate(query_data)
     filter_validation: list[ValidateItem] = []
     parameters = query.parameters or {}
-    # Build parameter declarations so the parser recognises :param placeholders.
-    param_declarations = ""
-    for key, value in parameters.items():
-        name = key.lstrip(":")
-        # Infer a simple Trilogy type from the Python value
-        if isinstance(value, int):
-            param_declarations += f"\nparameter {name} int;"
-        elif isinstance(value, float):
-            param_declarations += f"\nparameter {name} float;"
-        else:
-            param_declarations += f"\nparameter {name} string;"
+    param_declarations, cleaned_filters, _ = prepare_filter_params(
+        query.extra_filters or [], parameters
+    )
     try:
-        if query.extra_filters:
-            for idx, filter_string in enumerate(query.extra_filters):
-                # Replace :paramN tokens with bare names (matching declarations)
-                for key in parameters:
-                    filter_string = filter_string.replace(key, key.lstrip(":"))
+        if cleaned_filters:
+            for idx, filter_string in enumerate(cleaned_filters):
                 try:
                     base = get_diagnostics(
                         f"{param_declarations}\nWHERE {filter_string} SELECT 1 as __ftest_{idx};",
