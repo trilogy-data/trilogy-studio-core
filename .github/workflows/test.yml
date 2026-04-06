@@ -43,7 +43,6 @@ jobs:
     name: Integration Tests (Local)
     runs-on: ubuntu-latest
     env:
-      VITE_RESOLVER_URL: http://127.0.0.1:5678
       ALLOWED_ORIGINS: dev
     steps:
       - name: Checkout

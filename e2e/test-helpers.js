@@ -1,9 +1,10 @@
 import { expect } from '@playwright/test'
+import { getResolverUrl } from './test-env.js'
+
+export { getResolverUrl }
 
 export async function prepareTestPage(page) {
-  const resolverUrl =
-    process.env.VITE_RESOLVER_URL ||
-    (process.env.TEST_ENV === 'docker' ? '' : 'http://127.0.0.1:5678')
+  const resolverUrl = getResolverUrl()
 
   await page.addInitScript((url) => {
     if (window.localStorage.getItem('__playwright_prepared') === 'true') {

@@ -12,6 +12,7 @@ export default defineConfig({
   define: {
     'import.meta.env.VITE_DUCKDB_BUNDLED': JSON.stringify('true'),
     'import.meta.env.VITE_DISABLE_TIPS_DEFAULT': JSON.stringify('true'),
+    'import.meta.env.VITE_RESOLVER_URL': JSON.stringify('/api'),
   },
   server: {
     headers: {
