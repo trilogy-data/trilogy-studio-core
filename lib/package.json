@@ -92,6 +92,7 @@
     "monaco-editor": "^0.52.2",
     "prismjs": "^1.29.0",
     "split.js": "^1.6.5",
+    "sql.js": "^1.14.1",
     "tabulator-tables": "^6.3.1",
     "vega": "^6.2.0",
     "vega-embed": "^7.1.0",
