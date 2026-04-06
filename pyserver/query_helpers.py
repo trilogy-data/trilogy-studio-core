@@ -32,7 +32,6 @@ from trilogy.core.statements.execute import (
     PROCESSED_STATEMENT_TYPES,
 )
 from trilogy.core.models.core import TraitDataType, ListWrapper
-from copy import deepcopy
 from logging import getLogger
 
 from env_helpers import (

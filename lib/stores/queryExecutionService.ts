@@ -696,6 +696,7 @@ export default class QueryExecutionService {
       queryInput.extraFilters,
       null,
       queryInput.currentFilename || null,
+      queryInput.parameters || null,
     )
     // Return the imports from the validation result
     return validation

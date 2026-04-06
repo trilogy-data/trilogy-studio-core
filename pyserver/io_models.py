@@ -135,6 +135,7 @@ class ValidateQueryInSchema(BaseModel):
     sources: List[ModelSourceInSchema]
     current_filename: str | None = None
     extra_filters: Optional[list[str]] = None
+    parameters: Optional[dict[str, str | int | float]] = None
 
 
 class QueryOutColumn(BaseModel):

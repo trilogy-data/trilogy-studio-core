@@ -83,6 +83,10 @@ export interface CrossFilterController {
   getChartSelectionsFor(itemId: string): CrossFilterChartMap[]
   getFilterExpressionFor(itemId: string): string
   getSqlFiltersFor(itemId: string, baseFilters?: string[]): string[]
+  getSqlFilterLikesFor(
+    itemId: string,
+    baseFilters?: string[],
+  ): SqlFilterLike[]
   getSqlParametersFor(itemId: string): Record<string, string | number>
 }
 
@@ -535,6 +539,24 @@ export function createCrossFilterController(
       const expression = this.getFilterExpressionFor(itemId)
       return expression ? [...baseFilters, expression] : [...baseFilters]
     },
+    getSqlFilterLikesFor(itemId, baseFilters = []) {
+      const baseLikes: SqlFilterLike[] = baseFilters.map((value) => ({
+        source: 'base',
+        value,
+      }))
+      const { filterStrings, parameters } = buildCrossFilterExpression(
+        this.getSqlFilterInputsFor(itemId),
+      )
+      const crossExpression = filterStrings.join(' AND ')
+      if (crossExpression) {
+        baseLikes.push({
+          source: 'cross',
+          value: crossExpression,
+          parameters: Object.keys(parameters).length ? parameters : undefined,
+        })
+      }
+      return baseLikes
+    },
     getSqlParametersFor(itemId) {
       const { parameters } = buildCrossFilterExpression(this.getSqlFilterInputsFor(itemId))
       return parameters
@@ -594,6 +616,10 @@ export function useCrossFilterController(
     getSqlFiltersFor(itemId: string, baseFilters: string[] = []) {
       version.value
       return controller.getSqlFiltersFor(itemId, baseFilters)
+    },
+    getSqlFilterLikesFor(itemId: string, baseFilters: string[] = []) {
+      version.value
+      return controller.getSqlFilterLikesFor(itemId, baseFilters)
     },
     getSqlParametersFor(itemId: string) {
       version.value

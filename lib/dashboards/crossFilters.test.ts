@@ -81,6 +81,28 @@ describe('cross filter controller', () => {
     expect(controller.getSqlFiltersFor('native-chart')).toEqual([])
   })
 
+  it('returns SqlFilterLike objects with parameters via getSqlFilterLikesFor', () => {
+    const controller = createCrossFilterController({
+      validFields: ['species'],
+    })
+
+    controller.applyDimensionClick({
+      source: 'species-chart',
+      filters: { species: eq('Acer rubrum') },
+      chart: { species: 'Acer rubrum' },
+    })
+
+    const result = controller.getSqlFilterLikesFor('native-chart', ["city = 'USBTV'"])
+    expect(result).toEqual([
+      { source: 'base', value: "city = 'USBTV'" },
+      {
+        source: 'cross',
+        value: 'species = :species_x7sdl',
+        parameters: { ':species_x7sdl': 'Acer rubrum' },
+      },
+    ])
+  })
+
   it('normalizes local fields for embed clients by default', () => {
     const controller = createCrossFilterController({
       validFields: ['is_evergreen'],
