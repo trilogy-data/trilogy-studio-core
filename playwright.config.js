@@ -1,13 +1,8 @@
 // playwright.config.js
 import { defineConfig, devices } from '@playwright/test'
+import { getBaseUrl, needsWebServer } from './e2e/test-env.js'
 
 const usePreview = process.env.PLAYWRIGHT_USE_PREVIEW === 'true'
-const inDocker = process.env.TEST_ENV === 'docker'
-const inProd = process.env.TEST_ENV === 'prod'
-
-if (!process.env.VITE_RESOLVER_URL && !inProd && !inDocker) {
-  process.env.VITE_RESOLVER_URL = 'http://127.0.0.1:5678'
-}
 
 export default defineConfig({
   testDir: './e2e',
@@ -21,11 +16,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: inProd
-      ? 'https://trilogydata.dev/trilogy-studio-core'
-      : inDocker
-        ? 'http://localhost:8080'
-        : 'http://localhost:5173',
+    baseURL: getBaseUrl(),
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -51,12 +42,11 @@ export default defineConfig({
       use: { ...devices['iPhone 13'] },
     },
   ],
-  webServer:
-    inDocker || inProd
-      ? undefined
-      : {
-          command: usePreview ? 'pnpm preview --port 5173' : 'pnpm dev',
-          port: 5173,
-          reuseExistingServer: !process.env.CI,
-        },
+  webServer: needsWebServer()
+    ? {
+        command: usePreview ? 'pnpm preview --port 5173' : 'pnpm dev',
+        port: 5173,
+        reuseExistingServer: !process.env.CI,
+      }
+    : undefined,
 })
