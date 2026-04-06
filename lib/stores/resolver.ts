@@ -232,6 +232,7 @@ export default class TrilogyResolver {
     extraFilters: string[] | null = null,
     extraContent: Record<string, any> | null = null,
     currentFilename: string | null = null,
+    parameters: Record<string, string | number> | null = null,
   ): Promise<ValidateResponse> {
     const requestParams = {
       query: query,
@@ -240,6 +241,7 @@ export default class TrilogyResolver {
       extra_filters: extraFilters || [],
       extra_content: extraContent || {},
       current_filename: currentFilename || null,
+      parameters: parameters || {},
     }
 
     // Generate hash of request params

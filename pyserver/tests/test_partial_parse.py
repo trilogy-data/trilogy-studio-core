@@ -157,3 +157,36 @@ def test_validate_query_endpoint_resolves_relative_import_once():
     assert payload["items"] == []
     assert payload["imports"][0]["name"] == "base_import"
     assert any(item["label"] == "test" for item in payload["completion_items"])
+
+
+def test_validate_query_with_parameterized_filters():
+    """Ensure that extra_filters containing :param placeholders are accepted
+    when matching parameter declarations are supplied."""
+    app = FastAPI()
+    app.include_router(create_trilogy_router())
+    client = TestClient(app)
+
+    response = client.post(
+        "/validate_query",
+        json={
+            "query": "import customer as cust;\nselect cust.cuid;",
+            "sources": [
+                {
+                    "alias": "customer",
+                    "contents": (
+                        "key cuid int;\n"
+                        "property cuid.name string;\n"
+                        "auto customer_count <- count(cuid);\n"
+                    ),
+                }
+            ],
+            "imports": [],
+            "extra_filters": ["name = :name_abc12"],
+            "parameters": {":name_abc12": "Alice"},
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    # The parameterized filter should parse without errors
+    assert payload.get("filter_validation", []) == []

@@ -168,6 +168,7 @@ describe('QueryExecutionService', () => {
       [],
       null,
       null,
+      null,
     )
   })
 })
