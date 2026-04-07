@@ -19,6 +19,7 @@ from pathlib import Path
 
 import httpx
 import matplotlib
+
 matplotlib.use("Agg")  # non-interactive backend — no display required
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -100,6 +101,7 @@ ENDPOINT_MAP = {
 # Data structures
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class RequestResult:
     endpoint: str
@@ -131,7 +133,11 @@ class ScenarioResult:
         return len(self.results) / self.duration_s if self.duration_s > 0 else 0
 
     def latencies(self, endpoint: str | None = None) -> list[float]:
-        rs = self.results if endpoint is None else [r for r in self.results if r.endpoint == endpoint]
+        rs = (
+            self.results
+            if endpoint is None
+            else [r for r in self.results if r.endpoint == endpoint]
+        )
         return [r.latency_ms for r in rs if r.success]
 
     def percentile(self, p: float, endpoint: str | None = None) -> float:
@@ -139,7 +145,11 @@ class ScenarioResult:
         return float(np.percentile(lats, p)) if lats else float("nan")
 
     def error_rate(self, endpoint: str | None = None) -> float:
-        rs = self.results if endpoint is None else [r for r in self.results if r.endpoint == endpoint]
+        rs = (
+            self.results
+            if endpoint is None
+            else [r for r in self.results if r.endpoint == endpoint]
+        )
         if not rs:
             return 0.0
         return sum(1 for r in rs if not r.success) / len(rs)
@@ -148,6 +158,7 @@ class ScenarioResult:
 # ---------------------------------------------------------------------------
 # Request runner
 # ---------------------------------------------------------------------------
+
 
 async def send_request(
     client: httpx.AsyncClient,
@@ -201,15 +212,27 @@ async def run_scenario(
             async with httpx.AsyncClient() as client:
                 return await send_request(client, base_url, name, ep)
 
-    print(f"  Running scenario '{name}': {total_requests} requests, concurrency={concurrency}")
+    print(
+        f"  Running scenario '{name}': {total_requests} requests, concurrency={concurrency}"
+    )
     start = time.perf_counter()
     results = await asyncio.gather(*[bounded(ep) for ep in queue])
     end = time.perf_counter()
 
     ok = sum(1 for r in results if r.success)
-    p50 = float(np.percentile([r.latency_ms for r in results if r.success], 50)) if ok else float("nan")
-    p99 = float(np.percentile([r.latency_ms for r in results if r.success], 99)) if ok else float("nan")
-    print(f"    Done: {ok}/{total_requests} ok | p50={p50:.0f}ms p99={p99:.0f}ms | {(end-start):.1f}s elapsed")
+    p50 = (
+        float(np.percentile([r.latency_ms for r in results if r.success], 50))
+        if ok
+        else float("nan")
+    )
+    p99 = (
+        float(np.percentile([r.latency_ms for r in results if r.success], 99))
+        if ok
+        else float("nan")
+    )
+    print(
+        f"    Done: {ok}/{total_requests} ok | p50={p50:.0f}ms p99={p99:.0f}ms | {(end-start):.1f}s elapsed"
+    )
 
     return ScenarioResult(
         name=name,
@@ -225,21 +248,51 @@ async def run_scenario(
 # Test plan
 # ---------------------------------------------------------------------------
 
-async def run_all(base_url: str, base_concurrency: int, base_requests: int) -> list[ScenarioResult]:
+
+async def run_all(
+    base_url: str, base_concurrency: int, base_requests: int
+) -> list[ScenarioResult]:
     scenarios = [
         # Warm-up
         ("warmup", ["health"], max(5, base_requests // 10), 1),
         # Health endpoint stress
         ("health_burst", ["health"], base_requests, base_concurrency),
         # Lightweight CPU endpoints
-        ("format_validate", ["format_query", "validate_query"], base_requests, base_concurrency),
+        (
+            "format_validate",
+            ["format_query", "validate_query"],
+            base_requests,
+            base_concurrency,
+        ),
         # Heavy CPU endpoints
-        ("generate_sequential", ["generate_query_simple", "generate_query_real"], base_requests, 1),
-        ("generate_concurrent", ["generate_query_simple", "generate_query_real"], base_requests, base_concurrency),
+        (
+            "generate_sequential",
+            ["generate_query_simple", "generate_query_real"],
+            base_requests,
+            1,
+        ),
+        (
+            "generate_concurrent",
+            ["generate_query_simple", "generate_query_real"],
+            base_requests,
+            base_concurrency,
+        ),
         # Model parsing
         ("parse_model", ["parse_model"], base_requests, base_concurrency),
         # Mixed realistic workload
-        ("mixed", ["health", "format_query", "validate_query", "generate_query_simple", "generate_query_real", "parse_model"], base_requests, base_concurrency),
+        (
+            "mixed",
+            [
+                "health",
+                "format_query",
+                "validate_query",
+                "generate_query_simple",
+                "generate_query_real",
+                "parse_model",
+            ],
+            base_requests,
+            base_concurrency,
+        ),
     ]
 
     results = []
@@ -279,7 +332,9 @@ def _endpoint_latency_bars(ax: plt.Axes, scenario: ScenarioResult) -> None:
     ax.legend(fontsize=7)
 
 
-def _latency_dist(ax: plt.Axes, results: list[RequestResult], label: str, color) -> None:
+def _latency_dist(
+    ax: plt.Axes, results: list[RequestResult], label: str, color
+) -> None:
     lats = [r.latency_ms for r in results if r.success]
     if not lats:
         return
@@ -378,9 +433,12 @@ def plot_results(scenarios: list[ScenarioResult], output_path: Path) -> None:
 # Summary table
 # ---------------------------------------------------------------------------
 
+
 def print_summary(scenarios: list[ScenarioResult]) -> None:
     print("\n" + "=" * 90)
-    print(f"{'Scenario':<28} {'Concur':>7} {'N':>5} {'OK%':>6} {'p50ms':>7} {'p95ms':>7} {'p99ms':>7} {'RPS':>7}")
+    print(
+        f"{'Scenario':<28} {'Concur':>7} {'N':>5} {'OK%':>6} {'p50ms':>7} {'p95ms':>7} {'p99ms':>7} {'RPS':>7}"
+    )
     print("-" * 90)
     for s in scenarios:
         lats = s.latencies()
@@ -398,6 +456,7 @@ def print_summary(scenarios: list[ScenarioResult]) -> None:
 # ---------------------------------------------------------------------------
 # Baseline persistence
 # ---------------------------------------------------------------------------
+
 
 def save_baseline(scenarios: list[ScenarioResult], output_dir: Path) -> None:
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -439,6 +498,7 @@ def save_baseline(scenarios: list[ScenarioResult], output_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Trilogy server load test")
@@ -485,12 +545,12 @@ def main() -> None:
     print_summary(scenarios)
     save_baseline(scenarios, output_dir)
 
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     chart_path = output_dir / "load_test.png"
     plot_results(scenarios, chart_path)
 
     # Open chart on Windows
     import os
+
     if sys.platform == "win32":
         os.startfile(str(chart_path))
 

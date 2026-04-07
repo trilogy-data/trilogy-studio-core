@@ -1,5 +1,5 @@
 # Use multi-stage build for better optimization
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
 
 # Set working directory
 WORKDIR /app
@@ -12,7 +12,8 @@ ENV UV_CACHE_DIR=/tmp/uv-cache
 # Copy requirements files first for better layer caching
 COPY requirements.txt requirements-test.txt ./
 
-# Install test dependencies and run tests
+# Install production dependencies first (ensures pins apply), then test dependencies
+RUN uv pip install -r requirements.txt --no-cache-dir --system
 RUN uv pip install -r requirements-test.txt --no-cache-dir --system
 
 # Copy source code and tests
@@ -26,7 +27,7 @@ RUN uv pip uninstall $(uv pip freeze | grep -v -f requirements.txt | cut -d'=' -
 RUN uv pip install -r requirements.txt --no-cache-dir --system
 
 # Production stage
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS production
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS production
 
 # Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser
@@ -43,7 +44,7 @@ ENV PORT=8080
 ENV HOST=0.0.0.0
 
 # Copy only production dependencies and app code from builder
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /app/*.py /app/
 COPY --from=builder /app/requirements.txt /app/

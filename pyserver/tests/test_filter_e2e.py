@@ -17,7 +17,6 @@ from io_models import ModelInSchema, ModelSourceInSchema, QueryInSchema
 from studio_endpoints import _generate_query_task
 from trilogy import Dialects
 
-
 # ---------------------------------------------------------------------------
 # Binding helper (mirrors lib/connections/duckdb.ts query_core)
 # ---------------------------------------------------------------------------
@@ -313,7 +312,9 @@ def test_e2e_string_eq_returns_correct_row(species_db):
         ["local.species = :p0"],
         {":p0": "Acer rubrum"},
     )
-    rows = _bind_and_execute(species_db, payload["generated_sql"], {":p0": "Acer rubrum"})
+    rows = _bind_and_execute(
+        species_db, payload["generated_sql"], {":p0": "Acer rubrum"}
+    )
     assert len(rows) == 1
     assert rows[0][0] == "Acer rubrum"
 
