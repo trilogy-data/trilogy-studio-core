@@ -1,7 +1,7 @@
 from trilogy import Environment
 from trilogy.constants import Parsing
 from trilogy.core.models.environment import DictImportResolver, EnvironmentConfig
-from trilogy.core.models.execute import SelectStatement
+from trilogy.core.statements.author import SelectStatement
 from trilogy.dialect.duckdb import DuckDBDialect
 from trilogy.parser import parse_text
 
