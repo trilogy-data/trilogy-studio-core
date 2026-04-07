@@ -1,6 +1,7 @@
 from trilogy import Environment
 from trilogy.constants import Parsing
 from trilogy.core.models.environment import DictImportResolver, EnvironmentConfig
+from trilogy.core.models.execute import SelectStatement
 from trilogy.dialect.duckdb import DuckDBDialect
 from trilogy.parser import parse_text
 
@@ -87,7 +88,9 @@ def compile_inline_sql() -> str:
     env = build_environment()
     env, parsed = parse_text(INLINE_QUERY, env, parse_config=PARSE_CONFIG)
     dialect = DuckDBDialect()
-    processed = dialect.generate_queries(env, [parsed[-1]])[-1]
+    last = parsed[-1]
+    assert isinstance(last, SelectStatement)
+    processed = dialect.generate_queries(env, [last])[-1]
     return dialect.compile_statement(processed)
 
 
@@ -95,9 +98,12 @@ def compile_appended_filter_sql() -> str:
     env = build_environment()
     env, parsed = parse_text(BASE_QUERY, env, parse_config=PARSE_CONFIG)
     statement = parsed[-1]
+    assert isinstance(statement, SelectStatement)
 
     _, filter_parsed = parse_text(FILTER_QUERY, env, parse_config=PARSE_CONFIG)
-    where_clause = filter_parsed[-1].where_clause
+    filter_stmt = filter_parsed[-1]
+    assert isinstance(filter_stmt, SelectStatement)
+    where_clause = filter_stmt.where_clause
 
     assert statement.where_clause is None
     assert where_clause is not None
