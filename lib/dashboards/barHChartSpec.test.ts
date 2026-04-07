@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createBarHChartSpec } from './barHChartSpec'
-import { type Row, type ResultColumn, type ChartConfig, ColumnType } from '../editors/results'
+import { type ResultColumn, type ChartConfig, ColumnType } from '../editors/results'
 
 describe('createBarHChartSpec', () => {
   describe('discrete time tooltip fix', () => {

@@ -27,6 +27,7 @@ describe('createBarChartSpec', () => {
       ]
 
       const spec = createBarChartSpec(config, columns, tooltipFields, {}, data, [], 'light')
+      if (!('encoding' in spec)) throw new Error('expected encoding in spec')
 
       // The x-field tooltip should have timeUnit/format stripped and type set to ordinal
       const xTooltip = spec.encoding.tooltip.find((f: any) => f.field === 'date_year')
@@ -62,6 +63,7 @@ describe('createBarChartSpec', () => {
       ]
 
       const spec = createBarChartSpec(config, columns, tooltipFields, {}, data, [], 'light')
+      if (!('encoding' in spec)) throw new Error('expected encoding in spec')
 
       // Tooltip fields should remain unchanged
       expect(spec.encoding.tooltip).toEqual(tooltipFields)
@@ -87,6 +89,7 @@ describe('createBarChartSpec', () => {
       const data: Row[] = [{ order_month: 1, total: 500 } as Row]
 
       const spec = createBarChartSpec(config, columns, tooltipFields, {}, data, [], 'light')
+      if (!('encoding' in spec)) throw new Error('expected encoding in spec')
 
       const xTooltip = spec.encoding.tooltip.find((f: any) => f.field === 'order_month')
       expect(xTooltip.timeUnit).toBeUndefined()
