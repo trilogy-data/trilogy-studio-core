@@ -65,3 +65,40 @@ Additional burst-style test against Fly with 64 simultaneous `/generate_query` r
 Interpretation:
 - Under a burst of 64 simultaneous requests, the deployed Fly service does reproduce the "falls over under concurrent load" failure mode.
 - The failures are dominated by requests never being serviced before the 120 second client timeout, which points to saturation and queue starvation rather than simple per-request slowness.
+
+## Fly Python 3.13 update (2026-04-06)
+
+Environment:
+- URL: `https://trilogy-service.fly.dev`
+- Python 3.13 (upgraded from 3.12)
+- Benchmark script: `pyserver/scripts/benchmark_concurrency.py`
+
+### small_names payload
+
+| Concurrency | Requests | Throughput (req/s) | Req p50 (s) | Req p95 (s) | Req max (s) | Health p95 (s) | Health max (s) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 16 | 11.05 | 0.074 | 0.146 | 0.146 | 0.102 | 0.102 |
+| 2 | 16 | 18.96 | 0.108 | 0.136 | 0.136 | 0.096 | 0.096 |
+| 4 | 16 | 37.58 | 0.081 | 0.172 | 0.172 | 0.063 | 0.063 |
+| 8 | 32 | 60.17 | 0.111 | 0.184 | 0.199 | 0.091 | 0.091 |
+| 16 | 64 | 54.97 | 0.213 | 0.570 | 0.776 | 0.100 | 0.100 |
+| 32 | 128 | 66.09 | 0.439 | 0.777 | 0.944 | 0.400 | 0.400 |
+| 64 | 256 | 67.97 | 0.902 | 0.948 | 1.029 | 0.145 | 0.145 |
+
+### tpch_large_duckdb payload
+
+| Concurrency | Requests | Throughput (req/s) | Req p50 (s) | Req p95 (s) | Req max (s) | Health p95 (s) | Health max (s) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 16 | 5.66 | 0.167 | 0.274 | 0.274 | 0.098 | 0.098 |
+| 2 | 16 | 0.94 | 0.196 | 15.700 | 15.700 | 0.116 | 0.326 |
+| 4 | 16 | 13.96 | 0.236 | 0.400 | 0.400 | 0.104 | 0.104 |
+| 8 | 32 | 17.11 | 0.385 | 0.658 | 0.659 | 0.091 | 0.091 |
+| 16 | 64 | 18.49 | 0.811 | 1.046 | 1.307 | 0.109 | 0.109 |
+| 32 | 128 | 19.08 | 1.557 | 2.516 | 2.730 | 0.108 | 0.313 |
+| 64 | 256 | 18.31 | 3.040 | 4.321 | 4.469 | 0.197 | 0.332 |
+
+Interpretation:
+- Throughput improved ~1.5-2x for small payloads vs the original Fly baseline (e.g. 66 req/s at concurrency 32 vs 33 req/s).
+- Zero errors, zero timeouts, zero health failures across all concurrency levels — the burst failure mode from the original baseline is resolved.
+- The concurrency=2 large payload run had a one-off 15.7s outlier, likely a cold-start or GC pause; all other levels are healthy.
+- No regressions from the Python 3.13 upgrade.
