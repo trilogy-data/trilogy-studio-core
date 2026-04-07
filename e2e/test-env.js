@@ -41,10 +41,4 @@ export function needsWebServer(env = process.env) {
   return testEnv !== 'prod' && testEnv !== 'docker'
 }
 
-export {
-  LOCAL_RESOLVER,
-  DOCKER_RESOLVER,
-  LOCAL_BASE_URL,
-  DOCKER_BASE_URL,
-  PROD_BASE_URL,
-}
+export { LOCAL_RESOLVER, DOCKER_RESOLVER, LOCAL_BASE_URL, DOCKER_BASE_URL, PROD_BASE_URL }

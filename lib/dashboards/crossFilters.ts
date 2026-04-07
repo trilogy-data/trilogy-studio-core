@@ -83,10 +83,7 @@ export interface CrossFilterController {
   getChartSelectionsFor(itemId: string): CrossFilterChartMap[]
   getFilterExpressionFor(itemId: string): string
   getSqlFiltersFor(itemId: string, baseFilters?: string[]): string[]
-  getSqlFilterLikesFor(
-    itemId: string,
-    baseFilters?: string[],
-  ): SqlFilterLike[]
+  getSqlFilterLikesFor(itemId: string, baseFilters?: string[]): SqlFilterLike[]
   getSqlParametersFor(itemId: string): Record<string, string | number>
 }
 
