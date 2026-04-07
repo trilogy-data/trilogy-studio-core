@@ -171,9 +171,8 @@ def prepare_filter_params(
         # Prefer the type derived from the concept being filtered (most accurate);
         # fall back to inference from the value string.
         param_type = (
-            (_concept_type_for_param(name, stripped_filters, env) if env else None)
-            or _trilogy_type_for(value)
-        )
+            _concept_type_for_param(name, stripped_filters, env) if env else None
+        ) or _trilogy_type_for(value)
         param_declarations += f"\nparameter {name} {param_type};"
         # Normalize value to match the declared type — e.g. Luxon DateTime
         # serialises as a full ISO timestamp ('1992-12-20T22:19:57.462Z') but

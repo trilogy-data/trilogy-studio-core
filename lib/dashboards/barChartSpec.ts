@@ -52,6 +52,18 @@ export const createBarChartSpec = (
     return enc
   }
 
+  // For discrete time x-fields (year, month, etc.), strip temporal formatting from tooltip
+  // entries so Vega-Lite doesn't try to interpret the raw integer as a timestamp (epoch bug).
+  if (xIsDiscreteTime) {
+    tooltipFields = tooltipFields.map((f: any) => {
+      if (f.field === xField) {
+        const { timeUnit, format, ...rest } = f
+        return { ...rest, type: 'ordinal' }
+      }
+      return f
+    })
+  }
+
   const barLayer = {
     params: [
       {

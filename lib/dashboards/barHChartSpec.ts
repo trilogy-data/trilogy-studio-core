@@ -18,6 +18,19 @@ export const createBarHChartSpec = (
   intChart: Array<Partial<ChartConfig>>,
   currentTheme: string = 'light',
 ) => {
+  // For discrete time y-fields (year, month, etc.), strip temporal formatting from tooltip
+  // entries so Vega-Lite doesn't interpret the raw integer as a timestamp (epoch bug).
+  const yField = config.yField || ''
+  if (hasDiscreteTimeTrait(yField, columns)) {
+    tooltipFields = tooltipFields.map((f: any) => {
+      if (f.field === yField) {
+        const { timeUnit, format, ...rest } = f
+        return { ...rest, type: 'ordinal' }
+      }
+      return f
+    })
+  }
+
   return {
     params: [
       {

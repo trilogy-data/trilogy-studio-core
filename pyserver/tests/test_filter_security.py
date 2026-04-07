@@ -13,7 +13,6 @@ from io_models import ModelInSchema, ModelSourceInSchema, QueryInSchema
 from query_helpers import _trilogy_type_for
 from trilogy import Dialects
 
-
 # ---------------------------------------------------------------------------
 # _trilogy_type_for unit tests
 # ---------------------------------------------------------------------------
@@ -42,6 +41,7 @@ def test_trilogy_type_for_int():
 
 def test_trilogy_type_for_float():
     assert _trilogy_type_for(3.14) == "float"
+
 
 # ---------------------------------------------------------------------------
 # Shared model: a tiny "species" catalogue with string and numeric columns
@@ -180,9 +180,9 @@ def test_null_byte_injection():
     )
     sql: str = payload["generated_sql"]
     # Value must not be embedded in SQL
-    assert "\x00" not in sql and "OR '1'='1" not in sql, (
-        f"Injection leaked into SQL: {sql}"
-    )
+    assert (
+        "\x00" not in sql and "OR '1'='1" not in sql
+    ), f"Injection leaked into SQL: {sql}"
 
 
 # ---------------------------------------------------------------------------
@@ -278,9 +278,7 @@ def test_date_range_filter_type_matches():
     DATE vs STRING type mismatch (regression: _trilogy_type_for returned
     'string' for all str values, including ISO dates)."""
     payload = _run_date(
-        extra_filters=[
-            "local.order_date between :order_date_min and :order_date_max"
-        ],
+        extra_filters=["local.order_date between :order_date_min and :order_date_max"],
         parameters={":order_date_min": "2024-01-01", ":order_date_max": "2024-03-31"},
     )
     sql: str = payload["generated_sql"]

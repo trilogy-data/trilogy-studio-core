@@ -144,7 +144,11 @@ RAW_VARIABLE_REQUEST = {
 def test_parse_with_variables():
     """Filter parameters should appear as :name placeholders in the generated SQL,
     never embedded as literal values."""
-    raw = {**INVALID_PARSE_DEBUG, "extra_filters": ["flight.aircraft.aircraft_model.model = :param1"], "parameters": {":param1": "A319-112"}}
+    raw = {
+        **INVALID_PARSE_DEBUG,
+        "extra_filters": ["flight.aircraft.aircraft_model.model = :param1"],
+        "parameters": {":param1": "A319-112"},
+    }
     query = QueryInSchema.model_validate(raw)
     dialect = get_dialect_generator(query.dialect)
     final, _, _, _ = generate_query_core(query, dialect)
@@ -158,7 +162,11 @@ def test_parse_with_variables():
 def test_parse_with_variables_injection_safety():
     """Injection payloads in parameter values must never appear as raw SQL —
     they must travel only as bound parameters."""
-    raw = {**INVALID_PARSE_DEBUG, "extra_filters": ["flight.aircraft.aircraft_model.model = :param1"], "parameters": {":param1": "'; DROP TABLE flight; --"}}
+    raw = {
+        **INVALID_PARSE_DEBUG,
+        "extra_filters": ["flight.aircraft.aircraft_model.model = :param1"],
+        "parameters": {":param1": "'; DROP TABLE flight; --"},
+    }
     query = QueryInSchema.model_validate(raw)
     dialect = get_dialect_generator(query.dialect)
     final, _, _, _ = generate_query_core(query, dialect)
