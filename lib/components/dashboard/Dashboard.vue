@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, inject } from 'vue'
 import { GridLayout, GridItem } from 'vue3-grid-layout-next'
 import DashboardHeader from './DashboardHeader.vue'
 import DashboardGridItem from './DashboardGridItem.vue'
@@ -8,10 +8,12 @@ import ChartEditor from './DashboardChartEditor.vue'
 import MarkdownEditor from './DashboardMarkdownEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import DashboardCTA from './DashboardCTA.vue'
+import DashboardChatPanel from './DashboardChatPanel.vue'
 import { useDashboard } from './useDashboard'
 import { useDashboardStore } from '../../stores/dashboardStore'
 import { type DashboardState } from '../../dashboards/base'
 import { resolveMdiIconPath } from '../../icons/registerMdiIcons'
+import type { LLMConnectionStoreType } from '../../stores/llmStore'
 export interface DashboardProps {
   name: string
   connectionId?: string
@@ -101,6 +103,25 @@ const editable = computed(() => dashboard.value?.state === 'editing' || false)
 const loaded = ref(false)
 const isExportingImage = ref(false)
 const gridContentRef = ref<HTMLElement | null>(null)
+
+// Chat panel state
+const chatPanelOpen = ref(false)
+const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore')
+const hasLlmConnection = computed(() => !!llmConnectionStore?.activeConnection)
+
+function toggleChatPanel() {
+  chatPanelOpen.value = !chatPanelOpen.value
+}
+
+function handleRefreshItem(itemId: string) {
+  handleRefresh(itemId)
+}
+
+function handleForkInvestigation() {
+  if (!dashboard.value) return
+  const name = `Investigation ${Date.now().toString().slice(-4)}`
+  dashboardStore.forkDashboard(dashboard.value.id, name)
+}
 
 interface ExportItemMetric {
   id: string
@@ -443,6 +464,8 @@ async function exportToImage() {
       :globalCompletion="globalCompletion"
       :validateFilter="validateFilter"
       :export-image-action="exportToImage"
+      :has-llm-connection="hasLlmConnection"
+      :chat-open="chatPanelOpen"
       @connection-change="onConnectionChange"
       @filter-change="handleFilterChange"
       @import-change="handleImportChange"
@@ -453,63 +476,77 @@ async function exportToImage() {
       @clear-filter="handleFilterClear"
       @title-update="updateTitle"
       @export-image="exportToImage"
+      @toggle-chat="toggleChatPanel"
+      @fork-investigation="handleForkInvestigation"
     />
 
-    <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">
-      <DashboardCTA :dashboard-id="dashboard.id" />
-    </div>
+    <div class="dashboard-body" :class="{ 'chat-open': chatPanelOpen }">
+      <div class="dashboard-main">
+        <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">
+          <DashboardCTA :dashboard-id="dashboard.id" />
+        </div>
 
-    <div v-else class="grid-container">
-      <div
-        ref="gridContentRef"
-        class="grid-content"
-        :style="{ maxWidth: dashboardMaxWidth + 'px' }"
-      >
-        <GridLayout
-          :col-num="20"
-          :row-height="30"
-          :is-draggable="editable"
-          :is-resizable="editable"
-          :is-bounded="true"
-          :layout="layout"
-          :vertical-compact="true"
-          :use-css-transforms="true"
-          @layout-updated="onLayoutUpdatedDesktop"
-          @layout-ready="layoutReadyEvent"
-        >
-          <grid-item
-            v-for="item in layout"
-            :key="item.i"
-            :static="item.static"
-            :x="item.x"
-            :y="item.y"
-            :w="item.w"
-            :h="item.h"
-            :i="item.i"
-            :data-i="item.i"
-            drag-ignore-from=".no-drag"
-            drag-handle-class=".grid-item-drag-handle"
+        <div v-else class="grid-container">
+          <div
+            ref="gridContentRef"
+            class="grid-content"
+            :style="{ maxWidth: dashboardMaxWidth + 'px' }"
           >
-            <DashboardGridItem
-              :dashboard-id="dashboard.id"
-              :item="item"
-              :edit-mode="editMode"
-              :filter="filter"
-              :get-item-data="getItemData"
-              :symbols="globalCompletion"
-              :get-dashboard-query-executor="getDashboardQueryExecutor"
-              @dimension-click="setCrossFilter"
-              :set-item-data="setItemData"
-              @edit-content="openEditor"
-              @remove-filter="removeFilter"
-              @background-click="unSelect"
-              @update-dimensions="updateItemDimensions"
-              @copy-item="copyItem"
-              @remove-item="removeItem"
-            />
-          </grid-item>
-        </GridLayout>
+            <GridLayout
+              :col-num="20"
+              :row-height="30"
+              :is-draggable="editable"
+              :is-resizable="editable"
+              :is-bounded="true"
+              :layout="layout"
+              :vertical-compact="true"
+              :use-css-transforms="true"
+              @layout-updated="onLayoutUpdatedDesktop"
+              @layout-ready="layoutReadyEvent"
+            >
+              <grid-item
+                v-for="item in layout"
+                :key="item.i"
+                :static="item.static"
+                :x="item.x"
+                :y="item.y"
+                :w="item.w"
+                :h="item.h"
+                :i="item.i"
+                :data-i="item.i"
+                drag-ignore-from=".no-drag"
+                drag-handle-class=".grid-item-drag-handle"
+              >
+                <DashboardGridItem
+                  :dashboard-id="dashboard.id"
+                  :item="item"
+                  :edit-mode="editMode"
+                  :filter="filter"
+                  :get-item-data="getItemData"
+                  :symbols="globalCompletion"
+                  :get-dashboard-query-executor="getDashboardQueryExecutor"
+                  @dimension-click="setCrossFilter"
+                  :set-item-data="setItemData"
+                  @edit-content="openEditor"
+                  @remove-filter="removeFilter"
+                  @background-click="unSelect"
+                  @update-dimensions="updateItemDimensions"
+                  @copy-item="copyItem"
+                  @remove-item="removeItem"
+                />
+              </grid-item>
+            </GridLayout>
+          </div>
+        </div>
       </div>
+
+      <DashboardChatPanel
+        v-if="chatPanelOpen && dashboard"
+        :dashboard="dashboard"
+        :get-dashboard-query-executor="getDashboardQueryExecutor"
+        :refresh-item="handleRefreshItem"
+        @close="chatPanelOpen = false"
+      />
     </div>
 
     <!-- Add Item Modal -->
@@ -569,6 +606,21 @@ async function exportToImage() {
   background-color: var(--main-bg-color);
 }
 
+.dashboard-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dashboard-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .toggle-mode-button {
   background-color: var(--button-bg) !important;
   color: var(--text-color) !important;
@@ -581,6 +633,7 @@ async function exportToImage() {
   background-color: var(--main-bg-color);
   display: flex;
   justify-content: center;
+  min-height: 0;
 }
 
 .grid-content {

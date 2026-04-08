@@ -538,9 +538,16 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
       )
       return { response: response.text }
     } catch (err) {
-      return {
-        response: `Error: ${err instanceof Error ? err.message : 'An unknown error occurred'}`,
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return undefined
       }
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred'
+      // Add error as assistant message so it's visible in the chat UI
+      activeChatMessages.value = [
+        ...activeChatMessages.value,
+        { role: 'assistant', content: `Error: ${errorMessage}` },
+      ]
+      return undefined
     } finally {
       standaloneLoading.value = false
       standaloneActiveToolName.value = ''

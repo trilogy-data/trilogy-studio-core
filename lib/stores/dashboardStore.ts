@@ -213,6 +213,95 @@ export const useDashboardStore = defineStore('dashboards', {
       return newDashboard
     },
 
+    // Fork a dashboard into an investigation (child dashboard with lineage)
+    forkDashboard(parentId: string, investigationName: string): DashboardModel {
+      const parent = this.dashboards[parentId]
+      if (!parent) {
+        throw new Error(`Dashboard with ID "${parentId}" not found.`)
+      }
+
+      // Generate unique ID
+      let newId = `${parent.name} / ${investigationName}`
+      let counter = 1
+      while (this.dashboards[newId]) {
+        newId = `${parent.name} / ${investigationName} (${counter})`
+        counter++
+      }
+
+      const investigation = new DashboardModel({
+        id: newId,
+        name: newId,
+        connection: parent.connection,
+        storage: parent.storage,
+        state: 'editing',
+        parentDashboardId: parentId,
+        investigationName,
+        investigationCreatedFrom: { timestamp: new Date() },
+        description: parent.description,
+      })
+
+      // Deep-clone grid items, layout, imports
+      investigation.gridItems = Object.fromEntries(
+        Object.entries(parent.gridItems).map(([key, item]) => [
+          key,
+          { ...item, chartFilters: [], conceptFilters: [], filters: [] },
+        ]),
+      )
+      investigation.layout = parent.layout.map((item) => ({ ...item }))
+      investigation.imports = parent.imports.map((imp) => ({ ...imp }))
+      investigation.filter = parent.filter
+      investigation.nextId = parent.nextId
+      investigation.changed = true
+
+      // Track child on parent
+      if (!parent.children) parent.children = []
+      parent.children.push(newId)
+      parent.changed = true
+
+      this.addDashboard(investigation)
+      this.activeDashboardId = newId
+      return investigation
+    },
+
+    // Promote an investigation to a standalone root dashboard
+    promoteDashboard(investigationId: string): DashboardModel {
+      const investigation = this.dashboards[investigationId]
+      if (!investigation) {
+        throw new Error(`Dashboard with ID "${investigationId}" not found.`)
+      }
+
+      // Remove from parent's children list
+      if (investigation.parentDashboardId) {
+        const parent = this.dashboards[investigation.parentDashboardId]
+        if (parent?.children) {
+          parent.children = parent.children.filter((id) => id !== investigationId)
+          parent.changed = true
+        }
+      }
+
+      // Clear investigation lineage — it's now a root dashboard
+      investigation.parentDashboardId = null
+      investigation.investigationName = undefined
+      investigation.investigationCreatedFrom = undefined
+      investigation.changed = true
+
+      return investigation
+    },
+
+    // Get child investigations for a dashboard
+    getInvestigations(parentId: string): DashboardModel[] {
+      return Object.values(this.dashboards).filter(
+        (d) => d.parentDashboardId === parentId && !d.deleted,
+      )
+    },
+
+    // Get only root dashboards (not investigations)
+    getRootDashboards(): DashboardModel[] {
+      return Object.values(this.dashboards).filter(
+        (d) => !d.parentDashboardId && !d.deleted,
+      )
+    },
+
     // Add an existing dashboard
     addDashboard(dashboard: DashboardModel) {
       this.dashboards[dashboard.id] = dashboard

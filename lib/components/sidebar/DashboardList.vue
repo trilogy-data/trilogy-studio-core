@@ -74,14 +74,24 @@ import { useConfirmationState } from '../useConfirmationState'
 function buildDashboardTree(dashboards: any[], collapsed: Record<string, boolean>) {
   const tree: any[] = []
 
-  // Group by storage first
+  // Group by storage first — only include root dashboards (not investigations)
   const storageMap: Record<string, any[]> = {}
+  // Build a lookup of investigations by parent
+  const investigationsByParent: Record<string, any[]> = {}
 
   dashboards.forEach((dashboard) => {
-    const storage = dashboard.storage || 'local'
-    if (dashboard.deleted) {
-      return // Skip deleted dashboards
+    if (dashboard.deleted) return
+
+    if (dashboard.parentDashboardId) {
+      // This is an investigation — group by parent
+      if (!investigationsByParent[dashboard.parentDashboardId]) {
+        investigationsByParent[dashboard.parentDashboardId] = []
+      }
+      investigationsByParent[dashboard.parentDashboardId].push(dashboard)
+      return
     }
+
+    const storage = dashboard.storage || 'local'
     if (!storageMap[storage]) {
       storageMap[storage] = []
     }
@@ -125,17 +135,34 @@ function buildDashboardTree(dashboards: any[], collapsed: Record<string, boolean
           indent: 1,
         })
 
-        // If not collapsed, add dashboards
+        // If not collapsed, add dashboards and their investigations
         if (!collapsed[connectionKey]) {
           connectionItems.forEach((dashboard) => {
+            const hasInvestigations = (investigationsByParent[dashboard.id] || []).length > 0
+            const dashboardKey = `d-${dashboard.id}`
             tree.push({
               type: 'dashboard',
               label: dashboard.name,
               id: dashboard.id,
-              key: `d-${dashboard.id}`,
+              key: dashboardKey,
               indent: 2,
               dashboard: dashboard,
+              hasInvestigations,
             })
+
+            // Add investigations nested under the dashboard
+            if (hasInvestigations && !collapsed[dashboardKey]) {
+              investigationsByParent[dashboard.id].forEach((investigation: any) => {
+                tree.push({
+                  type: 'investigation',
+                  label: investigation.investigationName || investigation.name,
+                  id: investigation.id,
+                  key: `i-${investigation.id}`,
+                  indent: 3,
+                  dashboard: investigation,
+                })
+              })
+            }
           })
         }
       })
@@ -242,6 +269,9 @@ export default {
     },
     clickAction(item: any) {
       if (item.type === 'dashboard') {
+        // If dashboard has investigations, toggle collapse; click on the name still navigates
+        this.$emit('dashboard-key-selected', item.id)
+      } else if (item.type === 'investigation') {
         this.$emit('dashboard-key-selected', item.id)
       } else {
         this.toggleCollapse(item.key)

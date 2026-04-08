@@ -232,6 +232,12 @@ export class AnthropicProvider extends LLMProvider {
 
       const data = await response.json()
 
+      // Check for API-level errors (e.g. invalid model, authentication failures)
+      if (data.type === 'error' || data.error) {
+        const errorMsg = data.error?.message || data.error?.type || 'Unknown API error'
+        throw new Error(errorMsg)
+      }
+
       // Handle tool use responses - extract text and tool_use blocks
       let responseText = ''
       const toolCalls: LLMToolCall[] = []

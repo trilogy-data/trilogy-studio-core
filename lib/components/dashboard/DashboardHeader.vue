@@ -32,6 +32,14 @@ const props = defineProps({
     type: Function as unknown as PropType<(() => Promise<void>) | null>,
     default: null,
   },
+  hasLlmConnection: {
+    type: Boolean,
+    default: false,
+  },
+  chatOpen: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits([
@@ -45,6 +53,8 @@ const emit = defineEmits([
   'refresh',
   'title-update',
   'export-image',
+  'toggle-chat',
+  'fork-investigation',
 ])
 
 const connectionStore = useConnectionStore()
@@ -265,6 +275,30 @@ const modeIcon = computed(() => {
         >
           <i class="mdi mdi-refresh filter-action-icon" aria-hidden="true"></i>
           <span class="filter-action-label">Refresh</span>
+        </button>
+
+        <button
+          @click="$emit('fork-investigation')"
+          class="btn btn-secondary filter-action-btn"
+          data-testid="fork-investigation-button"
+          title="Fork as investigation"
+          aria-label="Fork as investigation"
+        >
+          <i class="mdi mdi-source-branch filter-action-icon" aria-hidden="true"></i>
+          <span class="filter-action-label">Fork</span>
+        </button>
+
+        <button
+          @click="$emit('toggle-chat')"
+          class="btn filter-action-btn"
+          :class="chatOpen ? 'btn-primary' : 'btn-secondary'"
+          :disabled="!hasLlmConnection"
+          data-testid="toggle-chat-button"
+          :title="hasLlmConnection ? 'Toggle AI assistant' : 'No LLM connection configured'"
+          aria-label="Toggle AI assistant"
+        >
+          <i class="mdi mdi-creation-outline filter-action-icon" aria-hidden="true"></i>
+          <span class="filter-action-label">{{ chatOpen ? 'Close AI' : 'AI' }}</span>
         </button>
 
         <div class="mode-selector" data-testid="mode-selector-wrapper">
