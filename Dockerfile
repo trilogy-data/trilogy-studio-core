@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for Trilogy Studio
 # Stage 1: Build Frontend
-FROM node:22.16-alpine AS frontend-builder
+FROM node:24-alpine AS frontend-builder
 WORKDIR /app/frontend
 # Enable pnpm via Corepack
 RUN corepack enable pnpm && corepack prepare pnpm@10 --activate

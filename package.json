@@ -27,7 +27,7 @@
     "@trilogy-data/trilogy-studio-components": "link:lib",
     "@types/gapi": "^0.0.47",
     "@types/luxon": "^3.7.1",
-    "@types/node": "^22.19.0",
+    "@types/node": "^24.0.0",
     "@types/prismjs": "^1.26.5",
     "@types/tabulator-tables": "^6.3.0",
     "@types/webappsec-credential-management": "^0.6.9",
