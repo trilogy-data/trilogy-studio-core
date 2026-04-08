@@ -108,6 +108,7 @@ export default abstract class BaseConnection {
   backoffFactor: number = 1.5 // Multiplier for exponential growth
   changed: boolean = false
   deleted: boolean = false
+  hasSchema: boolean = true
 
   constructor(
     name: string,
@@ -236,7 +237,14 @@ export default abstract class BaseConnection {
     table: string,
     limit: number = 100,
   ): Promise<Results> {
-    let sql = `SELECT * FROM ${database}.${schema}.${table} LIMIT ${limit}`
+    let qualifiedName = table
+    if (schema && schema !== database) {
+      qualifiedName = `${schema}.${qualifiedName}`
+    }
+    if (database) {
+      qualifiedName = `${database}.${qualifiedName}`
+    }
+    let sql = `SELECT * FROM ${qualifiedName} LIMIT ${limit}`
 
     return this.query(sql)
   }

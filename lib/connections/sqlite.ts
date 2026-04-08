@@ -81,6 +81,7 @@ export default class SQLiteConnection extends BaseConnection {
   constructor(name: string, model?: string) {
     super(name, 'sqlite', false, model)
     this.query_type = 'sqlite'
+    this.hasSchema = false
   }
 
   // FILE PROCESSING METHODS
@@ -364,6 +365,16 @@ export default class SQLiteConnection extends BaseConnection {
 
     foundTable.columns = await this.getColumns(database, schemaName, table)
     return foundTable
+  }
+
+  async getTableSample(
+    _database: string,
+    _schema: string,
+    table: string,
+    limit: number = 100,
+  ): Promise<Results> {
+    const sql = `SELECT * FROM "${table}" LIMIT ${limit}`
+    return this.query(sql)
   }
 
   private mapSQLiteTypeToColumnType(sqliteType: string): ColumnType {

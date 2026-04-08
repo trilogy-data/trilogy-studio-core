@@ -178,11 +178,12 @@ export function buildConnectionTree(
       }
       databases.forEach((db) => {
         const dbId = `${connection.name}${KeySeparator}${db.name}`
+        const skipSchema = !connection.hasSchema
         list.push({
           id: dbId,
           name: db.name,
           indent: 1,
-          count: db.schemas.length,
+          count: skipSchema ? (db.schemas[0]?.tables.length ?? 0) : db.schemas.length,
           type: 'database',
           searchPath: `${db.name}`,
           connection,
@@ -202,37 +203,19 @@ export function buildConnectionTree(
           }
 
           // Add all schemas
+          // When the connection has no schema concept (e.g. SQLite),
+          // show tables directly under the database
           db.schemas.forEach((schema) => {
             const schemaId = `${dbId}${KeySeparator}${schema.name}`
-            list.push({
-              id: schemaId,
-              name: schema.name,
-              indent: 2,
-              count: schema.tables.length,
-              type: 'schema',
-              searchPath: `${db.name}.${schema.name}`,
-              connection,
-            })
 
-            // If this schema is not collapsed, add all its tables
-            if (!collapsed[schemaId]) {
-              if (isLoading[schemaId]) {
-                list.push({
-                  id: `${schemaId}-loading`,
-                  name: 'Loading...',
-                  indent: 2,
-                  count: 0,
-                  type: 'loading',
-                  searchPath: `${db.name}.${schema.name}`,
-                  connection,
-                })
-              }
+            if (skipSchema) {
+              // Show tables directly under the database node
               schema.tables.forEach((table: Table) => {
                 const tableId = `${dbId}${KeySeparator}${schema.name}${KeySeparator}${table.name}`
                 list.push({
                   id: tableId,
                   name: table.name,
-                  indent: 3,
+                  indent: 2,
                   count: 0,
                   type: 'table',
                   searchPath: `${db.name}.${schema.name}.${table.name}`,
@@ -240,6 +223,44 @@ export function buildConnectionTree(
                   object: table,
                 })
               })
+            } else {
+              list.push({
+                id: schemaId,
+                name: schema.name,
+                indent: 2,
+                count: schema.tables.length,
+                type: 'schema',
+                searchPath: `${db.name}.${schema.name}`,
+                connection,
+              })
+
+              // If this schema is not collapsed, add all its tables
+              if (!collapsed[schemaId]) {
+                if (isLoading[schemaId]) {
+                  list.push({
+                    id: `${schemaId}-loading`,
+                    name: 'Loading...',
+                    indent: 2,
+                    count: 0,
+                    type: 'loading',
+                    searchPath: `${db.name}.${schema.name}`,
+                    connection,
+                  })
+                }
+                schema.tables.forEach((table: Table) => {
+                  const tableId = `${dbId}${KeySeparator}${schema.name}${KeySeparator}${table.name}`
+                  list.push({
+                    id: tableId,
+                    name: table.name,
+                    indent: 3,
+                    count: 0,
+                    type: 'table',
+                    searchPath: `${db.name}.${schema.name}.${table.name}`,
+                    connection,
+                    object: table,
+                  })
+                })
+              }
             }
           })
         }
