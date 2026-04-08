@@ -2,8 +2,14 @@ import BaseConnection from './base'
 import { Database, Schema, Table, Column, AssetType } from './base'
 import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
-import type initSqlJs from 'sql.js'
-import type { SqlJsStatic, Database as SqlJsDatabase } from 'sql.js'
+
+// sql.js types — declared inline so the module is fully optional at build time
+type SqlJsStatic = { Database: new (data?: ArrayLike<number>) => SqlJsDatabase }
+type SqlJsDatabase = {
+  exec(sql: string, params?: Record<string, any>): { columns: string[]; values: any[][] }[]
+  run(sql: string, params?: Record<string, any>): void
+  close(): void
+}
 
 export interface SQLiteAssetUrls {
   wasmUrl: string
@@ -18,6 +24,12 @@ export function configureSQLiteAssets(assetUrls: SQLiteAssetUrls | null): void {
 // Singleton cache to avoid creating multiple instances
 const connectionCache: Record<string, { sql: SqlJsStatic; db: SqlJsDatabase }> = {}
 
+async function loadSqlJsModule(): Promise<(config?: any) => Promise<SqlJsStatic>> {
+  // Lazy-load sql.js — bundled in app/Docker builds, external in lib builds
+  const mod = await import('sql.js')
+  return mod.default
+}
+
 async function createSQLite(
   connectionName: string = 'default',
 ): Promise<{ sql: SqlJsStatic; db: SqlJsDatabase }> {
@@ -25,23 +37,11 @@ async function createSQLite(
     return connectionCache[connectionName]
   }
 
-  // Lazy-load sql.js — only fetched when a SQLite connection is created
-  const sqlModule = await import('sql.js')
-  const initSqlJsFn = sqlModule.default as typeof initSqlJs
-
-  const configuredAssets = configuredSQLiteAssetUrls
-  const useBundledAssets = !configuredAssets && import.meta.env.VITE_SQLITE_BUNDLED === 'true'
+  const initSqlJsFn = await loadSqlJsModule()
 
   let config: { locateFile?: (file: string) => string } = {}
-  if (configuredAssets) {
-    config.locateFile = () => configuredAssets.wasmUrl
-  } else if (useBundledAssets) {
-    // When bundled, Vite handles the WASM file via ?url import
-    const { default: wasmUrl } = await import('sql.js/dist/sql-wasm.wasm?url')
-    config.locateFile = () => wasmUrl
-  } else {
-    // CDN fallback
-    config.locateFile = (file: string) => `https://cdn.jsdelivr.net/npm/sql.js@1.14.1/dist/${file}`
+  if (configuredSQLiteAssetUrls?.wasmUrl) {
+    config.locateFile = () => configuredSQLiteAssetUrls!.wasmUrl
   }
 
   const sql = await initSqlJsFn(config)
