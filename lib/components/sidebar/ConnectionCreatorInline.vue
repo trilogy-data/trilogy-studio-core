@@ -22,6 +22,7 @@
           required
         >
           <option value="duckdb">DuckDB</option>
+          <option value="sqlite">SQLite</option>
           <!-- Need to figure out CORS to support this and bigquery-->
           <!-- <option value="motherduck">MotherDuck</option> -->
           <option value="bigquery">Bigquery Oauth</option>

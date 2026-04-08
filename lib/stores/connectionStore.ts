@@ -5,6 +5,7 @@ import {
   BigQueryOauthConnection,
   MotherDuckConnection,
   SnowflakeJwtConnection,
+  SQLiteConnection,
 } from '../connections'
 import { EditorTag } from '../editors'
 import useEditorStore from './editorStore'
@@ -33,6 +34,7 @@ export const connectionTypes = [
   { label: 'BigQuery (Service Account)', value: 'bigquery' },
   // { label: 'Snowflake (Basic Auth)', value: 'snowflake-basic' },
   { label: 'Snowflake (Key Pair Auth)', value: 'snowflake' },
+  { label: 'SQLite', value: 'sqlite' },
   { label: 'MotherDuck (Token)', value: 'motherduck' },
   // { label: 'SQL Server (Basic Auth)', value: 'sqlserver' },
 ]
@@ -173,6 +175,8 @@ const useConnectionStore = defineStore('connections', {
       }
       if (type === 'duckdb') {
         this.connections[name] = new DuckDBConnection(name)
+      } else if (type === 'sqlite') {
+        this.connections[name] = new SQLiteConnection(name)
       } else if (type === 'bigquery-oauth') {
         this.connections[name] = new BigQueryOauthConnection(name, options.projectId)
       } else if (type === 'bigquery') {

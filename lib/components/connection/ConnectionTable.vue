@@ -5,7 +5,7 @@
         <div class="table-title-block">
           <h2 class="table-title">
             <span class="text-faint" v-if="table.database">{{ table.database }}.</span
-            ><span class="text-faint" v-if="table.schema">{{ table.schema }}.</span>{{ table.name }}
+            ><span class="text-faint" v-if="table.schema && table.schema !== table.database">{{ table.schema }}.</span>{{ table.name }}
           </h2>
           <span
             class="table-type-badge"
@@ -437,6 +437,7 @@ export default defineComponent({
 
 .tab-button {
   padding: 0 14px;
+  height: 100%;
   border: none;
   background: transparent;
   font-weight: 500;
@@ -446,6 +447,7 @@ export default defineComponent({
   font-size: 13px;
   line-height: 1;
   border-bottom: 2px solid transparent;
+  border-radius: 0;
 }
 
 .tab-button:hover {

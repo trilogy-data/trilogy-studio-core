@@ -11,7 +11,7 @@
   >
     <input
       type="file"
-      accept=".csv,.parquet,.db"
+      accept=".csv,.parquet,.db,.sqlite"
       @change="handleFileInput"
       ref="fileInput"
       class="hidden-input"
@@ -28,7 +28,7 @@
       <i class="mdi mdi-plus upload-icon"></i>
       <span class="upload-copy">
         <span class="upload-label">Import data...</span>
-        <span class="upload-subtitle">CSV, Parquet, DuckDB</span>
+        <span class="upload-subtitle">CSV, Parquet, DB</span>
       </span>
     </div>
     <div
@@ -44,13 +44,16 @@
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
-import DuckDBConnection from '../../connections/duckdb'
+import type DuckDBConnection from '../../connections/duckdb'
+import type SQLiteConnection from '../../connections/sqlite'
+
+type ImportableConnection = DuckDBConnection | SQLiteConnection
 
 export default defineComponent({
   name: 'FileUpload',
   props: {
     connection: {
-      type: Object as () => DuckDBConnection,
+      type: Object as () => ImportableConnection,
       required: true,
     },
   },
@@ -88,7 +91,7 @@ export default defineComponent({
         if (isValidFileType(file)) {
           await processFile(file)
         } else {
-          alert('Please drop a CSV, Parquet, or DuckDB file')
+          alert('Please drop a CSV, Parquet, or database file')
         }
       }
     }
@@ -99,7 +102,8 @@ export default defineComponent({
         file.name.endsWith('.csv') ||
         file.type === 'application/octet-stream' ||
         file.name.endsWith('.parquet') ||
-        file.name.endsWith('.db')
+        file.name.endsWith('.db') ||
+        file.name.endsWith('.sqlite')
       )
     }
 

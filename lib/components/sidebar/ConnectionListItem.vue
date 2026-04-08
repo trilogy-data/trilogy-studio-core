@@ -54,8 +54,7 @@
 
         <DuckDBImporter
           v-else-if="item.type === 'duckdb-upload'"
-          :db="(item.connection as any as DuckDBConnection).db"
-          :connection="item.connection as any as DuckDBConnection"
+          :connection="item.connection as any"
         />
 
         <div v-else-if="item.type === 'model'" class="connection-meta-row" @click.stop>
@@ -252,7 +251,7 @@ import DuckDBImporter from '../sidebar/DuckDBImporter.vue'
 import ModelSelector from '../model/ModelSelector.vue'
 import Tooltip from '../Tooltip.vue'
 import CreateEditorFromDatasourcePopup from './CreateEditorFromDatasourcePopup.vue'
-import { Connection, MotherDuckConnection, DuckDBConnection } from '../../connections'
+import { Connection, MotherDuckConnection } from '../../connections'
 import SidebarOverflowMenu from './SidebarOverflowMenu.vue'
 import type { ContextMenuItem } from '../ContextMenu.vue'
 import type { EditorStoreType } from '../../stores/editorStore'

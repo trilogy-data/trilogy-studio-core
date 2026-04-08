@@ -213,11 +213,13 @@ export default {
           console.log('getting schemas')
           let dbid = id.split(KeySeparator)[1]
           await connectionStore.connections[connection].refreshDatabase(dbid)
-          // we don't expand tables in the sidebar anymore
-          // for (let table of tables) {
-          //   collapsed.value[`${connection}${KeySeparator}${dbid}${KeySeparator}${table.name}`] =
-          //     true
-          // }
+          // For schema-less connections, also refresh the schema to load tables
+          if (!connectionStore.connections[connection].hasSchema) {
+            let db = connectionStore.connections[connection].databases?.find((db) => db.name === dbid)
+            if (db && db.schemas.length > 0) {
+              await connectionStore.connections[connection].refreshSchema(dbid, db.schemas[0].name)
+            }
+          }
         }
         if (type === 'schema') {
           let dbid = id.split(KeySeparator)[1]

@@ -253,7 +253,7 @@ describe.skipIf(!OPENROUTER_KEY)('OpenRouter Provider Integration', () => {
     provider = new OpenRouterProvider(
       'test-openrouter',
       OPENROUTER_KEY!,
-      'anthropic/claude-3-5-sonnet',
+      'anthropic/claude-sonnet-4-6',
     )
   })
 
