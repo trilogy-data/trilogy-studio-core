@@ -10,6 +10,8 @@ import type { ChatImport } from '../chats/chat'
 import type { ContentInput } from '../stores/resolver'
 import type { DashboardQueryExecutor } from '../dashboards/dashboardQueryExecutor'
 import { truncateResultRows } from './toolLoopCore'
+import { validateChartConfigForData } from '../dashboards/helpers'
+import type { ChartConfig, Results } from '../editors/results'
 
 export interface DashboardToolExecutorDeps {
   dashboardStore: DashboardStoreType
@@ -24,8 +26,8 @@ export interface DashboardToolExecutorDeps {
   setActiveImports: (imports: ChatImport[]) => void
   /** Get or create the dashboard query executor */
   getDashboardQueryExecutor: () => DashboardQueryExecutor | null
-  /** Trigger query re-execution for a specific item */
-  refreshItem: (itemId: string) => void
+  /** Trigger query re-execution for a specific item; returns a queryId if available */
+  refreshItem: (itemId: string) => string | undefined
 }
 
 export class DashboardToolExecutor {
@@ -163,7 +165,56 @@ export class DashboardToolExecutor {
     }
   }
 
-  private addDashboardItem(input: Record<string, any>): ToolCallResult {
+  /**
+   * Wait for a query to complete and validate the chart config against the results.
+   * If validation fails, auto-corrects to the default config and returns warnings.
+   */
+  private async validateChartConfigAfterQuery(
+    itemId: string,
+    queryId: string,
+    chartConfig: ChartConfig,
+  ): Promise<string | null> {
+    const executor = this.deps.getDashboardQueryExecutor()
+    if (!executor) return null
+
+    try {
+      const result = await executor.waitForQuery(queryId)
+
+      // Extract results - handle both direct Results and wrapped { results: Results }
+      const results: Results | null = result?.results ?? result ?? null
+      if (!results || !results.headers) return null
+
+      const validation = validateChartConfigForData(results.data, results.headers, chartConfig)
+      if (validation.valid) return null
+
+      // Validation failed - auto-correct to suggested config
+      const suggested = validation.suggestedConfig as ChartConfig
+      if (suggested && suggested.chartType) {
+        this.deps.dashboardStore.updateItemChartConfig(
+          this.deps.dashboardId,
+          itemId,
+          suggested,
+        )
+      }
+
+      const errors = [
+        validation.chartTypeError,
+        ...validation.fieldErrors,
+      ].filter(Boolean)
+
+      return (
+        `Chart config validation failed - auto-corrected to default configuration.\n` +
+        `Issues:\n${errors.map(e => `  - ${e}`).join('\n')}\n` +
+        `Suggested config: ${JSON.stringify(validation.suggestedConfig, null, 2)}\n` +
+        `Tip: Omit chartConfig to let auto-detection choose the best chart type and field mapping for the data.`
+      )
+    } catch {
+      // Query failed or was cancelled - validation not possible, skip silently
+      return null
+    }
+  }
+
+  private async addDashboardItem(input: Record<string, any>): Promise<ToolCallResult> {
     const dashboard = this.dashboard
     if (!dashboard) return { success: false, error: 'Dashboard not found.' }
 
@@ -202,17 +253,31 @@ export class DashboardToolExecutor {
     }
 
     // Trigger query execution for chart/table items
+    let queryId: string | undefined
     if (cellType === CELL_TYPES.CHART || cellType === CELL_TYPES.TABLE) {
-      this.deps.refreshItem(itemId)
+      queryId = this.deps.refreshItem(itemId)
+    }
+
+    let message = `Added ${type} item "${name}" (ID: ${itemId}) at position (0, ${maxY}, ${w}x${h}).`
+
+    // If a chartConfig was explicitly provided, validate it against query results
+    if (input.chartConfig && cellType === CELL_TYPES.CHART && queryId) {
+      const warning = await this.validateChartConfigAfterQuery(itemId, queryId, input.chartConfig)
+      if (warning) {
+        return {
+          success: false,
+          error: `${message}\n\nHowever, the chart configuration is invalid:\n${warning}`,
+        }
+      }
     }
 
     return {
       success: true,
-      message: `Added ${type} item "${name}" (ID: ${itemId}) at position (0, ${maxY}, ${w}x${h}).`,
+      message,
     }
   }
 
-  private updateDashboardItem(input: Record<string, any>): ToolCallResult {
+  private async updateDashboardItem(input: Record<string, any>): Promise<ToolCallResult> {
     const dashboard = this.dashboard
     if (!dashboard) return { success: false, error: 'Dashboard not found.' }
 
@@ -256,16 +321,58 @@ export class DashboardToolExecutor {
 
     // Re-execute query if content or type changed
     const item = dashboard.gridItems[itemId]
+    let queryId: string | undefined
     if (
       (updates.includes('content') || updates.includes('type')) &&
       (item.type === CELL_TYPES.CHART || item.type === CELL_TYPES.TABLE)
     ) {
-      this.deps.refreshItem(itemId)
+      queryId = this.deps.refreshItem(itemId)
+    }
+
+    let message = `Updated item "${itemId}": ${updates.join(', ')}.`
+
+    // If chartConfig was updated on a chart item, validate against query results
+    if (updates.includes('chartConfig') && item.type === CELL_TYPES.CHART) {
+      // If query was also re-executed, wait for that; otherwise use existing results
+      if (queryId) {
+        const warning = await this.validateChartConfigAfterQuery(itemId, queryId, input.chartConfig)
+        if (warning) {
+          return {
+            success: false,
+            error: `${message}\n\nHowever, the chart configuration is invalid:\n${warning}`,
+          }
+        }
+      } else if (item.results) {
+        // Validate against existing results without re-executing query
+        const results = item.results as Results
+        if (results.headers) {
+          const validation = validateChartConfigForData(results.data, results.headers, input.chartConfig)
+          if (!validation.valid) {
+            const suggested = validation.suggestedConfig as ChartConfig
+            if (suggested && suggested.chartType) {
+              this.deps.dashboardStore.updateItemChartConfig(
+                this.deps.dashboardId,
+                itemId,
+                suggested,
+              )
+            }
+            const errors = [
+              validation.chartTypeError,
+              ...validation.fieldErrors,
+            ].filter(Boolean)
+
+            return {
+              success: false,
+              error: `${message}\n\nHowever, the chart configuration is invalid - auto-corrected to default configuration.\nIssues:\n${errors.map(e => `  - ${e}`).join('\n')}\nSuggested config: ${JSON.stringify(validation.suggestedConfig, null, 2)}\nTip: Omit chartConfig to let auto-detection choose the best chart type and field mapping for the data.`,
+            }
+          }
+        }
+      }
     }
 
     return {
       success: true,
-      message: `Updated item "${itemId}": ${updates.join(', ')}.`,
+      message,
     }
   }
 

@@ -17,7 +17,7 @@ import type { ChatImport, ChatMessage } from '../../chats/chat'
 const props = defineProps<{
   dashboard: DashboardModel
   getDashboardQueryExecutor: (dashboardId: string) => DashboardQueryExecutor
-  refreshItem: (itemId: string) => void
+  refreshItem: (itemId: string) => string | undefined
 }>()
 
 const emit = defineEmits<{

@@ -571,6 +571,110 @@ export const determineEligibleChartTypes = (
   return eligibleCharts.filter((chart) => Charts.map((x) => x.value).includes(chart))
 }
 
+export interface ChartConfigValidationResult {
+  valid: boolean
+  /** Non-empty when the chart type itself is not eligible for the data */
+  chartTypeError?: string
+  /** Per-field issues (e.g. xField is not a latitude column for geo-map) */
+  fieldErrors: string[]
+  /** The eligible chart types for this data, for suggestion messages */
+  eligibleChartTypes: string[]
+  /** Auto-detected default config as a fallback suggestion */
+  suggestedConfig: Partial<ChartConfig>
+}
+
+/**
+ * Validate a chart config against actual column metadata.
+ * Returns detailed errors if the chart type or field assignments are invalid.
+ */
+export const validateChartConfigForData = (
+  data: readonly Row[],
+  columns: Map<string, ResultColumn>,
+  config: ChartConfig,
+): ChartConfigValidationResult => {
+  const eligible = determineEligibleChartTypes(data, columns)
+  const suggested = determineDefaultConfig(data, columns)
+  const fieldErrors: string[] = []
+
+  // Check if the chart type is eligible for this data
+  if (!eligible.includes(config.chartType)) {
+    return {
+      valid: false,
+      chartTypeError: `Chart type "${config.chartType}" is not compatible with this data. Eligible chart types: ${eligible.join(', ')}.`,
+      fieldErrors: [],
+      eligibleChartTypes: eligible,
+      suggestedConfig: suggested,
+    }
+  }
+
+  const columnNames = Array.from(columns.keys())
+
+  // Validate that referenced fields exist in the data
+  const fieldKeys: (keyof ChartConfig)[] = [
+    'xField', 'yField', 'yField2', 'colorField', 'sizeField',
+    'groupField', 'trellisField', 'trellisRowField', 'geoField', 'annotationField',
+  ]
+  for (const key of fieldKeys) {
+    const val = config[key]
+    if (typeof val === 'string' && val !== '' && !columns.has(val)) {
+      fieldErrors.push(`Field "${val}" (${key}) does not exist in the query results. Available columns: ${columnNames.join(', ')}.`)
+    }
+  }
+
+  // Chart-type-specific field validation
+  if (config.chartType === 'geo-map') {
+    const latCols = filteredColumns('latitude', columns)
+    const lonCols = filteredColumns('longitude', columns)
+    const geoCols = filteredColumns('geographic', columns)
+
+    const hasLatLon = latCols.length > 0 && lonCols.length > 0
+    const hasGeo = geoCols.length > 0
+
+    if (!hasLatLon && !hasGeo) {
+      fieldErrors.push(
+        `geo-map requires geographic columns (latitude/longitude pairs or state/country codes) but none were found. ` +
+        `Available columns: ${columnNames.join(', ')}. ` +
+        `Consider using a different chart type or adjusting the query to include geographic fields.`,
+      )
+    }
+
+    // Validate xField/yField are actual lat/long when used for geo-map without geoField
+    if (!config.geoField && !hasGeo) {
+      if (config.xField && lonCols.length > 0 && !lonCols.some(c => c.name === config.xField)) {
+        fieldErrors.push(
+          `For geo-map, xField should be a longitude column. "${config.xField}" is not a longitude field. ` +
+          `Available longitude columns: ${lonCols.map(c => c.name).join(', ') || 'none'}.`,
+        )
+      }
+      if (config.yField && latCols.length > 0 && !latCols.some(c => c.name === config.yField)) {
+        fieldErrors.push(
+          `For geo-map, yField should be a latitude column. "${config.yField}" is not a latitude field. ` +
+          `Available latitude columns: ${latCols.map(c => c.name).join(', ') || 'none'}.`,
+        )
+      }
+    }
+  }
+
+  if (config.chartType === 'line' || config.chartType === 'area') {
+    // These chart types work best with temporal x-axis
+    if (config.xField && columns.has(config.xField)) {
+      const col = columns.get(config.xField)!
+      if (!isTemporalColumn(col) && !isCategoricalColumn(col) && !isNumericColumn(col)) {
+        fieldErrors.push(
+          `For ${config.chartType} charts, xField should typically be a temporal or categorical column.`,
+        )
+      }
+    }
+  }
+
+  return {
+    valid: fieldErrors.length === 0,
+    fieldErrors,
+    eligibleChartTypes: eligible,
+    suggestedConfig: suggested,
+  }
+}
+
 /**
  * Get formatting hints for a field based on its column type
  */

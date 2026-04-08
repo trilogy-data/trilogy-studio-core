@@ -599,13 +599,13 @@ export function useDashboard(
   }
 
   // Refresh management
-  function handleRefresh(itemId?: string): void {
-    if (!dashboard.value) return
+  function handleRefresh(itemId?: string): string | undefined {
+    if (!dashboard.value) return undefined
 
     if (itemId) {
-      dashboardStore.getQueryExecutor(dashboard.value.id)?.runSingle(itemId)
+      const queryId = dashboardStore.getQueryExecutor(dashboard.value.id)?.runSingle(itemId)
       emit.dimensionsUpdate(itemId)
-      return
+      return queryId
     }
 
     // refresh them all

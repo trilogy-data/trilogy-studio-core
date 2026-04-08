@@ -113,8 +113,8 @@ function toggleChatPanel() {
   chatPanelOpen.value = !chatPanelOpen.value
 }
 
-function handleRefreshItem(itemId: string) {
-  handleRefresh(itemId)
+function handleRefreshItem(itemId: string): string | undefined {
+  return handleRefresh(itemId)
 }
 
 function handleForkInvestigation() {
