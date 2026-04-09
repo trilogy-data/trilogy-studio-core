@@ -85,12 +85,29 @@ export class OpenAIProvider extends LLMProvider {
       maxRetries: 3,
       initialDelayMs: 1000,
       retryStatusCodes: [429, 500, 502, 503, 504], // Add common API error codes
+      errorBodyExtractor: OpenAIProvider.extractErrorMessage,
       onRetry: (attempt, delayMs, error) => {
         console.warn(
           `Retry attempt ${attempt} after ${delayMs}ms delay due to error: ${error.message}`,
         )
       },
     }
+  }
+
+  /**
+   * Extract a rich error message from an OpenAI error response body.
+   * Expected body format: {"error":{"message":"...","type":"...","param":null,"code":"..."}}
+   */
+  static async extractErrorMessage(response: Response): Promise<string> {
+    const data = await response.json()
+    if (data?.error?.message) {
+      const code = data.error.code ? ` (${data.error.code})` : ''
+      return `OpenAI API error${code}: ${data.error.message}`
+    }
+    if (data?.error) {
+      return `OpenAI API error: ${JSON.stringify(data.error)}`
+    }
+    return `OpenAI API error: HTTP ${response.status}: ${response.statusText}`
   }
 
   async reset(): Promise<void> {

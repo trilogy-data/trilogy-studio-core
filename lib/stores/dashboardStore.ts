@@ -35,6 +35,10 @@ export const useDashboardStore = defineStore('dashboards', {
     activeDashboardId: '',
     // New state for query executors
     queryExecutors: {} as Record<string, DashboardQueryExecutor>,
+    // Prompts queued for the dashboard chat panel keyed by dashboard id.
+    // The Dashboard view consumes (and clears) the entry on mount so the
+    // chat panel opens with the prompt prepopulated and auto-sends it.
+    pendingChatPrompts: {} as Record<string, string>,
   }),
 
   getters: {
@@ -327,6 +331,20 @@ export const useDashboardStore = defineStore('dashboards', {
       return Object.values(this.dashboards).filter(
         (dashboard) => dashboard.connection === connection,
       )
+    },
+
+    // Queue an initial prompt to be auto-sent in the dashboard chat panel
+    // the next time the given dashboard is viewed.
+    setPendingChatPrompt(dashboardId: string, prompt: string) {
+      this.pendingChatPrompts[dashboardId] = prompt
+    },
+
+    // Read-and-clear the pending chat prompt for a dashboard.
+    consumePendingChatPrompt(dashboardId: string): string | null {
+      const prompt = this.pendingChatPrompts[dashboardId]
+      if (prompt === undefined) return null
+      delete this.pendingChatPrompts[dashboardId]
+      return prompt
     },
 
     // Set active dashboard

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, nextTick, inject } from 'vue'
+import { ref, computed, nextTick, inject, watch } from 'vue'
 import { GridLayout, GridItem } from 'vue3-grid-layout-next'
 import DashboardHeader from './DashboardHeader.vue'
 import DashboardGridItem from './DashboardGridItem.vue'
@@ -106,21 +106,41 @@ const gridContentRef = ref<HTMLElement | null>(null)
 
 // Chat panel state
 const chatPanelOpen = ref(false)
+// Prompt to auto-send when the chat panel opens. Set either by an inline
+// CTA submission or by a queued prompt from the dashboard creator flow.
+const chatInitialPrompt = ref<string | null>(null)
 const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore')
 const hasLlmConnection = computed(() => !!llmConnectionStore?.activeConnection)
 
 function toggleChatPanel() {
   chatPanelOpen.value = !chatPanelOpen.value
+  if (!chatPanelOpen.value) {
+    chatInitialPrompt.value = null
+  }
 }
+
+function openChatWithPrompt(prompt: string) {
+  if (!prompt || !prompt.trim()) return
+  chatInitialPrompt.value = prompt
+  chatPanelOpen.value = true
+}
+
+// When the bound dashboard changes (initial mount or navigating between
+// dashboards), drain any prompt that was queued for it via the store.
+watch(
+  dashboard,
+  (current) => {
+    if (!current) return
+    const pending = dashboardStore.consumePendingChatPrompt(current.id)
+    if (pending) {
+      openChatWithPrompt(pending)
+    }
+  },
+  { immediate: true },
+)
 
 function handleRefreshItem(itemId: string): string | undefined {
   return handleRefresh(itemId)
-}
-
-function handleForkInvestigation() {
-  if (!dashboard.value) return
-  const name = `Investigation ${Date.now().toString().slice(-4)}`
-  dashboardStore.forkDashboard(dashboard.value.id, name)
 }
 
 interface ExportItemMetric {
@@ -135,6 +155,14 @@ interface ExportLayoutMetrics {
   width: number
   height: number
   items: ExportItemMetric[]
+}
+
+interface ItemOverflowDiagnostic {
+  itemId: string
+  visiblePx: number
+  contentPx: number
+  overflowPx: number
+  visibleRatio: number
 }
 
 function waitForAnimationFrames(frameCount: number = 2): Promise<void> {
@@ -197,6 +225,65 @@ function collectExportLayoutMetrics(gridContent: HTMLElement): ExportLayoutMetri
   )
 
   return { width, height, items }
+}
+
+/**
+ * Walks each grid item looking for inner elements whose content exceeds their
+ * visible height — i.e. content that is being clipped or hidden behind a
+ * scrollbar. Returns one diagnostic per item that has meaningful overflow,
+ * so the agent reviewing a screenshot is told which items are truncated and
+ * by how much. Detects both `overflow: hidden` clipping and `overflow: auto/scroll`
+ * scrollable regions; the screenshot only renders what is currently visible.
+ */
+function collectOverflowDiagnostics(gridContent: HTMLElement): ItemOverflowDiagnostic[] {
+  const TOLERANCE_PX = 6
+  const diagnostics: ItemOverflowDiagnostic[] = []
+  const items = Array.from(gridContent.querySelectorAll<HTMLElement>('.vue-grid-item[data-i]'))
+
+  for (const item of items) {
+    const id = item.dataset.i
+    if (!id) continue
+
+    let worst: ItemOverflowDiagnostic | null = null
+    // Check the item itself plus every descendant — anything that clips or scrolls
+    // vertically and whose content is taller than its box is hiding content from view.
+    const candidates: HTMLElement[] = [
+      item,
+      ...Array.from(item.querySelectorAll<HTMLElement>('*')),
+    ]
+    for (const el of candidates) {
+      const clientHeight = el.clientHeight
+      const scrollHeight = el.scrollHeight
+      if (clientHeight <= 0) continue
+      const overflow = scrollHeight - clientHeight
+      if (overflow <= TOLERANCE_PX) continue
+
+      const style = window.getComputedStyle(el)
+      const overflowY = style.overflowY
+      // Skip elements that allow vertical content to grow beyond them naturally.
+      if (overflowY === 'visible') continue
+
+      // Skip canvas elements — chart libraries render to canvas at the size
+      // they're given, not clipped, so any scrollHeight discrepancy is noise.
+      if (el.tagName === 'CANVAS') continue
+
+      if (!worst || overflow > worst.overflowPx) {
+        worst = {
+          itemId: id,
+          visiblePx: clientHeight,
+          contentPx: scrollHeight,
+          overflowPx: overflow,
+          visibleRatio: clientHeight / scrollHeight,
+        }
+      }
+    }
+
+    if (worst) {
+      diagnostics.push(worst)
+    }
+  }
+
+  return diagnostics
 }
 
 function applyExportCloneLayout(
@@ -369,25 +456,30 @@ function handleToggleMode(mode: DashboardState) {
   })
 }
 
-// Image Export functionality
-async function exportToImage() {
-  if (!dashboard.value || isExportingImage.value) return
+/**
+ * Render the current dashboard to a PNG. Returns the resulting blob plus
+ * width/height. Used by both the manual download (exportToImage) and the
+ * agent's capture_dashboard_screenshot tool.
+ */
+async function renderDashboardToPng(): Promise<{
+  blob: Blob
+  width: number
+  height: number
+  overflows: ItemOverflowDiagnostic[]
+}> {
+  // Dynamically import html2canvas only when needed
+  const { default: html2canvas } = await import('html2canvas')
 
-  isExportingImage.value = true
+  // Find the dashboard content element
+  const dashboardElement = gridContentRef.value
+  if (!dashboardElement) {
+    throw new Error('Dashboard content not found')
+  }
+
+  // Temporarily disable any hover effects and transitions for cleaner capture
+  dashboardElement.classList.add('image-export-mode')
 
   try {
-    // Dynamically import html2canvas only when needed
-    const { default: html2canvas } = await import('html2canvas')
-
-    // Find the dashboard content element
-    const dashboardElement = gridContentRef.value
-    if (!dashboardElement) {
-      throw new Error('Dashboard content not found')
-    }
-
-    // Temporarily disable any hover effects and transitions for cleaner capture
-    dashboardElement.classList.add('image-export-mode')
-
     // Wait for pending layout, font, and chart renders to settle.
     await nextTick()
     await waitForAnimationFrames(3)
@@ -397,10 +489,24 @@ async function exportToImage() {
     }
 
     const exportMetrics = collectExportLayoutMetrics(dashboardElement)
+    // Collect overflow diagnostics BEFORE we mutate the DOM for export — once
+    // the clone runs we lose the original clientHeight/scrollHeight relationships.
+    const overflows = collectOverflowDiagnostics(dashboardElement)
+
+    // Resolve the current dashboard background color from the active theme so that
+    // dark-mode exports don't get a white background.
+    const computedBackground = window
+      .getComputedStyle(dashboardElement)
+      .getPropertyValue('--trilogy-embed-dashboard-background')
+      .trim()
+    const exportBackground =
+      computedBackground ||
+      window.getComputedStyle(dashboardElement).backgroundColor ||
+      '#ffffff'
 
     // Capture the dashboard as canvas
     const canvas = await html2canvas(dashboardElement as HTMLElement, {
-      backgroundColor: '#ffffff',
+      backgroundColor: exportBackground,
       scale: Math.max(2, Math.min(window.devicePixelRatio || 1, 3)),
       useCORS: true,
       allowTaint: true,
@@ -429,6 +535,25 @@ async function exportToImage() {
       throw new Error('Failed to create dashboard image')
     }
 
+    return {
+      blob: imageBlob,
+      width: exportMetrics.width,
+      height: exportMetrics.height,
+      overflows,
+    }
+  } finally {
+    dashboardElement.classList.remove('image-export-mode')
+  }
+}
+
+// Image Export functionality
+async function exportToImage() {
+  if (!dashboard.value || isExportingImage.value) return
+
+  isExportingImage.value = true
+
+  try {
+    const { blob: imageBlob } = await renderDashboardToPng()
     const downloadUrl = URL.createObjectURL(imageBlob)
 
     // Create download link
@@ -445,12 +570,42 @@ async function exportToImage() {
     console.error('Error exporting image:', error)
     alert('Failed to export image. Please try again.')
   } finally {
-    const dashboardElement = gridContentRef.value
-    if (dashboardElement) {
-      dashboardElement.classList.remove('image-export-mode')
-    }
     isExportingImage.value = false
   }
+}
+
+/**
+ * Capture the dashboard for the agent: render to PNG and return the base64
+ * string for the model to review. No download is triggered — the user is
+ * already looking at the live dashboard.
+ */
+async function captureDashboardImage(): Promise<{
+  base64: string
+  mediaType: string
+  width: number
+  height: number
+  overflows: ItemOverflowDiagnostic[]
+}> {
+  if (!dashboard.value) {
+    throw new Error('No dashboard loaded')
+  }
+
+  const { blob, width, height, overflows } = await renderDashboardToPng()
+
+  // Convert blob to base64 for the LLM
+  const base64 = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string
+      // Strip the "data:image/png;base64," prefix
+      const comma = dataUrl.indexOf(',')
+      resolve(comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl)
+    }
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(blob)
+  })
+
+  return { base64, mediaType: 'image/png', width, height, overflows }
 }
 </script>
 
@@ -477,13 +632,15 @@ async function exportToImage() {
       @title-update="updateTitle"
       @export-image="exportToImage"
       @toggle-chat="toggleChatPanel"
-      @fork-investigation="handleForkInvestigation"
     />
 
     <div class="dashboard-body" :class="{ 'chat-open': chatPanelOpen }">
       <div class="dashboard-main">
         <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">
-          <DashboardCTA :dashboard-id="dashboard.id" />
+          <DashboardCTA
+            :dashboard-id="dashboard.id"
+            @start-chat-with-prompt="openChatWithPrompt"
+          />
         </div>
 
         <div v-else class="grid-container">
@@ -545,6 +702,8 @@ async function exportToImage() {
         :dashboard="dashboard"
         :get-dashboard-query-executor="getDashboardQueryExecutor"
         :refresh-item="handleRefreshItem"
+        :capture-dashboard-image="captureDashboardImage"
+        :initial-prompt="chatInitialPrompt"
         @close="chatPanelOpen = false"
       />
     </div>

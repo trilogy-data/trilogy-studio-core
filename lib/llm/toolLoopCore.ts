@@ -406,6 +406,7 @@ export async function runToolLoop(
         toolCallId: toolCall.id,
         toolName: toolCall.name,
         result: resultText,
+        imageData: result.imageData,
       })
     }
 

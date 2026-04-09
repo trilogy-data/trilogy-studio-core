@@ -402,6 +402,7 @@ const useEditorStore = defineStore('editors', {
             onRunActiveEditorQuery: options.onRunActiveEditorQuery
               ? () => options.onRunActiveEditorQuery!()
               : undefined,
+            getCurrentResults: () => this.editors[editorId]?.results ?? null,
           }
         }
 

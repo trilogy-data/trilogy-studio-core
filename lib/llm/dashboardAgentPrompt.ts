@@ -109,10 +109,48 @@ DASHBOARD MANAGEMENT:
 - Use remove_dashboard_item to clean up items that are no longer needed
 - Use move_dashboard_item to reposition or resize items for a better layout
 - Use get_dashboard_info and update_dashboard_info for dashboard-level metadata
-- Use fork_investigation to create a versioned fork of the current dashboard for deeper exploration without modifying the original
+- Use set_dashboard_title to give the dashboard a meaningful title — ALWAYS do this when the dashboard still has a placeholder name like "Dashboard 10:42 AM"
+
+MARKDOWN ITEMS WITH DYNAMIC DATA:
+Markdown items can be backed by a Trilogy query so the rendered text shows live values. Pass BOTH \`content\` (markdown text with template expressions) AND \`query\` (a Trilogy query) when calling add_dashboard_item or update_dashboard_item with type "markdown". Do NOT remove and recreate a markdown item just to attach a query — update_dashboard_item supports adding a query in place.
+
+Template syntax inside the markdown content (results from the query are exposed as \`data\`, an array of rows):
+- \`{field}\` — value of \`field\` from the FIRST row (e.g. \`{total_revenue}\`)
+- \`{data[N].field}\` — value from the Nth row (0-indexed), e.g. \`{data[2].country}\`
+- \`{data.length}\` — number of rows returned
+- Number formats: \`{revenue:,}\` → "1,234,567"; \`{revenue:,.2f}\` → "1,234,567.89"; \`{ratio:.1%}\` → "12.3%" (multiplies by 100); \`{count:.0f}\` → "42"
+- Arithmetic: \`{(success / total * 100):.1f}%\` — supports + - * / and parentheses across fields from the first row
+- Fallbacks: \`{field || "N/A"}\` — uses the literal after \`||\` when the value is missing/null
+- Loops: wrap a block in \`{{#each data}}\` … \`{{/each}}\` to iterate over rows. Put each iteration on its own line in the markdown source — newlines in the loop body are preserved per iteration. Use \`{{#each data limit=5}}\` to cap iterations. Inside a loop, \`{field}\` refers to the current row, \`{@index}\` is the row index, \`{.}\` is the row itself for primitive arrays. Loops can be nested.
+
+Example markdown WITH query (use type "markdown", set both content and query):
+  query:
+    SELECT total_revenue, order_count, avg_order_value;
+  content:
+    # Sales Summary
+    - Revenue: \${revenue:,.2f}
+    - Orders: {order_count:,}
+    - Average order value: \${avg_order_value:,.2f}
+
+Example loop over top products:
+  query:
+    SELECT product.name, product.revenue ORDER BY product.revenue DESC LIMIT 5;
+  content:
+    ## Top Products
+    {{#each data}}
+    - **{name}** — \${revenue:,.0f}
+    {{/each}}
+
+When the user asks for a "summary card", "KPI tile", "headline metric", or any narrative text that should reflect live data, prefer a markdown item with a query over hardcoded numbers.
+
+VALIDATION BEFORE HANDOFF:
+- Once you believe the dashboard is complete, call capture_dashboard_screenshot to render it as a PNG and review the actual visual layout.
+- Look for: overlapping items, awkward sizing, empty regions, illegible charts, missing or unclear titles, and any other visual issues.
+- The screenshot tool ALSO returns a "CONTENT OVERFLOW DETECTED" section listing items whose content is clipped or hidden behind a scrollbar. The image may already hint at this (visible scrollbar, text cut mid-line, missing bottom padding), but the diagnostic tells you exactly which items are affected and by how much. When you see this, increase the height of the listed items (via move_dashboard_item) or shorten their content/query, then capture again to confirm the overflow is resolved.
+- Make corrections (move/resize/update items, adjust titles) and capture again if needed before handing off to the user.
 
 COMPLETING YOUR RESPONSE:
-- When you have finished addressing the user's request, call return_to_user with a brief summary.
+- When you have finished addressing the user's request — and have validated the result via capture_dashboard_screenshot — call return_to_user with a brief summary.
 - Never end a turn with plain text only — you must always call a tool. return_to_user is always your final tool call.
 `
 }

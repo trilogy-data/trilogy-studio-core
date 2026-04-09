@@ -4,9 +4,13 @@ import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { ChatArtifact } from '../chats/chat'
 import { generateArtifactId } from '../chats/chat'
-import type { ChartConfig } from '../editors/results'
+import type { ChartConfig, Results } from '../editors/results'
 import type { ContentInput, CompletionItem } from '../stores/resolver'
 import { symbolsToFieldPrompt } from './editorRefinementTools'
+import {
+  validateChartConfigForData,
+  formatChartConfigValidationError,
+} from '../dashboards/helpers'
 
 export interface ToolCallResult {
   success: boolean
@@ -21,6 +25,18 @@ export interface ToolCallResult {
   terminatesLoop?: boolean // If true, the tool loop should stop completely
   awaitsUserInput?: boolean // If true, stop auto-continue and wait for user input
   availableSymbols?: CompletionItem[] // Symbols available after validation
+  /**
+   * Optional image attached to this tool result (e.g. a rendered dashboard screenshot).
+   * Providers that support vision (Anthropic, etc.) will pass this through to the model
+   * as part of the tool_result content. Providers without vision will fall back to the
+   * textual `message` field only.
+   */
+  imageData?: {
+    /** Base64-encoded image bytes (no data URL prefix) */
+    data: string
+    /** MIME type, e.g. 'image/png' */
+    mediaType: string
+  }
 }
 
 export interface QueryExecutionResult {
@@ -48,6 +64,8 @@ export interface EditorContext {
   onChartConfigChange: (config: ChartConfig) => void
   onFinish: (message?: string) => void
   onRunActiveEditorQuery?: () => Promise<QueryExecutionResult>
+  /** Optional accessor for the editor's current query results, used to validate chart configs */
+  getCurrentResults?: () => Results | null | undefined
 }
 
 export class EditorRefinementToolExecutor {
@@ -57,6 +75,8 @@ export class EditorRefinementToolExecutor {
   private editorContext: EditorContext
   /** Artifacts created during this session — used by get_artifact_rows */
   private artifactRegistry = new Map<string, ChatArtifact>()
+  /** Most recent Results object produced by run_query in this session, used as a fallback for chart config validation */
+  private lastQueryResults: Results | null = null
 
   constructor(
     queryExecutionService: QueryExecutionService,
@@ -258,6 +278,11 @@ export class EditorRefinementToolExecutor {
       }
 
       this.artifactRegistry.set(artifact.id, artifact)
+      // Track latest results so edit_chart_config can validate against them
+      const resultsForValidation = queryResult.results as unknown as Results
+      if (resultsForValidation && resultsForValidation.headers) {
+        this.lastQueryResults = resultsForValidation
+      }
       return {
         success: true,
         artifact,
@@ -322,6 +347,30 @@ export class EditorRefinementToolExecutor {
       return {
         success: false,
         error: 'chartConfig is required and must be an object',
+      }
+    }
+
+    // Validate against current results if we have them. Prefer the editor-provided
+    // accessor (live editor state); fall back to results from a recent run_query call.
+    const results: Results | null =
+      this.editorContext.getCurrentResults?.() ?? this.lastQueryResults ?? null
+
+    if (results && results.headers) {
+      const validation = validateChartConfigForData(results.data, results.headers, chartConfig)
+      if (!validation.valid) {
+        // Auto-correct: apply the suggested config instead of the invalid one
+        const corrected = validation.suggestedConfig as ChartConfig
+        try {
+          this.editorContext.onChartConfigChange(corrected)
+        } catch {
+          // ignore — we still want to surface the validation error
+        }
+        return {
+          success: false,
+          error:
+            `Auto-corrected to default configuration.\n` +
+            formatChartConfigValidationError(validation),
+        }
       }
     }
 

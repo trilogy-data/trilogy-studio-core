@@ -37,7 +37,7 @@ export const DASHBOARD_TOOLS = [
   },
   {
     name: 'add_dashboard_item',
-    description: `Add a new item to the dashboard grid. Supports chart, table, markdown, and filter types. For charts and tables, provide a Trilogy query as content. ${chartConfigGuidance}`,
+    description: `Add a new item to the dashboard grid. Supports chart, table, markdown, and filter types. For charts and tables, provide a Trilogy query as content. For markdown items you can ALSO supply a 'query' to drive dynamic data — the query results are then available to the markdown via {field} template substitutions (see system prompt for full templating syntax). ${chartConfigGuidance}`,
     input_schema: {
       type: 'object',
       properties: {
@@ -53,7 +53,12 @@ export const DASHBOARD_TOOLS = [
         content: {
           type: 'string',
           description:
-            'Content for the item. For chart/table: a Trilogy query. For markdown: markdown text. For filter: a filter expression.',
+            'Content for the item. For chart/table: a Trilogy query. For markdown: markdown text (which may contain {field} or {{#each data}}…{{/each}} template expressions). For filter: a filter expression.',
+        },
+        query: {
+          type: 'string',
+          description:
+            'Optional Trilogy query for MARKDOWN items only. When provided, the query is executed and its result rows are bound to the markdown template — you can reference fields with {field}, {data[N].field}, formats like {revenue:,.2f}, fallbacks like {field || "N/A"}, and loops {{#each data}}...{{/each}}. Ignored for non-markdown types.',
         },
         chartConfig: {
           ...chartConfigSchema,
@@ -75,7 +80,7 @@ export const DASHBOARD_TOOLS = [
   {
     name: 'update_dashboard_item',
     description:
-      'Update an existing dashboard item. Can change its query/content, chart configuration, title, or type. The item will re-execute its query after update.',
+      'Update an existing dashboard item. Can change its query/content, chart configuration, title, or type. The item will re-execute its query after update. For MARKDOWN items, supply `content` to change the markdown text and/or `query` to change (or add) the Trilogy query that powers dynamic data templating — you do NOT need to remove and re-add the item to add a query.',
     input_schema: {
       type: 'object',
       properties: {
@@ -86,6 +91,11 @@ export const DASHBOARD_TOOLS = [
         content: {
           type: 'string',
           description: 'New content (query for chart/table, markdown text for markdown)',
+        },
+        query: {
+          type: 'string',
+          description:
+            'For MARKDOWN items: a Trilogy query whose results power {field} template substitutions inside the markdown. Pass an empty string to remove the existing query. Ignored for non-markdown types.',
         },
         name: {
           type: 'string',
@@ -161,19 +171,45 @@ export const DASHBOARD_TOOLS = [
   },
   {
     name: 'update_dashboard_info',
-    description: 'Update dashboard metadata such as name or description.',
+    description:
+      'Update dashboard metadata such as title (name) or description. Use this — or the dedicated set_dashboard_title — whenever you create a new dashboard from a prompt so it has a meaningful title.',
     input_schema: {
       type: 'object',
       properties: {
         name: {
           type: 'string',
-          description: 'New dashboard name',
+          description: 'New dashboard title/name',
         },
         description: {
           type: 'string',
           description: 'New dashboard description',
         },
       },
+      required: [],
+    },
+  },
+  {
+    name: 'set_dashboard_title',
+    description:
+      'Set the dashboard title. Always call this once you understand what the user wants and the dashboard still has a placeholder name (e.g. "Dashboard 10:42 AM"). The title should be short, descriptive, and human-friendly.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        title: {
+          type: 'string',
+          description: 'The new dashboard title (short, descriptive)',
+        },
+      },
+      required: ['title'],
+    },
+  },
+  {
+    name: 'capture_dashboard_screenshot',
+    description:
+      'Render the current dashboard to a PNG image and return it for visual review. Use this BEFORE returning to the user once you believe the dashboard is complete: review the captured image for layout issues (overlapping items, awkward sizing, empty regions, illegible charts, missing titles) and make corrections before handing off.',
+    input_schema: {
+      type: 'object',
+      properties: {},
       required: [],
     },
   },
@@ -221,21 +257,5 @@ export const DASHBOARD_TOOLS = [
     },
   },
   connectDataConnectionTool,
-  {
-    name: 'fork_investigation',
-    description:
-      'Create a new investigation from the current dashboard state. An investigation is a versioned fork that appears nested under the parent dashboard in the sidebar. Use this when the user wants to explore a different angle without modifying the original dashboard.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        name: {
-          type: 'string',
-          description:
-            'A descriptive name for the investigation (e.g. "Q1 revenue deep dive", "outlier analysis")',
-        },
-      },
-      required: ['name'],
-    },
-  },
   RETURN_TO_USER_TOOL,
 ]

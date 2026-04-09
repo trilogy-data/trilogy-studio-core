@@ -10,8 +10,9 @@ import type { ChatImport } from '../chats/chat'
 import type { ContentInput } from '../stores/resolver'
 import type { DashboardQueryExecutor } from '../dashboards/dashboardQueryExecutor'
 import { truncateResultRows } from './toolLoopCore'
-import { validateChartConfigForData } from '../dashboards/helpers'
+import { validateChartConfigForData, formatChartConfigValidationError } from '../dashboards/helpers'
 import type { ChartConfig, Results } from '../editors/results'
+import { fetchConceptsForImport } from './importConcepts'
 
 export interface DashboardToolExecutorDeps {
   dashboardStore: DashboardStoreType
@@ -28,6 +29,27 @@ export interface DashboardToolExecutorDeps {
   getDashboardQueryExecutor: () => DashboardQueryExecutor | null
   /** Trigger query re-execution for a specific item; returns a queryId if available */
   refreshItem: (itemId: string) => string | undefined
+  /**
+   * Optional callback to render the live dashboard to a PNG. When provided,
+   * the agent's `capture_dashboard_screenshot` tool returns the image so the
+   * model can visually review the layout before handing off. The `overflows`
+   * field reports any items whose content is being clipped or hidden behind
+   * a scrollbar (the screenshot only shows what is visible), so the agent
+   * can be told about content the image cannot reveal.
+   */
+  captureDashboardImage?: () => Promise<{
+    base64: string
+    mediaType: string
+    width: number
+    height: number
+    overflows: Array<{
+      itemId: string
+      visiblePx: number
+      contentPx: number
+      overflowPx: number
+      visibleRatio: number
+    }>
+  }>
 }
 
 export class DashboardToolExecutor {
@@ -66,6 +88,10 @@ export class DashboardToolExecutor {
         return this.getDashboardInfo()
       case 'update_dashboard_info':
         return this.updateDashboardInfo(toolInput)
+      case 'set_dashboard_title':
+        return this.updateDashboardInfo({ name: toolInput.title })
+      case 'capture_dashboard_screenshot':
+        return this.captureDashboardScreenshot()
       case 'run_trilogy_query':
         return this.runTrilogyQuery(toolInput.query, toolInput.connection)
       case 'select_active_import':
@@ -74,8 +100,6 @@ export class DashboardToolExecutor {
         return this.listAvailableImports()
       case 'connect_data_connection':
         return this.connectDataConnection(toolInput.connection)
-      case 'fork_investigation':
-        return this.forkInvestigation(toolInput.name as string)
       case 'return_to_user':
         return {
           success: true,
@@ -105,12 +129,14 @@ export class DashboardToolExecutor {
 
     const itemDescriptions = items.map(([id, item]) => {
       const layout = layoutMap.get(id)
-      const content =
-        typeof item.content === 'string'
-          ? item.content.substring(0, 120)
-          : (item.content as MarkdownData)?.markdown?.substring(0, 120) || ''
+      const isStructured = typeof item.content === 'object' && item.content !== null
+      const md = isStructured ? (item.content as MarkdownData) : null
+      const content = isStructured
+        ? md?.markdown?.substring(0, 120) || ''
+        : (item.content as string).substring(0, 120)
       const pos = layout ? `(x=${layout.x}, y=${layout.y}, w=${layout.w}, h=${layout.h})` : ''
-      return `- [${id}] ${item.type}: "${item.name}" ${pos}\n  Content: ${content}${content.length >= 120 ? '...' : ''}`
+      const querySuffix = md?.query ? `\n  Query: ${md.query.substring(0, 120)}${md.query.length >= 120 ? '...' : ''}` : ''
+      return `- [${id}] ${item.type}: "${item.name}" ${pos}\n  Content: ${content}${content.length >= 120 ? '...' : ''}${querySuffix}`
     })
 
     return {
@@ -132,11 +158,16 @@ export class DashboardToolExecutor {
     }
 
     const layout = dashboard.layout.find((l) => l.i === itemId)
+    // For markdown items, surface markdown text and query as separate fields
+    // so the agent can update either independently via update_dashboard_item.
+    const isStructured = typeof item.content === 'object' && item.content !== null
+    const mdContent = isStructured ? (item.content as MarkdownData) : null
     const details: Record<string, any> = {
       id: itemId,
       type: item.type,
       name: item.name,
-      content: item.content,
+      content: isStructured ? mdContent?.markdown || '' : item.content,
+      query: mdContent?.query || null,
       chartConfig: item.chartConfig || null,
       position: layout
         ? { x: layout.x, y: layout.y, w: layout.w, h: layout.h }
@@ -197,17 +228,7 @@ export class DashboardToolExecutor {
         )
       }
 
-      const errors = [
-        validation.chartTypeError,
-        ...validation.fieldErrors,
-      ].filter(Boolean)
-
-      return (
-        `Chart config validation failed - auto-corrected to default configuration.\n` +
-        `Issues:\n${errors.map(e => `  - ${e}`).join('\n')}\n` +
-        `Suggested config: ${JSON.stringify(validation.suggestedConfig, null, 2)}\n` +
-        `Tip: Omit chartConfig to let auto-detection choose the best chart type and field mapping for the data.`
-      )
+      return `Auto-corrected to default configuration.\n${formatChartConfigValidationError(validation)}`
     } catch {
       // Query failed or was cancelled - validation not possible, skip silently
       return null
@@ -229,8 +250,10 @@ export class DashboardToolExecutor {
     }
 
     const cellType = type as CellType
+    const markdownQuery = typeof input.query === 'string' ? input.query : ''
+    const hasMarkdownQuery = cellType === CELL_TYPES.MARKDOWN && markdownQuery.length > 0
     const w = input.width || (cellType === CELL_TYPES.MARKDOWN ? 20 : 10)
-    const h = input.height || (cellType === CELL_TYPES.MARKDOWN ? 4 : 8)
+    const h = input.height || (cellType === CELL_TYPES.MARKDOWN ? (hasMarkdownQuery ? 6 : 4) : 8)
     const name = input.name || type.charAt(0).toUpperCase() + type.slice(1)
 
     // Find the next available y position to avoid overlap
@@ -247,18 +270,27 @@ export class DashboardToolExecutor {
       name,
     )
 
+    // For markdown items with a query, store as MarkdownData so the renderer
+    // executes the query and exposes its results to the template engine.
+    if (hasMarkdownQuery) {
+      const mdData: MarkdownData = { markdown: content, query: markdownQuery }
+      this.deps.dashboardStore.updateMultipleItemProperties(this.deps.dashboardId, itemId, {
+        content: mdData,
+      })
+    }
+
     // Set chart config if provided
     if (input.chartConfig && cellType === CELL_TYPES.CHART) {
       this.deps.dashboardStore.updateItemChartConfig(this.deps.dashboardId, itemId, input.chartConfig)
     }
 
-    // Trigger query execution for chart/table items
+    // Trigger query execution for chart/table/markdown-with-query items
     let queryId: string | undefined
-    if (cellType === CELL_TYPES.CHART || cellType === CELL_TYPES.TABLE) {
+    if (cellType === CELL_TYPES.CHART || cellType === CELL_TYPES.TABLE || hasMarkdownQuery) {
       queryId = this.deps.refreshItem(itemId)
     }
 
-    let message = `Added ${type} item "${name}" (ID: ${itemId}) at position (0, ${maxY}, ${w}x${h}).`
+    let message = `Added ${type} item "${name}" (ID: ${itemId}) at position (0, ${maxY}, ${w}x${h}).${hasMarkdownQuery ? ' Markdown is bound to query results for dynamic data.' : ''}`
 
     // If a chartConfig was explicitly provided, validate it against query results
     if (input.chartConfig && cellType === CELL_TYPES.CHART && queryId) {
@@ -290,8 +322,34 @@ export class DashboardToolExecutor {
     }
 
     const updates: string[] = []
+    const existingItem = dashboard.gridItems[itemId]
+    const targetType = (input.type as CellType | undefined) || existingItem.type
+    const isMarkdown = targetType === CELL_TYPES.MARKDOWN
 
-    if (input.content !== undefined) {
+    // For markdown items, content + query collapse into MarkdownData. Handle both
+    // together so the agent can update either field independently without losing
+    // the other.
+    if (isMarkdown && (input.content !== undefined || input.query !== undefined)) {
+      const existingContent = existingItem.content
+      const existingMarkdown =
+        typeof existingContent === 'string'
+          ? existingContent
+          : (existingContent as MarkdownData)?.markdown || ''
+      const existingQuery =
+        typeof existingContent === 'string'
+          ? ''
+          : (existingContent as MarkdownData)?.query || ''
+      const nextMarkdown = input.content !== undefined ? (input.content as string) : existingMarkdown
+      const nextQuery = input.query !== undefined ? (input.query as string) : existingQuery
+      const nextContent: string | MarkdownData = nextQuery
+        ? { markdown: nextMarkdown, query: nextQuery }
+        : nextMarkdown
+      this.deps.dashboardStore.updateMultipleItemProperties(this.deps.dashboardId, itemId, {
+        content: nextContent,
+      })
+      if (input.content !== undefined) updates.push('content')
+      if (input.query !== undefined) updates.push('query')
+    } else if (input.content !== undefined) {
       this.deps.dashboardStore.updateItemContent(this.deps.dashboardId, itemId, input.content)
       updates.push('content')
     }
@@ -319,12 +377,18 @@ export class DashboardToolExecutor {
       return { success: true, message: `No updates provided for item "${itemId}".` }
     }
 
-    // Re-execute query if content or type changed
+    // Re-execute query if content/query/type changed for query-backed items
     const item = dashboard.gridItems[itemId]
     let queryId: string | undefined
+    const itemHasQuery =
+      item.type === CELL_TYPES.CHART ||
+      item.type === CELL_TYPES.TABLE ||
+      (item.type === CELL_TYPES.MARKDOWN &&
+        typeof item.content === 'object' &&
+        !!(item.content as MarkdownData).query)
     if (
-      (updates.includes('content') || updates.includes('type')) &&
-      (item.type === CELL_TYPES.CHART || item.type === CELL_TYPES.TABLE)
+      (updates.includes('content') || updates.includes('type') || updates.includes('query')) &&
+      itemHasQuery
     ) {
       queryId = this.deps.refreshItem(itemId)
     }
@@ -356,14 +420,9 @@ export class DashboardToolExecutor {
                 suggested,
               )
             }
-            const errors = [
-              validation.chartTypeError,
-              ...validation.fieldErrors,
-            ].filter(Boolean)
-
             return {
               success: false,
-              error: `${message}\n\nHowever, the chart configuration is invalid - auto-corrected to default configuration.\nIssues:\n${errors.map(e => `  - ${e}`).join('\n')}\nSuggested config: ${JSON.stringify(validation.suggestedConfig, null, 2)}\nTip: Omit chartConfig to let auto-detection choose the best chart type and field mapping for the data.`,
+              error: `${message}\n\nAuto-corrected to default configuration.\n${formatChartConfigValidationError(validation)}`,
             }
           }
         }
@@ -477,6 +536,82 @@ export class DashboardToolExecutor {
     }
   }
 
+  private async captureDashboardScreenshot(): Promise<ToolCallResult> {
+    const dashboard = this.dashboard
+    if (!dashboard) return { success: false, error: 'Dashboard not found.' }
+
+    if (!this.deps.captureDashboardImage) {
+      return {
+        success: false,
+        error:
+          'Screenshot capture is not available in this environment. Review the dashboard via list_dashboard_items / get_dashboard_item instead.',
+      }
+    }
+
+    try {
+      const { base64, mediaType, width, height, overflows } =
+        await this.deps.captureDashboardImage()
+
+      // Build a textual layout summary as a fallback for non-vision providers
+      // (Anthropic will additionally see the actual image attached below).
+      const layoutLines = dashboard.layout
+        .slice()
+        .sort((a, b) => a.y - b.y || a.x - b.x)
+        .map((l) => {
+          const item = dashboard.gridItems[l.i]
+          const name = item?.name || '(untitled)'
+          const type = item?.type || '?'
+          return `- [${l.i}] ${type} "${name}" at (x=${l.x}, y=${l.y}, w=${l.w}, h=${l.h})`
+        })
+
+      // Format overflow diagnostics. The screenshot only renders what is
+      // visible inside each grid cell, so any item whose content is clipped
+      // or scrollable looks "complete" in the image even though information
+      // is hidden. Surface this explicitly so the agent considers resizing.
+      const overflowSection = (overflows || [])
+        .filter((o) => o.overflowPx > 0)
+        .sort((a, b) => b.overflowPx - a.overflowPx)
+        .map((o) => {
+          const item = dashboard.gridItems[o.itemId]
+          const layout = dashboard.layout.find((l) => l.i === o.itemId)
+          const name = item?.name || '(untitled)'
+          const type = item?.type || '?'
+          const pct = Math.round(o.visibleRatio * 100)
+          const sizeHint = layout ? ` Current size: w=${layout.w}, h=${layout.h}.` : ''
+          return `- [${o.itemId}] ${type} "${name}": showing ~${pct}% of content (${o.visiblePx}px visible of ${o.contentPx}px, ${o.overflowPx}px hidden).${sizeHint}`
+        })
+
+      const itemCount = Object.keys(dashboard.gridItems).length
+      let summary =
+        `Captured dashboard "${dashboard.name}" as PNG (${width}x${height}px, ${itemCount} item${itemCount === 1 ? '' : 's'}). ` +
+        `The image is attached below for visual review.\n\n` +
+        `Layout:\n${layoutLines.join('\n') || '(empty)'}`
+
+      if (overflowSection.length > 0) {
+        summary +=
+          `\n\nCONTENT OVERFLOW DETECTED — the following items have content that is clipped or behind a scrollbar in the rendered image. You may be able to see signs of this in the screenshot (a scrollbar, text cut mid-line, missing bottom padding), but the diagnostic below pins down which items and by how much. Increase the height (h) of these items via move_dashboard_item, or shorten their content/query, before handing off:\n` +
+          overflowSection.join('\n')
+      }
+
+      summary +=
+        `\n\nReview the screenshot for visual issues (overlap, awkward sizing, empty regions, illegible charts, missing/unclear titles, truncated content) and make corrections before calling return_to_user.`
+
+      return {
+        success: true,
+        message: summary,
+        imageData: {
+          data: base64,
+          mediaType,
+        },
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to capture dashboard: ${error instanceof Error ? error.message : String(error)}`,
+      }
+    }
+  }
+
   private async runTrilogyQuery(query: string, connectionName?: string): Promise<ToolCallResult> {
     if (!query || typeof query !== 'string' || query.trim() === '') {
       return { success: false, error: 'Query is required and must be a non-empty string' }
@@ -562,10 +697,22 @@ export class DashboardToolExecutor {
     }
   }
 
-  private selectActiveImport(importName: string): ToolCallResult {
+  private async selectActiveImport(importName: string): Promise<ToolCallResult> {
     if (!importName || importName.trim() === '') {
       this.deps.setActiveImports([])
-      return { success: true, message: 'Cleared active data source selection.' }
+      return {
+        success: true,
+        message: 'Cleared active data source selection.',
+        triggersSymbolRefresh: true,
+      }
+    }
+
+    const connectionName = this.connectionName
+    if (!connectionName) {
+      return {
+        success: false,
+        error: 'No data connection selected for this dashboard. Connect a data connection first.',
+      }
     }
 
     const available = this.getAvailableImports()
@@ -580,12 +727,32 @@ export class DashboardToolExecutor {
       }
     }
 
-    this.deps.setActiveImports([importToSelect])
+    const activeImports = this.deps.getActiveImports()
+    const alreadyActive =
+      activeImports.length === 1 && activeImports[0].id === importToSelect.id
+
+    if (!alreadyActive) {
+      this.deps.setActiveImports([importToSelect])
+    }
+
+    const conceptsOutput = await fetchConceptsForImport(
+      {
+        connectionStore: this.deps.connectionStore,
+        editorStore: this.deps.editorStore,
+        queryExecutionService: this.deps.queryExecutionService,
+      },
+      importToSelect,
+      connectionName,
+    )
+
+    const prefix = alreadyActive
+      ? `"${importToSelect.name}" is already the active data source.`
+      : `Successfully selected "${importToSelect.name}" as the active data source.`
 
     return {
       success: true,
-      message: `Selected "${importToSelect.name}" as the active data source.`,
-      triggersSymbolRefresh: true,
+      message: `${prefix}\n\n${conceptsOutput}`,
+      triggersSymbolRefresh: !alreadyActive,
     }
   }
 
@@ -642,25 +809,6 @@ export class DashboardToolExecutor {
       return {
         success: false,
         error: `Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }
-    }
-  }
-
-  private forkInvestigation(name: string): ToolCallResult {
-    if (!name || name.trim() === '') {
-      return { success: false, error: 'Investigation name is required.' }
-    }
-
-    try {
-      const investigation = this.deps.dashboardStore.forkDashboard(this.deps.dashboardId, name.trim())
-      return {
-        success: true,
-        message: `Created investigation "${name}" (ID: ${investigation.id}). The investigation is now active and appears nested under the parent dashboard in the sidebar.`,
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: `Failed to create investigation: ${error instanceof Error ? error.message : 'Unknown error'}`,
       }
     }
   }

@@ -87,6 +87,14 @@
                   <span v-if="toolCall.count > 1" class="tool-count">(x{{ toolCall.count }})</span>
                 </span>
                 <span v-if="toolCall.error" class="tool-error">{{ toolCall.error }}</span>
+                <button
+                  type="button"
+                  class="tool-call-inspect"
+                  title="View tool call details"
+                  @click.stop="openToolCallInspector(toolCall)"
+                >
+                  <i class="mdi mdi-eye-outline"></i>
+                </button>
               </div>
             </template>
           </div>
@@ -103,6 +111,67 @@
         </span>
       </div>
     </div>
+
+    <Teleport to="body" v-if="inspectorToolCall">
+      <div class="tool-call-inspector-overlay" @click.self="closeToolCallInspector">
+        <div class="tool-call-inspector-modal" role="dialog" aria-modal="true">
+          <div class="tool-call-inspector-header">
+            <span class="tool-call-inspector-title">
+              <i class="mdi mdi-eye-outline"></i>
+              {{ inspectorToolCall.label }}
+              <span v-if="inspectorToolCall.count > 1" class="tool-count">
+                (x{{ inspectorToolCall.count }})
+              </span>
+            </span>
+            <button
+              type="button"
+              class="tool-call-inspector-close"
+              @click="closeToolCallInspector"
+              title="Close"
+            >
+              <i class="mdi mdi-close"></i>
+            </button>
+          </div>
+          <div class="tool-call-inspector-body">
+            <div
+              v-for="(call, idx) in inspectorToolCall.calls"
+              :key="call.id"
+              class="tool-call-inspector-call"
+            >
+              <div v-if="inspectorToolCall.calls.length > 1" class="tool-call-inspector-call-label">
+                Call #{{ idx + 1 }}
+              </div>
+              <div class="tool-call-inspector-section">
+                <div class="tool-call-inspector-section-label">Tool</div>
+                <pre class="tool-call-inspector-pre">{{ call.name }}</pre>
+              </div>
+              <div class="tool-call-inspector-section">
+                <div class="tool-call-inspector-section-label">Input</div>
+                <pre class="tool-call-inspector-pre">{{ formatToolCallValue(call.input) }}</pre>
+              </div>
+              <div class="tool-call-inspector-section">
+                <div class="tool-call-inspector-section-label">
+                  Result
+                  <span
+                    v-if="call.result"
+                    class="tool-call-inspector-status"
+                    :class="{
+                      success: call.result.success,
+                      error: !call.result.success,
+                    }"
+                  >
+                    {{ call.result.success ? 'success' : 'error' }}
+                  </span>
+                </div>
+                <pre class="tool-call-inspector-pre">{{
+                  call.result?.error || call.result?.message || '(no output)'
+                }}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <div class="input-container">
       <div class="input-wrapper">
@@ -163,6 +232,7 @@ import {
   getToolDisplayName,
   mergeContiguousToolCallMessages,
   isToolOnlyAssistantMessage,
+  type CondensedToolCallDisplay,
 } from './toolCallDisplay'
 
 // Re-export for backwards compatibility
@@ -394,6 +464,27 @@ export default defineComponent({
 
     const getCondensedToolCalls = (toolCalls: ChatToolCall[]) => condenseToolCalls(toolCalls)
 
+    // Tool call inspector state — opens a modal with full input/result for a pill
+    const inspectorToolCall = ref<CondensedToolCallDisplay | null>(null)
+
+    const openToolCallInspector = (toolCall: CondensedToolCallDisplay) => {
+      inspectorToolCall.value = toolCall
+    }
+
+    const closeToolCallInspector = () => {
+      inspectorToolCall.value = null
+    }
+
+    const formatToolCallValue = (value: unknown): string => {
+      if (value === undefined || value === null) return '(none)'
+      if (typeof value === 'string') return value
+      try {
+        return JSON.stringify(value, null, 2)
+      } catch {
+        return String(value)
+      }
+    }
+
     const shouldSummarizeToolCalls = (message: ChatMessage): boolean => {
       if (!isToolOnlyAssistantMessage(message) || !message.executedToolCalls?.length) return false
 
@@ -501,6 +592,10 @@ export default defineComponent({
       clearMessages,
       scrollToBottom,
       focusInput,
+      inspectorToolCall,
+      openToolCallInspector,
+      closeToolCallInspector,
+      formatToolCallValue,
     }
   },
 })
@@ -863,6 +958,30 @@ export default defineComponent({
   font-size: 12px;
 }
 
+.tool-call-inspect {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0;
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+.tool-call-inspect:hover {
+  opacity: 1;
+  background: rgba(148, 163, 184, 0.18);
+  color: var(--text-color);
+}
+
+
 @media screen and (max-width: 768px) {
   .textarea-wrapper textarea {
     font-size: var(--font-size);
@@ -871,5 +990,148 @@ export default defineComponent({
   .send-button {
     font-size: var(--button-font-size);
   }
+}
+</style>
+
+<!-- Non-scoped styles for the tool call inspector modal (Teleported to body) -->
+<style>
+.tool-call-inspector-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 24px;
+}
+
+.tool-call-inspector-modal {
+  background: var(--query-window-bg, #ffffff);
+  color: var(--text-color, #1f2937);
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 8px;
+  width: min(720px, 100%);
+  max-height: min(80vh, 720px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.tool-call-inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-light, #e5e7eb);
+  background: var(--panel-header-bg, var(--query-window-bg, #f9fafb));
+}
+
+.tool-call-inspector-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tool-call-inspector-title i {
+  font-size: 16px;
+}
+
+.tool-call-inspector-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-color, #1f2937);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.tool-call-inspector-close:hover {
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.tool-call-inspector-body {
+  padding: 14px 16px 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tool-call-inspector-call {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed var(--border-light, #e5e7eb);
+}
+
+.tool-call-inspector-call:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.tool-call-inspector-call-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint, #6b7280);
+}
+
+.tool-call-inspector-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tool-call-inspector-section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint, #6b7280);
+}
+
+.tool-call-inspector-status {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.tool-call-inspector-status.success {
+  background: rgba(40, 167, 69, 0.15);
+  color: #1f7a3a;
+}
+
+.tool-call-inspector-status.error {
+  background: rgba(220, 53, 69, 0.15);
+  color: #b01f30;
+}
+
+.tool-call-inspector-pre {
+  margin: 0;
+  background: var(--code-bg, rgba(148, 163, 184, 0.1));
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow: auto;
 }
 </style>

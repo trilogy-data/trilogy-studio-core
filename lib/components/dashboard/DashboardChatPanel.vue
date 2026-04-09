@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, inject } from 'vue'
+import { ref, computed, inject, nextTick, onMounted, watch } from 'vue'
 import LLMChat from '../llm/LLMChat.vue'
 import { useChatWithTools } from '../../composables/useChatWithTools'
 import { DASHBOARD_TOOLS } from '../../llm/dashboardAgentTools'
@@ -18,6 +18,20 @@ const props = defineProps<{
   dashboard: DashboardModel
   getDashboardQueryExecutor: (dashboardId: string) => DashboardQueryExecutor
   refreshItem: (itemId: string) => string | undefined
+  captureDashboardImage?: () => Promise<{
+    base64: string
+    mediaType: string
+    width: number
+    height: number
+    overflows: Array<{
+      itemId: string
+      visiblePx: number
+      contentPx: number
+      overflowPx: number
+      visibleRatio: number
+    }>
+  }>
+  initialPrompt?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -30,9 +44,55 @@ const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore') 
 const connectionStore = inject<ConnectionStoreType>('connectionStore') as ConnectionStoreType
 const editorStore = inject<EditorStoreType>('editorStore') as EditorStoreType
 const queryExecutionService = inject<QueryExecutionService>('queryExecutionService') as QueryExecutionService
+const setActiveDashboardNav = inject<(dashboard: string | null) => void>('setActiveDashboard')
 
 // Local state for dashboard chat imports
 const dashboardChatImports = ref<ChatImport[]>([])
+
+// Tools that mutate dashboard state — these trigger an auto-fork on first use
+// so a chat session never modifies the user's original dashboard in place.
+const MUTATING_TOOLS = new Set([
+  'add_dashboard_item',
+  'update_dashboard_item',
+  'remove_dashboard_item',
+  'move_dashboard_item',
+  'update_dashboard_info',
+  'set_dashboard_title',
+])
+
+// If this chat session has already forked the dashboard, this is the fork's id.
+// All subsequent tool calls operate on this id instead of the original.
+const sessionForkId = ref<string | null>(null)
+
+// The dashboard id that the executor should target. Falls back to the bound
+// dashboard prop until a fork has been created for this session.
+const effectiveDashboardId = computed(
+  () => sessionForkId.value ?? props.dashboard.id,
+)
+
+async function ensureChatFork(): Promise<void> {
+  if (sessionForkId.value) return
+  // Don't fork investigations — the user is already on a derived dashboard,
+  // so editing in place is the expected behavior.
+  if (props.dashboard.parentDashboardId) return
+
+  const baseId = props.dashboard.id
+  const stamp = new Date().toISOString().slice(11, 19).replace(/:/g, '')
+  const investigationName = `chat-${stamp}`
+
+  try {
+    const fork = dashboardStore.forkDashboard(baseId, investigationName)
+    sessionForkId.value = fork.id
+    if (setActiveDashboardNav) {
+      setActiveDashboardNav(fork.id)
+    }
+    // Wait for prop reactivity to flow through (props.dashboard) so the
+    // executor's computed deps reflect the new id before we run the tool.
+    await nextTick()
+  } catch (err) {
+    console.error('Failed to auto-fork dashboard for chat session:', err)
+  }
+}
 
 // Create the dashboard tool executor
 const toolExecutor = computed(() => {
@@ -41,13 +101,15 @@ const toolExecutor = computed(() => {
     connectionStore,
     editorStore,
     queryExecutionService,
-    dashboardId: props.dashboard.id,
+    dashboardId: effectiveDashboardId.value,
     getActiveImports: () => dashboardChatImports.value,
     setActiveImports: (imports: ChatImport[]) => {
       dashboardChatImports.value = imports
     },
-    getDashboardQueryExecutor: () => props.getDashboardQueryExecutor(props.dashboard.id) || null,
+    getDashboardQueryExecutor: () =>
+      props.getDashboardQueryExecutor(effectiveDashboardId.value) || null,
     refreshItem: props.refreshItem,
+    captureDashboardImage: props.captureDashboardImage,
   }
   return new DashboardToolExecutor(deps)
 })
@@ -67,6 +129,9 @@ const {
   initialTitle: `Dashboard: ${props.dashboard.name}`,
   customTools: DASHBOARD_TOOLS,
   onCustomToolCall: async (toolName: string, toolInput: Record<string, unknown>) => {
+    if (MUTATING_TOOLS.has(toolName)) {
+      await ensureChatFork()
+    }
     const result = await toolExecutor.value.executeToolCall(
       toolName,
       toolInput as Record<string, any>,
@@ -112,6 +177,31 @@ const systemPrompt = computed(() => {
 async function handleSend(message: string, messages: ChatMessage[]) {
   await handleChatMessageWithTools(message, messages)
 }
+
+// Track which initial-prompt strings we've already auto-submitted to avoid
+// re-firing if the parent re-passes the same value or the prop is reactive.
+const consumedInitialPrompts = new Set<string>()
+
+async function maybeAutoSendInitialPrompt(value: string | null | undefined) {
+  if (!value) return
+  if (consumedInitialPrompts.has(value)) return
+  consumedInitialPrompts.add(value)
+  // Wait a tick so the chat panel is fully mounted and LLMChat has registered
+  // its system prompt before we kick off the conversation.
+  await nextTick()
+  await handleSend(value, activeChatMessages.value)
+}
+
+onMounted(() => {
+  void maybeAutoSendInitialPrompt(props.initialPrompt)
+})
+
+watch(
+  () => props.initialPrompt,
+  (newVal) => {
+    void maybeAutoSendInitialPrompt(newVal)
+  },
+)
 </script>
 
 <template>

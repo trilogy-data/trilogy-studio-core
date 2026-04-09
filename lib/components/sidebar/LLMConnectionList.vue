@@ -115,19 +115,15 @@ export default {
       try {
         isLoading.value[id] = true
         if (type === 'connection') {
-          const connection = llmConnectionStore.connections[connectionName] as any
-          if (connection.testConnection) {
-            await connection.testConnection()
-          }
+          // resetConnection() re-fetches models and re-validates auth. It
+          // throws on failure (e.g. 401), letting us surface the real error
+          // instead of silently no-oping like the previous testConnection check.
+          await llmConnectionStore.resetConnection(connectionName)
         }
 
         delete isErrored.value[id]
       } catch (error) {
-        if (error instanceof Error) {
-          isErrored.value[id] = error.message
-        } else {
-          isErrored.value[id] = 'An error occurred'
-        }
+        isErrored.value[id] = error instanceof Error ? error.message : 'An error occurred'
       }
       delete isLoading.value[id]
     }
@@ -265,6 +261,31 @@ export default {
           connection,
         })
 
+        // Render loading/error rows immediately under the connection so they
+        // remain visible even when the connection is collapsed — feedback from
+        // refresh/connect actions must persist regardless of UI state.
+        if (isLoading.value[name]) {
+          list.push({
+            id: `${name}-loading`,
+            name: 'Loading...',
+            indent: 1,
+            count: 0,
+            type: 'loading',
+            connection,
+          })
+        }
+
+        if (isErrored.value[name]) {
+          list.push({
+            id: `${name}-error`,
+            name: isErrored.value[name],
+            indent: 1,
+            count: 0,
+            type: 'error',
+            connection,
+          })
+        }
+
         if (collapsed.value[name] !== false) {
           return
         }
@@ -352,28 +373,6 @@ export default {
             })
           }
         }
-
-        if (isLoading.value[name]) {
-          list.push({
-            id: `${name}-loading`,
-            name: 'Loading...',
-            indent: 1,
-            count: 0,
-            type: 'loading',
-            connection,
-          })
-        }
-
-        if (isErrored.value[name]) {
-          list.push({
-            id: `${name}-error`,
-            name: isErrored.value[name],
-            indent: 1,
-            count: 0,
-            type: 'error',
-            connection,
-          })
-        }
       })
 
       return list
@@ -455,9 +454,9 @@ export default {
       }
     },
 
-    toggleSaveCredential(connection: LLMProvider) {
-      connection.saveCredential = !connection.saveCredential
-      this.saveConnections()
+    async toggleSaveCredential(connection: LLMProvider) {
+      connection.setSaveCredential(!connection.saveCredential)
+      await this.saveConnections()
     },
   },
   computed: {

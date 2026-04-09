@@ -676,6 +676,23 @@ export const validateChartConfigForData = (
 }
 
 /**
+ * Format a chart config validation result as a user-facing error message
+ * suitable for returning to an LLM agent.
+ */
+export const formatChartConfigValidationError = (
+  validation: ChartConfigValidationResult,
+): string => {
+  const errors = [validation.chartTypeError, ...validation.fieldErrors].filter(Boolean)
+  return (
+    `Chart configuration is invalid for the data:\n` +
+    `${errors.map((e) => `  - ${e}`).join('\n')}\n` +
+    `Eligible chart types for this data: ${validation.eligibleChartTypes.join(', ') || 'none'}.\n` +
+    `Suggested auto-detected config: ${JSON.stringify(validation.suggestedConfig)}\n` +
+    `Tip: Omit chartConfig to let auto-detection choose the best chart type and field mapping.`
+  )
+}
+
+/**
  * Get formatting hints for a field based on its column type
  */
 export const getFormatHint = (

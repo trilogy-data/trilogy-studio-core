@@ -58,6 +58,7 @@ export function sanitizeHtml(html: string): string {
       'h2',
       'h3',
       'h4',
+      'hr',
       'p',
       'ul',
       'ol',
@@ -817,6 +818,19 @@ function processHeaders(html: string): string {
     .replace(/^### (.*\S)[\s]*$/gim, '<h3 class="rendered-markdown-h3">$1</h3>')
     .replace(/^## (.*\S)[\s]*$/gim, '<h2 class="rendered-markdown-h2">$1</h2>')
     .replace(/^# (.*\S)[\s]*$/gim, '<h1 class="rendered-markdown-h1">$1</h1>')
+}
+
+/**
+ * Process markdown horizontal rules. Matches a line containing only 3+ of
+ * `-`, `*`, or `_` (optionally separated by spaces). Intentionally runs after
+ * table processing — a bare `---` has no `|`, so tables won't consume it — and
+ * before emphasis so that `***` rules aren't mistaken for bold markers.
+ */
+function processHorizontalRules(html: string): string {
+  return html.replace(
+    /^[ \t]*(?:-[ \t]*){3,}$|^[ \t]*(?:\*[ \t]*){3,}$|^[ \t]*(?:_[ \t]*){3,}$/gm,
+    '<hr class="rendered-markdown-hr">',
+  )
 }
 
 /**

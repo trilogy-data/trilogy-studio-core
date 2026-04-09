@@ -6,6 +6,8 @@ export interface CondensedToolCallDisplay {
   count: number
   success: boolean
   error?: string
+  /** The underlying tool calls grouped into this pill (preserved for inspection UI). */
+  calls: ChatToolCall[]
 }
 
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
@@ -33,6 +35,16 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   hide_artifact: 'Hidden artifact',
   reorder_artifacts: 'Reordered artifacts',
   return_to_user: 'Returned to user',
+  set_dashboard_title: 'Set dashboard title',
+  capture_dashboard_screenshot: 'Captured dashboard screenshot',
+  add_dashboard_item: 'Added dashboard item',
+  update_dashboard_item: 'Updated dashboard item',
+  remove_dashboard_item: 'Removed dashboard item',
+  move_dashboard_item: 'Moved dashboard item',
+  list_dashboard_items: 'Listed dashboard items',
+  get_dashboard_item: 'Got dashboard item',
+  get_dashboard_info: 'Got dashboard info',
+  update_dashboard_info: 'Updated dashboard info',
 }
 
 export function getToolDisplayName(toolName: string): string {
@@ -99,6 +111,7 @@ export function condenseToolCalls(toolCalls: ChatToolCall[]): CondensedToolCallD
       previous.error === error
     ) {
       previous.count += 1
+      previous.calls.push(toolCall)
       continue
     }
 
@@ -108,6 +121,7 @@ export function condenseToolCalls(toolCalls: ChatToolCall[]): CondensedToolCallD
       count: 1,
       success,
       error,
+      calls: [toolCall],
     })
   }
 

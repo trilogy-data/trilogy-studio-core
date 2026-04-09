@@ -144,7 +144,6 @@ export default {
 
       if (props.item.type === 'dashboard') {
         return [
-          { id: 'fork-investigation', label: 'New investigation', icon: 'mdi-source-branch' },
           { id: 'clone-dashboard', label: 'Clone dashboard', icon: 'mdi-content-copy' },
           { id: 'delete-separator', kind: 'separator' },
           {
@@ -194,11 +193,6 @@ export default {
         case 'delete-dashboard':
           this.handleDelete()
           break
-        case 'fork-investigation': {
-          const name = `Investigation ${Date.now().toString().slice(-4)}`
-          this.dashboardStore.forkDashboard(this.item.id, name)
-          break
-        }
         case 'promote-investigation':
           this.dashboardStore.promoteDashboard(this.item.id)
           break

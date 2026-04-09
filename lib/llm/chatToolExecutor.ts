@@ -4,9 +4,14 @@ import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { ChatStoreType } from '../stores/chatStore'
 import type { EditorStoreType } from '../stores/editorStore'
 import { type ChatArtifact, type ChatImport, generateArtifactId } from '../chats/chat'
-import type { ChartConfig } from '../editors/results'
+import type { ChartConfig, Results } from '../editors/results'
 import type { ContentInput } from '../stores/resolver'
 import { MAX_TOOL_RESULT_ROWS, truncateResultRows } from './toolLoopCore'
+import { fetchConceptsForImport } from './importConcepts'
+import {
+  validateChartConfigForData,
+  formatChartConfigValidationError,
+} from '../dashboards/helpers'
 
 export interface ToolCallResult {
   success: boolean
@@ -20,6 +25,18 @@ export interface ToolCallResult {
   triggersSymbolRefresh?: boolean // Indicates this tool call should trigger symbol refresh
   terminatesLoop?: boolean // If true, the tool loop stops and returns control to the user
   awaitsUserInput?: boolean // If true, the tool loop pauses waiting for user input
+  /**
+   * Optional image attached to this tool result (e.g. a rendered dashboard screenshot).
+   * Vision-capable providers (Anthropic, etc.) will pass this through to the model
+   * as part of the tool_result content. Other providers ignore it and use the textual
+   * `message` field only.
+   */
+  imageData?: {
+    /** Base64-encoded image bytes (no data URL prefix) */
+    data: string
+    /** MIME type, e.g. 'image/png' */
+    mediaType: string
+  }
 }
 
 export interface ToolCallInput {
@@ -240,6 +257,21 @@ export class ChatToolExecutor {
         }
       }
 
+      // Validate chart config against actual results if one was provided
+      let effectiveChartConfig = chartConfig
+      let validationWarning: string | null = null
+      if (chartConfig && artifactType === 'chart') {
+        const results = queryResult.results as Results
+        if (results && results.headers) {
+          const validation = validateChartConfigForData(results.data, results.headers, chartConfig)
+          if (!validation.valid) {
+            // Auto-correct to suggested config
+            effectiveChartConfig = validation.suggestedConfig as ChartConfig
+            validationWarning = `Auto-corrected to default configuration.\n${formatChartConfigValidationError(validation)}`
+          }
+        }
+      }
+
       // Build artifact with results data - store Results object directly
       const artifactId = generateArtifactId()
       const artifact: ChatArtifact = {
@@ -253,8 +285,20 @@ export class ChatToolExecutor {
           executionTime: queryResult.executionTime,
           resultSize: queryResult.resultSize,
           columnCount: queryResult.columnCount,
-          ...(chartConfig && { chartConfig }),
+          ...(effectiveChartConfig && { chartConfig: effectiveChartConfig }),
         },
+      }
+
+      if (validationWarning) {
+        return {
+          success: false,
+          error: validationWarning,
+          artifact,
+          artifactId,
+          executionTime: queryResult.executionTime,
+          query,
+          generatedSql: queryResult.generatedSql,
+        }
       }
 
       return {
@@ -437,83 +481,18 @@ export class ChatToolExecutor {
     }
   }
 
-  // Helper to fetch concepts for a specific import and format them
-  private async getConceptsForImport(imp: ChatImport, connectionName: string): Promise<string> {
-    try {
-      // Build extra content for the import
-      const editorContent = this.editorStore?.editors[imp.id]?.contents || ''
-      if (!editorContent) {
-        return 'No fields found in this data source.'
-      }
-
-      // Get all connection sources and editors for dependency resolution
-      const allConnectionEditors = this.editorStore
-        ? Object.values(this.editorStore.editors)
-            .filter((editor) => editor.connection === connectionName && !editor.deleted)
-            .map((editor) => ({
-              alias: editor.name,
-              contents: editor.contents,
-            }))
-        : []
-
-      const connectionSources = this.connectionStore.getConnectionSources(connectionName)
-      const extraContentMap = new Map<string, string>()
-
-      connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
-      allConnectionEditors.forEach((s) => extraContentMap.set(s.alias, s.contents))
-
-      const extraContent: ContentInput[] = Array.from(extraContentMap.entries()).map(
-        ([alias, contents]) => ({
-          alias,
-          contents,
-        }),
-      )
-
-      // Validate to get completion items
-      const queryInput: QueryInput = {
-        text: 'SELECT 1',
-        editorType: 'trilogy' as const,
-        imports: [{ name: imp.name, alias: imp.alias || '' }],
-        extraContent,
-      }
-
-      const validation = await this.queryExecutionService.validateQuery(
-        connectionName,
-        queryInput,
-        false,
-      )
-
-      if (validation?.data?.completion_items) {
-        const concepts = validation.data.completion_items.filter(
-          (item) => item.trilogyType === 'concept',
-        )
-
-        if (concepts.length === 0) {
-          return 'No fields found in this data source.'
-        }
-
-        // Format concepts with full details including descriptions
-        const conceptsList = concepts
-          .map((c) => {
-            let entry = `- ${c.label} (${c.datatype || c.type})`
-            if (c.description) {
-              entry += `: ${c.description}`
-            }
-            if (c.calculation) {
-              entry += ` [calculated: ${c.calculation}]`
-            }
-            return entry
-          })
-          .join('\n')
-
-        return `AVAILABLE FIELDS (${concepts.length} total):\n${conceptsList}`
-      }
-
-      return 'Unable to fetch field information for this data source.'
-    } catch (error) {
-      console.error('Failed to fetch concepts for import:', error)
-      return 'Error fetching field information for this data source.'
-    }
+  // Helper to fetch concepts for a specific import and format them.
+  // Delegates to shared helper so the dashboard agent surface uses the same logic.
+  private getConceptsForImport(imp: ChatImport, connectionName: string): Promise<string> {
+    return fetchConceptsForImport(
+      {
+        connectionStore: this.connectionStore,
+        editorStore: this.editorStore,
+        queryExecutionService: this.queryExecutionService,
+      },
+      imp,
+      connectionName,
+    )
   }
 
   private listAvailableImports(): ToolCallResult {
@@ -861,6 +840,24 @@ export class ChatToolExecutor {
     }
 
     if (chartConfig !== undefined && (artifact.type === 'chart' || artifact.type === 'results')) {
+      // Validate chart config against the artifact's actual data
+      const results = artifact.data as Results | null
+      if (results && results.headers) {
+        const validation = validateChartConfigForData(results.data, results.headers, chartConfig)
+        if (!validation.valid) {
+          // Auto-correct to suggested config
+          const corrected = validation.suggestedConfig as ChartConfig
+          artifact.config = { ...artifact.config, chartConfig: corrected }
+          chat.updatedAt = new Date()
+          chat.changed = true
+          return {
+            success: false,
+            error:
+              `Auto-corrected artifact "${artifactId}" chart config to default configuration.\n` +
+              formatChartConfigValidationError(validation),
+          }
+        }
+      }
       artifact.config = { ...artifact.config, chartConfig }
       updates.push('chart configuration')
     }
