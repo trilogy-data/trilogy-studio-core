@@ -265,6 +265,49 @@ Line three`
     })
   })
 
+  describe('Horizontal Rules', () => {
+    it('should convert --- to hr', () => {
+      expect(convertMarkdownToHtml('---')).toBe('<hr class="rendered-markdown-hr">')
+    })
+
+    it('should convert *** to hr', () => {
+      expect(convertMarkdownToHtml('***')).toBe('<hr class="rendered-markdown-hr">')
+    })
+
+    it('should convert ___ to hr', () => {
+      expect(convertMarkdownToHtml('___')).toBe('<hr class="rendered-markdown-hr">')
+    })
+
+    it('should handle hr between paragraphs', () => {
+      const markdown = `First paragraph.
+
+---
+
+Second paragraph.`
+      const result = convertMarkdownToHtml(markdown)
+      expect(result).toContain('<hr class="rendered-markdown-hr">')
+      expect(result).toContain('First paragraph.')
+      expect(result).toContain('Second paragraph.')
+    })
+
+    it('should not treat table separator as hr', () => {
+      const markdown = `| A | B |
+|---|---|
+| 1 | 2 |`
+      const result = convertMarkdownToHtml(markdown)
+      expect(result).not.toContain('<hr')
+      expect(result).toContain('<table')
+    })
+
+    it('should not treat list dash as hr', () => {
+      expect(convertMarkdownToHtml('- item')).not.toContain('<hr')
+    })
+
+    it('should support longer dash sequences', () => {
+      expect(convertMarkdownToHtml('-----')).toBe('<hr class="rendered-markdown-hr">')
+    })
+  })
+
   describe('Tables', () => {
     it('should convert basic markdown table to HTML', () => {
       const markdown = `| Country | Total Sales |

@@ -1044,6 +1044,7 @@ export function convertMarkdownToHtml(text: string): string {
 
   html = processHeaders(html)
   html = processTables(html) // Process tables before lists to avoid conflicts
+  html = processHorizontalRules(html) // After tables (table seps contain `|`), before emphasis
   html = processLists(html)
   html = processEmphasis(html)
   html = processLinks(html)
