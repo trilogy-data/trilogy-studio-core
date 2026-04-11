@@ -8,6 +8,7 @@ import type { EditorStoreType } from './editorStore'
 import { ChatToolExecutor, type ToolCallResult } from '../llm/chatToolExecutor'
 import { buildChatAgentSystemPrompt, CHAT_TOOLS } from '../llm/chatAgentPrompt'
 import type { CompletionItem } from './resolver'
+import type { LLMToolDefinition } from '../llm/base'
 import {
   runToolLoop,
   type LLMAdapter,
@@ -15,6 +16,21 @@ import {
   type ToolExecutorFactory,
   type ExecutionStateUpdater,
 } from '../llm/toolLoopCore'
+
+/** Overrides that let a caller plug custom tools and a custom tool executor
+ *  into the persistent executeMessage pipeline. Used by DashboardChatPanel so
+ *  dashboard chats get persistence + background execution without polluting
+ *  the generic chat agent. */
+export interface ExecuteMessageOverrides {
+  tools: LLMToolDefinition[]
+  executeToolCall: (
+    toolName: string,
+    toolInput: Record<string, any>,
+  ) => Promise<ToolCallResult>
+  buildSystemPrompt: () => string
+  noToolCallReminder?: string
+  terminateOnNoToolCall?: boolean
+}
 
 /** Rate limit backoff state */
 export interface RateLimitBackoff {
@@ -304,6 +320,9 @@ export const useChatStore = defineStore('chats', {
       options: {
         /** Callback to refresh symbols after import changes */
         onSymbolsRefresh?: () => Promise<CompletionItem[]>
+        /** Replace the generic chat tools + executor + prompt with a caller-supplied set.
+         *  When provided, onSymbolsRefresh and the default ChatToolExecutor are bypassed. */
+        overrides?: ExecuteMessageOverrides
       } = {},
     ): Promise<{ response?: string; artifacts?: ChatArtifact[] } | void> {
       const chat = this.chats[chatId]
@@ -377,17 +396,23 @@ export const useChatStore = defineStore('chats', {
           getMessages: () => chat.messages,
         }
 
-        // Create tool executor for this execution
-        const toolExecutor = new ChatToolExecutor(
-          queryExecutionService,
-          connectionStore,
-          this,
-          editorStore,
-        )
-
-        const toolExecutorFactory: ToolExecutorFactory = {
-          getToolExecutor: () => toolExecutor,
-        }
+        // Build tool executor: either caller-provided override, or the default
+        // generic chat executor that uses editor/query tools.
+        const toolExecutorFactory: ToolExecutorFactory = options.overrides
+          ? {
+              getToolExecutor: () => ({
+                executeToolCall: options.overrides!.executeToolCall,
+              }),
+            }
+          : (() => {
+              const toolExecutor = new ChatToolExecutor(
+                queryExecutionService,
+                connectionStore,
+                this,
+                editorStore,
+              )
+              return { getToolExecutor: () => toolExecutor }
+            })()
 
         const stateUpdater: ExecutionStateUpdater = {
           setActiveToolName: (name) => this.setActiveToolName(chatId, name),
@@ -395,14 +420,18 @@ export const useChatStore = defineStore('chats', {
         }
 
         // Build system prompt function (called each iteration for freshness)
-        const buildSystemPrompt = () => this.buildSystemPrompt(chatId, deps)
+        const buildSystemPrompt = options.overrides
+          ? options.overrides.buildSystemPrompt
+          : () => this.buildSystemPrompt(chatId, deps)
 
-        // Handle symbol refresh on tool results
-        const onToolResult = async (_toolName: string, result: ToolCallResult) => {
-          if (result.triggersSymbolRefresh && options.onSymbolsRefresh) {
-            await options.onSymbolsRefresh()
-          }
-        }
+        // Handle symbol refresh on tool results (default path only)
+        const onToolResult = options.overrides
+          ? undefined
+          : async (_toolName: string, result: ToolCallResult) => {
+              if (result.triggersSymbolRefresh && options.onSymbolsRefresh) {
+                await options.onSymbolsRefresh()
+              }
+            }
 
         await runToolLoop(
           message,
@@ -412,10 +441,12 @@ export const useChatStore = defineStore('chats', {
           toolExecutorFactory,
           stateUpdater,
           {
-            tools: CHAT_TOOLS,
+            tools: options.overrides ? options.overrides.tools : CHAT_TOOLS,
             maxIterations: 50,
             noToolCallReminder:
+              options.overrides?.noToolCallReminder ??
               'You must call a tool to proceed. If you are finished, call return_to_user with a summary of what was done. Do not respond with text only.',
+            terminateOnNoToolCall: options.overrides?.terminateOnNoToolCall,
             buildSystemPrompt,
             onToolResult,
           },

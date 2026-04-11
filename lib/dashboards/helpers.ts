@@ -1,7 +1,7 @@
 import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
-import { Charts } from './constants'
+import { Charts, Controls } from './constants'
 import { snakeCaseToCapitalizedWords } from './formatting'
 import { type FieldEncodingOutput } from './types'
 
@@ -593,7 +593,6 @@ export const validateChartConfigForData = (
   config: ChartConfig,
 ): ChartConfigValidationResult => {
   const eligible = determineEligibleChartTypes(data, columns)
-  const suggested = determineDefaultConfig(data, columns)
   const fieldErrors: string[] = []
 
   // Check if the chart type is eligible for this data
@@ -603,9 +602,24 @@ export const validateChartConfigForData = (
       chartTypeError: `Chart type "${config.chartType}" is not compatible with this data. Eligible chart types: ${eligible.join(', ')}.`,
       fieldErrors: [],
       eligibleChartTypes: eligible,
-      suggestedConfig: suggested,
+      suggestedConfig: determineDefaultConfig(data, columns),
     }
   }
+
+  // Compute defaults scoped to the user's requested chart type so the suggested
+  // config can auto-fill missing required fields without discarding the user's
+  // other choices (e.g. keep their colorField, fill in the missing xField/yField).
+  const defaultableChartTypes = [
+    'line', 'bar', 'barh', 'point', 'geo-map', 'tree',
+    'area', 'heatmap', 'headline', 'donut',
+  ] as const
+  type DefaultableChartType = (typeof defaultableChartTypes)[number]
+  const scopedChartType: DefaultableChartType | undefined = (
+    defaultableChartTypes as readonly string[]
+  ).includes(config.chartType)
+    ? (config.chartType as DefaultableChartType)
+    : undefined
+  const typeDefaults = determineDefaultConfig(data, columns, scopedChartType)
 
   const columnNames = Array.from(columns.keys())
 
@@ -618,6 +632,20 @@ export const validateChartConfigForData = (
     const val = config[key]
     if (typeof val === 'string' && val !== '' && !columns.has(val)) {
       fieldErrors.push(`Field "${val}" (${key}) does not exist in the query results. Available columns: ${columnNames.join(', ')}.`)
+    }
+  }
+
+  // Validate that all required fields for this chart type are specified.
+  // A field is required when a Control entry targets this chart type with allowEmpty=false.
+  const requiredControls = Controls.filter(
+    (c) => !c.allowEmpty && c.visibleFor.includes(config.chartType),
+  )
+  for (const control of requiredControls) {
+    const val = config[control.field]
+    if (typeof val !== 'string' || val === '') {
+      fieldErrors.push(
+        `Chart type "${config.chartType}" requires ${control.label} (${String(control.field)}) to be specified, but it is missing.`,
+      )
     }
   }
 
@@ -667,11 +695,20 @@ export const validateChartConfigForData = (
     }
   }
 
+  // Build the suggested config: start from type-scoped defaults, then overlay
+  // the user's explicit (non-empty) choices so auto-correction preserves them.
+  const mergedSuggested: Partial<ChartConfig> = { ...typeDefaults }
+  for (const [k, v] of Object.entries(config)) {
+    if (v === undefined || v === null) continue
+    if (typeof v === 'string' && v === '') continue
+    ;(mergedSuggested as any)[k] = v
+  }
+
   return {
     valid: fieldErrors.length === 0,
     fieldErrors,
     eligibleChartTypes: eligible,
-    suggestedConfig: suggested,
+    suggestedConfig: mergedSuggested,
   }
 }
 

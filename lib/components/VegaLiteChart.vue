@@ -183,7 +183,30 @@ export default defineComponent({
     // Resize observer for live chart area sizing
     let resizeObserver: ResizeObserver | null = null
     let hasMounted = false
-    let updatePending = false
+
+    // Render scheduler: coalesces multiple render triggers in the same tick
+    // into a single renderChart call. Vega-Lite rendering is expensive on
+    // dashboards with many charts, so deduping bursts (e.g. data + config
+    // changing in the same reactive update) is a meaningful win.
+    let renderScheduled = false
+    let pendingForce = false
+    const pendingPreRender: Array<() => void> = []
+
+    const scheduleRender = (force: boolean = false, preRender?: () => void) => {
+      if (force) pendingForce = true
+      if (preRender) pendingPreRender.push(preRender)
+      if (renderScheduled) return
+      renderScheduled = true
+      nextTick(() => {
+        renderScheduled = false
+        const forceThisRender = pendingForce
+        pendingForce = false
+        const work = pendingPreRender.splice(0)
+        if (!hasMounted) return
+        for (const fn of work) fn()
+        renderChart(forceThisRender)
+      })
+    }
 
     // Internal dimensions tracked from the rendered chart area
     const internalWidth = ref<number | null>(null)
@@ -210,7 +233,7 @@ export default defineComponent({
 
     // Create debounced resize handler for live chart resizing
     const debouncedResizeHandler = debounce(() => {
-      renderChart(true)
+      scheduleRender(true)
     }, 300)
 
     // Generate Vega-Lite spec based on current configuration
@@ -380,59 +403,72 @@ export default defineComponent({
     watch(
       () => [props.chartSelection],
       (newValues, oldValues) => {
-        if (!hasMounted || updatePending) return
+        if (!hasMounted) return
         const [newSelection] = newValues
         const oldSelection = oldValues ? oldValues[0] : undefined
         if (safeJsonStringify(newSelection) === safeJsonStringify(oldSelection)) return
-        renderChart(true)
+        scheduleRender(true)
       },
     )
     // Watch for data/column changes
     watch(
       () => [props.columns, props.data, props.containerHeight, props.containerWidth],
       (newValues, oldValues) => {
-        if (!hasMounted) {
-          return
-        }
-        if (updatePending) {
-          return
-        }
-        // check they are actually different
+        if (!hasMounted) return
         if (oldValues && safeJsonStringify(newValues) === safeJsonStringify(oldValues)) {
           return
         }
-        updatePending = true
-        nextTick(() => {
-          updatePending = false
+        // If containerheight/containerwidth changed, force a re-render.
+        const containerHeightChanged = oldValues && props.containerHeight !== oldValues[2]
+        const containerWidthChanged = oldValues && props.containerWidth !== oldValues[3]
+        scheduleRender(Boolean(containerHeightChanged || containerWidthChanged), () => {
           controlsManager.validateAndResetConfig(
             props.data,
             props.columns,
             props.onChartConfigChange,
             props.initialConfig,
           )
-          // if containerheight/containerwidth changed,
-          // force = True
-          const containerHeightChanged = oldValues && props.containerHeight !== oldValues[2]
-          const containerWidthChanged = oldValues && props.containerWidth !== oldValues[3]
-          renderChart(containerHeightChanged || containerWidthChanged)
         })
       },
       { deep: true, immediate: true },
+    )
+
+    // Watch for external chart config changes (e.g. the agent updating
+    // chartConfig via the dashboard tool executor). Without this, the chart
+    // only reads initialConfig on mount, so config-only updates don't
+    // re-render the live chart even though the store has the new config.
+    //
+    // The comparison guard is important: user-driven edits via the controls
+    // panel mutate internalConfig, then fire onChartConfigChange which the
+    // parent pipes back into initialConfig. Without the guard this watcher
+    // would re-initialize and force-render on every keystroke.
+    watch(
+      () => props.initialConfig,
+      (newConfig) => {
+        if (!hasMounted || !newConfig) return
+        if (
+          safeJsonStringify(newConfig) ===
+          safeJsonStringify(controlsManager.internalConfig.value)
+        ) {
+          return
+        }
+        scheduleRender(true, () => {
+          controlsManager.initializeConfig(props.data, props.columns, newConfig)
+        })
+      },
+      { deep: true },
     )
 
     // Watch for controls toggle to trigger re-render
     watch(
       () => controlsManager.showingControls.value,
       (showing) => {
-        if (!hasMounted) {
-          return
+        if (!hasMounted) return
+        if (!showing) {
+          scheduleRender(true, () => setupResizeObserver())
+        } else {
+          nextTick(() => setupResizeObserver())
         }
-        nextTick(() => {
-          setupResizeObserver()
-          if (!showing) {
-            renderChart(true)
-          }
-        })
       },
     )
 

@@ -17,6 +17,33 @@
     </template>
     <template #actions>
       <LLMConnectionCreator :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
+      <div ref="filterDropdown" class="tag-filter-dropdown">
+        <button
+          class="tag-filter-button"
+          type="button"
+          @click="filterMenuOpen = !filterMenuOpen"
+          :aria-expanded="filterMenuOpen"
+        >
+          <span class="tag-filter-button-scope">Scope:</span>
+          <span class="tag-filter-button-label">{{ filterSummary }}</span>
+          <i class="mdi mdi-chevron-down tag-filter-chevron" :class="{ open: filterMenuOpen }"></i>
+        </button>
+
+        <div v-if="filterMenuOpen" class="tag-filter-menu">
+          <label
+            v-for="option in SCOPE_OPTIONS"
+            :key="option.value"
+            class="tag-filter-option"
+          >
+            <input
+              type="checkbox"
+              :checked="!hiddenScopes.has(option.value)"
+              @change="toggleScopeFilter(option.value)"
+            />
+            <span>{{ option.label }}</span>
+          </label>
+        </div>
+      </div>
     </template>
     <LLMConnectionListItem
       v-for="item in contentList"
@@ -38,7 +65,7 @@
 </template>
 
 <script lang="ts">
-import { ref, computed, inject, onMounted } from 'vue'
+import { ref, computed, inject, onMounted, onBeforeUnmount } from 'vue'
 import SidebarList from './SidebarList.vue'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 import type { ChatStoreType } from '../../stores/chatStore'
@@ -47,8 +74,13 @@ import { getDefaultValueFromHash } from '../../stores/urlStore'
 import { LLMProvider } from '../../llm/base'
 import LLMConnectionListItem from './LLMConnectionListItem.vue'
 import LLMConnectionCreator from './LLMConnectionCreator.vue'
-import type { Chat } from '../../chats/chat'
+import type { Chat, ChatSource } from '../../chats/chat'
 import useScreenNavigation from '../../stores/useScreenNavigation'
+
+const SCOPE_OPTIONS: Array<{ value: ChatSource; label: string }> = [
+  { value: 'user', label: 'User Chats' },
+  { value: 'dashboard', label: 'Dashboard Chats' },
+]
 
 export default {
   name: 'LLMConnectionList',
@@ -78,6 +110,37 @@ export default {
     const isErrored = ref<Record<string, string>>({})
     const creatorVisible = ref(false)
     const collapsed = ref<Record<string, boolean>>({})
+
+    // Scope filter — hide dashboard-owned chats by default so the sidebar stays
+    // focused on the user's own conversations.
+    const hiddenScopes = ref<Set<ChatSource>>(new Set<ChatSource>(['dashboard']))
+    const filterMenuOpen = ref(false)
+    const filterDropdown = ref<HTMLElement | null>(null)
+
+    const toggleScopeFilter = (scope: ChatSource) => {
+      if (hiddenScopes.value.has(scope)) {
+        hiddenScopes.value.delete(scope)
+      } else {
+        hiddenScopes.value.add(scope)
+      }
+      // Reassign to trigger reactivity (Set mutation alone is not deeply tracked).
+      hiddenScopes.value = new Set(hiddenScopes.value)
+    }
+
+    const filterSummary = computed(() => {
+      const visible = SCOPE_OPTIONS.filter((opt) => !hiddenScopes.value.has(opt.value))
+      if (visible.length === SCOPE_OPTIONS.length) return 'All chats'
+      if (visible.length === 0) return 'No chats'
+      if (visible.length === 1) return visible[0].label
+      return `${visible.length} scopes`
+    })
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      const target = event.target as Node | null
+      if (filterDropdown.value && target && !filterDropdown.value.contains(target)) {
+        filterMenuOpen.value = false
+      }
+    }
 
     const settingsId = (connectionName: string) => `${connectionName}-settings`
 
@@ -185,6 +248,7 @@ export default {
     })
 
     onMounted(() => {
+      document.addEventListener('click', handleDocumentClick)
       const currentLLMKey = getDefaultValueFromHash('llm-key', '')
       if (!currentLLMKey) {
         return
@@ -202,6 +266,10 @@ export default {
           chatStore.setActiveChat(chatId)
         }
       }
+    })
+
+    onBeforeUnmount(() => {
+      document.removeEventListener('click', handleDocumentClick)
     })
 
     const contentList = computed(() => {
@@ -290,7 +358,10 @@ export default {
           return
         }
 
-        const connectionChats = chatStore ? chatStore.getConnectionChats(name) : []
+        const allConnectionChats = chatStore ? chatStore.getConnectionChats(name) : []
+        const connectionChats = allConnectionChats.filter(
+          (chat) => !hiddenScopes.value.has(chat.source),
+        )
 
         list.push({
           id: `${name}-new-chat`,
@@ -402,6 +473,12 @@ export default {
       creatorVisible,
       isItemSelected,
       screenNavigation,
+      hiddenScopes,
+      filterMenuOpen,
+      filterDropdown,
+      filterSummary,
+      toggleScopeFilter,
+      SCOPE_OPTIONS,
     }
   },
   components: {
@@ -524,5 +601,84 @@ export default {
   width: 12px;
   height: 12px;
   border-radius: 50%;
+}
+
+.tag-filter-dropdown {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.tag-filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 0 9px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-faint);
+  background-color: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: 7px;
+  line-height: 1;
+}
+
+.tag-filter-button:hover {
+  color: var(--text-color);
+}
+
+.tag-filter-button-scope {
+  color: var(--text-faint);
+}
+
+.tag-filter-button-label {
+  white-space: nowrap;
+  color: var(--text-color);
+}
+
+.tag-filter-chevron {
+  font-size: 14px;
+  transition: transform 0.16s ease;
+}
+
+.tag-filter-chevron.open {
+  transform: rotate(180deg);
+}
+
+.tag-filter-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  min-width: 180px;
+  padding: 6px;
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--surface-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tag-filter-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  padding: 0 6px;
+  border-radius: 6px;
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.tag-filter-option:hover {
+  background-color: var(--button-mouseover);
+}
+
+.tag-filter-option input {
+  margin: 0;
 }
 </style>

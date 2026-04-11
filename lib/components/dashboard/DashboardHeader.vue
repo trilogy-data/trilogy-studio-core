@@ -266,17 +266,6 @@ const modeIcon = computed(() => {
         </button>
 
         <button
-          @click="handleRefresh"
-          class="btn btn-primary filter-action-btn"
-          data-testid="refresh-button"
-          title="Refresh dashboard"
-          aria-label="Refresh dashboard"
-        >
-          <i class="mdi mdi-refresh filter-action-icon" aria-hidden="true"></i>
-          <span class="filter-action-label">Refresh</span>
-        </button>
-
-        <button
           @click="$emit('toggle-chat')"
           class="btn filter-action-btn"
           :class="chatOpen ? 'btn-primary' : 'btn-secondary'"
@@ -287,6 +276,17 @@ const modeIcon = computed(() => {
         >
           <i class="mdi mdi-creation-outline filter-action-icon" aria-hidden="true"></i>
           <span class="filter-action-label">{{ chatOpen ? 'Close AI' : 'AI' }}</span>
+        </button>
+
+        <button
+          @click="handleRefresh"
+          class="btn btn-primary filter-action-btn"
+          data-testid="refresh-button"
+          title="Refresh dashboard"
+          aria-label="Refresh dashboard"
+        >
+          <i class="mdi mdi-refresh filter-action-icon" aria-hidden="true"></i>
+          <span class="filter-action-label">Refresh</span>
         </button>
 
         <div class="mode-selector" data-testid="mode-selector-wrapper">

@@ -60,6 +60,7 @@
 import { inject, ref, computed, onMounted } from 'vue'
 import type { DashboardStoreType } from '../../stores/dashboardStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
+import type { ChatStoreType } from '../../stores/chatStore'
 import DashboardCreatorInline from '../dashboard/DashboardCreatorInline.vue'
 import DashboardImportPopup from '../dashboard/DashboardImportPopup.vue'
 import DashboardListItem from './DashboardListItem.vue'
@@ -184,6 +185,7 @@ export default {
   setup() {
     const dashboardStore = inject<DashboardStoreType>('dashboardStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
+    const chatStore = inject<ChatStoreType>('chatStore', null as any)
     const saveDashboards = inject<Function>('saveDashboards')
 
     if (!dashboardStore || !connectionStore || !saveDashboards) {
@@ -244,6 +246,11 @@ export default {
       closeConfirmation: cancelDelete,
       confirm: confirmDelete,
     } = useConfirmationState<DashboardModel>((dashboard) => {
+      // Soft-delete any owned dashboard chat so it doesn't linger as an orphan
+      // under the "Dashboard Chats" filter in the AI sidebar.
+      if (chatStore && dashboard.chatId && chatStore.chats[dashboard.chatId]) {
+        chatStore.removeChat(dashboard.chatId)
+      }
       dashboard.delete()
     })
 

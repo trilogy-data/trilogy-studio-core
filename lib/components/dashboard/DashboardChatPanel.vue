@@ -1,12 +1,13 @@
 <script lang="ts" setup>
 import { ref, computed, inject, nextTick, onMounted, watch } from 'vue'
 import LLMChat from '../llm/LLMChat.vue'
-import { useChatWithTools } from '../../composables/useChatWithTools'
+import { Chat } from '../../chats/chat'
 import { DASHBOARD_TOOLS } from '../../llm/dashboardAgentTools'
 import { buildDashboardAgentSystemPrompt } from '../../llm/dashboardAgentPrompt'
-import { DashboardToolExecutor, type DashboardToolExecutorDeps } from '../../llm/dashboardToolExecutor'
+import { DashboardToolExecutor } from '../../llm/dashboardToolExecutor'
 import type { DashboardModel } from '../../dashboards/base'
 import type { DashboardStoreType } from '../../stores/dashboardStore'
+import type { ChatStoreType } from '../../stores/chatStore'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { EditorStoreType } from '../../stores/editorStore'
@@ -38,16 +39,17 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-// Inject stores
 const dashboardStore = inject<DashboardStoreType>('dashboardStore') as DashboardStoreType
-const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore') as LLMConnectionStoreType
+const chatStore = inject<ChatStoreType>('chatStore') as ChatStoreType
+const llmConnectionStore = inject<LLMConnectionStoreType>(
+  'llmConnectionStore',
+) as LLMConnectionStoreType
 const connectionStore = inject<ConnectionStoreType>('connectionStore') as ConnectionStoreType
 const editorStore = inject<EditorStoreType>('editorStore') as EditorStoreType
-const queryExecutionService = inject<QueryExecutionService>('queryExecutionService') as QueryExecutionService
+const queryExecutionService = inject<QueryExecutionService>(
+  'queryExecutionService',
+) as QueryExecutionService
 const setActiveDashboardNav = inject<(dashboard: string | null) => void>('setActiveDashboard')
-
-// Local state for dashboard chat imports
-const dashboardChatImports = ref<ChatImport[]>([])
 
 // Tools that mutate dashboard state — these trigger an auto-fork on first use
 // so a chat session never modifies the user's original dashboard in place.
@@ -60,18 +62,59 @@ const MUTATING_TOOLS = new Set([
   'set_dashboard_title',
 ])
 
-// If this chat session has already forked the dashboard, this is the fork's id.
-// All subsequent tool calls operate on this id instead of the original.
-const sessionForkId = ref<string | null>(null)
+// Ensure this dashboard has a backing chat record, creating one lazily.
+// Returns the chat id.
+function ensureDashboardChat(): string {
+  const existingId = props.dashboard.chatId
+  if (existingId) {
+    const existing = chatStore.chats[existingId]
+    if (existing && !existing.deleted) {
+      return existingId
+    }
+  }
+  const chat = new Chat({
+    name: `Dashboard: ${props.dashboard.name}`,
+    llmConnectionName: llmConnectionStore.activeConnection || '',
+    dataConnectionName: props.dashboard.connection || '',
+    source: 'dashboard',
+    sourceRefId: props.dashboard.id,
+  })
+  chatStore.addChat(chat)
+  props.dashboard.setChatId(chat.id)
+  return chat.id
+}
 
-// The dashboard id that the executor should target. Falls back to the bound
-// dashboard prop until a fork has been created for this session.
-const effectiveDashboardId = computed(
-  () => sessionForkId.value ?? props.dashboard.id,
+const currentChatId = ref<string>('')
+
+// Re-resolve the backing chat whenever the dashboard prop changes (navigating
+// between dashboards with the panel open) or the dashboard's chatId pointer
+// gets reassigned (e.g. after a fork moves the chat to a new dashboard).
+watch(
+  () => [props.dashboard.id, props.dashboard.chatId] as const,
+  () => {
+    currentChatId.value = ensureDashboardChat()
+  },
+  { immediate: true },
 )
 
+const currentChat = computed(() =>
+  currentChatId.value ? chatStore.chats[currentChatId.value] || null : null,
+)
+
+const activeChatMessages = computed<ChatMessage[]>(() => currentChat.value?.messages || [])
+
+const isChatLoading = computed(() =>
+  currentChatId.value ? chatStore.isChatExecuting(currentChatId.value) : false,
+)
+
+const activeToolName = computed(() =>
+  currentChatId.value ? chatStore.getChatActiveToolName(currentChatId.value) : '',
+)
+
+// Active imports live on the chat record so they persist across panel open/close.
+const dashboardChatImports = computed<ChatImport[]>(() => currentChat.value?.imports || [])
+
 async function ensureChatFork(): Promise<void> {
-  if (sessionForkId.value) return
   // Don't fork investigations — the user is already on a derived dashboard,
   // so editing in place is the expected behavior.
   if (props.dashboard.parentDashboardId) return
@@ -82,75 +125,56 @@ async function ensureChatFork(): Promise<void> {
 
   try {
     const fork = dashboardStore.forkDashboard(baseId, investigationName)
-    sessionForkId.value = fork.id
+    // Move the chat pointer from the original dashboard to the fork so
+    // reopening the panel on the fork resumes this conversation. The original
+    // dashboard goes back to having no chat.
+    const chatId = currentChatId.value
+    props.dashboard.setChatId(null)
+    fork.setChatId(chatId)
+    const chat = chatStore.chats[chatId]
+    if (chat) {
+      chat.sourceRefId = fork.id
+      chat.changed = true
+    }
     if (setActiveDashboardNav) {
       setActiveDashboardNav(fork.id)
     }
-    // Wait for prop reactivity to flow through (props.dashboard) so the
-    // executor's computed deps reflect the new id before we run the tool.
+    // Wait for prop reactivity to flow through so the executor's dashboardId
+    // reflects the new id before the tool actually runs.
     await nextTick()
   } catch (err) {
     console.error('Failed to auto-fork dashboard for chat session:', err)
   }
 }
 
-// Create the dashboard tool executor
+// Tool executor is recomputed when the dashboard prop id changes (including
+// post-fork, since the parent swaps which dashboard is rendered).
 const toolExecutor = computed(() => {
-  const deps: DashboardToolExecutorDeps = {
+  return new DashboardToolExecutor({
     dashboardStore,
     connectionStore,
     editorStore,
     queryExecutionService,
-    dashboardId: effectiveDashboardId.value,
+    dashboardId: props.dashboard.id,
     getActiveImports: () => dashboardChatImports.value,
     setActiveImports: (imports: ChatImport[]) => {
-      dashboardChatImports.value = imports
+      if (currentChatId.value) {
+        chatStore.setImports(currentChatId.value, imports)
+      }
     },
     getDashboardQueryExecutor: () =>
-      props.getDashboardQueryExecutor(effectiveDashboardId.value) || null,
+      props.getDashboardQueryExecutor(props.dashboard.id) || null,
     refreshItem: props.refreshItem,
     captureDashboardImage: props.captureDashboardImage,
-  }
-  return new DashboardToolExecutor(deps)
+  })
 })
 
-// Use the chat composable in standalone mode with custom tools
-const {
-  isChatLoading,
-  activeToolName,
-  activeChatMessages,
-  handleChatMessageWithTools,
-} = useChatWithTools({
-  llmConnectionStore,
-  connectionStore,
-  queryExecutionService,
-  editorStore,
-  dataConnectionName: props.dashboard.connection,
-  initialTitle: `Dashboard: ${props.dashboard.name}`,
-  customTools: DASHBOARD_TOOLS,
-  onCustomToolCall: async (toolName: string, toolInput: Record<string, unknown>) => {
-    if (MUTATING_TOOLS.has(toolName)) {
-      await ensureChatFork()
-    }
-    const result = await toolExecutor.value.executeToolCall(
-      toolName,
-      toolInput as Record<string, any>,
-    )
-    if (result.success) {
-      return result.message || 'Success'
-    }
-    throw new Error(result.error || 'Tool execution failed')
-  },
-})
-
-// Build system prompt dynamically based on current dashboard state
 const systemPrompt = computed(() => {
   const availableConnections = connectionStore ? Object.keys(connectionStore.connections) : []
   const isDataConnectionActive = props.dashboard.connection
     ? (connectionStore?.connections[props.dashboard.connection]?.connected ?? false)
     : false
 
-  // Get available imports for this connection
   const availableImports: ChatImport[] = editorStore
     ? Object.values(editorStore.editors)
         .filter(
@@ -174,8 +198,56 @@ const systemPrompt = computed(() => {
   })
 })
 
-async function handleSend(message: string, messages: ChatMessage[]) {
-  await handleChatMessageWithTools(message, messages)
+function handleClear() {
+  const chatId = currentChatId.value
+  if (!chatId) return
+  const chat = chatStore.chats[chatId]
+  if (!chat || chat.messages.length === 0) return
+  if (!window.confirm('Clear this dashboard conversation? Messages cannot be recovered.')) return
+  // Stop any in-flight tool loop before wiping the history out from under it.
+  if (chatStore.isChatExecuting(chatId)) {
+    chatStore.stopExecution(chatId)
+  }
+  chatStore.clearChatMessages(chatId)
+}
+
+async function handleSend(message: string, _messages: ChatMessage[]) {
+  const chatId = currentChatId.value
+  if (!chatId) return
+
+  // Keep the chat's data connection aligned with the dashboard's, in case
+  // the dashboard's connection changed since the chat was created.
+  const chat = chatStore.chats[chatId]
+  if (chat && chat.dataConnectionName !== (props.dashboard.connection || '')) {
+    chat.setDataConnection(props.dashboard.connection || '')
+  }
+
+  await chatStore.executeMessage(
+    chatId,
+    message,
+    {
+      llmConnectionStore,
+      connectionStore,
+      queryExecutionService,
+      editorStore,
+    },
+    {
+      overrides: {
+        tools: DASHBOARD_TOOLS,
+        executeToolCall: async (toolName, toolInput) => {
+          if (MUTATING_TOOLS.has(toolName)) {
+            await ensureChatFork()
+          }
+          const result = await toolExecutor.value.executeToolCall(
+            toolName,
+            toolInput as Record<string, any>,
+          )
+          return result
+        },
+        buildSystemPrompt: () => systemPrompt.value,
+      },
+    },
+  )
 }
 
 // Track which initial-prompt strings we've already auto-submitted to avoid
@@ -211,9 +283,20 @@ watch(
         <i class="mdi mdi-creation-outline"></i>
         Dashboard Assistant
       </span>
-      <button class="chat-panel-close" @click="emit('close')" title="Close chat panel">
-        <i class="mdi mdi-close"></i>
-      </button>
+      <div class="chat-panel-actions">
+        <button
+          class="chat-panel-action"
+          :disabled="activeChatMessages.length === 0"
+          @click="handleClear"
+          title="Clear conversation"
+        >
+          <i class="mdi mdi-broom"></i>
+          Clear
+        </button>
+        <button class="chat-panel-close" @click="emit('close')" title="Close chat panel">
+          <i class="mdi mdi-close"></i>
+        </button>
+      </div>
     </div>
 
     <LLMChat
@@ -269,6 +352,42 @@ watch(
 .chat-panel-title .mdi {
   font-size: 18px;
   color: var(--special-text);
+}
+
+.chat-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chat-panel-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.chat-panel-action .mdi {
+  font-size: 14px;
+}
+
+.chat-panel-action:hover:not(:disabled) {
+  background: var(--button-hover-bg);
+  color: var(--text-color);
+}
+
+.chat-panel-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .chat-panel-close {

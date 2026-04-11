@@ -126,6 +126,9 @@ export interface Dashboard {
   investigationName?: string
   investigationCreatedFrom?: InvestigationMeta
   children?: string[]
+  /** Id of the persistent chat record backing the dashboard assistant panel.
+   * Null/undefined means no chat has been created yet for this dashboard. */
+  chatId?: string | null
 }
 
 // Interface for batch updates to item properties
@@ -188,6 +191,7 @@ export class DashboardModel implements Dashboard {
   investigationName?: string
   investigationCreatedFrom?: InvestigationMeta
   children?: string[]
+  chatId?: string | null
 
   constructor({
     id,
@@ -208,6 +212,7 @@ export class DashboardModel implements Dashboard {
     investigationName,
     investigationCreatedFrom,
     children = [],
+    chatId = null,
   }: Partial<Dashboard> & { id: string; name: string; connection: string }) {
     this.id = id
     this.name = name
@@ -228,6 +233,15 @@ export class DashboardModel implements Dashboard {
     this.investigationName = investigationName
     this.investigationCreatedFrom = investigationCreatedFrom
     this.children = children
+    this.chatId = chatId
+  }
+
+  setChatId(chatId: string | null): void {
+    if (this.chatId !== chatId) {
+      this.chatId = chatId
+      this.updatedAt = new Date()
+      this.changed = true
+    }
   }
 
   get isInvestigation(): boolean {
@@ -838,6 +852,7 @@ export class DashboardModel implements Dashboard {
       investigationName: this.investigationName,
       investigationCreatedFrom: this.investigationCreatedFrom,
       children: this.children,
+      chatId: this.chatId ?? null,
     }
   }
 
