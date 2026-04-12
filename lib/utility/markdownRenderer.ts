@@ -371,15 +371,19 @@ function evaluateFormatExpression(
   if (!formatSpec) return undefined
 
   let numericValue: number | undefined
+  let rawValue: any = undefined
 
   if (/^\(.*\)$/.test(exprPart)) {
     // Parenthesised arithmetic: (a/b*100)
     numericValue = evaluateArithmeticExpr(exprPart.slice(1, -1), data)
   } else if (/^\w+$/.test(exprPart)) {
     // Simple field name: total_flights
-    const val = data[0][exprPart]
-    const num = Number(val)
-    numericValue = val !== null && val !== undefined && val !== '' && !isNaN(num) ? num : undefined
+    rawValue = data[0][exprPart]
+    const num = Number(rawValue)
+    numericValue =
+      rawValue !== null && rawValue !== undefined && rawValue !== '' && !isNaN(num)
+        ? num
+        : undefined
   } else {
     // data[N].field pattern: data[0].crime_count
     const dataIndexMatch = exprPart.match(/^data\[(\d+)\]\.(.+)$/)
@@ -387,12 +391,20 @@ function evaluateFormatExpression(
       const [, index, fieldPath] = dataIndexMatch
       const rowIndex = parseInt(index)
       if (data[rowIndex]) {
-        const val = getNestedValue(data[rowIndex], fieldPath)
-        const num = Number(val)
+        rawValue = getNestedValue(data[rowIndex], fieldPath)
+        const num = Number(rawValue)
         numericValue =
-          val !== null && val !== undefined && val !== '' && !isNaN(num) ? num : undefined
+          rawValue !== null && rawValue !== undefined && rawValue !== '' && !isNaN(num)
+            ? num
+            : undefined
       }
     }
+  }
+
+  // For numeric format expressions, null/empty values should still resolve instead
+  // of leaving the original template token in the rendered markdown.
+  if (numericValue === undefined && (rawValue === null || rawValue === undefined || rawValue === '')) {
+    numericValue = 0
   }
 
   if (numericValue === undefined) return undefined
@@ -438,6 +450,7 @@ export function evaluateFallback(
       const formatResult = evaluateFormatExpression(expression, data, loading)
       if (formatResult !== undefined) return formatResult
       const value = evaluateExpression(expression, data, loading)
+      if (value === null || value === '') return 'Null'
       return value !== undefined ? String(value) : `{${expression}}`
     }
   } catch (error) {

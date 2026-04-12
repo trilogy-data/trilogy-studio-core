@@ -171,5 +171,26 @@ describe('Expression Evaluation', () => {
       expect(result).toContain('John')
       expect(result).toContain('function() { return true; }')
     })
+
+    it('should render formatted null or empty values as zero instead of placeholders', () => {
+      const nullData = new Results(new Map(), [
+        { total_revenue: null, avg_order_value: '', order_count: 0 },
+      ])
+
+      const template =
+        'Revenue: ${total_revenue:,.0f} | Avg: ${avg_order_value:,.0f} | Orders: {order_count:,}'
+      const result = renderMarkdown(template, nullData)
+
+      expect(result).toBe('Revenue: $0 | Avg: $0 | Orders: 0')
+    })
+
+    it('should render unformatted null or empty values as Null', () => {
+      const nullData = new Results(new Map(), [{ total_revenue: null, avg_order_value: '' }])
+
+      const template = 'Revenue: {total_revenue} | Avg: {avg_order_value}'
+      const result = renderMarkdown(template, nullData)
+
+      expect(result).toBe('Revenue: Null | Avg: Null')
+    })
   })
 })
