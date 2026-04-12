@@ -12,7 +12,7 @@ import {
   validateChartConfigForData,
   formatChartConfigValidationError,
 } from '../dashboards/helpers'
-import type { ToolCallResult } from './sharedToolHelpers'
+import { type ToolCallResult, connectDataConnection as sharedConnectDataConnection } from './sharedToolHelpers'
 
 export type { ToolCallResult } from './sharedToolHelpers'
 
@@ -536,56 +536,13 @@ export class ChatToolExecutor {
 
   // Connect a data connection
   private async connectDataConnection(connectionName: string): Promise<ToolCallResult> {
-    if (!connectionName || typeof connectionName !== 'string') {
-      return {
-        success: false,
-        error: `Connection name is required. Available connections: ${Object.keys(this.connectionStore.connections).join(', ') || 'None'}`,
-      }
-    }
-
-    // Verify connection exists
-    const connection = this.connectionStore.connections[connectionName]
-    if (!connection) {
-      return {
-        success: false,
-        error: `Connection "${connectionName}" not found. Available connections: ${Object.keys(this.connectionStore.connections).join(', ') || 'None'}`,
-      }
-    }
-
-    // Check if already connected
-    if (connection.connected) {
-      // Even if already connected, update the chat's data connection if different
-      if (this.resolvedChatId && this.chatStore) {
-        const chat = this.resolvedChat
-        if (chat && chat.dataConnectionName !== connectionName) {
-          this.chatStore.updateChatDataConnection(this.resolvedChatId, connectionName)
+    return sharedConnectDataConnection(this.connectionStore, connectionName, {
+      onConnected: (name) => {
+        if (this.resolvedChatId && this.chatStore) {
+          this.chatStore.updateChatDataConnection(this.resolvedChatId, name)
         }
-      }
-      return {
-        success: true,
-        message: `Connection "${connectionName}" is already active and set as the data connection for this chat.`,
-      }
-    }
-
-    try {
-      await this.connectionStore.connectConnection(connectionName)
-
-      // Update the chat's data connection after successful connection
-      if (this.resolvedChatId && this.chatStore) {
-        this.chatStore.updateChatDataConnection(this.resolvedChatId, connectionName)
-      }
-
-      return {
-        success: true,
-        message: `Successfully connected to "${connectionName}" and set as the data connection for this chat. You can now run queries against this connection.`,
-        triggersSymbolRefresh: true, // Refresh symbols since data connection changed
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: `Failed to connect to "${connectionName}": ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }
-    }
+      },
+    })
   }
 
   // Create a markdown artifact, optionally backed by a query for data-driven content

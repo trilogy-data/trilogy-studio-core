@@ -1,4 +1,4 @@
-import type { ToolCallResult } from './sharedToolHelpers'
+import { type ToolCallResult, connectDataConnection as sharedConnectDataConnection } from './sharedToolHelpers'
 import type { DashboardModel } from '../dashboards/base'
 import { CELL_TYPES, type CellType, type MarkdownData } from '../dashboards/base'
 import type { DashboardStoreType } from '../stores/dashboardStore'
@@ -806,38 +806,7 @@ export class DashboardToolExecutor {
   }
 
   private async connectDataConnection(connectionName: string): Promise<ToolCallResult> {
-    if (!connectionName) {
-      return {
-        success: false,
-        error: `Connection name required. Available: ${Object.keys(this.deps.connectionStore.connections).join(', ') || 'None'}`,
-      }
-    }
-
-    const connection = this.deps.connectionStore.connections[connectionName]
-    if (!connection) {
-      return {
-        success: false,
-        error: `Connection "${connectionName}" not found. Available: ${Object.keys(this.deps.connectionStore.connections).join(', ') || 'None'}`,
-      }
-    }
-
-    if (connection.connected) {
-      return { success: true, message: `Connection "${connectionName}" is already active.` }
-    }
-
-    try {
-      await this.deps.connectionStore.connectConnection(connectionName)
-      return {
-        success: true,
-        message: `Successfully connected to "${connectionName}".`,
-        triggersSymbolRefresh: true,
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: `Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }
-    }
+    return sharedConnectDataConnection(this.deps.connectionStore, connectionName)
   }
 
   private getAvailableImports(): ChatImport[] {

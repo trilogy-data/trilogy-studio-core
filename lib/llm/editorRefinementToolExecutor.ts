@@ -11,7 +11,7 @@ import {
   validateChartConfigForData,
   formatChartConfigValidationError,
 } from '../dashboards/helpers'
-import type { ToolCallResult } from './sharedToolHelpers'
+import { type ToolCallResult, connectDataConnection as sharedConnectDataConnection } from './sharedToolHelpers'
 
 export type { ToolCallResult } from './sharedToolHelpers'
 
@@ -533,42 +533,7 @@ export class EditorRefinementToolExecutor {
   }
 
   private async connectDataConnection(connectionName: string): Promise<ToolCallResult> {
-    if (!connectionName || typeof connectionName !== 'string') {
-      return {
-        success: false,
-        error: `Connection name is required. Available connections: ${Object.keys(this.connectionStore.connections).join(', ') || 'None'}`,
-      }
-    }
-
-    // Verify connection exists
-    const connection = this.connectionStore.connections[connectionName]
-    if (!connection) {
-      return {
-        success: false,
-        error: `Connection "${connectionName}" not found. Available connections: ${Object.keys(this.connectionStore.connections).join(', ') || 'None'}`,
-      }
-    }
-
-    // Check if already connected
-    if (connection.connected) {
-      return {
-        success: true,
-        message: `Connection "${connectionName}" is already active.`,
-      }
-    }
-
-    try {
-      await this.connectionStore.connectConnection(connectionName)
-      return {
-        success: true,
-        message: `Successfully connected to "${connectionName}". You can now run queries against this connection.`,
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: `Failed to connect to "${connectionName}": ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }
-    }
+    return sharedConnectDataConnection(this.connectionStore, connectionName)
   }
 
   // Helper to build QueryInput with proper context
