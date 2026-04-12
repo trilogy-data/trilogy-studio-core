@@ -1,11 +1,11 @@
 import {
   type ToolCallResult,
   type ImportStateAccessor,
+  type QueryCoreSuccess,
   connectDataConnection as sharedConnectDataConnection,
-  buildExtraContent,
-  getAvailableImports as sharedGetAvailableImports,
   selectActiveImport as sharedSelectActiveImport,
   listAvailableImports as sharedListAvailableImports,
+  executeTrilogyQueryCore,
 } from './sharedToolHelpers'
 import type { DashboardModel } from '../dashboards/base'
 import { CELL_TYPES, type CellType, type MarkdownData } from '../dashboards/base'
@@ -13,9 +13,7 @@ import type { DashboardStoreType } from '../stores/dashboardStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { EditorStoreType } from '../stores/editorStore'
 import type QueryExecutionService from '../stores/queryExecutionService'
-import type { QueryInput, QueryResult } from '../stores/queryExecutionService'
 import type { ChatImport } from '../chats/chat'
-import type { ContentInput } from '../stores/resolver'
 import type { DashboardQueryExecutor } from '../dashboards/dashboardQueryExecutor'
 import { truncateResultRows } from './toolLoopCore'
 import { validateChartConfigForData, formatChartConfigValidationError } from '../dashboards/helpers'
@@ -647,87 +645,46 @@ export class DashboardToolExecutor {
   }
 
   private async runTrilogyQuery(query: string, connectionName?: string): Promise<ToolCallResult> {
-    if (!query || typeof query !== 'string' || query.trim() === '') {
-      return { success: false, error: 'Query is required and must be a non-empty string' }
-    }
-
     const connName = connectionName || this.connectionName
     if (!connName) {
       return { success: false, error: 'No connection name specified and no dashboard connection set.' }
     }
 
-    const connection = this.deps.connectionStore.connections[connName]
-    if (!connection) {
-      return {
-        success: false,
-        error: `Connection "${connName}" not found. Available: ${Object.keys(this.deps.connectionStore.connections).join(', ') || 'None'}`,
-      }
-    }
-
-    if (!connection.connected) {
-      return {
-        success: false,
-        error: `Connection "${connName}" is not connected. Use connect_data_connection first.`,
-      }
-    }
-
-    const extraContent = this.buildDashboardExtraContent(connName)
     const activeImports = this.deps.getActiveImports()
-    const importsForQuery = activeImports.map((imp) => ({
-      name: imp.name,
-      alias: imp.alias || '',
-    }))
+    const coreResult = await executeTrilogyQueryCore(
+      this.deps.queryExecutionService,
+      this.deps.connectionStore,
+      this.deps.editorStore,
+      connName,
+      query,
+      activeImports,
+    )
 
-    const queryInput: QueryInput = {
-      text: query.trim(),
-      editorType: 'trilogy',
-      imports: importsForQuery,
-      extraContent,
+    if (!coreResult.success) {
+      return coreResult as ToolCallResult
     }
 
-    try {
-      const result = await this.deps.queryExecutionService.executeQuery(connName, queryInput)
-      const queryResult: QueryResult = await result.resultPromise
+    const { queryResult } = coreResult as QueryCoreSuccess
 
-      if (!queryResult.success) {
-        return {
-          success: false,
-          error: queryResult.error || 'Query execution failed',
-          query,
-          generatedSql: queryResult.generatedSql,
-        }
-      }
+    const jsonData =
+      typeof (queryResult.results as any).toJSON === 'function'
+        ? (queryResult.results as any).toJSON()
+        : queryResult.results
+    const { head, totalRows, cutCount } = truncateResultRows(jsonData)
 
-      if (!queryResult.results) {
-        return { success: false, error: 'Query returned no results', query }
-      }
+    let dataMessage: string
+    if (cutCount > 0) {
+      dataMessage = JSON.stringify({ ...jsonData, data: head }, null, 2)
+      dataMessage += `\n\n(Showing first ${head.length} of ${totalRows} rows)`
+    } else {
+      dataMessage = JSON.stringify(jsonData, null, 2)
+    }
 
-      const jsonData =
-        typeof (queryResult.results as any).toJSON === 'function'
-          ? (queryResult.results as any).toJSON()
-          : queryResult.results
-      const { head, totalRows, cutCount } = truncateResultRows(jsonData)
-
-      let dataMessage: string
-      if (cutCount > 0) {
-        dataMessage = JSON.stringify({ ...jsonData, data: head }, null, 2)
-        dataMessage += `\n\n(Showing first ${head.length} of ${totalRows} rows)`
-      } else {
-        dataMessage = JSON.stringify(jsonData, null, 2)
-      }
-
-      return {
-        success: true,
-        message: `Query executed successfully (${queryResult.executionTime}ms, ${totalRows} rows):\n${dataMessage}`,
-        query,
-        generatedSql: queryResult.generatedSql,
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error during query execution',
-        query,
-      }
+    return {
+      success: true,
+      message: `Query executed successfully (${queryResult.executionTime}ms, ${totalRows} rows):\n${dataMessage}`,
+      query,
+      generatedSql: queryResult.generatedSql,
     }
   }
 
@@ -761,12 +718,4 @@ export class DashboardToolExecutor {
     return sharedConnectDataConnection(this.deps.connectionStore, connectionName)
   }
 
-  private buildDashboardExtraContent(connectionName: string): ContentInput[] {
-    return buildExtraContent(
-      this.deps.connectionStore,
-      this.deps.editorStore,
-      connectionName,
-      this.deps.getActiveImports(),
-    )
-  }
 }

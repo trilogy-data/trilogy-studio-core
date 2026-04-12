@@ -1,5 +1,5 @@
 import type QueryExecutionService from '../stores/queryExecutionService'
-import type { QueryInput, QueryResult } from '../stores/queryExecutionService'
+import type { QueryInput } from '../stores/queryExecutionService'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { ChatStoreType } from '../stores/chatStore'
 import type { EditorStoreType } from '../stores/editorStore'
@@ -13,12 +13,14 @@ import {
 import {
   type ToolCallResult,
   type ImportStateAccessor,
+  type QueryCoreSuccess,
   connectDataConnection as sharedConnectDataConnection,
   buildExtraContent,
   getArtifactRowsFromData,
   getAvailableImports as sharedGetAvailableImports,
   selectActiveImport as sharedSelectActiveImport,
   listAvailableImports as sharedListAvailableImports,
+  executeTrilogyQueryCore,
 } from './sharedToolHelpers'
 
 export type { ToolCallResult } from './sharedToolHelpers'
@@ -127,153 +129,73 @@ export class ChatToolExecutor {
     artifactType: 'results' | 'chart',
     chartConfig?: ChartConfig,
   ): Promise<ToolCallResult> {
-    // Validate inputs
-    if (!query || typeof query !== 'string' || query.trim() === '') {
-      return {
-        success: false,
-        error: 'Query is required and must be a non-empty string',
-        query,
-      }
-    }
-
-    if (!connectionName || typeof connectionName !== 'string') {
-      return {
-        success: false,
-        error: `Connection name is required. Available connections: ${Object.keys(this.connectionStore.connections).join(', ') || 'None'}`,
-        query,
-      }
-    }
-
-    // Verify connection exists
-    if (!this.connectionStore.connections[connectionName]) {
-      return {
-        success: false,
-        error: `Connection "${connectionName}" not found. Available connections: ${Object.keys(this.connectionStore.connections).join(', ') || 'None'}`,
-        query,
-      }
-    }
-
-    // Check connection is active
-    const connection = this.connectionStore.connections[connectionName]
-    if (!connection.connected) {
-      return {
-        success: false,
-        error: `Connection "${connectionName}" is not currently connected. Please ensure the connection is active.`,
-        query,
-      }
-    }
-
-    // Get active imports from chat store and build extraContent from them
     const activeImports = this.resolvedChat?.imports || []
-    const importsForQuery = activeImports.map((imp) => ({
-      name: imp.name,
-      alias: imp.alias || '',
-    }))
-
-    const extraContent = buildExtraContent(
+    const coreResult = await executeTrilogyQueryCore(
+      this.queryExecutionService,
       this.connectionStore,
       this.editorStore,
       connectionName,
+      query,
       activeImports,
     )
 
-    const queryInput: QueryInput = {
-      text: query.trim(),
-      editorType: 'trilogy',
-      imports: importsForQuery,
-      extraContent,
+    // Error case — return the ToolCallResult directly
+    if (!coreResult.success) {
+      return coreResult as ToolCallResult
     }
 
-    try {
-      const result = await this.queryExecutionService.executeQuery(
+    const { queryResult } = coreResult as QueryCoreSuccess
+
+    // Validate chart config against actual results if one was provided
+    let effectiveChartConfig = chartConfig
+    let validationWarning: string | null = null
+    if (chartConfig && artifactType === 'chart') {
+      const results = queryResult.results as Results
+      if (results && results.headers) {
+        const validation = validateChartConfigForData(results.data, results.headers, chartConfig)
+        if (!validation.valid) {
+          effectiveChartConfig = validation.suggestedConfig as ChartConfig
+          validationWarning = `Auto-corrected to default configuration.\n${formatChartConfigValidationError(validation)}`
+        }
+      }
+    }
+
+    // Build artifact with results data
+    const artifactId = generateArtifactId()
+    const artifact: ChatArtifact = {
+      id: artifactId,
+      type: artifactType,
+      data: queryResult.results,
+      config: {
+        query,
         connectionName,
-        queryInput,
-        undefined, // onStarted
-        undefined, // onProgress
-        undefined, // onFailure
-        undefined, // onSuccess
-        false, // dryRun
-      )
+        generatedSql: queryResult.generatedSql,
+        executionTime: queryResult.executionTime,
+        resultSize: queryResult.resultSize,
+        columnCount: queryResult.columnCount,
+        ...(effectiveChartConfig && { chartConfig: effectiveChartConfig }),
+      },
+    }
 
-      const queryResult: QueryResult = await result.resultPromise
-
-      if (!queryResult.success) {
-        return {
-          success: false,
-          error: queryResult.error || 'Query execution failed',
-          executionTime: queryResult.executionTime,
-          query,
-          generatedSql: queryResult.generatedSql,
-        }
-      }
-
-      if (!queryResult.results) {
-        return {
-          success: false,
-          error: 'Query returned no results',
-          query,
-          generatedSql: queryResult.generatedSql,
-        }
-      }
-
-      // Validate chart config against actual results if one was provided
-      let effectiveChartConfig = chartConfig
-      let validationWarning: string | null = null
-      if (chartConfig && artifactType === 'chart') {
-        const results = queryResult.results as Results
-        if (results && results.headers) {
-          const validation = validateChartConfigForData(results.data, results.headers, chartConfig)
-          if (!validation.valid) {
-            // Auto-correct to suggested config
-            effectiveChartConfig = validation.suggestedConfig as ChartConfig
-            validationWarning = `Auto-corrected to default configuration.\n${formatChartConfigValidationError(validation)}`
-          }
-        }
-      }
-
-      // Build artifact with results data - store Results object directly
-      const artifactId = generateArtifactId()
-      const artifact: ChatArtifact = {
-        id: artifactId,
-        type: artifactType,
-        data: queryResult.results,
-        config: {
-          query,
-          connectionName,
-          generatedSql: queryResult.generatedSql,
-          executionTime: queryResult.executionTime,
-          resultSize: queryResult.resultSize,
-          columnCount: queryResult.columnCount,
-          ...(effectiveChartConfig && { chartConfig: effectiveChartConfig }),
-        },
-      }
-
-      if (validationWarning) {
-        return {
-          success: false,
-          error: validationWarning,
-          artifact,
-          artifactId,
-          executionTime: queryResult.executionTime,
-          query,
-          generatedSql: queryResult.generatedSql,
-        }
-      }
-
+    if (validationWarning) {
       return {
-        success: true,
+        success: false,
+        error: validationWarning,
         artifact,
         artifactId,
         executionTime: queryResult.executionTime,
         query,
         generatedSql: queryResult.generatedSql,
       }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error during query execution',
-        query,
-      }
+    }
+
+    return {
+      success: true,
+      artifact,
+      artifactId,
+      executionTime: queryResult.executionTime,
+      query,
+      generatedSql: queryResult.generatedSql,
     }
   }
 

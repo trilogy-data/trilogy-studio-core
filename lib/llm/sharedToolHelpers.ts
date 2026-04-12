@@ -8,6 +8,8 @@ import type { ChatArtifact, ChatImport } from '../chats/chat'
 import type { CompletionItem, ContentInput } from '../stores/resolver'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { EditorStoreType } from '../stores/editorStore'
+import type QueryExecutionService from '../stores/queryExecutionService'
+import type { QueryInput, QueryResult } from '../stores/queryExecutionService'
 import { fetchConceptsForImport, type FetchConceptsForImportDeps } from './importConcepts'
 
 export interface ToolCallResult {
@@ -275,5 +277,109 @@ export function listAvailableImports(
   return {
     success: true,
     message: `${currentStatus}Available data sources for connection "${connectionName}":\n${available.map((i) => `- ${i.name}${activeImport?.id === i.id ? ' (active)' : ''}`).join('\n')}\n\nUse select_active_import to select a data source.`,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shared query execution core
+// ---------------------------------------------------------------------------
+
+/** Successful result from executeTrilogyQueryCore. */
+export interface QueryCoreSuccess {
+  success: true
+  queryResult: QueryResult
+  query: string
+}
+
+/**
+ * Core query execution logic shared between ChatToolExecutor and
+ * DashboardToolExecutor. Validates inputs, builds the QueryInput, executes
+ * the query, and returns the raw QueryResult on success or a ToolCallResult
+ * error on failure.
+ */
+export async function executeTrilogyQueryCore(
+  queryExecutionService: QueryExecutionService,
+  connectionStore: ConnectionStoreType,
+  editorStore: EditorStoreType | null,
+  connectionName: string,
+  query: string,
+  activeImports?: ChatImport[],
+): Promise<QueryCoreSuccess | ToolCallResult> {
+  if (!query || typeof query !== 'string' || query.trim() === '') {
+    return {
+      success: false,
+      error: 'Query is required and must be a non-empty string',
+      query,
+    }
+  }
+
+  if (!connectionName || typeof connectionName !== 'string') {
+    return {
+      success: false,
+      error: `Connection name is required. Available connections: ${Object.keys(connectionStore.connections).join(', ') || 'None'}`,
+      query,
+    }
+  }
+
+  const connection = connectionStore.connections[connectionName]
+  if (!connection) {
+    return {
+      success: false,
+      error: `Connection "${connectionName}" not found. Available connections: ${Object.keys(connectionStore.connections).join(', ') || 'None'}`,
+      query,
+    }
+  }
+
+  if (!connection.connected) {
+    return {
+      success: false,
+      error: `Connection "${connectionName}" is not connected. Use connect_data_connection first.`,
+      query,
+    }
+  }
+
+  const extraContent = buildExtraContent(connectionStore, editorStore, connectionName, activeImports)
+  const importsForQuery = (activeImports || []).map((imp) => ({
+    name: imp.name,
+    alias: imp.alias || '',
+  }))
+
+  const queryInput: QueryInput = {
+    text: query.trim(),
+    editorType: 'trilogy',
+    imports: importsForQuery,
+    extraContent,
+  }
+
+  try {
+    const result = await queryExecutionService.executeQuery(connectionName, queryInput)
+    const queryResult: QueryResult = await result.resultPromise
+
+    if (!queryResult.success) {
+      return {
+        success: false,
+        error: queryResult.error || 'Query execution failed',
+        executionTime: queryResult.executionTime,
+        query,
+        generatedSql: queryResult.generatedSql,
+      }
+    }
+
+    if (!queryResult.results) {
+      return {
+        success: false,
+        error: 'Query returned no results',
+        query,
+        generatedSql: queryResult.generatedSql,
+      }
+    }
+
+    return { success: true, queryResult, query }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error during query execution',
+      query,
+    }
   }
 }
