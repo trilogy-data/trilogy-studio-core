@@ -15,6 +15,7 @@ import {
   type ToolCallResult,
   connectDataConnection as sharedConnectDataConnection,
   buildExtraContent,
+  getArtifactRowsFromData,
 } from './sharedToolHelpers'
 
 export type { ToolCallResult } from './sharedToolHelpers'
@@ -489,25 +490,7 @@ export class EditorRefinementToolExecutor {
       }
     }
 
-    const jsonData =
-      typeof artifact.data?.toJSON === 'function' ? artifact.data.toJSON() : artifact.data
-    const rows: any[] = jsonData?.data
-
-    if (!Array.isArray(rows)) {
-      return { success: false, error: `Artifact "${artifactId}" has no row data.` }
-    }
-
-    const totalRows = rows.length
-    const clampedStart = Math.max(0, Math.min(startRow, totalRows - 1))
-    const clampedEnd = Math.max(clampedStart, Math.min(endRow, totalRows - 1))
-    const slice = rows.slice(clampedStart, clampedEnd + 1)
-
-    return {
-      success: true,
-      message:
-        `Rows ${clampedStart}-${clampedEnd} of ${totalRows} total from artifact "${artifactId}":\n` +
-        JSON.stringify({ headers: jsonData.headers, data: slice }, null, 2),
-    }
+    return getArtifactRowsFromData(artifactId, artifact.data, startRow, endRow)
   }
 
   private requestClose(message: string): ToolCallResult {

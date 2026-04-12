@@ -119,3 +119,35 @@ export function buildExtraContent(
 
   return Array.from(extraContentMap.entries()).map(([alias, contents]) => ({ alias, contents }))
 }
+
+/**
+ * Fetch a specific row range from artifact data that contains tabular rows.
+ * Both ChatToolExecutor and EditorRefinementToolExecutor resolve the artifact
+ * their own way, then delegate the row-slicing logic here.
+ */
+export function getArtifactRowsFromData(
+  artifactId: string,
+  artifactData: any,
+  startRow: number,
+  endRow: number,
+): ToolCallResult {
+  const jsonData =
+    typeof artifactData?.toJSON === 'function' ? artifactData.toJSON() : artifactData
+  const rows: any[] = jsonData?.data
+
+  if (!Array.isArray(rows)) {
+    return { success: false, error: `Artifact "${artifactId}" has no row data.` }
+  }
+
+  const totalRows = rows.length
+  const clampedStart = Math.max(0, Math.min(startRow, totalRows - 1))
+  const clampedEnd = Math.max(clampedStart, Math.min(endRow, totalRows - 1))
+  const slice = rows.slice(clampedStart, clampedEnd + 1)
+
+  return {
+    success: true,
+    message:
+      `Rows ${clampedStart}-${clampedEnd} of ${totalRows} total from artifact "${artifactId}":\n` +
+      JSON.stringify({ headers: jsonData.headers, data: slice }, null, 2),
+  }
+}
