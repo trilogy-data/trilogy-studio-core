@@ -6,16 +6,19 @@ import type { EditorStoreType } from '../stores/editorStore'
 import { Chat, type ChatArtifact, type ChatImport, generateArtifactId } from '../chats/chat'
 import type { ChartConfig, Results } from '../editors/results'
 import { MAX_TOOL_RESULT_ROWS, truncateResultRows } from './toolLoopCore'
-import { fetchConceptsForImport } from './importConcepts'
 import {
   validateChartConfigForData,
   formatChartConfigValidationError,
 } from '../dashboards/helpers'
 import {
   type ToolCallResult,
+  type ImportStateAccessor,
   connectDataConnection as sharedConnectDataConnection,
   buildExtraContent,
   getArtifactRowsFromData,
+  getAvailableImports as sharedGetAvailableImports,
+  selectActiveImport as sharedSelectActiveImport,
+  listAvailableImports as sharedListAvailableImports,
 } from './sharedToolHelpers'
 
 export type { ToolCallResult } from './sharedToolHelpers'
@@ -347,7 +350,19 @@ export class ChatToolExecutor {
     return Object.keys(this.connectionStore.connections)
   }
 
-  // Import management tools - single import model
+  /** Build the import state accessor that bridges chat store to the shared helpers. */
+  private get importAccessor(): ImportStateAccessor {
+    return {
+      getActiveImports: () => this.resolvedChat?.imports || [],
+      setActiveImports: (imports) => {
+        if (this.resolvedChatId && this.chatStore) {
+          this.chatStore.setImports(this.resolvedChatId, imports)
+        }
+      },
+      getConnectionName: () => this.resolvedChat?.dataConnectionName || '',
+    }
+  }
+
   private async selectActiveImport(importName: string): Promise<ToolCallResult> {
     if (!this.resolvedChatId || !this.editorStore) {
       return {
@@ -356,119 +371,25 @@ export class ChatToolExecutor {
       }
     }
 
-    const chat = this.resolvedChat
-    if (!chat?.dataConnectionName) {
-      return {
-        success: false,
-        error: 'No data connection selected for this chat. Please select a data connection first.',
-      }
-    }
-
-    // Handle clearing the selection
-    if (!importName || importName.trim() === '') {
-      this.chatStore.setImports(this.resolvedChatId, [])
-      return {
-        success: true,
-        message: 'Cleared active data source selection.',
-        triggersSymbolRefresh: true,
-      }
-    }
-
-    // Find the import in available imports
-    const available = this.getAvailableImports(chat.dataConnectionName)
-    const importToSelect = available.find(
-      (i) => i.name === importName || i.name.endsWith(`.${importName}`),
-    )
-
-    if (!importToSelect) {
-      return {
-        success: false,
-        error: `Import "${importName}" not found. Available imports: ${available.map((i) => i.name).join(', ') || 'none'}`,
-      }
-    }
-
-    // Check if already the active import
-    if (chat.imports.length === 1 && chat.imports[0].id === importToSelect.id) {
-      // Already active, but still fetch and return the concepts
-      const conceptsOutput = await this.getConceptsForImport(
-        importToSelect,
-        chat.dataConnectionName,
-      )
-      return {
-        success: true,
-        message: `"${importToSelect.name}" is already the active data source.\n\n${conceptsOutput}`,
-        triggersSymbolRefresh: false, // No change needed
-      }
-    }
-
-    // Set as the single active import (replaces any previous selection)
-    this.chatStore.setImports(this.resolvedChatId, [importToSelect])
-
-    // Fetch and return the full concept output
-    const conceptsOutput = await this.getConceptsForImport(importToSelect, chat.dataConnectionName)
-
-    return {
-      success: true,
-      message: `Successfully selected "${importToSelect.name}" as the active data source.\n\n${conceptsOutput}`,
-      triggersSymbolRefresh: true, // Signal that symbols should be refreshed
-    }
-  }
-
-  // Helper to fetch concepts for a specific import and format them.
-  // Delegates to shared helper so the dashboard agent surface uses the same logic.
-  private getConceptsForImport(imp: ChatImport, connectionName: string): Promise<string> {
-    return fetchConceptsForImport(
+    return sharedSelectActiveImport(
+      importName,
+      this.importAccessor,
       {
         connectionStore: this.connectionStore,
         editorStore: this.editorStore,
         queryExecutionService: this.queryExecutionService,
       },
-      imp,
-      connectionName,
+      this.editorStore,
     )
   }
 
   private listAvailableImports(): ToolCallResult {
-    const chat = this.resolvedChat
-    if (!chat?.dataConnectionName) {
-      return {
-        success: false,
-        error: 'No data connection selected for this chat. Please select a data connection first.',
-      }
-    }
-
-    const available = this.getAvailableImports(chat.dataConnectionName)
-    const activeImport = chat.imports.length > 0 ? chat.imports[0] : null
-
-    if (available.length === 0) {
-      return {
-        success: true,
-        message: `No data sources available on connection "${chat.dataConnectionName}".`,
-      }
-    }
-
-    const currentStatus = activeImport
-      ? `Current active data source: ${activeImport.name}\n\n`
-      : 'No data source currently selected.\n\n'
-
-    return {
-      success: true,
-      message: `${currentStatus}Available data sources for connection "${chat.dataConnectionName}":\n${available.map((i) => `- ${i.name}${activeImport?.id === i.id ? ' (active)' : ''}`).join('\n')}\n\nUse select_active_import to select a data source.`,
-    }
+    return sharedListAvailableImports(this.importAccessor, this.editorStore)
   }
 
   // Get available imports for a connection
   getAvailableImports(connectionName: string): ChatImport[] {
-    if (!this.editorStore) return []
-
-    return Object.values(this.editorStore.editors)
-      .filter((editor) => editor.connection === connectionName)
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((editor) => ({
-        id: editor.id,
-        name: editor.name.replace(/\//g, '.'), // Convert folder/editor to folder.editor
-        alias: '',
-      }))
+    return sharedGetAvailableImports(this.editorStore, connectionName)
   }
 
   // Connect a data connection

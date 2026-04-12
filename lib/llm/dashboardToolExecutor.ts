@@ -1,7 +1,11 @@
 import {
   type ToolCallResult,
+  type ImportStateAccessor,
   connectDataConnection as sharedConnectDataConnection,
   buildExtraContent,
+  getAvailableImports as sharedGetAvailableImports,
+  selectActiveImport as sharedSelectActiveImport,
+  listAvailableImports as sharedListAvailableImports,
 } from './sharedToolHelpers'
 import type { DashboardModel } from '../dashboards/base'
 import { CELL_TYPES, type CellType, type MarkdownData } from '../dashboards/base'
@@ -16,7 +20,6 @@ import type { DashboardQueryExecutor } from '../dashboards/dashboardQueryExecuto
 import { truncateResultRows } from './toolLoopCore'
 import { validateChartConfigForData, formatChartConfigValidationError } from '../dashboards/helpers'
 import type { ChartConfig, Results } from '../editors/results'
-import { fetchConceptsForImport } from './importConcepts'
 
 export interface DashboardToolExecutorDeps {
   dashboardStore: DashboardStoreType
@@ -728,103 +731,34 @@ export class DashboardToolExecutor {
     }
   }
 
+  /** Build the import state accessor that bridges dashboard deps to the shared helpers. */
+  private get importAccessor(): ImportStateAccessor {
+    return {
+      getActiveImports: () => this.deps.getActiveImports(),
+      setActiveImports: (imports) => this.deps.setActiveImports(imports),
+      getConnectionName: () => this.connectionName,
+    }
+  }
+
   private async selectActiveImport(importName: string): Promise<ToolCallResult> {
-    if (!importName || importName.trim() === '') {
-      this.deps.setActiveImports([])
-      return {
-        success: true,
-        message: 'Cleared active data source selection.',
-        triggersSymbolRefresh: true,
-      }
-    }
-
-    const connectionName = this.connectionName
-    if (!connectionName) {
-      return {
-        success: false,
-        error: 'No data connection selected for this dashboard. Connect a data connection first.',
-      }
-    }
-
-    const available = this.getAvailableImports()
-    const importToSelect = available.find(
-      (i) => i.name === importName || i.name.endsWith(`.${importName}`),
-    )
-
-    if (!importToSelect) {
-      return {
-        success: false,
-        error: `Import "${importName}" not found. Available: ${available.map((i) => i.name).join(', ') || 'none'}`,
-      }
-    }
-
-    const activeImports = this.deps.getActiveImports()
-    const alreadyActive =
-      activeImports.length === 1 && activeImports[0].id === importToSelect.id
-
-    if (!alreadyActive) {
-      this.deps.setActiveImports([importToSelect])
-    }
-
-    const conceptsOutput = await fetchConceptsForImport(
+    return sharedSelectActiveImport(
+      importName,
+      this.importAccessor,
       {
         connectionStore: this.deps.connectionStore,
         editorStore: this.deps.editorStore,
         queryExecutionService: this.deps.queryExecutionService,
       },
-      importToSelect,
-      connectionName,
+      this.deps.editorStore,
     )
-
-    const prefix = alreadyActive
-      ? `"${importToSelect.name}" is already the active data source.`
-      : `Successfully selected "${importToSelect.name}" as the active data source.`
-
-    return {
-      success: true,
-      message: `${prefix}\n\n${conceptsOutput}`,
-      triggersSymbolRefresh: !alreadyActive,
-    }
   }
 
   private listAvailableImports(): ToolCallResult {
-    const available = this.getAvailableImports()
-    const activeImports = this.deps.getActiveImports()
-    const activeImport = activeImports.length > 0 ? activeImports[0] : null
-
-    if (available.length === 0) {
-      return {
-        success: true,
-        message: `No data sources available on connection "${this.connectionName}".`,
-      }
-    }
-
-    const currentStatus = activeImport
-      ? `Current active data source: ${activeImport.name}\n\n`
-      : 'No data source currently selected.\n\n'
-
-    return {
-      success: true,
-      message: `${currentStatus}Available data sources:\n${available.map((i) => `- ${i.name}${activeImport?.id === i.id ? ' (active)' : ''}`).join('\n')}`,
-    }
+    return sharedListAvailableImports(this.importAccessor, this.deps.editorStore)
   }
 
   private async connectDataConnection(connectionName: string): Promise<ToolCallResult> {
     return sharedConnectDataConnection(this.deps.connectionStore, connectionName)
-  }
-
-  private getAvailableImports(): ChatImport[] {
-    const connectionName = this.connectionName
-    if (!connectionName || !this.deps.editorStore) return []
-
-    return Object.values(this.deps.editorStore.editors)
-      .filter((editor) => editor.connection === connectionName && !editor.deleted)
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((editor) => ({
-        id: editor.id,
-        name: editor.name.replace(/\//g, '.'),
-        alias: '',
-      }))
   }
 
   private buildDashboardExtraContent(connectionName: string): ContentInput[] {

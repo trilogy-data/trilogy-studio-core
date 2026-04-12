@@ -8,6 +8,7 @@ import type { ChatArtifact, ChatImport } from '../chats/chat'
 import type { CompletionItem, ContentInput } from '../stores/resolver'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { EditorStoreType } from '../stores/editorStore'
+import { fetchConceptsForImport, type FetchConceptsForImportDeps } from './importConcepts'
 
 export interface ToolCallResult {
   success: boolean
@@ -149,5 +150,130 @@ export function getArtifactRowsFromData(
     message:
       `Rows ${clampedStart}-${clampedEnd} of ${totalRows} total from artifact "${artifactId}":\n` +
       JSON.stringify({ headers: jsonData.headers, data: slice }, null, 2),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shared import management
+// ---------------------------------------------------------------------------
+
+/**
+ * Abstraction over how active imports are read/written. Chat and Dashboard
+ * executors each wire this differently (chat uses chatStore, dashboard uses
+ * injected callbacks).
+ */
+export interface ImportStateAccessor {
+  getActiveImports(): ChatImport[]
+  setActiveImports(imports: ChatImport[]): void
+  getConnectionName(): string
+}
+
+/** Get available imports (editor files) for a connection. */
+export function getAvailableImports(
+  editorStore: EditorStoreType | null,
+  connectionName: string,
+): ChatImport[] {
+  if (!editorStore) return []
+
+  return Object.values(editorStore.editors)
+    .filter((editor) => editor.connection === connectionName && !editor.deleted)
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((editor) => ({
+      id: editor.id,
+      name: editor.name.replace(/\//g, '.'),
+      alias: '',
+    }))
+}
+
+/** Select (or clear) the active import and fetch its concepts. */
+export async function selectActiveImport(
+  importName: string,
+  accessor: ImportStateAccessor,
+  deps: FetchConceptsForImportDeps,
+  editorStore: EditorStoreType | null,
+): Promise<ToolCallResult> {
+  const connectionName = accessor.getConnectionName()
+
+  // Handle clearing
+  if (!importName || importName.trim() === '') {
+    accessor.setActiveImports([])
+    return {
+      success: true,
+      message: 'Cleared active data source selection.',
+      triggersSymbolRefresh: true,
+    }
+  }
+
+  if (!connectionName) {
+    return {
+      success: false,
+      error: 'No data connection selected. Please select a data connection first.',
+    }
+  }
+
+  const available = getAvailableImports(editorStore, connectionName)
+  const importToSelect = available.find(
+    (i) => i.name === importName || i.name.endsWith(`.${importName}`),
+  )
+
+  if (!importToSelect) {
+    return {
+      success: false,
+      error: `Import "${importName}" not found. Available imports: ${available.map((i) => i.name).join(', ') || 'none'}`,
+    }
+  }
+
+  const activeImports = accessor.getActiveImports()
+  const alreadyActive =
+    activeImports.length === 1 && activeImports[0].id === importToSelect.id
+
+  if (!alreadyActive) {
+    accessor.setActiveImports([importToSelect])
+  }
+
+  const conceptsOutput = await fetchConceptsForImport(deps, importToSelect, connectionName)
+
+  const prefix = alreadyActive
+    ? `"${importToSelect.name}" is already the active data source.`
+    : `Successfully selected "${importToSelect.name}" as the active data source.`
+
+  return {
+    success: true,
+    message: `${prefix}\n\n${conceptsOutput}`,
+    triggersSymbolRefresh: !alreadyActive,
+  }
+}
+
+/** List available imports with active status. */
+export function listAvailableImports(
+  accessor: ImportStateAccessor,
+  editorStore: EditorStoreType | null,
+): ToolCallResult {
+  const connectionName = accessor.getConnectionName()
+  if (!connectionName) {
+    return {
+      success: false,
+      error: 'No data connection selected. Please select a data connection first.',
+    }
+  }
+
+  const available = getAvailableImports(editorStore, connectionName)
+  const activeImports = accessor.getActiveImports()
+  const activeImport = activeImports.length > 0 ? activeImports[0] : null
+
+  if (available.length === 0) {
+    return {
+      success: true,
+      message: `No data sources available on connection "${connectionName}".`,
+    }
+  }
+
+  const currentStatus = activeImport
+    ? `Current active data source: ${activeImport.name}\n\n`
+    : 'No data source currently selected.\n\n'
+
+  return {
+    success: true,
+    message: `${currentStatus}Available data sources for connection "${connectionName}":\n${available.map((i) => `- ${i.name}${activeImport?.id === i.id ? ' (active)' : ''}`).join('\n')}\n\nUse select_active_import to select a data source.`,
   }
 }
