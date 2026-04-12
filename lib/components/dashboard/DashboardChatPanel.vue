@@ -111,8 +111,20 @@ const activeToolName = computed(() =>
   currentChatId.value ? chatStore.getChatActiveToolName(currentChatId.value) : '',
 )
 
-// Active imports live on the chat record so they persist across panel open/close.
-const dashboardChatImports = computed<ChatImport[]>(() => currentChat.value?.imports || [])
+// The dashboard itself is the single source of truth for the "active import".
+// Reading the agent's active imports off `dashboard.imports` (rather than a
+// separate per-chat field) guarantees the chat panel, the agent prompt, and
+// the dashboard query executor all see the same value. Otherwise operations
+// like "clear chat" or rebuilding the chat session could leave chat.imports
+// and dashboard.imports out of sync and confuse the agent about which import
+// is live.
+const dashboardChatImports = computed<ChatImport[]>(() =>
+  (props.dashboard.imports || []).map((imp) => ({
+    id: imp.id,
+    name: imp.name,
+    alias: imp.alias || '',
+  })),
+)
 
 async function ensureChatFork(): Promise<void> {
   // Don't fork investigations — the user is already on a derived dashboard,
@@ -158,9 +170,13 @@ const toolExecutor = computed(() => {
     dashboardId: props.dashboard.id,
     getActiveImports: () => dashboardChatImports.value,
     setActiveImports: (imports: ChatImport[]) => {
-      if (currentChatId.value) {
-        chatStore.setImports(currentChatId.value, imports)
-      }
+      // Write only to the dashboard. `dashboardChatImports` reads back from
+      // the same store, so the agent, prompt, and query executor stay in sync
+      // automatically — there is no separate chat-level import state to drift.
+      dashboardStore.updateDashboardImports(
+        props.dashboard.id,
+        imports.map((imp) => ({ id: imp.id, name: imp.name, alias: imp.alias })),
+      )
     },
     getDashboardQueryExecutor: () =>
       props.getDashboardQueryExecutor(props.dashboard.id) || null,

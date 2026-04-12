@@ -32,11 +32,16 @@ describe('ChartControlsManager', () => {
       type: ColumnType.DATE,
       traits: [],
     })
+    testColumns.set('region', {
+      name: 'region',
+      type: ColumnType.STRING,
+      traits: [],
+    })
 
     testData = [
-      { category: 'A', revenue: 100, profit: 20, date: '2024-01-01' },
-      { category: 'B', revenue: 200, profit: 40, date: '2024-01-02' },
-      { category: 'C', revenue: 150, profit: 30, date: '2024-01-03' },
+      { category: 'A', region: 'North', revenue: 100, profit: 20, date: '2024-01-01' },
+      { category: 'B', region: 'South', revenue: 200, profit: 40, date: '2024-01-02' },
+      { category: 'C', region: 'East', revenue: 150, profit: 30, date: '2024-01-03' },
     ]
 
     // Track config changes
@@ -105,6 +110,37 @@ describe('ChartControlsManager', () => {
       // Should have called the callback
       expect(configChanges.length).toBeGreaterThan(0)
       expect(configChanges[configChanges.length - 1].showTitle).toBe(false)
+    })
+  })
+
+  describe('heatmap default backfill', () => {
+    it('should backfill colorField for heatmaps when initial config omits it', () => {
+      manager.initializeConfig(
+        testData,
+        testColumns,
+        {
+          chartType: 'heatmap',
+          xField: 'category',
+          yField: 'region',
+          colorField: '',
+        } as ChartConfig,
+      )
+
+      expect(manager.internalConfig.value.colorField).toBe('revenue')
+    })
+
+    it('should backfill colorField for heatmaps after dimension edits when it is empty', () => {
+      manager.internalConfig.value = {
+        ...manager.internalConfig.value,
+        chartType: 'heatmap',
+        xField: 'category',
+        yField: 'region',
+        colorField: '',
+      }
+
+      manager.updateConfig('xField', 'region', testData, testColumns)
+
+      expect(manager.internalConfig.value.colorField).toBe('revenue')
     })
   })
 

@@ -85,7 +85,7 @@ export const createDonutChartSpec = (
         type: 'quantitative',
         stack: true,
       },
-      text: { field: config.yField, type: 'nominal' },
+      text: createFieldEncoding(config.yField || '', columns, {}, false),
       order: { field: config.xField, sort: 'descending' },
     },
   }

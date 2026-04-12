@@ -46,7 +46,7 @@ export function buildDashboardAgentSystemPrompt(options: DashboardAgentPromptOpt
 
   const activeImportsSection =
     activeImports.length > 0
-      ? `\nACTIVE DATA SOURCE: ${activeImports[0].name}`
+      ? `\nACTIVE DATA SOURCE: ${activeImports[0].name} (this is the import the dashboard itself uses — changing it via select_active_import will affect every existing item on the next refresh)`
       : '\nNo data source currently selected. Use select_active_import to select a data source, or use list_available_imports to see what is available.'
 
   const availableImportsSection =

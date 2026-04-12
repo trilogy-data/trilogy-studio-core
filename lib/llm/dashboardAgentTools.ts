@@ -235,7 +235,7 @@ export const DASHBOARD_TOOLS = [
   {
     name: 'select_active_import',
     description:
-      'Select a data source import to use for queries. After selecting, available fields are returned.',
+      'Select a data source import for the ENTIRE dashboard (not just this chat). This replaces any previously selected import and immediately becomes the import all dashboard items use on their next query execution. Any existing items whose queries reference fields from a different data source will break after switching — after calling this, use list_dashboard_items / get_dashboard_item to review existing items and update_dashboard_item (or remove_dashboard_item) to fix or remove stale queries before handing off to the user. Returns the available fields/concepts from the newly selected import. Use list_available_imports first to see what data sources are available.',
     input_schema: {
       type: 'object',
       properties: {

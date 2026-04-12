@@ -13,14 +13,17 @@
       ></div>
       <!-- Toggle button for collapsible items -->
       <button
-        v-if="isCollapsible"
+        v-if="isCollapsible || itemType === 'dashboard'"
         @click.stop="handleToggle"
         class="chevron-button"
-        :data-testid="`expand-${itemType}-${itemId}`"
-        :aria-label="isCollapsed ? 'Expand section' : 'Collapse section'"
+        :class="{ 'chevron-button-placeholder': !isCollapsible }"
+        :data-testid="isCollapsible ? `expand-${itemType}-${itemId}` : undefined"
+        :aria-label="isCollapsible ? (isCollapsed ? 'Expand section' : 'Collapse section') : undefined"
+        :disabled="!isCollapsible"
+        :tabindex="isCollapsible ? 0 : -1"
       >
-        <i v-if="!isCollapsed" class="mdi mdi-menu-down chevron-icon"></i>
-        <i v-else class="mdi mdi-menu-right chevron-icon"></i>
+        <i v-if="isCollapsible && !isCollapsed" class="mdi mdi-menu-down chevron-icon"></i>
+        <i v-else-if="isCollapsible" class="mdi mdi-menu-right chevron-icon"></i>
       </button>
 
       <!-- Custom icon slot or default icon -->
@@ -146,6 +149,11 @@ export default {
   min-height: 22px;
   padding: 0;
   margin-right: 2px;
+}
+
+.chevron-button-placeholder {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .chevron-icon {
