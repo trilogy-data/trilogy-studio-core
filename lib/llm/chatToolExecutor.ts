@@ -5,14 +5,17 @@ import type { ChatStoreType } from '../stores/chatStore'
 import type { EditorStoreType } from '../stores/editorStore'
 import { Chat, type ChatArtifact, type ChatImport, generateArtifactId } from '../chats/chat'
 import type { ChartConfig, Results } from '../editors/results'
-import type { ContentInput } from '../stores/resolver'
 import { MAX_TOOL_RESULT_ROWS, truncateResultRows } from './toolLoopCore'
 import { fetchConceptsForImport } from './importConcepts'
 import {
   validateChartConfigForData,
   formatChartConfigValidationError,
 } from '../dashboards/helpers'
-import { type ToolCallResult, connectDataConnection as sharedConnectDataConnection } from './sharedToolHelpers'
+import {
+  type ToolCallResult,
+  connectDataConnection as sharedConnectDataConnection,
+  buildExtraContent,
+} from './sharedToolHelpers'
 
 export type { ToolCallResult } from './sharedToolHelpers'
 
@@ -163,55 +166,11 @@ export class ChatToolExecutor {
       alias: imp.alias || '',
     }))
 
-    // Build extra content: connection sources + all editors for this connection
-    // This ensures cross-file dependencies (like 'import etl') can be resolved
-    console.log(`[ChatToolExecutor] Building extraContent for connection: "${connectionName}"`)
-    const allConnectionEditors = this.editorStore
-      ? Object.values(this.editorStore.editors)
-          .filter((editor) => {
-            const matches = editor.connection === connectionName && !editor.deleted
-            return matches
-          })
-          .map((editor) => ({
-            alias: editor.name,
-            contents: editor.contents,
-          }))
-      : []
-
-    console.log(
-      `[ChatToolExecutor] Found ${allConnectionEditors.length} editors for this connection:`,
-      allConnectionEditors.map((e) => e.alias),
-    )
-
-    const connectionSources = this.connectionStore.getConnectionSources(connectionName)
-    console.log(
-      `[ChatToolExecutor] Found ${connectionSources.length} connection sources:`,
-      connectionSources.map((s) => s.alias),
-    )
-
-    // Combine and remove duplicates (preferring connection editors for latest content)
-    const extraContentMap = new Map<string, string>()
-
-    // Start with connection sources
-    connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
-
-    // Add/overwrite with all editors for this connection
-    allConnectionEditors.forEach((s) => extraContentMap.set(s.alias, s.contents))
-
-    // Also include chat imports (though they should already be in allConnectionEditors)
-    activeImports.forEach((imp) => {
-      const alias = imp.alias || imp.name
-      const contents = this.editorStore?.editors[imp.id]?.contents || ''
-      if (contents) {
-        extraContentMap.set(alias, contents)
-      }
-    })
-
-    const extraContent: ContentInput[] = Array.from(extraContentMap.entries()).map(
-      ([alias, contents]) => ({
-        alias,
-        contents,
-      }),
+    const extraContent = buildExtraContent(
+      this.connectionStore,
+      this.editorStore,
+      connectionName,
+      activeImports,
     )
 
     const queryInput: QueryInput = {
@@ -337,34 +296,11 @@ export class ChatToolExecutor {
       alias: imp.alias || '',
     }))
 
-    // Build extra content matching executeTrilogyQuery logic
-    const allConnectionEditors = this.editorStore
-      ? Object.values(this.editorStore.editors)
-          .filter((editor) => editor.connection === connectionName && !editor.deleted)
-          .map((editor) => ({
-            alias: editor.name,
-            contents: editor.contents,
-          }))
-      : []
-
-    const connectionSources = this.connectionStore.getConnectionSources(connectionName)
-    const extraContentMap = new Map<string, string>()
-
-    connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
-    allConnectionEditors.forEach((s) => extraContentMap.set(s.alias, s.contents))
-    activeImports.forEach((imp) => {
-      const alias = imp.alias || imp.name
-      const contents = this.editorStore?.editors[imp.id]?.contents || ''
-      if (contents) {
-        extraContentMap.set(alias, contents)
-      }
-    })
-
-    const extraContent: ContentInput[] = Array.from(extraContentMap.entries()).map(
-      ([alias, contents]) => ({
-        alias,
-        contents,
-      }),
+    const extraContent = buildExtraContent(
+      this.connectionStore,
+      this.editorStore,
+      connectionName,
+      activeImports,
     )
 
     const queryInput: QueryInput = {

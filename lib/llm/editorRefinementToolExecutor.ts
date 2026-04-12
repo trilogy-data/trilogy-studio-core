@@ -11,7 +11,11 @@ import {
   validateChartConfigForData,
   formatChartConfigValidationError,
 } from '../dashboards/helpers'
-import { type ToolCallResult, connectDataConnection as sharedConnectDataConnection } from './sharedToolHelpers'
+import {
+  type ToolCallResult,
+  connectDataConnection as sharedConnectDataConnection,
+  buildExtraContent,
+} from './sharedToolHelpers'
 
 export type { ToolCallResult } from './sharedToolHelpers'
 
@@ -285,7 +289,7 @@ export class EditorRefinementToolExecutor {
     }
 
     const connectionName = this.editorContext.connectionName
-    const extraContent = this.buildExtraContent()
+    const extraContent = this.buildEditorExtraContent()
 
     try {
       const formatted = await this.queryExecutionService.formatQuery(
@@ -542,31 +546,15 @@ export class EditorRefinementToolExecutor {
       text: query.trim(),
       editorType: 'trilogy',
       imports: [],
-      extraContent: this.buildExtraContent(),
+      extraContent: this.buildEditorExtraContent(),
     }
   }
 
-  // Helper to build extra content from connection sources and editors
-  private buildExtraContent(): ContentInput[] {
-    const connectionName = this.editorContext.connectionName
-    const extraContentMap = new Map<string, string>()
-
-    // Add connection sources
-    const connectionSources = this.connectionStore.getConnectionSources(connectionName)
-    connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
-
-    // Add all editors for this connection
-    if (this.editorStore) {
-      Object.values(this.editorStore.editors)
-        .filter((editor) => editor.connection === connectionName && !editor.deleted)
-        .forEach((editor) => {
-          extraContentMap.set(editor.name, editor.contents)
-        })
-    }
-
-    return Array.from(extraContentMap.entries()).map(([alias, contents]) => ({
-      alias,
-      contents,
-    }))
+  private buildEditorExtraContent(): ContentInput[] {
+    return buildExtraContent(
+      this.connectionStore,
+      this.editorStore,
+      this.editorContext.connectionName,
+    )
   }
 }

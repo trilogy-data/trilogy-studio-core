@@ -1,4 +1,8 @@
-import { type ToolCallResult, connectDataConnection as sharedConnectDataConnection } from './sharedToolHelpers'
+import {
+  type ToolCallResult,
+  connectDataConnection as sharedConnectDataConnection,
+  buildExtraContent,
+} from './sharedToolHelpers'
 import type { DashboardModel } from '../dashboards/base'
 import { CELL_TYPES, type CellType, type MarkdownData } from '../dashboards/base'
 import type { DashboardStoreType } from '../stores/dashboardStore'
@@ -664,7 +668,7 @@ export class DashboardToolExecutor {
       }
     }
 
-    const extraContent = this.buildExtraContent(connName)
+    const extraContent = this.buildDashboardExtraContent(connName)
     const activeImports = this.deps.getActiveImports()
     const importsForQuery = activeImports.map((imp) => ({
       name: imp.name,
@@ -823,28 +827,12 @@ export class DashboardToolExecutor {
       }))
   }
 
-  private buildExtraContent(connectionName: string): ContentInput[] {
-    const allConnectionEditors = this.deps.editorStore
-      ? Object.values(this.deps.editorStore.editors)
-          .filter((editor) => editor.connection === connectionName && !editor.deleted)
-          .map((editor) => ({ alias: editor.name, contents: editor.contents }))
-      : []
-
-    const connectionSources = this.deps.connectionStore.getConnectionSources(connectionName)
-    const extraContentMap = new Map<string, string>()
-
-    connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
-    allConnectionEditors.forEach((s) => extraContentMap.set(s.alias, s.contents))
-
-    const activeImports = this.deps.getActiveImports()
-    activeImports.forEach((imp) => {
-      const alias = imp.alias || imp.name
-      const contents = this.deps.editorStore?.editors[imp.id]?.contents || ''
-      if (contents) {
-        extraContentMap.set(alias, contents)
-      }
-    })
-
-    return Array.from(extraContentMap.entries()).map(([alias, contents]) => ({ alias, contents }))
+  private buildDashboardExtraContent(connectionName: string): ContentInput[] {
+    return buildExtraContent(
+      this.deps.connectionStore,
+      this.deps.editorStore,
+      connectionName,
+      this.deps.getActiveImports(),
+    )
   }
 }

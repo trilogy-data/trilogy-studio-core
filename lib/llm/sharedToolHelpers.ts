@@ -4,9 +4,10 @@
  * executor classes.
  */
 
-import type { ChatArtifact } from '../chats/chat'
-import type { CompletionItem } from '../stores/resolver'
+import type { ChatArtifact, ChatImport } from '../chats/chat'
+import type { CompletionItem, ContentInput } from '../stores/resolver'
 import type { ConnectionStoreType } from '../stores/connectionStore'
+import type { EditorStoreType } from '../stores/editorStore'
 
 export interface ToolCallResult {
   success: boolean
@@ -76,4 +77,45 @@ export async function connectDataConnection(
       error: `Failed to connect to "${connectionName}": ${error instanceof Error ? error.message : 'Unknown error'}`,
     }
   }
+}
+
+/**
+ * Build the `ContentInput[]` array that provides cross-file context to the
+ * Trilogy query engine. Merges connection sources, editor contents for the
+ * connection, and (optionally) active imports. Duplicate aliases are resolved
+ * by preferring the later source in the chain.
+ */
+export function buildExtraContent(
+  connectionStore: ConnectionStoreType,
+  editorStore: EditorStoreType | null,
+  connectionName: string,
+  activeImports?: ChatImport[],
+): ContentInput[] {
+  const extraContentMap = new Map<string, string>()
+
+  // Connection sources first
+  const connectionSources = connectionStore.getConnectionSources(connectionName)
+  connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
+
+  // Overlay with all editors for this connection
+  if (editorStore) {
+    Object.values(editorStore.editors)
+      .filter((editor) => editor.connection === connectionName && !editor.deleted)
+      .forEach((editor) => {
+        extraContentMap.set(editor.name, editor.contents)
+      })
+  }
+
+  // Overlay active imports (if provided)
+  if (activeImports) {
+    activeImports.forEach((imp) => {
+      const alias = imp.alias || imp.name
+      const contents = editorStore?.editors[imp.id]?.contents || ''
+      if (contents) {
+        extraContentMap.set(alias, contents)
+      }
+    })
+  }
+
+  return Array.from(extraContentMap.entries()).map(([alias, contents]) => ({ alias, contents }))
 }
