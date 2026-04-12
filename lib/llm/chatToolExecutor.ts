@@ -3,7 +3,7 @@ import type { QueryInput, QueryResult } from '../stores/queryExecutionService'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { ChatStoreType } from '../stores/chatStore'
 import type { EditorStoreType } from '../stores/editorStore'
-import { type ChatArtifact, type ChatImport, generateArtifactId } from '../chats/chat'
+import { Chat, type ChatArtifact, type ChatImport, generateArtifactId } from '../chats/chat'
 import type { ChartConfig, Results } from '../editors/results'
 import type { ContentInput } from '../stores/resolver'
 import { MAX_TOOL_RESULT_ROWS, truncateResultRows } from './toolLoopCore'
@@ -12,32 +12,9 @@ import {
   validateChartConfigForData,
   formatChartConfigValidationError,
 } from '../dashboards/helpers'
+import type { ToolCallResult } from './sharedToolHelpers'
 
-export interface ToolCallResult {
-  success: boolean
-  artifact?: ChatArtifact
-  artifactId?: string // ID of the artifact created by this tool call
-  error?: string
-  message?: string // Success message for non-artifact tools (like add_import)
-  executionTime?: number
-  query?: string
-  generatedSql?: string
-  triggersSymbolRefresh?: boolean // Indicates this tool call should trigger symbol refresh
-  terminatesLoop?: boolean // If true, the tool loop stops and returns control to the user
-  awaitsUserInput?: boolean // If true, the tool loop pauses waiting for user input
-  /**
-   * Optional image attached to this tool result (e.g. a rendered dashboard screenshot).
-   * Vision-capable providers (Anthropic, etc.) will pass this through to the model
-   * as part of the tool_result content. Other providers ignore it and use the textual
-   * `message` field only.
-   */
-  imageData?: {
-    /** Base64-encoded image bytes (no data URL prefix) */
-    data: string
-    /** MIME type, e.g. 'image/png' */
-    mediaType: string
-  }
-}
+export type { ToolCallResult } from './sharedToolHelpers'
 
 export interface ToolCallInput {
   query: string
@@ -50,17 +27,36 @@ export class ChatToolExecutor {
   private connectionStore: ConnectionStoreType
   private chatStore: ChatStoreType | null
   private editorStore: EditorStoreType | null
+  /** Specific chat ID to operate on. When set, all operations target this chat
+   *  instead of relying on the global `chatStore.activeChatId`. */
+  private chatId: string | null
 
   constructor(
     queryExecutionService: QueryExecutionService,
     connectionStore: ConnectionStoreType,
     chatStore?: ChatStoreType,
     editorStore?: EditorStoreType,
+    chatId?: string,
   ) {
     this.queryExecutionService = queryExecutionService
     this.connectionStore = connectionStore
     this.chatStore = chatStore || null
     this.editorStore = editorStore || null
+    this.chatId = chatId || null
+  }
+
+  /** Resolve the chat ID — prefer the explicit chatId, fall back to global active. */
+  private get resolvedChatId(): string {
+    return this.chatId || this.chatStore?.activeChatId || ''
+  }
+
+  /** Resolve the chat instance — prefer explicit chatId lookup, fall back to global activeChat getter. */
+  private get resolvedChat(): Chat | null {
+    if (!this.chatStore) return null
+    if (this.chatId) {
+      return this.chatStore.chats?.[this.chatId] || null
+    }
+    return this.chatStore.activeChat || null
   }
 
   async executeToolCall(toolName: string, toolInput: Record<string, any>): Promise<ToolCallResult> {
@@ -161,7 +157,7 @@ export class ChatToolExecutor {
     }
 
     // Get active imports from chat store and build extraContent from them
-    const activeImports = this.chatStore?.activeChat?.imports || []
+    const activeImports = this.resolvedChat?.imports || []
     const importsForQuery = activeImports.map((imp) => ({
       name: imp.name,
       alias: imp.alias || '',
@@ -335,7 +331,7 @@ export class ChatToolExecutor {
     }
 
     // Get active imports from chat store and build extraContent from them
-    const activeImports = this.chatStore?.activeChat?.imports || []
+    const activeImports = this.resolvedChat?.imports || []
     const importsForQuery = activeImports.map((imp) => ({
       name: imp.name,
       alias: imp.alias || '',
@@ -416,14 +412,14 @@ export class ChatToolExecutor {
 
   // Import management tools - single import model
   private async selectActiveImport(importName: string): Promise<ToolCallResult> {
-    if (!this.chatStore?.activeChatId || !this.editorStore) {
+    if (!this.resolvedChatId || !this.editorStore) {
       return {
         success: false,
         error: 'No active chat or editor store not available',
       }
     }
 
-    const chat = this.chatStore.activeChat
+    const chat = this.resolvedChat
     if (!chat?.dataConnectionName) {
       return {
         success: false,
@@ -433,7 +429,7 @@ export class ChatToolExecutor {
 
     // Handle clearing the selection
     if (!importName || importName.trim() === '') {
-      this.chatStore.setImports(this.chatStore.activeChatId, [])
+      this.chatStore.setImports(this.resolvedChatId, [])
       return {
         success: true,
         message: 'Cleared active data source selection.',
@@ -469,7 +465,7 @@ export class ChatToolExecutor {
     }
 
     // Set as the single active import (replaces any previous selection)
-    this.chatStore.setImports(this.chatStore.activeChatId, [importToSelect])
+    this.chatStore.setImports(this.resolvedChatId, [importToSelect])
 
     // Fetch and return the full concept output
     const conceptsOutput = await this.getConceptsForImport(importToSelect, chat.dataConnectionName)
@@ -496,7 +492,7 @@ export class ChatToolExecutor {
   }
 
   private listAvailableImports(): ToolCallResult {
-    const chat = this.chatStore?.activeChat
+    const chat = this.resolvedChat
     if (!chat?.dataConnectionName) {
       return {
         success: false,
@@ -559,10 +555,10 @@ export class ChatToolExecutor {
     // Check if already connected
     if (connection.connected) {
       // Even if already connected, update the chat's data connection if different
-      if (this.chatStore?.activeChatId) {
-        const chat = this.chatStore.activeChat
+      if (this.resolvedChatId && this.chatStore) {
+        const chat = this.resolvedChat
         if (chat && chat.dataConnectionName !== connectionName) {
-          this.chatStore.updateChatDataConnection(this.chatStore.activeChatId, connectionName)
+          this.chatStore.updateChatDataConnection(this.resolvedChatId, connectionName)
         }
       }
       return {
@@ -575,8 +571,8 @@ export class ChatToolExecutor {
       await this.connectionStore.connectConnection(connectionName)
 
       // Update the chat's data connection after successful connection
-      if (this.chatStore?.activeChatId) {
-        this.chatStore.updateChatDataConnection(this.chatStore.activeChatId, connectionName)
+      if (this.resolvedChatId && this.chatStore) {
+        this.chatStore.updateChatDataConnection(this.resolvedChatId, connectionName)
       }
 
       return {
@@ -613,7 +609,7 @@ export class ChatToolExecutor {
     if (query && query.trim()) {
       if (!connectionName) {
         // Fall back to chat's data connection
-        const chat = this.chatStore?.activeChat
+        const chat = this.resolvedChat
         connectionName = chat?.dataConnectionName || ''
       }
       if (!connectionName) {
@@ -664,7 +660,7 @@ export class ChatToolExecutor {
 
   // List all artifacts in the current chat
   private listArtifacts(): ToolCallResult {
-    const chat = this.chatStore?.activeChat
+    const chat = this.resolvedChat
     if (!chat) {
       return {
         success: false,
@@ -712,7 +708,7 @@ export class ChatToolExecutor {
 
   // Get the full contents and metadata of an artifact by ID
   private getArtifact(artifactId: string): ToolCallResult {
-    const chat = this.chatStore?.activeChat
+    const chat = this.resolvedChat
     if (!chat) {
       return {
         success: false,
@@ -763,7 +759,7 @@ export class ChatToolExecutor {
 
   // Fetch a specific row range from a results or chart artifact
   private getArtifactRows(artifactId: string, startRow: number, endRow: number): ToolCallResult {
-    const chat = this.chatStore?.activeChat
+    const chat = this.resolvedChat
     if (!chat) {
       return { success: false, error: 'No active chat session.' }
     }
@@ -811,7 +807,7 @@ export class ChatToolExecutor {
     title?: string,
     chartConfig?: ChartConfig,
   ): ToolCallResult {
-    const chat = this.chatStore?.activeChat
+    const chat = this.resolvedChat
     if (!chat) {
       return {
         success: false,
@@ -880,7 +876,7 @@ export class ChatToolExecutor {
 
   // Reorder artifacts by providing desired order of IDs
   private reorderArtifacts(artifactIds: string[]): ToolCallResult {
-    const chat = this.chatStore?.activeChat
+    const chat = this.resolvedChat
     if (!chat) {
       return { success: false, error: 'No active chat session.' }
     }
@@ -923,7 +919,7 @@ export class ChatToolExecutor {
 
   // Hide one or more artifacts by ID (soft-delete — user can restore from the Hidden section)
   private hideArtifacts(artifactIds: string | string[]): ToolCallResult {
-    const chat = this.chatStore?.activeChat
+    const chat = this.resolvedChat
     if (!chat) {
       return { success: false, error: 'No active chat session.' }
     }

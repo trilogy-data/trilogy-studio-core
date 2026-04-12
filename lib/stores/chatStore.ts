@@ -5,7 +5,8 @@ import type { LLMConnectionStoreType } from './llmStore'
 import type { ConnectionStoreType } from './connectionStore'
 import type QueryExecutionService from './queryExecutionService'
 import type { EditorStoreType } from './editorStore'
-import { ChatToolExecutor, type ToolCallResult } from '../llm/chatToolExecutor'
+import { ChatToolExecutor } from '../llm/chatToolExecutor'
+import type { ToolCallResult } from '../llm/sharedToolHelpers'
 import { buildChatAgentSystemPrompt, CHAT_TOOLS } from '../llm/chatAgentPrompt'
 import type { CompletionItem } from './resolver'
 import type { LLMToolDefinition } from '../llm/base'
@@ -410,6 +411,7 @@ export const useChatStore = defineStore('chats', {
                 connectionStore,
                 this,
                 editorStore,
+                chatId,
               )
               return { getToolExecutor: () => toolExecutor }
             })()

@@ -5,7 +5,7 @@
 
 import type { LLMMessage, LLMRequestOptions, LLMResponse, LLMToolCall, LLMToolResult } from './base'
 import type { ChatMessage, ChatArtifact, ChatToolCall } from '../chats/chat'
-import type { ToolCallResult } from './editorRefinementToolExecutor'
+import type { ToolCallResult } from './sharedToolHelpers'
 
 const USER_INPUT_START = '<user_input>'
 const USER_INPUT_END = '</user_input>'

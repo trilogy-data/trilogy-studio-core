@@ -1,4 +1,4 @@
-import type { ToolCallResult } from './chatToolExecutor'
+import type { ToolCallResult } from './sharedToolHelpers'
 import type { DashboardModel } from '../dashboards/base'
 import { CELL_TYPES, type CellType, type MarkdownData } from '../dashboards/base'
 import type { DashboardStoreType } from '../stores/dashboardStore'

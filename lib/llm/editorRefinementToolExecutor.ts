@@ -11,33 +11,9 @@ import {
   validateChartConfigForData,
   formatChartConfigValidationError,
 } from '../dashboards/helpers'
+import type { ToolCallResult } from './sharedToolHelpers'
 
-export interface ToolCallResult {
-  success: boolean
-  artifact?: ChatArtifact
-  artifactId?: string // ID of the artifact created by this tool call
-  error?: string
-  message?: string
-  executionTime?: number
-  query?: string
-  generatedSql?: string
-  formattedQuery?: string
-  terminatesLoop?: boolean // If true, the tool loop should stop completely
-  awaitsUserInput?: boolean // If true, stop auto-continue and wait for user input
-  availableSymbols?: CompletionItem[] // Symbols available after validation
-  /**
-   * Optional image attached to this tool result (e.g. a rendered dashboard screenshot).
-   * Providers that support vision (Anthropic, etc.) will pass this through to the model
-   * as part of the tool_result content. Providers without vision will fall back to the
-   * textual `message` field only.
-   */
-  imageData?: {
-    /** Base64-encoded image bytes (no data URL prefix) */
-    data: string
-    /** MIME type, e.g. 'image/png' */
-    mediaType: string
-  }
-}
+export type { ToolCallResult } from './sharedToolHelpers'
 
 export interface QueryExecutionResult {
   success: boolean
