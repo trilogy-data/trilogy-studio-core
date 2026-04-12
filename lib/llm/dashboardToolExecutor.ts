@@ -19,6 +19,37 @@ import { truncateResultRows } from './toolLoopCore'
 import { validateChartConfigForData, formatChartConfigValidationError } from '../dashboards/helpers'
 import type { ChartConfig, Results } from '../editors/results'
 
+type ChartAxisThresholds = Partial<Record<'xField' | 'yField', number>>
+
+const CHART_AXIS_ELEMENT_THRESHOLDS: Partial<Record<ChartConfig['chartType'], ChartAxisThresholds>> = {
+  heatmap: {
+    xField: 25,
+    yField: 25,
+  },
+}
+
+function serializeAxisValue(value: unknown): string | null {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'object') {
+    if ('toISO' in (value as Record<string, unknown>) && typeof value.toISO === 'function') {
+      return String(value.toISO())
+    }
+    return JSON.stringify(value)
+  }
+  return String(value)
+}
+
+function countDistinctAxisValues(rows: readonly Record<string, unknown>[], field: string): number {
+  const values = new Set<string>()
+  for (const row of rows) {
+    const serialized = serializeAxisValue(row[field])
+    if (serialized !== null) {
+      values.add(serialized)
+    }
+  }
+  return values.size
+}
+
 export interface DashboardToolExecutorDeps {
   dashboardStore: DashboardStoreType
   connectionStore: ConnectionStoreType
@@ -541,6 +572,49 @@ export class DashboardToolExecutor {
     }
   }
 
+  private getChartAxisThresholdWarnings(): string[] {
+    const dashboard = this.dashboard
+    if (!dashboard) return []
+
+    const warnings: string[] = []
+
+    for (const [itemId, item] of Object.entries(dashboard.gridItems)) {
+      if (item.type !== CELL_TYPES.CHART || !item.chartConfig || !item.results) {
+        continue
+      }
+
+      const thresholds = CHART_AXIS_ELEMENT_THRESHOLDS[item.chartConfig.chartType]
+      if (!thresholds) {
+        continue
+      }
+
+      const rows = item.results.data as readonly Record<string, unknown>[]
+      const layout = dashboard.layout.find((entry) => entry.i === itemId)
+      const name = item.name || '(untitled)'
+
+      for (const axis of ['xField', 'yField'] as const) {
+        const threshold = thresholds[axis]
+        const fieldName = item.chartConfig[axis]
+        if (!threshold || !fieldName) {
+          continue
+        }
+
+        const distinctCount = countDistinctAxisValues(rows, fieldName)
+        if (distinctCount <= threshold) {
+          continue
+        }
+
+        const axisLabel = axis === 'xField' ? 'x-axis' : 'y-axis'
+        const sizeHint = layout ? ` Current size: w=${layout.w}, h=${layout.h}.` : ''
+        warnings.push(
+          `- [${itemId}] ${item.chartConfig.chartType} "${name}": ${axisLabel} field "${fieldName}" has ${distinctCount} distinct values, exceeding the recommended limit of ${threshold}.${sizeHint}`,
+        )
+      }
+    }
+
+    return warnings
+  }
+
   private async captureDashboardScreenshot(): Promise<ToolCallResult> {
     const dashboard = this.dashboard
     if (!dashboard) return { success: false, error: 'Dashboard not found.' }
@@ -556,6 +630,7 @@ export class DashboardToolExecutor {
     try {
       const { base64, mediaType, width, height, overflows } =
         await this.deps.captureDashboardImage()
+      const chartAxisWarnings = this.getChartAxisThresholdWarnings()
 
       // Build a textual layout summary as a fallback for non-vision providers
       // (Anthropic will additionally see the actual image attached below).
@@ -625,8 +700,14 @@ export class DashboardToolExecutor {
           overflowSection.join('\n')
       }
 
+      if (chartAxisWarnings.length > 0) {
+        summary +=
+          `\n\nCHART DENSITY WARNINGS — the following charts exceed recommended axis cardinality for clear display. These charts may technically render, but the result is likely cramped, unreadable, or visually low-signal even if the screenshot looks superficially complete. Simplify the query, filter the data, aggregate further, or switch to a more suitable chart before handing off:\n` +
+          chartAxisWarnings.join('\n')
+      }
+
       summary +=
-        `\n\nReview the screenshot for visual issues (overlap, awkward sizing, empty regions, illegible charts, missing/unclear titles, truncated content) AND confirm every broken item listed above has been fixed or removed before calling return_to_user.`
+        `\n\nReview the screenshot for visual issues (overlap, awkward sizing, empty regions, illegible charts, missing/unclear titles, truncated content) AND confirm every broken item listed above has been fixed or removed before calling return_to_user. Treat any chart density warnings as actionable review feedback, not just informational notes.`
 
       return {
         success: true,

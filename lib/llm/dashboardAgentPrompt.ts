@@ -147,6 +147,7 @@ VALIDATION BEFORE HANDOFF:
 - Once you believe the dashboard is complete, call capture_dashboard_screenshot to render it as a PNG and review the actual visual layout.
 - Look for: overlapping items, awkward sizing, empty regions, illegible charts, missing or unclear titles, and any other visual issues.
 - The screenshot tool ALSO returns a "CONTENT OVERFLOW DETECTED" section listing items whose content is clipped or hidden behind a scrollbar. The image may already hint at this (visible scrollbar, text cut mid-line, missing bottom padding), but the diagnostic tells you exactly which items are affected and by how much. When you see this, increase the height of the listed items (via move_dashboard_item) or shorten their content/query, then capture again to confirm the overflow is resolved.
+- Critically consider every warning returned by the screenshot tool. Do not treat warnings as informational only: fix the underlying issue where possible, or change the chart/query/layout so the warning no longer applies, then capture again.
 - Make corrections (move/resize/update items, adjust titles) and capture again if needed before handing off to the user.
 
 COMPLETING YOUR RESPONSE:
