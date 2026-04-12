@@ -166,12 +166,36 @@ export class OpenAIProvider extends LLMProvider {
         })
       } else if (msg.role === 'user' && msg.toolResults && msg.toolResults.length > 0) {
         // Tool results - OpenAI uses role: 'tool' for each result
+        // The tool role only accepts string content, so images are sent as a
+        // follow-up user message with an image_url content block.
+        let hasImage = false
         for (const tr of msg.toolResults) {
           cleanHistory.push({
             role: 'tool',
             tool_call_id: tr.toolCallId,
             content: tr.result,
           })
+          if (tr.imageData) {
+            hasImage = true
+          }
+        }
+        if (hasImage) {
+          const imageParts: any[] = []
+          for (const tr of msg.toolResults) {
+            if (tr.imageData) {
+              imageParts.push({
+                type: 'image_url',
+                image_url: {
+                  url: `data:${tr.imageData.mediaType};base64,${tr.imageData.data}`,
+                },
+              })
+            }
+          }
+          imageParts.push({
+            type: 'text',
+            text: 'Above is the rendered screenshot referenced by the preceding tool result. Review it visually.',
+          })
+          cleanHistory.push({ role: 'user', content: imageParts })
         }
       } else {
         // Regular text message

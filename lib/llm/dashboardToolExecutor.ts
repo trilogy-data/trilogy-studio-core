@@ -581,11 +581,38 @@ export class DashboardToolExecutor {
           return `- [${o.itemId}] ${type} "${name}": showing ~${pct}% of content (${o.visiblePx}px visible of ${o.contentPx}px, ${o.overflowPx}px hidden).${sizeHint}`
         })
 
+      // Collect items whose query failed (syntax error, resolution error, etc.).
+      // These render as an error placeholder in the screenshot which the model
+      // tends to skim past, so list them explicitly by id.
+      const brokenItems = Object.entries(dashboard.gridItems)
+        .filter(([, item]) => typeof item.error === 'string' && item.error.trim() !== '')
+        .map(([id, item]) => {
+          const name = item.name || '(untitled)'
+          const type = item.type || '?'
+          const errMsg = (item.error || '').replace(/\s+/g, ' ').trim()
+          const errPreview = errMsg.length > 400 ? errMsg.slice(0, 400) + '...' : errMsg
+          const mdContent =
+            typeof item.content === 'object' && item.content !== null
+              ? (item.content as MarkdownData)
+              : null
+          const query = mdContent?.query || (typeof item.content === 'string' ? item.content : '')
+          const queryPreview = query
+            ? `\n    Query: ${query.substring(0, 200)}${query.length > 200 ? '...' : ''}`
+            : ''
+          return `- [${id}] ${type} "${name}": ${errPreview}${queryPreview}`
+        })
+
       const itemCount = Object.keys(dashboard.gridItems).length
       let summary =
         `Captured dashboard "${dashboard.name}" as PNG (${width}x${height}px, ${itemCount} item${itemCount === 1 ? '' : 's'}). ` +
         `The image is attached below for visual review.\n\n` +
         `Layout:\n${layoutLines.join('\n') || '(empty)'}`
+
+      if (brokenItems.length > 0) {
+        summary +=
+          `\n\nBROKEN ITEMS DETECTED — the following items currently have a query or rendering error and are NOT displaying real data in the screenshot (they render as an error placeholder, which is easy to miss at a glance). You MUST fix these before calling return_to_user — either correct the Trilogy query syntax via update_dashboard_item, or remove the item if it cannot be salvaged. Do not ignore them:\n` +
+          brokenItems.join('\n')
+      }
 
       if (overflowSection.length > 0) {
         summary +=
@@ -594,7 +621,7 @@ export class DashboardToolExecutor {
       }
 
       summary +=
-        `\n\nReview the screenshot for visual issues (overlap, awkward sizing, empty regions, illegible charts, missing/unclear titles, truncated content) and make corrections before calling return_to_user.`
+        `\n\nReview the screenshot for visual issues (overlap, awkward sizing, empty regions, illegible charts, missing/unclear titles, truncated content) AND confirm every broken item listed above has been fixed or removed before calling return_to_user.`
 
       return {
         success: true,

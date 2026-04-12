@@ -389,12 +389,25 @@ export class GoogleProvider extends LLMProvider {
         result.push({ parts, role: 'model' })
       } else if (message.role === 'user' && message.toolResults && message.toolResults.length > 0) {
         // User message with tool results - include functionResponse parts
-        const parts: any[] = message.toolResults.map((tr) => ({
-          functionResponse: {
-            name: tr.toolName,
-            response: { result: tr.result },
-          },
-        }))
+        // When a tool result includes imageData, append an inlineData part so
+        // the model can visually review the image (e.g. dashboard screenshot).
+        const parts: any[] = []
+        for (const tr of message.toolResults) {
+          parts.push({
+            functionResponse: {
+              name: tr.toolName,
+              response: { result: tr.result },
+            },
+          })
+          if (tr.imageData) {
+            parts.push({
+              inlineData: {
+                mimeType: tr.imageData.mediaType,
+                data: tr.imageData.data,
+              },
+            })
+          }
+        }
         result.push({ parts, role: 'user' })
       } else {
         // Regular text message
