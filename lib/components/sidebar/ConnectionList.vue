@@ -215,7 +215,9 @@ export default {
           await connectionStore.connections[connection].refreshDatabase(dbid)
           // For schema-less connections, also refresh the schema to load tables
           if (!connectionStore.connections[connection].hasSchema) {
-            let db = connectionStore.connections[connection].databases?.find((db) => db.name === dbid)
+            let db = connectionStore.connections[connection].databases?.find(
+              (db) => db.name === dbid,
+            )
             if (db && db.schemas.length > 0) {
               await connectionStore.connections[connection].refreshSchema(dbid, db.schemas[0].name)
             }

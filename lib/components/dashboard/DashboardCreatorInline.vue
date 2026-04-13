@@ -18,7 +18,10 @@
     </div>
     <div class="form-group">
       <label for="dashboard-name">
-        Name <span v-if="showPromptField && dashboardPrompt.trim()" class="optional-label">(optional)</span>
+        Name
+        <span v-if="showPromptField && dashboardPrompt.trim()" class="optional-label"
+          >(optional)</span
+        >
       </label>
       <input
         id="dashboard-name"
@@ -188,9 +191,7 @@ export default {
         // Apply the selected import if one was chosen. When the user goes through
         // the agent path, they can leave this blank and let the assistant pick.
         if (selectedImport.value) {
-          const importToUse = availableImports.value.find(
-            (imp) => imp.id === selectedImport.value,
-          )
+          const importToUse = availableImports.value.find((imp) => imp.id === selectedImport.value)
           if (importToUse) {
             dashboardStore.updateDashboardImports(dashboard.id, [importToUse])
           }

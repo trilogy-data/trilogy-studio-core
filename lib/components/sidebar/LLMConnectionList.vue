@@ -30,11 +30,7 @@
         </button>
 
         <div v-if="filterMenuOpen" class="tag-filter-menu">
-          <label
-            v-for="option in SCOPE_OPTIONS"
-            :key="option.value"
-            class="tag-filter-option"
-          >
+          <label v-for="option in SCOPE_OPTIONS" :key="option.value" class="tag-filter-option">
             <input
               type="checkbox"
               :checked="!hiddenScopes.has(option.value)"

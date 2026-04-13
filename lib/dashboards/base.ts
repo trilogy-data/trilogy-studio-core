@@ -881,7 +881,10 @@ export class DashboardModel implements Dashboard {
       parentDashboardId: data.parentDashboardId || null,
       investigationName: data.investigationName,
       investigationCreatedFrom: data.investigationCreatedFrom
-        ? { ...data.investigationCreatedFrom, timestamp: new Date(data.investigationCreatedFrom.timestamp) }
+        ? {
+            ...data.investigationCreatedFrom,
+            timestamp: new Date(data.investigationCreatedFrom.timestamp),
+          }
         : undefined,
       children: data.children || [],
     })

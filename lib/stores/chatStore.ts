@@ -24,10 +24,7 @@ import {
  *  the generic chat agent. */
 export interface ExecuteMessageOverrides {
   tools: LLMToolDefinition[]
-  executeToolCall: (
-    toolName: string,
-    toolInput: Record<string, any>,
-  ) => Promise<ToolCallResult>
+  executeToolCall: (toolName: string, toolInput: Record<string, any>) => Promise<ToolCallResult>
   buildSystemPrompt: () => string
   noToolCallReminder?: string
   terminateOnNoToolCall?: boolean

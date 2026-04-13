@@ -5,7 +5,9 @@
         <div class="table-title-block">
           <h2 class="table-title">
             <span class="text-faint" v-if="table.database">{{ table.database }}.</span
-            ><span class="text-faint" v-if="table.schema && table.schema !== table.database">{{ table.schema }}.</span>{{ table.name }}
+            ><span class="text-faint" v-if="table.schema && table.schema !== table.database"
+              >{{ table.schema }}.</span
+            >{{ table.name }}
           </h2>
           <span
             class="table-type-badge"

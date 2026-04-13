@@ -170,7 +170,11 @@ export default class GitHubStorage extends AbstractStorage {
 
   async saveConnections(
     connections: Array<
-      BigQueryOauthConnection | DuckDBConnection | SQLiteConnection | MotherDuckConnection | SnowflakeJwtConnection
+      | BigQueryOauthConnection
+      | DuckDBConnection
+      | SQLiteConnection
+      | MotherDuckConnection
+      | SnowflakeJwtConnection
     >,
   ): Promise<void> {
     await this.saveFile(this.connectionStorageFile, connections)
@@ -179,14 +183,22 @@ export default class GitHubStorage extends AbstractStorage {
   async loadConnections(): Promise<
     Record<
       string,
-      BigQueryOauthConnection | DuckDBConnection | SQLiteConnection | MotherDuckConnection | SnowflakeJwtConnection
+      | BigQueryOauthConnection
+      | DuckDBConnection
+      | SQLiteConnection
+      | MotherDuckConnection
+      | SnowflakeJwtConnection
     >
   > {
     const response = await this.fetchFile(this.connectionStorageFile)
     const raw = response?.content || []
     const connections: Record<
       string,
-      BigQueryOauthConnection | DuckDBConnection | SQLiteConnection | MotherDuckConnection | SnowflakeJwtConnection
+      | BigQueryOauthConnection
+      | DuckDBConnection
+      | SQLiteConnection
+      | MotherDuckConnection
+      | SnowflakeJwtConnection
     > = {}
 
     // Process each connection sequentially

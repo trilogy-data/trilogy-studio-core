@@ -357,9 +357,7 @@ export async function runToolLoop(
         // When the LLM puts its whole response into the terminating tool call
         // (e.g. return_to_user), responseText is empty. Surface the tool's
         // message as the assistant content so the user actually sees it.
-        const finalContent = responseText?.trim()
-          ? responseText
-          : (result.message ?? '')
+        const finalContent = responseText?.trim() ? responseText : (result.message ?? '')
 
         // Persist assistant message with tool calls
         messagePersistence.addMessage({

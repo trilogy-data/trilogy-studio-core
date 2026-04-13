@@ -447,8 +447,7 @@ export default defineComponent({
       (newConfig) => {
         if (!hasMounted || !newConfig) return
         if (
-          safeJsonStringify(newConfig) ===
-          safeJsonStringify(controlsManager.internalConfig.value)
+          safeJsonStringify(newConfig) === safeJsonStringify(controlsManager.internalConfig.value)
         ) {
           return
         }

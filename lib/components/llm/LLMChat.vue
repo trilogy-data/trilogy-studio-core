@@ -981,7 +981,6 @@ export default defineComponent({
   color: var(--text-color);
 }
 
-
 @media screen and (max-width: 768px) {
   .textarea-wrapper textarea {
     font-size: var(--font-size);

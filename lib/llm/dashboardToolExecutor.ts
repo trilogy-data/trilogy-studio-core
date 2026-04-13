@@ -21,7 +21,9 @@ import type { ChartConfig, Results } from '../editors/results'
 
 type ChartAxisThresholds = Partial<Record<'xField' | 'yField', number>>
 
-const CHART_AXIS_ELEMENT_THRESHOLDS: Partial<Record<ChartConfig['chartType'], ChartAxisThresholds>> = {
+const CHART_AXIS_ELEMENT_THRESHOLDS: Partial<
+  Record<ChartConfig['chartType'], ChartAxisThresholds>
+> = {
   heatmap: {
     xField: 25,
     yField: 25,
@@ -31,8 +33,9 @@ const CHART_AXIS_ELEMENT_THRESHOLDS: Partial<Record<ChartConfig['chartType'], Ch
 function serializeAxisValue(value: unknown): string | null {
   if (value === null || value === undefined) return null
   if (typeof value === 'object') {
-    if ('toISO' in (value as Record<string, unknown>) && typeof value.toISO === 'function') {
-      return String(value.toISO())
+    const withToISO = value as { toISO?: () => unknown }
+    if (typeof withToISO.toISO === 'function') {
+      return String(withToISO.toISO())
     }
     return JSON.stringify(value)
   }
@@ -103,10 +106,7 @@ export class DashboardToolExecutor {
     return this.dashboard?.connection || ''
   }
 
-  async executeToolCall(
-    toolName: string,
-    toolInput: Record<string, any>,
-  ): Promise<ToolCallResult> {
+  async executeToolCall(toolName: string, toolInput: Record<string, any>): Promise<ToolCallResult> {
     switch (toolName) {
       case 'list_dashboard_items':
         return this.listDashboardItems()
@@ -171,7 +171,9 @@ export class DashboardToolExecutor {
         ? md?.markdown?.substring(0, 120) || ''
         : (item.content as string).substring(0, 120)
       const pos = layout ? `(x=${layout.x}, y=${layout.y}, w=${layout.w}, h=${layout.h})` : ''
-      const querySuffix = md?.query ? `\n  Query: ${md.query.substring(0, 120)}${md.query.length >= 120 ? '...' : ''}` : ''
+      const querySuffix = md?.query
+        ? `\n  Query: ${md.query.substring(0, 120)}${md.query.length >= 120 ? '...' : ''}`
+        : ''
       return `- [${id}] ${item.type}: "${item.name}" ${pos}\n  Content: ${content}${content.length >= 120 ? '...' : ''}${querySuffix}`
     })
 
@@ -205,9 +207,7 @@ export class DashboardToolExecutor {
       content: isStructured ? mdContent?.markdown || '' : item.content,
       query: mdContent?.query || null,
       chartConfig: item.chartConfig || null,
-      position: layout
-        ? { x: layout.x, y: layout.y, w: layout.w, h: layout.h }
-        : null,
+      position: layout ? { x: layout.x, y: layout.y, w: layout.w, h: layout.h } : null,
       loading: item.loading || false,
       error: item.error || null,
     }
@@ -257,11 +257,7 @@ export class DashboardToolExecutor {
       // Validation failed - auto-correct to suggested config
       const suggested = validation.suggestedConfig as ChartConfig
       if (suggested && suggested.chartType) {
-        this.deps.dashboardStore.updateItemChartConfig(
-          this.deps.dashboardId,
-          itemId,
-          suggested,
-        )
+        this.deps.dashboardStore.updateItemChartConfig(this.deps.dashboardId, itemId, suggested)
       }
 
       return `Auto-corrected to default configuration.\n${formatChartConfigValidationError(validation)}`
@@ -277,7 +273,10 @@ export class DashboardToolExecutor {
 
     const type = input.type as string
     if (!type || !['chart', 'table', 'markdown', 'filter'].includes(type)) {
-      return { success: false, error: `Invalid item type: "${type}". Must be chart, table, markdown, or filter.` }
+      return {
+        success: false,
+        error: `Invalid item type: "${type}". Must be chart, table, markdown, or filter.`,
+      }
     }
 
     const content = input.content as string
@@ -317,7 +316,11 @@ export class DashboardToolExecutor {
 
     // Set chart config if provided
     if (input.chartConfig && cellType === CELL_TYPES.CHART) {
-      this.deps.dashboardStore.updateItemChartConfig(this.deps.dashboardId, itemId, input.chartConfig)
+      this.deps.dashboardStore.updateItemChartConfig(
+        this.deps.dashboardId,
+        itemId,
+        input.chartConfig,
+      )
     }
 
     // Trigger query execution for chart/table/markdown-with-query items
@@ -372,10 +375,9 @@ export class DashboardToolExecutor {
           ? existingContent
           : (existingContent as MarkdownData)?.markdown || ''
       const existingQuery =
-        typeof existingContent === 'string'
-          ? ''
-          : (existingContent as MarkdownData)?.query || ''
-      const nextMarkdown = input.content !== undefined ? (input.content as string) : existingMarkdown
+        typeof existingContent === 'string' ? '' : (existingContent as MarkdownData)?.query || ''
+      const nextMarkdown =
+        input.content !== undefined ? (input.content as string) : existingMarkdown
       const nextQuery = input.query !== undefined ? (input.query as string) : existingQuery
       const nextContent: string | MarkdownData = nextQuery
         ? { markdown: nextMarkdown, query: nextQuery }
@@ -446,7 +448,11 @@ export class DashboardToolExecutor {
         // Validate against existing results without re-executing query
         const results = item.results as Results
         if (results.headers) {
-          const validation = validateChartConfigForData(results.data, results.headers, input.chartConfig)
+          const validation = validateChartConfigForData(
+            results.data,
+            results.headers,
+            input.chartConfig,
+          )
           if (!validation.valid) {
             const suggested = validation.suggestedConfig as ChartConfig
             if (suggested && suggested.chartType) {
@@ -513,9 +519,7 @@ export class DashboardToolExecutor {
     )
 
     const layout = dashboard.layout.find((l) => l.i === itemId)
-    const pos = layout
-      ? `(x=${layout.x}, y=${layout.y}, w=${layout.w}, h=${layout.h})`
-      : 'updated'
+    const pos = layout ? `(x=${layout.x}, y=${layout.y}, w=${layout.w}, h=${layout.h})` : 'updated'
 
     return {
       success: true,
@@ -706,8 +710,7 @@ export class DashboardToolExecutor {
           chartAxisWarnings.join('\n')
       }
 
-      summary +=
-        `\n\nReview the screenshot for visual issues (overlap, awkward sizing, empty regions, illegible charts, missing/unclear titles, truncated content) AND confirm every broken item listed above has been fixed or removed before calling return_to_user. Treat any chart density warnings as actionable review feedback, not just informational notes.`
+      summary += `\n\nReview the screenshot for visual issues (overlap, awkward sizing, empty regions, illegible charts, missing/unclear titles, truncated content) AND confirm every broken item listed above has been fixed or removed before calling return_to_user. Treat any chart density warnings as actionable review feedback, not just informational notes.`
 
       return {
         success: true,
@@ -728,7 +731,10 @@ export class DashboardToolExecutor {
   private async runTrilogyQuery(query: string, connectionName?: string): Promise<ToolCallResult> {
     const connName = connectionName || this.connectionName
     if (!connName) {
-      return { success: false, error: 'No connection name specified and no dashboard connection set.' }
+      return {
+        success: false,
+        error: 'No connection name specified and no dashboard connection set.',
+      }
     }
 
     const activeImports = this.deps.getActiveImports()
@@ -798,5 +804,4 @@ export class DashboardToolExecutor {
   private async connectDataConnection(connectionName: string): Promise<ToolCallResult> {
     return sharedConnectDataConnection(this.deps.connectionStore, connectionName)
   }
-
 }

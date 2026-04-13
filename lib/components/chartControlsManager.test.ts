@@ -115,16 +115,12 @@ describe('ChartControlsManager', () => {
 
   describe('heatmap default backfill', () => {
     it('should backfill colorField for heatmaps when initial config omits it', () => {
-      manager.initializeConfig(
-        testData,
-        testColumns,
-        {
-          chartType: 'heatmap',
-          xField: 'category',
-          yField: 'region',
-          colorField: '',
-        } as ChartConfig,
-      )
+      manager.initializeConfig(testData, testColumns, {
+        chartType: 'heatmap',
+        xField: 'category',
+        yField: 'region',
+        colorField: '',
+      } as ChartConfig)
 
       expect(manager.internalConfig.value.colorField).toBe('revenue')
     })

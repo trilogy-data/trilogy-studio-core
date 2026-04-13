@@ -247,10 +247,7 @@ function collectOverflowDiagnostics(gridContent: HTMLElement): ItemOverflowDiagn
     let worst: ItemOverflowDiagnostic | null = null
     // Check the item itself plus every descendant — anything that clips or scrolls
     // vertically and whose content is taller than its box is hiding content from view.
-    const candidates: HTMLElement[] = [
-      item,
-      ...Array.from(item.querySelectorAll<HTMLElement>('*')),
-    ]
+    const candidates: HTMLElement[] = [item, ...Array.from(item.querySelectorAll<HTMLElement>('*'))]
     for (const el of candidates) {
       const clientHeight = el.clientHeight
       const scrollHeight = el.scrollHeight
@@ -500,9 +497,7 @@ async function renderDashboardToPng(): Promise<{
       .getPropertyValue('--trilogy-embed-dashboard-background')
       .trim()
     const exportBackground =
-      computedBackground ||
-      window.getComputedStyle(dashboardElement).backgroundColor ||
-      '#ffffff'
+      computedBackground || window.getComputedStyle(dashboardElement).backgroundColor || '#ffffff'
 
     // Capture the dashboard as canvas
     const canvas = await html2canvas(dashboardElement as HTMLElement, {
@@ -637,10 +632,7 @@ async function captureDashboardImage(): Promise<{
     <div class="dashboard-body" :class="{ 'chat-open': chatPanelOpen }">
       <div class="dashboard-main">
         <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">
-          <DashboardCTA
-            :dashboard-id="dashboard.id"
-            @start-chat-with-prompt="openChatWithPrompt"
-          />
+          <DashboardCTA :dashboard-id="dashboard.id" @start-chat-with-prompt="openChatWithPrompt" />
         </div>
 
         <div v-else class="grid-container">

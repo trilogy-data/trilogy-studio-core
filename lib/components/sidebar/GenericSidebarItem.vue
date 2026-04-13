@@ -18,7 +18,9 @@
         class="chevron-button"
         :class="{ 'chevron-button-placeholder': !isCollapsible }"
         :data-testid="isCollapsible ? `expand-${itemType}-${itemId}` : undefined"
-        :aria-label="isCollapsible ? (isCollapsed ? 'Expand section' : 'Collapse section') : undefined"
+        :aria-label="
+          isCollapsible ? (isCollapsed ? 'Expand section' : 'Collapse section') : undefined
+        "
         :disabled="!isCollapsible"
         :tabindex="isCollapsible ? 0 : -1"
       >

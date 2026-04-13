@@ -5,7 +5,9 @@
     :name="item.label"
     :indent="item.indent"
     :is-selected="isActive"
-    :is-collapsible="!['dashboard', 'investigation', 'creator'].includes(item.type) || item.hasInvestigations"
+    :is-collapsible="
+      !['dashboard', 'investigation', 'creator'].includes(item.type) || item.hasInvestigations
+    "
     :is-collapsed="isCollapsed"
     itemType="dashboard"
     @click="handleClick"

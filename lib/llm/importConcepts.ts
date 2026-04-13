@@ -56,11 +56,7 @@ export async function fetchConceptsForImport(
       extraContent,
     }
 
-    const validation = await queryExecutionService.validateQuery(
-      connectionName,
-      queryInput,
-      false,
-    )
+    const validation = await queryExecutionService.validateQuery(connectionName, queryInput, false)
 
     if (validation?.data?.completion_items) {
       const concepts = validation.data.completion_items.filter(

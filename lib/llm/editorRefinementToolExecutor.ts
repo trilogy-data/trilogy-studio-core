@@ -7,10 +7,7 @@ import { generateArtifactId } from '../chats/chat'
 import type { ChartConfig, Results } from '../editors/results'
 import type { ContentInput, CompletionItem } from '../stores/resolver'
 import { symbolsToFieldPrompt } from './editorRefinementTools'
-import {
-  validateChartConfigForData,
-  formatChartConfigValidationError,
-} from '../dashboards/helpers'
+import { validateChartConfigForData, formatChartConfigValidationError } from '../dashboards/helpers'
 import {
   type ToolCallResult,
   connectDataConnection as sharedConnectDataConnection,

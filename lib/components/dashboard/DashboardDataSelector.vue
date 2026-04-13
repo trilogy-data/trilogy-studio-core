@@ -263,9 +263,7 @@ function emitSelection(values: CrossFilterScalar[]) {
   }
 
   const entry: CrossFilterEntry =
-    values.length === 1
-      ? { op: 'eq', value: values[0] }
-      : { op: 'in', value: [...values] }
+    values.length === 1 ? { op: 'eq', value: values[0] } : { op: 'in', value: [...values] }
 
   emit('cell-click', {
     filters: { [field]: entry },
@@ -435,12 +433,12 @@ function onDropdownKeydown(e: KeyboardEvent) {
             class="dropdown-item dropdown-item--all"
             @mousedown.prevent
           >
-            <input
-              type="checkbox"
-              :checked="allDraftSelected"
-              @change="toggleAllDraft"
-            />
-            <span>{{ searchText ? `Select ${filteredOptions.length} matching` : `All (${selectOptions.length})` }}</span>
+            <input type="checkbox" :checked="allDraftSelected" @change="toggleAllDraft" />
+            <span>{{
+              searchText
+                ? `Select ${filteredOptions.length} matching`
+                : `All (${selectOptions.length})`
+            }}</span>
           </label>
 
           <label
@@ -458,9 +456,7 @@ function onDropdownKeydown(e: KeyboardEvent) {
             <span v-html="highlightMatch(option.label)"></span>
           </label>
 
-          <div v-if="filteredOptions.length === 0" class="dropdown-empty">
-            No matches found
-          </div>
+          <div v-if="filteredOptions.length === 0" class="dropdown-empty">No matches found</div>
         </div>
 
         <div class="dropdown-footer">

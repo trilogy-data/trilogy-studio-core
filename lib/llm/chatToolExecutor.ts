@@ -6,10 +6,7 @@ import type { EditorStoreType } from '../stores/editorStore'
 import { Chat, type ChatArtifact, type ChatImport, generateArtifactId } from '../chats/chat'
 import type { ChartConfig, Results } from '../editors/results'
 import { MAX_TOOL_RESULT_ROWS, truncateResultRows } from './toolLoopCore'
-import {
-  validateChartConfigForData,
-  formatChartConfigValidationError,
-} from '../dashboards/helpers'
+import { validateChartConfigForData, formatChartConfigValidationError } from '../dashboards/helpers'
 import {
   type ToolCallResult,
   type ImportStateAccessor,

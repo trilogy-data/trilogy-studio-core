@@ -178,8 +178,7 @@ const toolExecutor = computed(() => {
         imports.map((imp) => ({ id: imp.id, name: imp.name, alias: imp.alias })),
       )
     },
-    getDashboardQueryExecutor: () =>
-      props.getDashboardQueryExecutor(props.dashboard.id) || null,
+    getDashboardQueryExecutor: () => props.getDashboardQueryExecutor(props.dashboard.id) || null,
     refreshItem: props.refreshItem,
     captureDashboardImage: props.captureDashboardImage,
   })
@@ -193,9 +192,7 @@ const systemPrompt = computed(() => {
 
   const availableImports: ChatImport[] = editorStore
     ? Object.values(editorStore.editors)
-        .filter(
-          (editor) => editor.connection === props.dashboard.connection && !editor.deleted,
-        )
+        .filter((editor) => editor.connection === props.dashboard.connection && !editor.deleted)
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((editor) => ({
           id: editor.id,

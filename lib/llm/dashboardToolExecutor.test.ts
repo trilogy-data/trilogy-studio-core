@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { DashboardToolExecutor } from './dashboardToolExecutor'
 import { DashboardModel, CELL_TYPES } from '../dashboards/base'
-import { ChartConfig, ColumnType, Results } from '../editors/results'
+import { ColumnType, Results } from '../editors/results'
+import type { ChartConfig } from '../editors/results'
 
 function makeHeatmapResults(xCount: number, yCount: number): Results {
   const headers = new Map([

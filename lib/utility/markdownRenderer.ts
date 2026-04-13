@@ -403,7 +403,10 @@ function evaluateFormatExpression(
 
   // For numeric format expressions, null/empty values should still resolve instead
   // of leaving the original template token in the rendered markdown.
-  if (numericValue === undefined && (rawValue === null || rawValue === undefined || rawValue === '')) {
+  if (
+    numericValue === undefined &&
+    (rawValue === null || rawValue === undefined || rawValue === '')
+  ) {
     numericValue = 0
   }
 

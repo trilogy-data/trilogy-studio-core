@@ -134,8 +134,7 @@ export function getArtifactRowsFromData(
   startRow: number,
   endRow: number,
 ): ToolCallResult {
-  const jsonData =
-    typeof artifactData?.toJSON === 'function' ? artifactData.toJSON() : artifactData
+  const jsonData = typeof artifactData?.toJSON === 'function' ? artifactData.toJSON() : artifactData
   const rows: any[] = jsonData?.data
 
   if (!Array.isArray(rows)) {
@@ -226,8 +225,7 @@ export async function selectActiveImport(
   }
 
   const activeImports = accessor.getActiveImports()
-  const alreadyActive =
-    activeImports.length === 1 && activeImports[0].id === importToSelect.id
+  const alreadyActive = activeImports.length === 1 && activeImports[0].id === importToSelect.id
 
   if (!alreadyActive) {
     accessor.setActiveImports([importToSelect])
@@ -338,7 +336,12 @@ export async function executeTrilogyQueryCore(
     }
   }
 
-  const extraContent = buildExtraContent(connectionStore, editorStore, connectionName, activeImports)
+  const extraContent = buildExtraContent(
+    connectionStore,
+    editorStore,
+    connectionName,
+    activeImports,
+  )
   const importsForQuery = (activeImports || []).map((imp) => ({
     name: imp.name,
     alias: imp.alias || '',

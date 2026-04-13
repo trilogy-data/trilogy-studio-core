@@ -301,9 +301,7 @@ export const useDashboardStore = defineStore('dashboards', {
 
     // Get only root dashboards (not investigations)
     getRootDashboards(): DashboardModel[] {
-      return Object.values(this.dashboards).filter(
-        (d) => !d.parentDashboardId && !d.deleted,
-      )
+      return Object.values(this.dashboards).filter((d) => !d.parentDashboardId && !d.deleted)
     },
 
     // Add an existing dashboard

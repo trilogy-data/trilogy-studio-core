@@ -109,7 +109,11 @@ export class ChartControlsManager {
   ): void {
     if (initialConfig && !force) {
       const configDefaults = this.getChartTypeDefaults(data, columns, initialConfig.chartType)
-      this.internalConfig.value = { ...this.internalConfig.value, ...configDefaults, ...initialConfig }
+      this.internalConfig.value = {
+        ...this.internalConfig.value,
+        ...configDefaults,
+        ...initialConfig,
+      }
       this.applyMissingDefaultsForCurrentChartType(data, columns)
     } else {
       // Auto select chart type and fields based on data types
@@ -136,7 +140,11 @@ export class ChartControlsManager {
 
     if (field === 'chartType') {
       // Reset other fields when changing chart type
-      const configDefaults = this.getChartTypeDefaults(data, columns, value as ChartConfig['chartType'])
+      const configDefaults = this.getChartTypeDefaults(
+        data,
+        columns,
+        value as ChartConfig['chartType'],
+      )
 
       // Update all config fields
       Object.assign(this.internalConfig.value, configDefaults)

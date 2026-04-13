@@ -610,8 +610,16 @@ export const validateChartConfigForData = (
   // config can auto-fill missing required fields without discarding the user's
   // other choices (e.g. keep their colorField, fill in the missing xField/yField).
   const defaultableChartTypes = [
-    'line', 'bar', 'barh', 'point', 'geo-map', 'tree',
-    'area', 'heatmap', 'headline', 'donut',
+    'line',
+    'bar',
+    'barh',
+    'point',
+    'geo-map',
+    'tree',
+    'area',
+    'heatmap',
+    'headline',
+    'donut',
   ] as const
   type DefaultableChartType = (typeof defaultableChartTypes)[number]
   const scopedChartType: DefaultableChartType | undefined = (
@@ -625,13 +633,23 @@ export const validateChartConfigForData = (
 
   // Validate that referenced fields exist in the data
   const fieldKeys: (keyof ChartConfig)[] = [
-    'xField', 'yField', 'yField2', 'colorField', 'sizeField',
-    'groupField', 'trellisField', 'trellisRowField', 'geoField', 'annotationField',
+    'xField',
+    'yField',
+    'yField2',
+    'colorField',
+    'sizeField',
+    'groupField',
+    'trellisField',
+    'trellisRowField',
+    'geoField',
+    'annotationField',
   ]
   for (const key of fieldKeys) {
     const val = config[key]
     if (typeof val === 'string' && val !== '' && !columns.has(val)) {
-      fieldErrors.push(`Field "${val}" (${key}) does not exist in the query results. Available columns: ${columnNames.join(', ')}.`)
+      fieldErrors.push(
+        `Field "${val}" (${key}) does not exist in the query results. Available columns: ${columnNames.join(', ')}.`,
+      )
     }
   }
 
@@ -661,23 +679,23 @@ export const validateChartConfigForData = (
     if (!hasLatLon && !hasGeo) {
       fieldErrors.push(
         `geo-map requires geographic columns (latitude/longitude pairs or state/country codes) but none were found. ` +
-        `Available columns: ${columnNames.join(', ')}. ` +
-        `Consider using a different chart type or adjusting the query to include geographic fields.`,
+          `Available columns: ${columnNames.join(', ')}. ` +
+          `Consider using a different chart type or adjusting the query to include geographic fields.`,
       )
     }
 
     // Validate xField/yField are actual lat/long when used for geo-map without geoField
     if (!config.geoField && !hasGeo) {
-      if (config.xField && lonCols.length > 0 && !lonCols.some(c => c.name === config.xField)) {
+      if (config.xField && lonCols.length > 0 && !lonCols.some((c) => c.name === config.xField)) {
         fieldErrors.push(
           `For geo-map, xField should be a longitude column. "${config.xField}" is not a longitude field. ` +
-          `Available longitude columns: ${lonCols.map(c => c.name).join(', ') || 'none'}.`,
+            `Available longitude columns: ${lonCols.map((c) => c.name).join(', ') || 'none'}.`,
         )
       }
-      if (config.yField && latCols.length > 0 && !latCols.some(c => c.name === config.yField)) {
+      if (config.yField && latCols.length > 0 && !latCols.some((c) => c.name === config.yField)) {
         fieldErrors.push(
           `For geo-map, yField should be a latitude column. "${config.yField}" is not a latitude field. ` +
-          `Available latitude columns: ${latCols.map(c => c.name).join(', ') || 'none'}.`,
+            `Available latitude columns: ${latCols.map((c) => c.name).join(', ') || 'none'}.`,
         )
       }
     }
