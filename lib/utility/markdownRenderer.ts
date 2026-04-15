@@ -58,6 +58,7 @@ export function sanitizeHtml(html: string): string {
       'h2',
       'h3',
       'h4',
+      'hr',
       'p',
       'ul',
       'ol',
@@ -370,15 +371,19 @@ function evaluateFormatExpression(
   if (!formatSpec) return undefined
 
   let numericValue: number | undefined
+  let rawValue: any = undefined
 
   if (/^\(.*\)$/.test(exprPart)) {
     // Parenthesised arithmetic: (a/b*100)
     numericValue = evaluateArithmeticExpr(exprPart.slice(1, -1), data)
   } else if (/^\w+$/.test(exprPart)) {
     // Simple field name: total_flights
-    const val = data[0][exprPart]
-    const num = Number(val)
-    numericValue = val !== null && val !== undefined && val !== '' && !isNaN(num) ? num : undefined
+    rawValue = data[0][exprPart]
+    const num = Number(rawValue)
+    numericValue =
+      rawValue !== null && rawValue !== undefined && rawValue !== '' && !isNaN(num)
+        ? num
+        : undefined
   } else {
     // data[N].field pattern: data[0].crime_count
     const dataIndexMatch = exprPart.match(/^data\[(\d+)\]\.(.+)$/)
@@ -386,12 +391,23 @@ function evaluateFormatExpression(
       const [, index, fieldPath] = dataIndexMatch
       const rowIndex = parseInt(index)
       if (data[rowIndex]) {
-        const val = getNestedValue(data[rowIndex], fieldPath)
-        const num = Number(val)
+        rawValue = getNestedValue(data[rowIndex], fieldPath)
+        const num = Number(rawValue)
         numericValue =
-          val !== null && val !== undefined && val !== '' && !isNaN(num) ? num : undefined
+          rawValue !== null && rawValue !== undefined && rawValue !== '' && !isNaN(num)
+            ? num
+            : undefined
       }
     }
+  }
+
+  // For numeric format expressions, null/empty values should still resolve instead
+  // of leaving the original template token in the rendered markdown.
+  if (
+    numericValue === undefined &&
+    (rawValue === null || rawValue === undefined || rawValue === '')
+  ) {
+    numericValue = 0
   }
 
   if (numericValue === undefined) return undefined
@@ -437,6 +453,7 @@ export function evaluateFallback(
       const formatResult = evaluateFormatExpression(expression, data, loading)
       if (formatResult !== undefined) return formatResult
       const value = evaluateExpression(expression, data, loading)
+      if (value === null || value === '') return 'Null'
       return value !== undefined ? String(value) : `{${expression}}`
     }
   } catch (error) {
@@ -820,6 +837,19 @@ function processHeaders(html: string): string {
 }
 
 /**
+ * Process markdown horizontal rules. Matches a line containing only 3+ of
+ * `-`, `*`, or `_` (optionally separated by spaces). Intentionally runs after
+ * table processing — a bare `---` has no `|`, so tables won't consume it — and
+ * before emphasis so that `***` rules aren't mistaken for bold markers.
+ */
+function processHorizontalRules(html: string): string {
+  return html.replace(
+    /^[ \t]*(?:-[ \t]*){3,}$|^[ \t]*(?:\*[ \t]*){3,}$|^[ \t]*(?:_[ \t]*){3,}$/gm,
+    '<hr class="rendered-markdown-hr">',
+  )
+}
+
+/**
  * Process markdown lists
  */
 function processLists(html: string): string {
@@ -1030,6 +1060,7 @@ export function convertMarkdownToHtml(text: string): string {
 
   html = processHeaders(html)
   html = processTables(html) // Process tables before lists to avoid conflicts
+  html = processHorizontalRules(html) // After tables (table seps contain `|`), before emphasis
   html = processLists(html)
   html = processEmphasis(html)
   html = processLinks(html)

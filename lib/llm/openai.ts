@@ -85,12 +85,29 @@ export class OpenAIProvider extends LLMProvider {
       maxRetries: 3,
       initialDelayMs: 1000,
       retryStatusCodes: [429, 500, 502, 503, 504], // Add common API error codes
+      errorBodyExtractor: OpenAIProvider.extractErrorMessage,
       onRetry: (attempt, delayMs, error) => {
         console.warn(
           `Retry attempt ${attempt} after ${delayMs}ms delay due to error: ${error.message}`,
         )
       },
     }
+  }
+
+  /**
+   * Extract a rich error message from an OpenAI error response body.
+   * Expected body format: {"error":{"message":"...","type":"...","param":null,"code":"..."}}
+   */
+  static async extractErrorMessage(response: Response): Promise<string> {
+    const data = await response.json()
+    if (data?.error?.message) {
+      const code = data.error.code ? ` (${data.error.code})` : ''
+      return `OpenAI API error${code}: ${data.error.message}`
+    }
+    if (data?.error) {
+      return `OpenAI API error: ${JSON.stringify(data.error)}`
+    }
+    return `OpenAI API error: HTTP ${response.status}: ${response.statusText}`
   }
 
   async reset(): Promise<void> {
@@ -149,12 +166,36 @@ export class OpenAIProvider extends LLMProvider {
         })
       } else if (msg.role === 'user' && msg.toolResults && msg.toolResults.length > 0) {
         // Tool results - OpenAI uses role: 'tool' for each result
+        // The tool role only accepts string content, so images are sent as a
+        // follow-up user message with an image_url content block.
+        let hasImage = false
         for (const tr of msg.toolResults) {
           cleanHistory.push({
             role: 'tool',
             tool_call_id: tr.toolCallId,
             content: tr.result,
           })
+          if (tr.imageData) {
+            hasImage = true
+          }
+        }
+        if (hasImage) {
+          const imageParts: any[] = []
+          for (const tr of msg.toolResults) {
+            if (tr.imageData) {
+              imageParts.push({
+                type: 'image_url',
+                image_url: {
+                  url: `data:${tr.imageData.mediaType};base64,${tr.imageData.data}`,
+                },
+              })
+            }
+          }
+          imageParts.push({
+            type: 'text',
+            text: 'Above is the rendered screenshot referenced by the preceding tool result. Review it visually.',
+          })
+          cleanHistory.push({ role: 'user', content: imageParts })
         }
       } else {
         // Regular text message

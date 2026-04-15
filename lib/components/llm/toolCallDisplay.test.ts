@@ -50,12 +50,13 @@ describe('toolCallDisplay', () => {
   })
 
   it('condenses contiguous repeated tool calls into a counted badge', () => {
-    const condensed = condenseToolCalls([
+    const calls = [
       buildToolCall('1', 'update_artifact'),
       buildToolCall('2', 'update_artifact'),
       buildToolCall('3', 'update_artifact'),
       buildToolCall('4', 'return_to_user'),
-    ])
+    ]
+    const condensed = condenseToolCalls(calls)
 
     expect(condensed).toEqual([
       {
@@ -64,6 +65,7 @@ describe('toolCallDisplay', () => {
         count: 3,
         success: true,
         error: undefined,
+        calls: [calls[0], calls[1], calls[2]],
       },
       {
         key: '4',
@@ -71,6 +73,7 @@ describe('toolCallDisplay', () => {
         count: 1,
         success: true,
         error: undefined,
+        calls: [calls[3]],
       },
     ])
   })

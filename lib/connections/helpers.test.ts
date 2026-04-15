@@ -24,10 +24,7 @@ function makeTable(name: string, schema: string, database: string): Table {
 
 describe('buildConnectionTree', () => {
   describe('schema-less connections (hasSchema=false)', () => {
-    const tables = [
-      makeTable('artists', 'main', 'main'),
-      makeTable('albums', 'main', 'main'),
-    ]
+    const tables = [makeTable('artists', 'main', 'main'), makeTable('albums', 'main', 'main')]
     const schema = new Schema('main', tables, 'main')
     const db = new Database('main', [schema])
 
@@ -88,10 +85,7 @@ describe('buildConnectionTree', () => {
   })
 
   describe('schema connections (hasSchema=true)', () => {
-    const tables = [
-      makeTable('users', 'public', 'mydb'),
-      makeTable('orders', 'public', 'mydb'),
-    ]
+    const tables = [makeTable('users', 'public', 'mydb'), makeTable('orders', 'public', 'mydb')]
     const schema = new Schema('public', tables, 'mydb')
     const db = new Database('mydb', [schema])
 

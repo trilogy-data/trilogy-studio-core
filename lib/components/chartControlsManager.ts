@@ -4,6 +4,21 @@ import type { ChartConfig, ResultColumn, Row } from '../editors/results'
 import { determineDefaultConfig } from '../dashboards/helpers'
 import { ChromaChartHelpers } from './chartHelpers'
 
+const DEFAULTABLE_CHART_TYPES = [
+  'bar',
+  'line',
+  'barh',
+  'point',
+  'geo-map',
+  'tree',
+  'area',
+  'headline',
+  'donut',
+  'heatmap',
+] as const
+
+type DefaultableChartType = (typeof DEFAULTABLE_CHART_TYPES)[number]
+
 export class ChartControlsManager {
   // Controls visibility state
   public controlsVisible = ref(false)
@@ -26,6 +41,49 @@ export class ChartControlsManager {
   })
 
   constructor(private chartHelpers: ChromaChartHelpers) {}
+
+  private getChartTypeDefaults(
+    data: readonly Row[],
+    columns: Map<string, ResultColumn>,
+    chartType?: ChartConfig['chartType'],
+  ): Partial<ChartConfig> {
+    if (chartType && (DEFAULTABLE_CHART_TYPES as readonly string[]).includes(chartType)) {
+      return determineDefaultConfig(data, columns, chartType as DefaultableChartType)
+    }
+    return determineDefaultConfig(data, columns)
+  }
+
+  private applyMissingDefaultsForCurrentChartType(
+    data: readonly Row[],
+    columns: Map<string, ResultColumn>,
+  ): void {
+    const chartType = this.internalConfig.value.chartType
+    const defaults = this.getChartTypeDefaults(data, columns, chartType)
+    const fieldsToBackfill: Array<keyof ChartConfig> = [
+      'xField',
+      'yField',
+      'yField2',
+      'colorField',
+      'sizeField',
+      'groupField',
+      'trellisField',
+      'trellisRowField',
+      'geoField',
+      'annotationField',
+    ]
+
+    for (const field of fieldsToBackfill) {
+      const currentValue = this.internalConfig.value[field]
+      const defaultValue = defaults[field]
+      if (
+        (currentValue === undefined || currentValue === '') &&
+        typeof defaultValue === 'string' &&
+        defaultValue !== ''
+      ) {
+        this.internalConfig.value[field] = defaultValue as never
+      }
+    }
+  }
 
   // Hover event handlers
   onChartMouseEnter(): void {
@@ -50,11 +108,16 @@ export class ChartControlsManager {
     force: boolean = false,
   ): void {
     if (initialConfig && !force) {
-      // Use external config if provided
-      this.internalConfig.value = { ...this.internalConfig.value, ...initialConfig }
+      const configDefaults = this.getChartTypeDefaults(data, columns, initialConfig.chartType)
+      this.internalConfig.value = {
+        ...this.internalConfig.value,
+        ...configDefaults,
+        ...initialConfig,
+      }
+      this.applyMissingDefaultsForCurrentChartType(data, columns)
     } else {
       // Auto select chart type and fields based on data types
-      const configDefaults = determineDefaultConfig(data, columns)
+      const configDefaults = this.getChartTypeDefaults(data, columns)
       this.internalConfig.value = { ...this.internalConfig.value, ...configDefaults }
       if (onChartConfigChange) {
         onChartConfigChange({ ...this.internalConfig.value })
@@ -77,24 +140,16 @@ export class ChartControlsManager {
 
     if (field === 'chartType') {
       // Reset other fields when changing chart type
-      const configDefaults = determineDefaultConfig(
+      const configDefaults = this.getChartTypeDefaults(
         data,
         columns,
-        value as
-          | 'bar'
-          | 'line'
-          | 'barh'
-          | 'point'
-          | 'geo-map'
-          | 'tree'
-          | 'area'
-          | 'headline'
-          | 'donut'
-          | 'heatmap',
+        value as ChartConfig['chartType'],
       )
 
       // Update all config fields
       Object.assign(this.internalConfig.value, configDefaults)
+    } else {
+      this.applyMissingDefaultsForCurrentChartType(data, columns)
     }
 
     // Notify parent component if the callback is provided

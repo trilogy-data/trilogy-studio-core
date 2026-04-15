@@ -114,9 +114,25 @@
             <input
               type="checkbox"
               :checked="item.connection.saveCredential"
-              @change="toggleSaveCredential(item.connection)"
+              @change="handleToggleSaveCredential(item.connection)"
             />
             <span class="checkbox-label">Save credentials</span>
+            <span
+              v-if="saveCredentialStatus === 'saving'"
+              class="save-credential-status saving"
+              :data-testid="`save-credential-saving-${item.connection.name}`"
+            >
+              <i class="mdi mdi-loading mdi-spin"></i>
+              Saving...
+            </span>
+            <span
+              v-else-if="saveCredentialStatus === 'saved'"
+              class="save-credential-status saved"
+              :data-testid="`save-credential-saved-${item.connection.name}`"
+            >
+              <i class="mdi mdi-check-circle"></i>
+              Saved
+            </span>
           </label>
         </div>
 
@@ -234,7 +250,9 @@ export default defineComponent({
     const showApiKey = ref<boolean>(false)
     const selectedModel = ref<string>('')
     const selectedFastModel = ref<string>('')
+    const saveCredentialStatus = ref<'idle' | 'saving' | 'saved'>('idle')
     let apiKeySaveTimeout: ReturnType<typeof setTimeout> | null = null
+    let saveCredentialTimeout: ReturnType<typeof setTimeout> | null = null
 
     // Initialize values on mount
     onMounted(() => {
@@ -374,6 +392,30 @@ export default defineComponent({
       emit('toggleSaveCredential', connection)
     }
 
+    // Wraps the toggle emit with a brief "saving" → "saved" visual so the user
+    // sees feedback that enabling the checkbox actually persisted their key.
+    // Previously, checking the box after typing a key silently failed because
+    // the base provider's `changed` flag had already been reset by the prior
+    // save — localStorage then treated the toggle as a no-op. The underlying
+    // fix is in base.ts (setSaveCredential now marks the connection changed);
+    // this animation exists so the user can tell the save happened.
+    const handleToggleSaveCredential = (connection: LLMProvider) => {
+      if (saveCredentialTimeout) {
+        clearTimeout(saveCredentialTimeout)
+        saveCredentialTimeout = null
+      }
+      saveCredentialStatus.value = 'saving'
+      emit('toggleSaveCredential', connection)
+      // Hold "saving" long enough to register, then flip to "saved" and clear.
+      saveCredentialTimeout = setTimeout(() => {
+        saveCredentialStatus.value = 'saved'
+        saveCredentialTimeout = setTimeout(() => {
+          saveCredentialStatus.value = 'idle'
+          saveCredentialTimeout = null
+        }, 1500)
+      }, 400)
+    }
+
     // Get provider type for icon
     const getProviderType = (connection: LLMProvider): string => {
       if (connection instanceof AnthropicProvider) {
@@ -489,6 +531,8 @@ export default defineComponent({
       handleModelChange,
       handleFastModelChange,
       toggleSaveCredential,
+      handleToggleSaveCredential,
+      saveCredentialStatus,
       deleteConnection,
       deleteChat,
       contextMenuItems,
@@ -605,6 +649,51 @@ export default defineComponent({
 
 .save-credential-toggle input[type='checkbox'] {
   margin: 0;
+}
+
+.save-credential-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  font-size: 11px;
+  animation: save-status-fade 180ms ease-out;
+}
+
+.save-credential-status.saving {
+  color: var(--text-faint);
+}
+
+.save-credential-status.saved {
+  color: var(--special-text, #4caf50);
+}
+
+.save-credential-status i {
+  font-size: 13px;
+}
+
+.mdi-spin {
+  animation: mdi-spin 1s linear infinite;
+}
+
+@keyframes save-status-fade {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes mdi-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .checkbox-label {

@@ -10,6 +10,17 @@ export interface LLMToolResult {
   toolCallId: string
   toolName: string
   result: string
+  /**
+   * Optional image attached to this tool result. Providers that support vision
+   * (e.g. Anthropic) embed this as an image content block in the tool_result so
+   * the model can actually see it. Providers without vision support ignore it.
+   */
+  imageData?: {
+    /** Base64-encoded image bytes (no data URL prefix) */
+    data: string
+    /** MIME type, e.g. 'image/png' */
+    mediaType: string
+  }
 }
 
 // Generic interface for LLM responses
@@ -120,6 +131,14 @@ export abstract class LLMProvider {
     }
     this.changed = true
     this.fastModel = fastModel
+  }
+
+  setSaveCredential(saveCredential: boolean): void {
+    if (this.saveCredential === saveCredential) {
+      return // No change, do nothing
+    }
+    this.changed = true
+    this.saveCredential = saveCredential
   }
 
   getFastModel(): string {

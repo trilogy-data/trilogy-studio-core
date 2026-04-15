@@ -31,12 +31,13 @@
   align-items: center;
   justify-content: center;
   min-height: 100%;
-  background: #f8f9fa;
+  background: var(--main-bg-color, #f8f9fa);
+  color: var(--text-color, #1f2937);
 }
 
 .credentials-card {
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: var(--panel-header-bg, #ffffff);
+  border: 1px solid var(--border-light, #e0e0e0);
   padding: 2rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   text-align: center;
@@ -45,21 +46,21 @@
 }
 
 .credentials-icon {
-  color: #0ea5e9;
+  color: var(--special-text, #0ea5e9);
   margin-bottom: 1rem;
   display: flex;
   justify-content: center;
 }
 
 .credentials-title {
-  color: #1f2937;
+  color: var(--text-color, #1f2937);
   font-size: 1.5rem;
   font-weight: 600;
   margin: 0 0 1rem 0;
 }
 
 .credentials-message {
-  color: #6b7280;
+  color: var(--text-color-muted, #6b7280);
   font-size: 1rem;
   line-height: 1.5;
   margin: 0 0 1.5rem 0;
@@ -70,15 +71,15 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  color: #0ea5e9;
+  color: var(--special-text, #0ea5e9);
   font-size: 0.875rem;
 }
 
 .spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid #e5e7eb;
-  border-top: 2px solid #0ea5e9;
+  border: 2px solid var(--border-light, #e5e7eb);
+  border-top: 2px solid var(--special-text, #0ea5e9);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

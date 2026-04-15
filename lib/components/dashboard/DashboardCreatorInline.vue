@@ -1,13 +1,33 @@
 <template>
   <div v-if="visible" class="dashboard-creator">
     <h4>Create New Dashboard</h4>
+    <!-- Prompt-first when an LLM is configured: the assistant can pick the title. -->
+    <div v-if="showPromptField" class="form-group">
+      <label for="dashboard-prompt">Describe your dashboard</label>
+      <textarea
+        id="dashboard-prompt"
+        v-model="dashboardPrompt"
+        placeholder="Describe what you want to analyze. The assistant will build it (and pick a title if you skip the next field)..."
+        rows="3"
+        @keyup.ctrl.enter="createDashboard"
+        :data-testid="testTag ? `dashboard-creator-prompt-${testTag}` : 'dashboard-creator-prompt'"
+      ></textarea>
+    </div>
+    <div v-if="showPromptField" class="form-divider">
+      <span>or set manually</span>
+    </div>
     <div class="form-group">
-      <label for="dashboard-name">Name</label>
+      <label for="dashboard-name">
+        Name
+        <span v-if="showPromptField && dashboardPrompt.trim()" class="optional-label"
+          >(optional)</span
+        >
+      </label>
       <input
         id="dashboard-name"
         v-model="dashboardName"
         type="text"
-        placeholder="My Dashboard"
+        :placeholder="namePlaceholder"
         @keyup.enter="createDashboard"
         :data-testid="testTag ? `dashboard-creator-name-${testTag}` : 'dashboard-creator-name'"
       />
@@ -43,21 +63,10 @@
         </option>
       </select>
     </div>
-    <!-- Added prompt input field based on TODO -->
-    <div v-if="showPromptField" class="form-group">
-      <label for="dashboard-prompt">Dashboard Prompt</label>
-      <textarea
-        id="dashboard-prompt"
-        v-model="dashboardPrompt"
-        placeholder="Describe what you want to analyze..."
-        rows="3"
-        :data-testid="testTag ? `dashboard-creator-prompt-${testTag}` : 'dashboard-creator-prompt'"
-      ></textarea>
-    </div>
     <div class="form-actions">
       <button
         @click="createDashboard"
-        :disabled="!dashboardName || !selectedConnection || !selectedImport"
+        :disabled="!canSubmit"
         :data-testid="testTag ? `dashboard-creator-submit-${testTag}` : 'dashboard-creator-submit'"
         class="create-btn"
       >
@@ -79,7 +88,6 @@ import { ref, computed, inject, type Ref } from 'vue'
 import type { DashboardStoreType } from '../../stores/dashboardStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
-import QueryExecutionService from '../../stores/queryExecutionService'
 import { type EditorStoreType } from '../../stores/editorStore'
 import { type DashboardImport } from '../../dashboards/base'
 
@@ -100,17 +108,10 @@ export default {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
-    const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     const saveDashboards = inject<CallableFunction>('saveDashboards')
+    const setActiveDashboardNav = inject<(dashboard: string | null) => void>('setActiveDashboard')
 
-    if (
-      !dashboardStore ||
-      !connectionStore ||
-      !llmStore ||
-      !queryExecutionService ||
-      !editorStore ||
-      !saveDashboards
-    ) {
+    if (!dashboardStore || !connectionStore || !llmStore || !editorStore || !saveDashboards) {
       throw new Error('Dashboard or connection store is not provided!')
     }
 
@@ -122,6 +123,21 @@ export default {
     // Show prompt field only if there's an active default LLM connection
     const showPromptField = computed(() => {
       return llmStore.hasActiveDefaultConnection
+    })
+
+    // When a prompt is supplied, the assistant can choose the title — making it
+    // optional. Otherwise we still require a name.
+    const canSubmit = computed(() => {
+      if (!selectedConnection.value) return false
+      if (showPromptField.value && dashboardPrompt.value.trim()) return true
+      return !!dashboardName.value.trim()
+    })
+
+    const namePlaceholder = computed(() => {
+      if (showPromptField.value && dashboardPrompt.value.trim()) {
+        return 'Leave blank to let the assistant choose'
+      }
+      return 'My Dashboard'
     })
 
     const connections = computed(() => {
@@ -156,54 +172,59 @@ export default {
     }
 
     const createDashboard = async () => {
-      if (!dashboardName.value || !selectedConnection.value) return
+      if (!canSubmit.value) return
 
       try {
-        // Create new dashboard
-        const dashboard = dashboardStore.newDashboard(dashboardName.value, selectedConnection.value)
-
-        // Use the selected import instead of hardcoded 'lineitem'
-        const importToUse = availableImports.value.find((imp) => imp.id === selectedImport.value)
-        if (!importToUse) {
-          throw new Error('Selected import not found')
+        // If the user only supplied a prompt, generate a placeholder name
+        // (the agent will rename via update_dashboard_info / set_dashboard_title).
+        let nameToUse = dashboardName.value.trim()
+        if (!nameToUse) {
+          nameToUse = `Dashboard ${new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}`
         }
-        dashboardStore.updateDashboardImports(dashboard.id, [importToUse])
+
+        // Create new dashboard
+        const dashboard = dashboardStore.newDashboard(nameToUse, selectedConnection.value)
+
+        // Apply the selected import if one was chosen. When the user goes through
+        // the agent path, they can leave this blank and let the assistant pick.
+        if (selectedImport.value) {
+          const importToUse = availableImports.value.find((imp) => imp.id === selectedImport.value)
+          if (importToUse) {
+            dashboardStore.updateDashboardImports(dashboard.id, [importToUse])
+          }
+        }
+
+        // If the user supplied an AI prompt, queue it for the chat panel
+        // before navigating so the Dashboard view picks it up on mount and
+        // auto-opens the chat with the prompt prepopulated.
+        const queuedPrompt = showPromptField.value ? dashboardPrompt.value.trim() : ''
+        if (queuedPrompt) {
+          dashboardStore.setPendingChatPrompt(dashboard.id, queuedPrompt)
+        }
 
         // Reset form
         dashboardName.value = ''
         selectedImport.value = ''
+        dashboardPrompt.value = ''
 
         saveDashboards()
 
         // Close creator
         emit('close')
 
-        // Select the new dashboard
-        dashboardStore.setActiveDashboard(dashboard.id)
+        // Navigate to the new dashboard. Prefer the screen-navigation hook
+        // (opens a tab) and fall back to the store setter for environments
+        // where navigation isn't injected.
+        if (setActiveDashboardNav) {
+          setActiveDashboardNav(dashboard.id)
+        } else {
+          dashboardStore.setActiveDashboard(dashboard.id)
+        }
         console.log('New dashboard created:', dashboard.id)
         emit('dashboard-created', dashboard.id)
-
-        // Process prompt if it's provided and LLM connection exists
-        if (showPromptField.value && dashboardPrompt.value.trim()) {
-          // Use the actual prompt from the form instead of hardcoded value
-          const promptSpec = await dashboardStore.generatePromptSpec(
-            dashboardPrompt.value,
-            llmStore,
-            queryExecutionService,
-            editorStore,
-          )
-          console.log('Prompt spec generated:', promptSpec)
-
-          if (promptSpec) {
-            dashboardStore.populateFromPromptSpec(
-              dashboard.id,
-              promptSpec,
-              llmStore,
-              queryExecutionService,
-              editorStore,
-            )
-          }
-        }
       } catch (error) {
         console.error('Failed to create dashboard:', error)
         // Handle error (e.g., dashboard with name already exists)
@@ -223,6 +244,8 @@ export default {
       selectedConnection,
       dashboardPrompt,
       showPromptField,
+      canSubmit,
+      namePlaceholder,
       connections,
       availableImports,
       selectedImport,
@@ -251,6 +274,33 @@ export default {
 
 .form-group {
   margin-bottom: 10px;
+}
+
+.form-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  font-size: 11px;
+  color: var(--text-faint, var(--text-color));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-divider::before,
+.form-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.optional-label {
+  color: var(--text-faint, var(--text-color));
+  font-weight: normal;
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .form-group label {

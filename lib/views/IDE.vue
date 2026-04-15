@@ -227,22 +227,29 @@ import type { DrillDownEvent } from '../events/display.ts'
 import UserSettings from '../components/user/UserSettings.vue'
 import UserProfile from '../components/user/UserProfile.vue'
 import { defineComponent, type Component } from 'vue'
+import PageLoading from '../components/PageLoading.vue'
+
+const asyncPage = (loader: () => Promise<any>) =>
+  defineAsyncComponent({
+    loader,
+    loadingComponent: PageLoading,
+    delay: 150,
+  })
+
 // Lazy load all page components
-const TutorialPage = defineAsyncComponent(() => import('./TutorialPage.vue'))
+const TutorialPage = asyncPage(() => import('./TutorialPage.vue'))
 const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar.vue'))
-const Editor = defineAsyncComponent(() => import('../components/editor/Editor.vue'))
-const WelcomePage = defineAsyncComponent(() => import('./WelcomePage.vue'))
-const Dashboard = defineAsyncComponent(() => import('../components/dashboard/Dashboard.vue'))
+const Editor = asyncPage(() => import('../components/editor/Editor.vue'))
+const WelcomePage = asyncPage(() => import('./WelcomePage.vue'))
+const Dashboard = asyncPage(() => import('../components/dashboard/Dashboard.vue'))
 const ResultsView = defineAsyncComponent(() => import('../components/editor/ResultComponent.vue'))
 
 // Lazy load all view components
-const ModelView = defineAsyncComponent(() => import('./ModelView.vue'))
-const CommunityModels = defineAsyncComponent(
-  () => import('../components/community/CommunityModels.vue'),
-)
-const JobsView = defineAsyncComponent(() => import('../components/jobs/JobsView.vue'))
-const ConnectionView = defineAsyncComponent(() => import('./ConnectionView.vue'))
-const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
+const ModelView = asyncPage(() => import('./ModelView.vue'))
+const CommunityModels = asyncPage(() => import('../components/community/CommunityModels.vue'))
+const JobsView = asyncPage(() => import('../components/jobs/JobsView.vue'))
+const ConnectionView = asyncPage(() => import('./ConnectionView.vue'))
+const LLMView = asyncPage(() => import('./LLMView.vue'))
 const AssetAutoImporter = defineAsyncComponent(() => import('../components/AssetAutoImporter.vue'))
 const ChatCreatorModal = defineAsyncComponent(
   () => import('../components/llm/ChatCreatorModal.vue'),

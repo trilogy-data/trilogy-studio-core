@@ -5,7 +5,7 @@
 
 import type { LLMMessage, LLMRequestOptions, LLMResponse, LLMToolCall, LLMToolResult } from './base'
 import type { ChatMessage, ChatArtifact, ChatToolCall } from '../chats/chat'
-import type { ToolCallResult } from './editorRefinementToolExecutor'
+import type { ToolCallResult } from './sharedToolHelpers'
 
 const USER_INPUT_START = '<user_input>'
 const USER_INPUT_END = '</user_input>'
@@ -354,10 +354,15 @@ export async function runToolLoop(
           result: '',
         })
 
+        // When the LLM puts its whole response into the terminating tool call
+        // (e.g. return_to_user), responseText is empty. Surface the tool's
+        // message as the assistant content so the user actually sees it.
+        const finalContent = responseText?.trim() ? responseText : (result.message ?? '')
+
         // Persist assistant message with tool calls
         messagePersistence.addMessage({
           role: 'assistant',
-          content: responseText,
+          content: finalContent,
           toolCalls: toolCalls.slice(0, executedToolCalls.length),
           executedToolCalls: executedToolCalls,
         })
@@ -406,6 +411,7 @@ export async function runToolLoop(
         toolCallId: toolCall.id,
         toolName: toolCall.name,
         result: resultText,
+        imageData: result.imageData,
       })
     }
 

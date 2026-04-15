@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { MAX_TOOL_RESULT_ROWS, truncateResultRows, formatToolResultText } from './toolLoopCore'
-import type { ToolCallResult } from './editorRefinementToolExecutor'
+import type { ToolCallResult } from './sharedToolHelpers'
 
 // Helper: build a plain jsonData object with N rows
 function makeJsonData(rowCount: number) {

@@ -149,17 +149,23 @@ import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import useScreenNavigation, { type Tab } from '../stores/useScreenNavigation.ts'
 import { type DashboardStoreType } from '../stores/dashboardStore.ts'
 import { defineComponent, type Component } from 'vue'
+import PageLoading from '../components/PageLoading.vue'
 
-const TutorialPage = defineAsyncComponent(() => import('./TutorialPage.vue'))
+const asyncPage = (loader: () => Promise<any>) =>
+  defineAsyncComponent({
+    loader,
+    loadingComponent: PageLoading,
+    delay: 150,
+  })
+
+const TutorialPage = asyncPage(() => import('./TutorialPage.vue'))
 const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar.vue'))
-const Editor = defineAsyncComponent(() => import('../components/editor/Editor.vue'))
+const Editor = asyncPage(() => import('../components/editor/Editor.vue'))
 const DataTable = defineAsyncComponent(() => import('../components/DataTable.vue'))
-const WelcomePage = defineAsyncComponent(() => import('./WelcomePage.vue'))
-const MobileDashboard = defineAsyncComponent(
-  () => import('../components/dashboard/DashboardMobile.vue'),
-)
+const WelcomePage = asyncPage(() => import('./WelcomePage.vue'))
+const MobileDashboard = asyncPage(() => import('../components/dashboard/DashboardMobile.vue'))
 const ResultsView = defineAsyncComponent(() => import('../components/editor/ResultComponent.vue'))
-const LLMView = defineAsyncComponent(() => import('./LLMView.vue'))
+const LLMView = asyncPage(() => import('./LLMView.vue'))
 const ChatCreatorModal = defineAsyncComponent(
   () => import('../components/llm/ChatCreatorModal.vue'),
 )

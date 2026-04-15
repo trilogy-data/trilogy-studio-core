@@ -55,7 +55,8 @@ import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExec
 import ErrorMessage from '../ErrorMessage.vue'
 import DashboardDataSelector from './DashboardDataSelector.vue'
 import LoadingView from '../LoadingView.vue'
-import { type GridItemDataResponse, type DimensionClick } from '../../dashboards/base'
+import { type GridItemDataResponse } from '../../dashboards/base'
+import type { CrossFilterEntry } from '../../dashboards/conditions'
 import type { AnalyticsStoreType } from '../../stores/analyticsStore'
 import { useDashboardItemShell } from './useDashboardItemShell'
 
@@ -161,12 +162,15 @@ export default defineComponent({
       analyticsType: 'FILTER',
     })
 
-    const handleDimensionClick = (dimension: DimensionClick) => {
+    const handleDimensionClick = (payload: {
+      filters: Record<string, CrossFilterEntry>
+      append: boolean
+    }) => {
       emit('dimension-click', {
         source: props.itemId,
-        filters: dimension.filters,
-        chart: dimension.chart,
-        append: dimension.append,
+        filters: payload.filters,
+        chart: {},
+        append: payload.append,
       })
     }
 

@@ -4,18 +4,12 @@ import { ref, inject, computed } from 'vue'
 import { CELL_TYPES } from '../../dashboards/base'
 import type { DashboardStoreType } from '../../stores/dashboardStore'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
-import QueryExecutionService from '../../stores/queryExecutionService'
-import type { EditorStoreType } from '../../stores/editorStore'
 
 const dashboardStore = inject<DashboardStoreType>('dashboardStore') as DashboardStoreType
-const editorStore = inject<EditorStoreType>('editorStore') as EditorStoreType
 const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore') as LLMConnectionStoreType
-const queryExecutionService = inject<QueryExecutionService>(
-  'queryExecutionService',
-) as QueryExecutionService
 const saveDashboards = inject<CallableFunction>('saveDashboards') as CallableFunction
-if (!dashboardStore || !llmStore || !queryExecutionService || !saveDashboards) {
-  throw new Error('DashboardStore, LLMConnectionStore, or QueryExecutionService not provided')
+if (!dashboardStore || !llmStore || !saveDashboards) {
+  throw new Error('DashboardStore or LLMConnectionStore not provided')
 }
 // Props definition
 export interface DashboardCTAProps {
@@ -32,16 +26,13 @@ const hasLlmConnection = computed(() => {
 const emit = defineEmits<{
   (e: 'template-selected', templateName: string): void
   (e: 'description-updated', description: string): void
+  (e: 'start-chat-with-prompt', prompt: string): void
 }>()
 
 // Dashboard description
 const description = ref('')
 // Dashboard prompt for LLM
 const dashboardPrompt = ref('')
-// LLM generation loading state
-const isGenerating = ref(false)
-// LLM generation error state
-const generationError = ref('')
 
 // Template selection state
 const selectedTemplate = ref<string | null>(null)
@@ -147,53 +138,14 @@ function updateDescription(): void {
   }
 }
 
-// Fully implemented LLM generation function
-async function generateDashboardWithLLM(): Promise<void> {
-  if (!dashboardPrompt.value.trim()) {
-    generationError.value = 'Please provide a prompt for the dashboard generation.'
-    return
-  }
-
-  try {
-    isGenerating.value = true
-    generationError.value = ''
-
-    // Generate the prompt specification based on user input
-    const promptSpec = await dashboardStore.generatePromptSpec(
-      dashboardPrompt.value,
-      llmStore,
-      queryExecutionService,
-      editorStore,
-    )
-    console.log('Prompt spec generated:', promptSpec)
-
-    if (promptSpec) {
-      // Populate the dashboard with the generated specification
-      await dashboardStore.populateFromPromptSpec(
-        props.dashboardId,
-        promptSpec,
-        llmStore,
-        queryExecutionService,
-        editorStore,
-      )
-
-      // Update the dashboard description if not already set
-      if (!description.value && promptSpec.description) {
-        description.value = promptSpec.description
-        updateDescription()
-      }
-
-      // Save the dashboards
-      saveDashboards()
-    } else {
-      generationError.value = 'Failed to generate dashboard specification.'
-    }
-  } catch (error) {
-    console.error('Error generating dashboard with LLM:', error)
-    generationError.value = 'An error occurred while generating the dashboard.'
-  } finally {
-    isGenerating.value = false
-  }
+// Hand the prompt off to the dashboard chat panel. The chat assistant
+// auto-forks the dashboard on first edit and works on it incrementally,
+// replacing the previous one-shot generate-and-populate flow.
+function startChatWithPrompt(): void {
+  const prompt = dashboardPrompt.value.trim()
+  if (!prompt) return
+  emit('start-chat-with-prompt', prompt)
+  dashboardPrompt.value = ''
 }
 </script>
 
@@ -227,7 +179,7 @@ async function generateDashboardWithLLM(): Promise<void> {
     <div v-if="hasLlmConnection" class="setup-section">
       <h3 class="section-title">AI Copilot</h3>
       <p class="section-desc">
-        Let AI help build your dashboard based on your data and description
+        Describe what you want and the assistant will build it for you in the chat panel
       </p>
       <textarea
         v-model="dashboardPrompt"
@@ -235,20 +187,18 @@ async function generateDashboardWithLLM(): Promise<void> {
         rows="4"
         class="description-input"
         data-testid="dashboard-prompt-input"
+        @keydown.enter.exact.prevent="startChatWithPrompt"
       ></textarea>
       <div class="action-row">
         <button
-          @click="generateDashboardWithLLM"
+          @click="startChatWithPrompt"
           class="action-button llm-button"
-          :disabled="isGenerating || !dashboardPrompt.trim()"
+          :disabled="!dashboardPrompt.trim()"
           data-testid="generate-with-llm-button"
         >
-          <i class="mdi" :class="isGenerating ? 'mdi-loading mdi-spin' : 'mdi-creation'"></i>
-          {{ isGenerating ? 'Generating...' : 'Generate with AI' }}
+          <i class="mdi mdi-creation"></i>
+          Build with AI
         </button>
-        <div v-if="generationError" class="error-message">
-          {{ generationError }}
-        </div>
       </div>
     </div>
 

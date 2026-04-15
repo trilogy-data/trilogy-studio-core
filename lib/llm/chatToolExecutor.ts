@@ -1,26 +1,26 @@
 import type QueryExecutionService from '../stores/queryExecutionService'
-import type { QueryInput, QueryResult } from '../stores/queryExecutionService'
+import type { QueryInput } from '../stores/queryExecutionService'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { ChatStoreType } from '../stores/chatStore'
 import type { EditorStoreType } from '../stores/editorStore'
-import { type ChatArtifact, type ChatImport, generateArtifactId } from '../chats/chat'
-import type { ChartConfig } from '../editors/results'
-import type { ContentInput } from '../stores/resolver'
+import { Chat, type ChatArtifact, type ChatImport, generateArtifactId } from '../chats/chat'
+import type { ChartConfig, Results } from '../editors/results'
 import { MAX_TOOL_RESULT_ROWS, truncateResultRows } from './toolLoopCore'
+import { validateChartConfigForData, formatChartConfigValidationError } from '../dashboards/helpers'
+import {
+  type ToolCallResult,
+  type ImportStateAccessor,
+  type QueryCoreSuccess,
+  connectDataConnection as sharedConnectDataConnection,
+  buildExtraContent,
+  getArtifactRowsFromData,
+  getAvailableImports as sharedGetAvailableImports,
+  selectActiveImport as sharedSelectActiveImport,
+  listAvailableImports as sharedListAvailableImports,
+  executeTrilogyQueryCore,
+} from './sharedToolHelpers'
 
-export interface ToolCallResult {
-  success: boolean
-  artifact?: ChatArtifact
-  artifactId?: string // ID of the artifact created by this tool call
-  error?: string
-  message?: string // Success message for non-artifact tools (like add_import)
-  executionTime?: number
-  query?: string
-  generatedSql?: string
-  triggersSymbolRefresh?: boolean // Indicates this tool call should trigger symbol refresh
-  terminatesLoop?: boolean // If true, the tool loop stops and returns control to the user
-  awaitsUserInput?: boolean // If true, the tool loop pauses waiting for user input
-}
+export type { ToolCallResult } from './sharedToolHelpers'
 
 export interface ToolCallInput {
   query: string
@@ -33,17 +33,36 @@ export class ChatToolExecutor {
   private connectionStore: ConnectionStoreType
   private chatStore: ChatStoreType | null
   private editorStore: EditorStoreType | null
+  /** Specific chat ID to operate on. When set, all operations target this chat
+   *  instead of relying on the global `chatStore.activeChatId`. */
+  private chatId: string | null
 
   constructor(
     queryExecutionService: QueryExecutionService,
     connectionStore: ConnectionStoreType,
     chatStore?: ChatStoreType,
     editorStore?: EditorStoreType,
+    chatId?: string,
   ) {
     this.queryExecutionService = queryExecutionService
     this.connectionStore = connectionStore
     this.chatStore = chatStore || null
     this.editorStore = editorStore || null
+    this.chatId = chatId || null
+  }
+
+  /** Resolve the chat ID — prefer the explicit chatId, fall back to global active. */
+  private get resolvedChatId(): string {
+    return this.chatId || this.chatStore?.activeChatId || ''
+  }
+
+  /** Resolve the chat instance — prefer explicit chatId lookup, fall back to global activeChat getter. */
+  private get resolvedChat(): Chat | null {
+    if (!this.chatStore) return null
+    if (this.chatId) {
+      return this.chatStore.chats?.[this.chatId] || null
+    }
+    return this.chatStore.activeChat || null
   }
 
   async executeToolCall(toolName: string, toolInput: Record<string, any>): Promise<ToolCallResult> {
@@ -107,170 +126,73 @@ export class ChatToolExecutor {
     artifactType: 'results' | 'chart',
     chartConfig?: ChartConfig,
   ): Promise<ToolCallResult> {
-    // Validate inputs
-    if (!query || typeof query !== 'string' || query.trim() === '') {
-      return {
-        success: false,
-        error: 'Query is required and must be a non-empty string',
-        query,
-      }
-    }
-
-    if (!connectionName || typeof connectionName !== 'string') {
-      return {
-        success: false,
-        error: `Connection name is required. Available connections: ${Object.keys(this.connectionStore.connections).join(', ') || 'None'}`,
-        query,
-      }
-    }
-
-    // Verify connection exists
-    if (!this.connectionStore.connections[connectionName]) {
-      return {
-        success: false,
-        error: `Connection "${connectionName}" not found. Available connections: ${Object.keys(this.connectionStore.connections).join(', ') || 'None'}`,
-        query,
-      }
-    }
-
-    // Check connection is active
-    const connection = this.connectionStore.connections[connectionName]
-    if (!connection.connected) {
-      return {
-        success: false,
-        error: `Connection "${connectionName}" is not currently connected. Please ensure the connection is active.`,
-        query,
-      }
-    }
-
-    // Get active imports from chat store and build extraContent from them
-    const activeImports = this.chatStore?.activeChat?.imports || []
-    const importsForQuery = activeImports.map((imp) => ({
-      name: imp.name,
-      alias: imp.alias || '',
-    }))
-
-    // Build extra content: connection sources + all editors for this connection
-    // This ensures cross-file dependencies (like 'import etl') can be resolved
-    console.log(`[ChatToolExecutor] Building extraContent for connection: "${connectionName}"`)
-    const allConnectionEditors = this.editorStore
-      ? Object.values(this.editorStore.editors)
-          .filter((editor) => {
-            const matches = editor.connection === connectionName && !editor.deleted
-            return matches
-          })
-          .map((editor) => ({
-            alias: editor.name,
-            contents: editor.contents,
-          }))
-      : []
-
-    console.log(
-      `[ChatToolExecutor] Found ${allConnectionEditors.length} editors for this connection:`,
-      allConnectionEditors.map((e) => e.alias),
+    const activeImports = this.resolvedChat?.imports || []
+    const coreResult = await executeTrilogyQueryCore(
+      this.queryExecutionService,
+      this.connectionStore,
+      this.editorStore,
+      connectionName,
+      query,
+      activeImports,
     )
 
-    const connectionSources = this.connectionStore.getConnectionSources(connectionName)
-    console.log(
-      `[ChatToolExecutor] Found ${connectionSources.length} connection sources:`,
-      connectionSources.map((s) => s.alias),
-    )
-
-    // Combine and remove duplicates (preferring connection editors for latest content)
-    const extraContentMap = new Map<string, string>()
-
-    // Start with connection sources
-    connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
-
-    // Add/overwrite with all editors for this connection
-    allConnectionEditors.forEach((s) => extraContentMap.set(s.alias, s.contents))
-
-    // Also include chat imports (though they should already be in allConnectionEditors)
-    activeImports.forEach((imp) => {
-      const alias = imp.alias || imp.name
-      const contents = this.editorStore?.editors[imp.id]?.contents || ''
-      if (contents) {
-        extraContentMap.set(alias, contents)
-      }
-    })
-
-    const extraContent: ContentInput[] = Array.from(extraContentMap.entries()).map(
-      ([alias, contents]) => ({
-        alias,
-        contents,
-      }),
-    )
-
-    const queryInput: QueryInput = {
-      text: query.trim(),
-      editorType: 'trilogy',
-      imports: importsForQuery,
-      extraContent,
+    // Error case — return the ToolCallResult directly
+    if (!coreResult.success) {
+      return coreResult as ToolCallResult
     }
 
-    try {
-      const result = await this.queryExecutionService.executeQuery(
+    const { queryResult } = coreResult as QueryCoreSuccess
+
+    // Validate chart config against actual results if one was provided
+    let effectiveChartConfig = chartConfig
+    let validationWarning: string | null = null
+    if (chartConfig && artifactType === 'chart') {
+      const results = queryResult.results as Results
+      if (results && results.headers) {
+        const validation = validateChartConfigForData(results.data, results.headers, chartConfig)
+        if (!validation.valid) {
+          effectiveChartConfig = validation.suggestedConfig as ChartConfig
+          validationWarning = `Auto-corrected to default configuration.\n${formatChartConfigValidationError(validation)}`
+        }
+      }
+    }
+
+    // Build artifact with results data
+    const artifactId = generateArtifactId()
+    const artifact: ChatArtifact = {
+      id: artifactId,
+      type: artifactType,
+      data: queryResult.results,
+      config: {
+        query,
         connectionName,
-        queryInput,
-        undefined, // onStarted
-        undefined, // onProgress
-        undefined, // onFailure
-        undefined, // onSuccess
-        false, // dryRun
-      )
+        generatedSql: queryResult.generatedSql,
+        executionTime: queryResult.executionTime,
+        resultSize: queryResult.resultSize,
+        columnCount: queryResult.columnCount,
+        ...(effectiveChartConfig && { chartConfig: effectiveChartConfig }),
+      },
+    }
 
-      const queryResult: QueryResult = await result.resultPromise
-
-      if (!queryResult.success) {
-        return {
-          success: false,
-          error: queryResult.error || 'Query execution failed',
-          executionTime: queryResult.executionTime,
-          query,
-          generatedSql: queryResult.generatedSql,
-        }
-      }
-
-      if (!queryResult.results) {
-        return {
-          success: false,
-          error: 'Query returned no results',
-          query,
-          generatedSql: queryResult.generatedSql,
-        }
-      }
-
-      // Build artifact with results data - store Results object directly
-      const artifactId = generateArtifactId()
-      const artifact: ChatArtifact = {
-        id: artifactId,
-        type: artifactType,
-        data: queryResult.results,
-        config: {
-          query,
-          connectionName,
-          generatedSql: queryResult.generatedSql,
-          executionTime: queryResult.executionTime,
-          resultSize: queryResult.resultSize,
-          columnCount: queryResult.columnCount,
-          ...(chartConfig && { chartConfig }),
-        },
-      }
-
+    if (validationWarning) {
       return {
-        success: true,
+        success: false,
+        error: validationWarning,
         artifact,
         artifactId,
         executionTime: queryResult.executionTime,
         query,
         generatedSql: queryResult.generatedSql,
       }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error during query execution',
-        query,
-      }
+    }
+
+    return {
+      success: true,
+      artifact,
+      artifactId,
+      executionTime: queryResult.executionTime,
+      query,
+      generatedSql: queryResult.generatedSql,
     }
   }
 
@@ -291,40 +213,17 @@ export class ChatToolExecutor {
     }
 
     // Get active imports from chat store and build extraContent from them
-    const activeImports = this.chatStore?.activeChat?.imports || []
+    const activeImports = this.resolvedChat?.imports || []
     const importsForQuery = activeImports.map((imp) => ({
       name: imp.name,
       alias: imp.alias || '',
     }))
 
-    // Build extra content matching executeTrilogyQuery logic
-    const allConnectionEditors = this.editorStore
-      ? Object.values(this.editorStore.editors)
-          .filter((editor) => editor.connection === connectionName && !editor.deleted)
-          .map((editor) => ({
-            alias: editor.name,
-            contents: editor.contents,
-          }))
-      : []
-
-    const connectionSources = this.connectionStore.getConnectionSources(connectionName)
-    const extraContentMap = new Map<string, string>()
-
-    connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
-    allConnectionEditors.forEach((s) => extraContentMap.set(s.alias, s.contents))
-    activeImports.forEach((imp) => {
-      const alias = imp.alias || imp.name
-      const contents = this.editorStore?.editors[imp.id]?.contents || ''
-      if (contents) {
-        extraContentMap.set(alias, contents)
-      }
-    })
-
-    const extraContent: ContentInput[] = Array.from(extraContentMap.entries()).map(
-      ([alias, contents]) => ({
-        alias,
-        contents,
-      }),
+    const extraContent = buildExtraContent(
+      this.connectionStore,
+      this.editorStore,
+      connectionName,
+      activeImports,
     )
 
     const queryInput: QueryInput = {
@@ -370,247 +269,57 @@ export class ChatToolExecutor {
     return Object.keys(this.connectionStore.connections)
   }
 
-  // Import management tools - single import model
+  /** Build the import state accessor that bridges chat store to the shared helpers. */
+  private get importAccessor(): ImportStateAccessor {
+    return {
+      getActiveImports: () => this.resolvedChat?.imports || [],
+      setActiveImports: (imports) => {
+        if (this.resolvedChatId && this.chatStore) {
+          this.chatStore.setImports(this.resolvedChatId, imports)
+        }
+      },
+      getConnectionName: () => this.resolvedChat?.dataConnectionName || '',
+    }
+  }
+
   private async selectActiveImport(importName: string): Promise<ToolCallResult> {
-    if (!this.chatStore?.activeChatId || !this.editorStore) {
+    if (!this.resolvedChatId || !this.editorStore) {
       return {
         success: false,
         error: 'No active chat or editor store not available',
       }
     }
 
-    const chat = this.chatStore.activeChat
-    if (!chat?.dataConnectionName) {
-      return {
-        success: false,
-        error: 'No data connection selected for this chat. Please select a data connection first.',
-      }
-    }
-
-    // Handle clearing the selection
-    if (!importName || importName.trim() === '') {
-      this.chatStore.setImports(this.chatStore.activeChatId, [])
-      return {
-        success: true,
-        message: 'Cleared active data source selection.',
-        triggersSymbolRefresh: true,
-      }
-    }
-
-    // Find the import in available imports
-    const available = this.getAvailableImports(chat.dataConnectionName)
-    const importToSelect = available.find(
-      (i) => i.name === importName || i.name.endsWith(`.${importName}`),
+    return sharedSelectActiveImport(
+      importName,
+      this.importAccessor,
+      {
+        connectionStore: this.connectionStore,
+        editorStore: this.editorStore,
+        queryExecutionService: this.queryExecutionService,
+      },
+      this.editorStore,
     )
-
-    if (!importToSelect) {
-      return {
-        success: false,
-        error: `Import "${importName}" not found. Available imports: ${available.map((i) => i.name).join(', ') || 'none'}`,
-      }
-    }
-
-    // Check if already the active import
-    if (chat.imports.length === 1 && chat.imports[0].id === importToSelect.id) {
-      // Already active, but still fetch and return the concepts
-      const conceptsOutput = await this.getConceptsForImport(
-        importToSelect,
-        chat.dataConnectionName,
-      )
-      return {
-        success: true,
-        message: `"${importToSelect.name}" is already the active data source.\n\n${conceptsOutput}`,
-        triggersSymbolRefresh: false, // No change needed
-      }
-    }
-
-    // Set as the single active import (replaces any previous selection)
-    this.chatStore.setImports(this.chatStore.activeChatId, [importToSelect])
-
-    // Fetch and return the full concept output
-    const conceptsOutput = await this.getConceptsForImport(importToSelect, chat.dataConnectionName)
-
-    return {
-      success: true,
-      message: `Successfully selected "${importToSelect.name}" as the active data source.\n\n${conceptsOutput}`,
-      triggersSymbolRefresh: true, // Signal that symbols should be refreshed
-    }
-  }
-
-  // Helper to fetch concepts for a specific import and format them
-  private async getConceptsForImport(imp: ChatImport, connectionName: string): Promise<string> {
-    try {
-      // Build extra content for the import
-      const editorContent = this.editorStore?.editors[imp.id]?.contents || ''
-      if (!editorContent) {
-        return 'No fields found in this data source.'
-      }
-
-      // Get all connection sources and editors for dependency resolution
-      const allConnectionEditors = this.editorStore
-        ? Object.values(this.editorStore.editors)
-            .filter((editor) => editor.connection === connectionName && !editor.deleted)
-            .map((editor) => ({
-              alias: editor.name,
-              contents: editor.contents,
-            }))
-        : []
-
-      const connectionSources = this.connectionStore.getConnectionSources(connectionName)
-      const extraContentMap = new Map<string, string>()
-
-      connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
-      allConnectionEditors.forEach((s) => extraContentMap.set(s.alias, s.contents))
-
-      const extraContent: ContentInput[] = Array.from(extraContentMap.entries()).map(
-        ([alias, contents]) => ({
-          alias,
-          contents,
-        }),
-      )
-
-      // Validate to get completion items
-      const queryInput: QueryInput = {
-        text: 'SELECT 1',
-        editorType: 'trilogy' as const,
-        imports: [{ name: imp.name, alias: imp.alias || '' }],
-        extraContent,
-      }
-
-      const validation = await this.queryExecutionService.validateQuery(
-        connectionName,
-        queryInput,
-        false,
-      )
-
-      if (validation?.data?.completion_items) {
-        const concepts = validation.data.completion_items.filter(
-          (item) => item.trilogyType === 'concept',
-        )
-
-        if (concepts.length === 0) {
-          return 'No fields found in this data source.'
-        }
-
-        // Format concepts with full details including descriptions
-        const conceptsList = concepts
-          .map((c) => {
-            let entry = `- ${c.label} (${c.datatype || c.type})`
-            if (c.description) {
-              entry += `: ${c.description}`
-            }
-            if (c.calculation) {
-              entry += ` [calculated: ${c.calculation}]`
-            }
-            return entry
-          })
-          .join('\n')
-
-        return `AVAILABLE FIELDS (${concepts.length} total):\n${conceptsList}`
-      }
-
-      return 'Unable to fetch field information for this data source.'
-    } catch (error) {
-      console.error('Failed to fetch concepts for import:', error)
-      return 'Error fetching field information for this data source.'
-    }
   }
 
   private listAvailableImports(): ToolCallResult {
-    const chat = this.chatStore?.activeChat
-    if (!chat?.dataConnectionName) {
-      return {
-        success: false,
-        error: 'No data connection selected for this chat. Please select a data connection first.',
-      }
-    }
-
-    const available = this.getAvailableImports(chat.dataConnectionName)
-    const activeImport = chat.imports.length > 0 ? chat.imports[0] : null
-
-    if (available.length === 0) {
-      return {
-        success: true,
-        message: `No data sources available on connection "${chat.dataConnectionName}".`,
-      }
-    }
-
-    const currentStatus = activeImport
-      ? `Current active data source: ${activeImport.name}\n\n`
-      : 'No data source currently selected.\n\n'
-
-    return {
-      success: true,
-      message: `${currentStatus}Available data sources for connection "${chat.dataConnectionName}":\n${available.map((i) => `- ${i.name}${activeImport?.id === i.id ? ' (active)' : ''}`).join('\n')}\n\nUse select_active_import to select a data source.`,
-    }
+    return sharedListAvailableImports(this.importAccessor, this.editorStore)
   }
 
   // Get available imports for a connection
   getAvailableImports(connectionName: string): ChatImport[] {
-    if (!this.editorStore) return []
-
-    return Object.values(this.editorStore.editors)
-      .filter((editor) => editor.connection === connectionName)
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((editor) => ({
-        id: editor.id,
-        name: editor.name.replace(/\//g, '.'), // Convert folder/editor to folder.editor
-        alias: '',
-      }))
+    return sharedGetAvailableImports(this.editorStore, connectionName)
   }
 
   // Connect a data connection
   private async connectDataConnection(connectionName: string): Promise<ToolCallResult> {
-    if (!connectionName || typeof connectionName !== 'string') {
-      return {
-        success: false,
-        error: `Connection name is required. Available connections: ${Object.keys(this.connectionStore.connections).join(', ') || 'None'}`,
-      }
-    }
-
-    // Verify connection exists
-    const connection = this.connectionStore.connections[connectionName]
-    if (!connection) {
-      return {
-        success: false,
-        error: `Connection "${connectionName}" not found. Available connections: ${Object.keys(this.connectionStore.connections).join(', ') || 'None'}`,
-      }
-    }
-
-    // Check if already connected
-    if (connection.connected) {
-      // Even if already connected, update the chat's data connection if different
-      if (this.chatStore?.activeChatId) {
-        const chat = this.chatStore.activeChat
-        if (chat && chat.dataConnectionName !== connectionName) {
-          this.chatStore.updateChatDataConnection(this.chatStore.activeChatId, connectionName)
+    return sharedConnectDataConnection(this.connectionStore, connectionName, {
+      onConnected: (name) => {
+        if (this.resolvedChatId && this.chatStore) {
+          this.chatStore.updateChatDataConnection(this.resolvedChatId, name)
         }
-      }
-      return {
-        success: true,
-        message: `Connection "${connectionName}" is already active and set as the data connection for this chat.`,
-      }
-    }
-
-    try {
-      await this.connectionStore.connectConnection(connectionName)
-
-      // Update the chat's data connection after successful connection
-      if (this.chatStore?.activeChatId) {
-        this.chatStore.updateChatDataConnection(this.chatStore.activeChatId, connectionName)
-      }
-
-      return {
-        success: true,
-        message: `Successfully connected to "${connectionName}" and set as the data connection for this chat. You can now run queries against this connection.`,
-        triggersSymbolRefresh: true, // Refresh symbols since data connection changed
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: `Failed to connect to "${connectionName}": ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }
-    }
+      },
+    })
   }
 
   // Create a markdown artifact, optionally backed by a query for data-driven content
@@ -634,7 +343,7 @@ export class ChatToolExecutor {
     if (query && query.trim()) {
       if (!connectionName) {
         // Fall back to chat's data connection
-        const chat = this.chatStore?.activeChat
+        const chat = this.resolvedChat
         connectionName = chat?.dataConnectionName || ''
       }
       if (!connectionName) {
@@ -685,7 +394,7 @@ export class ChatToolExecutor {
 
   // List all artifacts in the current chat
   private listArtifacts(): ToolCallResult {
-    const chat = this.chatStore?.activeChat
+    const chat = this.resolvedChat
     if (!chat) {
       return {
         success: false,
@@ -733,7 +442,7 @@ export class ChatToolExecutor {
 
   // Get the full contents and metadata of an artifact by ID
   private getArtifact(artifactId: string): ToolCallResult {
-    const chat = this.chatStore?.activeChat
+    const chat = this.resolvedChat
     if (!chat) {
       return {
         success: false,
@@ -784,7 +493,7 @@ export class ChatToolExecutor {
 
   // Fetch a specific row range from a results or chart artifact
   private getArtifactRows(artifactId: string, startRow: number, endRow: number): ToolCallResult {
-    const chat = this.chatStore?.activeChat
+    const chat = this.resolvedChat
     if (!chat) {
       return { success: false, error: 'No active chat session.' }
     }
@@ -804,25 +513,7 @@ export class ChatToolExecutor {
       }
     }
 
-    const jsonData =
-      typeof artifact.data?.toJSON === 'function' ? artifact.data.toJSON() : artifact.data
-    const rows: any[] = jsonData?.data
-
-    if (!Array.isArray(rows)) {
-      return { success: false, error: `Artifact "${artifactId}" has no row data.` }
-    }
-
-    const totalRows = rows.length
-    const clampedStart = Math.max(0, Math.min(startRow, totalRows - 1))
-    const clampedEnd = Math.max(clampedStart, Math.min(endRow, totalRows - 1))
-    const slice = rows.slice(clampedStart, clampedEnd + 1)
-
-    return {
-      success: true,
-      message:
-        `Rows ${clampedStart}-${clampedEnd} of ${totalRows} total from artifact "${artifactId}":\n` +
-        JSON.stringify({ headers: jsonData.headers, data: slice }, null, 2),
-    }
+    return getArtifactRowsFromData(artifactId, artifact.data, startRow, endRow)
   }
 
   // Update an existing artifact by ID
@@ -832,7 +523,7 @@ export class ChatToolExecutor {
     title?: string,
     chartConfig?: ChartConfig,
   ): ToolCallResult {
-    const chat = this.chatStore?.activeChat
+    const chat = this.resolvedChat
     if (!chat) {
       return {
         success: false,
@@ -861,6 +552,24 @@ export class ChatToolExecutor {
     }
 
     if (chartConfig !== undefined && (artifact.type === 'chart' || artifact.type === 'results')) {
+      // Validate chart config against the artifact's actual data
+      const results = artifact.data as Results | null
+      if (results && results.headers) {
+        const validation = validateChartConfigForData(results.data, results.headers, chartConfig)
+        if (!validation.valid) {
+          // Auto-correct to suggested config
+          const corrected = validation.suggestedConfig as ChartConfig
+          artifact.config = { ...artifact.config, chartConfig: corrected }
+          chat.updatedAt = new Date()
+          chat.changed = true
+          return {
+            success: false,
+            error:
+              `Auto-corrected artifact "${artifactId}" chart config to default configuration.\n` +
+              formatChartConfigValidationError(validation),
+          }
+        }
+      }
       artifact.config = { ...artifact.config, chartConfig }
       updates.push('chart configuration')
     }
@@ -883,7 +592,7 @@ export class ChatToolExecutor {
 
   // Reorder artifacts by providing desired order of IDs
   private reorderArtifacts(artifactIds: string[]): ToolCallResult {
-    const chat = this.chatStore?.activeChat
+    const chat = this.resolvedChat
     if (!chat) {
       return { success: false, error: 'No active chat session.' }
     }
@@ -926,7 +635,7 @@ export class ChatToolExecutor {
 
   // Hide one or more artifacts by ID (soft-delete — user can restore from the Hidden section)
   private hideArtifacts(artifactIds: string | string[]): ToolCallResult {
-    const chat = this.chatStore?.activeChat
+    const chat = this.resolvedChat
     if (!chat) {
       return { success: false, error: 'No active chat session.' }
     }

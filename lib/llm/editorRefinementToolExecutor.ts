@@ -4,24 +4,18 @@ import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { ChatArtifact } from '../chats/chat'
 import { generateArtifactId } from '../chats/chat'
-import type { ChartConfig } from '../editors/results'
+import type { ChartConfig, Results } from '../editors/results'
 import type { ContentInput, CompletionItem } from '../stores/resolver'
 import { symbolsToFieldPrompt } from './editorRefinementTools'
+import { validateChartConfigForData, formatChartConfigValidationError } from '../dashboards/helpers'
+import {
+  type ToolCallResult,
+  connectDataConnection as sharedConnectDataConnection,
+  buildExtraContent,
+  getArtifactRowsFromData,
+} from './sharedToolHelpers'
 
-export interface ToolCallResult {
-  success: boolean
-  artifact?: ChatArtifact
-  artifactId?: string // ID of the artifact created by this tool call
-  error?: string
-  message?: string
-  executionTime?: number
-  query?: string
-  generatedSql?: string
-  formattedQuery?: string
-  terminatesLoop?: boolean // If true, the tool loop should stop completely
-  awaitsUserInput?: boolean // If true, stop auto-continue and wait for user input
-  availableSymbols?: CompletionItem[] // Symbols available after validation
-}
+export type { ToolCallResult } from './sharedToolHelpers'
 
 export interface QueryExecutionResult {
   success: boolean
@@ -48,6 +42,8 @@ export interface EditorContext {
   onChartConfigChange: (config: ChartConfig) => void
   onFinish: (message?: string) => void
   onRunActiveEditorQuery?: () => Promise<QueryExecutionResult>
+  /** Optional accessor for the editor's current query results, used to validate chart configs */
+  getCurrentResults?: () => Results | null | undefined
 }
 
 export class EditorRefinementToolExecutor {
@@ -57,6 +53,8 @@ export class EditorRefinementToolExecutor {
   private editorContext: EditorContext
   /** Artifacts created during this session — used by get_artifact_rows */
   private artifactRegistry = new Map<string, ChatArtifact>()
+  /** Most recent Results object produced by run_query in this session, used as a fallback for chart config validation */
+  private lastQueryResults: Results | null = null
 
   constructor(
     queryExecutionService: QueryExecutionService,
@@ -258,6 +256,11 @@ export class EditorRefinementToolExecutor {
       }
 
       this.artifactRegistry.set(artifact.id, artifact)
+      // Track latest results so edit_chart_config can validate against them
+      const resultsForValidation = queryResult.results as unknown as Results
+      if (resultsForValidation && resultsForValidation.headers) {
+        this.lastQueryResults = resultsForValidation
+      }
       return {
         success: true,
         artifact,
@@ -284,7 +287,7 @@ export class EditorRefinementToolExecutor {
     }
 
     const connectionName = this.editorContext.connectionName
-    const extraContent = this.buildExtraContent()
+    const extraContent = this.buildEditorExtraContent()
 
     try {
       const formatted = await this.queryExecutionService.formatQuery(
@@ -322,6 +325,30 @@ export class EditorRefinementToolExecutor {
       return {
         success: false,
         error: 'chartConfig is required and must be an object',
+      }
+    }
+
+    // Validate against current results if we have them. Prefer the editor-provided
+    // accessor (live editor state); fall back to results from a recent run_query call.
+    const results: Results | null =
+      this.editorContext.getCurrentResults?.() ?? this.lastQueryResults ?? null
+
+    if (results && results.headers) {
+      const validation = validateChartConfigForData(results.data, results.headers, chartConfig)
+      if (!validation.valid) {
+        // Auto-correct: apply the suggested config instead of the invalid one
+        const corrected = validation.suggestedConfig as ChartConfig
+        try {
+          this.editorContext.onChartConfigChange(corrected)
+        } catch {
+          // ignore — we still want to surface the validation error
+        }
+        return {
+          success: false,
+          error:
+            `Auto-corrected to default configuration.\n` +
+            formatChartConfigValidationError(validation),
+        }
       }
     }
 
@@ -460,25 +487,7 @@ export class EditorRefinementToolExecutor {
       }
     }
 
-    const jsonData =
-      typeof artifact.data?.toJSON === 'function' ? artifact.data.toJSON() : artifact.data
-    const rows: any[] = jsonData?.data
-
-    if (!Array.isArray(rows)) {
-      return { success: false, error: `Artifact "${artifactId}" has no row data.` }
-    }
-
-    const totalRows = rows.length
-    const clampedStart = Math.max(0, Math.min(startRow, totalRows - 1))
-    const clampedEnd = Math.max(clampedStart, Math.min(endRow, totalRows - 1))
-    const slice = rows.slice(clampedStart, clampedEnd + 1)
-
-    return {
-      success: true,
-      message:
-        `Rows ${clampedStart}-${clampedEnd} of ${totalRows} total from artifact "${artifactId}":\n` +
-        JSON.stringify({ headers: jsonData.headers, data: slice }, null, 2),
-    }
+    return getArtifactRowsFromData(artifactId, artifact.data, startRow, endRow)
   }
 
   private requestClose(message: string): ToolCallResult {
@@ -508,42 +517,7 @@ export class EditorRefinementToolExecutor {
   }
 
   private async connectDataConnection(connectionName: string): Promise<ToolCallResult> {
-    if (!connectionName || typeof connectionName !== 'string') {
-      return {
-        success: false,
-        error: `Connection name is required. Available connections: ${Object.keys(this.connectionStore.connections).join(', ') || 'None'}`,
-      }
-    }
-
-    // Verify connection exists
-    const connection = this.connectionStore.connections[connectionName]
-    if (!connection) {
-      return {
-        success: false,
-        error: `Connection "${connectionName}" not found. Available connections: ${Object.keys(this.connectionStore.connections).join(', ') || 'None'}`,
-      }
-    }
-
-    // Check if already connected
-    if (connection.connected) {
-      return {
-        success: true,
-        message: `Connection "${connectionName}" is already active.`,
-      }
-    }
-
-    try {
-      await this.connectionStore.connectConnection(connectionName)
-      return {
-        success: true,
-        message: `Successfully connected to "${connectionName}". You can now run queries against this connection.`,
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: `Failed to connect to "${connectionName}": ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }
-    }
+    return sharedConnectDataConnection(this.connectionStore, connectionName)
   }
 
   // Helper to build QueryInput with proper context
@@ -552,31 +526,15 @@ export class EditorRefinementToolExecutor {
       text: query.trim(),
       editorType: 'trilogy',
       imports: [],
-      extraContent: this.buildExtraContent(),
+      extraContent: this.buildEditorExtraContent(),
     }
   }
 
-  // Helper to build extra content from connection sources and editors
-  private buildExtraContent(): ContentInput[] {
-    const connectionName = this.editorContext.connectionName
-    const extraContentMap = new Map<string, string>()
-
-    // Add connection sources
-    const connectionSources = this.connectionStore.getConnectionSources(connectionName)
-    connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
-
-    // Add all editors for this connection
-    if (this.editorStore) {
-      Object.values(this.editorStore.editors)
-        .filter((editor) => editor.connection === connectionName && !editor.deleted)
-        .forEach((editor) => {
-          extraContentMap.set(editor.name, editor.contents)
-        })
-    }
-
-    return Array.from(extraContentMap.entries()).map(([alias, contents]) => ({
-      alias,
-      contents,
-    }))
+  private buildEditorExtraContent(): ContentInput[] {
+    return buildExtraContent(
+      this.connectionStore,
+      this.editorStore,
+      this.editorContext.connectionName,
+    )
   }
 }

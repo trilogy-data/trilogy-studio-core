@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useToolLoop, type ToolExecutor } from './useToolLoop'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
-import type { ToolCallResult } from '../llm/editorRefinementToolExecutor'
+import type { ToolCallResult } from '../llm/sharedToolHelpers'
 
 // Mock LLM store type for testing
 type MockLLMStore = {

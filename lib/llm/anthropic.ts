@@ -93,12 +93,30 @@ export class AnthropicProvider extends LLMProvider {
       maxRetries: 5,
       initialDelayMs: 5000,
       retryStatusCodes: [429, 500, 502, 503, 504],
+      errorBodyExtractor: AnthropicProvider.extractErrorMessage,
       onRetry: (attempt, delayMs, error) => {
         console.warn(
           `Anthropic API retry attempt ${attempt} after ${delayMs}ms delay due to error: ${error.message}`,
         )
       },
     }
+  }
+
+  /**
+   * Extract a rich error message from an Anthropic error response body.
+   * Expected body format:
+   *   {"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"},"request_id":"..."}
+   */
+  static async extractErrorMessage(response: Response): Promise<string> {
+    const data = await response.json()
+    if (data?.error?.message) {
+      const kind = data.error.type ? ` (${data.error.type})` : ''
+      return `Anthropic API error${kind}: ${data.error.message}`
+    }
+    if (data?.error) {
+      return `Anthropic API error: ${JSON.stringify(data.error)}`
+    }
+    return `Anthropic API error: HTTP ${response.status}: ${response.statusText}`
   }
 
   async reset(): Promise<void> {
@@ -165,12 +183,35 @@ export class AnthropicProvider extends LLMProvider {
           }
           cleanedHistory.push({ role: 'assistant', content })
         } else if (msg.role === 'user' && msg.toolResults && msg.toolResults.length > 0) {
-          // User message with tool results - format as content array with tool_result blocks
-          const content: any[] = msg.toolResults.map((tr) => ({
-            type: 'tool_result',
-            tool_use_id: tr.toolCallId,
-            content: tr.result,
-          }))
+          // User message with tool results - format as content array with tool_result blocks.
+          // When a tool result includes imageData, build a mixed-content block array so the
+          // model can actually see the image (e.g. a captured dashboard screenshot).
+          const content: any[] = msg.toolResults.map((tr) => {
+            if (tr.imageData) {
+              const blocks: any[] = []
+              if (tr.result) {
+                blocks.push({ type: 'text', text: tr.result })
+              }
+              blocks.push({
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: tr.imageData.mediaType,
+                  data: tr.imageData.data,
+                },
+              })
+              return {
+                type: 'tool_result',
+                tool_use_id: tr.toolCallId,
+                content: blocks,
+              }
+            }
+            return {
+              type: 'tool_result',
+              tool_use_id: tr.toolCallId,
+              content: tr.result,
+            }
+          })
           cleanedHistory.push({ role: 'user', content })
         } else {
           // Regular text message
@@ -231,6 +272,12 @@ export class AnthropicProvider extends LLMProvider {
       )
 
       const data = await response.json()
+
+      // Check for API-level errors (e.g. invalid model, authentication failures)
+      if (data.type === 'error' || data.error) {
+        const errorMsg = data.error?.message || data.error?.type || 'Unknown API error'
+        throw new Error(errorMsg)
+      }
 
       // Handle tool use responses - extract text and tool_use blocks
       let responseText = ''

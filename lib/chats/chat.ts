@@ -43,6 +43,8 @@ export interface ChatMessage extends LLMMessage {
   executedToolCalls?: ChatToolCall[]
 }
 
+export type ChatSource = 'user' | 'dashboard'
+
 export interface ChatSessionData {
   id: string
   name: string
@@ -55,6 +57,11 @@ export interface ChatSessionData {
   createdAt: Date
   updatedAt: Date
   storage: 'local' | 'github' | 'remote'
+  /** What created this chat. 'user' is the default; 'dashboard' means it's
+   * owned by a DashboardModel and should be hidden from the main chat list by default. */
+  source: ChatSource
+  /** For non-user sources, the id of the owning entity (e.g. dashboard id). */
+  sourceRefId?: string | null
   changed: boolean
   deleted: boolean
 }
@@ -71,6 +78,8 @@ export class Chat implements ChatSessionData {
   createdAt: Date
   updatedAt: Date
   storage: 'local' | 'github' | 'remote'
+  source: ChatSource
+  sourceRefId?: string | null
   changed: boolean
   deleted: boolean
 
@@ -86,6 +95,8 @@ export class Chat implements ChatSessionData {
     this.createdAt = data.createdAt || new Date()
     this.updatedAt = data.updatedAt || new Date()
     this.storage = data.storage || 'local'
+    this.source = data.source || 'user'
+    this.sourceRefId = data.sourceRefId ?? null
     this.changed = data.changed ?? true
     this.deleted = data.deleted ?? false
   }
@@ -240,6 +251,8 @@ export class Chat implements ChatSessionData {
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
       storage: this.storage,
+      source: this.source,
+      sourceRefId: this.sourceRefId ?? null,
     }
   }
 

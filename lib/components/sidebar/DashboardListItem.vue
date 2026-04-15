@@ -5,7 +5,9 @@
     :name="item.label"
     :indent="item.indent"
     :is-selected="isActive"
-    :is-collapsible="!['dashboard', 'creator'].includes(item.type)"
+    :is-collapsible="
+      !['dashboard', 'investigation', 'creator'].includes(item.type) || item.hasInvestigations
+    "
     :is-collapsed="isCollapsed"
     itemType="dashboard"
     @click="handleClick"
@@ -13,7 +15,12 @@
   >
     <!-- Custom icon slot for dashboard items -->
     <template #icon>
-      <template v-if="item.type === 'dashboard'">
+      <template v-if="item.type === 'investigation'">
+        <tooltip content="Investigation" position="right">
+          <i class="mdi mdi-source-branch node-icon investigation-icon"></i>
+        </tooltip>
+      </template>
+      <template v-else-if="item.type === 'dashboard'">
         <tooltip content="Dashboard" position="right">
           <i class="mdi mdi-view-dashboard node-icon"></i>
         </tooltip>
@@ -39,10 +46,10 @@
             @select="handleContextMenuItemClick"
           />
         </template>
-        <template v-if="item.type === 'dashboard'">
+        <template v-if="item.type === 'dashboard' || item.type === 'investigation'">
           <sidebar-overflow-menu
             :items="contextMenuItems"
-            tooltip="Dashboard actions"
+            :tooltip="item.type === 'investigation' ? 'Investigation actions' : 'Dashboard actions'"
             @select="handleContextMenuItemClick"
           />
         </template>
@@ -123,6 +130,20 @@ export default {
         return [{ id: 'new-dashboard', label: 'New dashboard', icon: 'mdi-table-plus' }]
       }
 
+      if (props.item.type === 'investigation') {
+        return [
+          { id: 'promote-investigation', label: 'Promote to dashboard', icon: 'mdi-arrow-up-bold' },
+          { id: 'clone-dashboard', label: 'Clone', icon: 'mdi-content-copy' },
+          { id: 'delete-separator', kind: 'separator' },
+          {
+            id: 'delete-dashboard',
+            label: 'Delete investigation',
+            icon: 'mdi-trash-can-outline',
+            danger: true,
+          },
+        ]
+      }
+
       if (props.item.type === 'dashboard') {
         return [
           { id: 'clone-dashboard', label: 'Clone dashboard', icon: 'mdi-content-copy' },
@@ -174,6 +195,9 @@ export default {
         case 'delete-dashboard':
           this.handleDelete()
           break
+        case 'promote-investigation':
+          this.dashboardStore.promoteDashboard(this.item.id)
+          break
       }
     },
   },
@@ -200,6 +224,10 @@ export default {
 
 .text-light {
   color: var(--text-faint);
+}
+
+.investigation-icon {
+  color: var(--special-text);
 }
 
 .dashboard-actions {

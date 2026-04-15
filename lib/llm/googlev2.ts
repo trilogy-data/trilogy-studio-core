@@ -91,6 +91,26 @@ export class GoogleProvider extends LLMProvider {
     this.genAIClient = new GoogleGenAI({ apiKey: this.apiKey })
   }
 
+  /**
+   * Extract a rich error message from a Google Generative Language error response body.
+   * Expected body format: {"error":{"code":401,"message":"...","status":"UNAUTHENTICATED"}}
+   */
+  static async extractErrorMessage(response: Response): Promise<string> {
+    try {
+      const data = await response.json()
+      if (data?.error?.message) {
+        const status = data.error.status ? ` (${data.error.status})` : ''
+        return `Google API error${status}: ${data.error.message}`
+      }
+      if (data?.error) {
+        return `Google API error: ${JSON.stringify(data.error)}`
+      }
+    } catch {
+      // fall through
+    }
+    return `Google API error: HTTP ${response.status}: ${response.statusText}`
+  }
+
   async reset(): Promise<void> {
     try {
       this.genAIClient = new GoogleGenAI({ apiKey: this.apiKey })
@@ -123,7 +143,7 @@ export class GoogleProvider extends LLMProvider {
         }
 
         if (!response.ok) {
-          throw new Error(`Google API error: ${response.status} ${response.statusText}`)
+          throw new Error(await GoogleProvider.extractErrorMessage(response))
         }
 
         const data = await response.json()
@@ -369,12 +389,25 @@ export class GoogleProvider extends LLMProvider {
         result.push({ parts, role: 'model' })
       } else if (message.role === 'user' && message.toolResults && message.toolResults.length > 0) {
         // User message with tool results - include functionResponse parts
-        const parts: any[] = message.toolResults.map((tr) => ({
-          functionResponse: {
-            name: tr.toolName,
-            response: { result: tr.result },
-          },
-        }))
+        // When a tool result includes imageData, append an inlineData part so
+        // the model can visually review the image (e.g. dashboard screenshot).
+        const parts: any[] = []
+        for (const tr of message.toolResults) {
+          parts.push({
+            functionResponse: {
+              name: tr.toolName,
+              response: { result: tr.result },
+            },
+          })
+          if (tr.imageData) {
+            parts.push({
+              inlineData: {
+                mimeType: tr.imageData.mediaType,
+                data: tr.imageData.data,
+              },
+            })
+          }
+        }
         result.push({ parts, role: 'user' })
       } else {
         // Regular text message

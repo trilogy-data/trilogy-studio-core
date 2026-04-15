@@ -1,7 +1,7 @@
 import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { ColumnType } from '../editors/results'
-import { Charts } from './constants'
+import { Charts, Controls } from './constants'
 import { snakeCaseToCapitalizedWords } from './formatting'
 import { type FieldEncodingOutput } from './types'
 
@@ -569,6 +569,182 @@ export const determineEligibleChartTypes = (
   }
   // Ensure all chart types are from the predefined list
   return eligibleCharts.filter((chart) => Charts.map((x) => x.value).includes(chart))
+}
+
+export interface ChartConfigValidationResult {
+  valid: boolean
+  /** Non-empty when the chart type itself is not eligible for the data */
+  chartTypeError?: string
+  /** Per-field issues (e.g. xField is not a latitude column for geo-map) */
+  fieldErrors: string[]
+  /** The eligible chart types for this data, for suggestion messages */
+  eligibleChartTypes: string[]
+  /** Auto-detected default config as a fallback suggestion */
+  suggestedConfig: Partial<ChartConfig>
+}
+
+/**
+ * Validate a chart config against actual column metadata.
+ * Returns detailed errors if the chart type or field assignments are invalid.
+ */
+export const validateChartConfigForData = (
+  data: readonly Row[],
+  columns: Map<string, ResultColumn>,
+  config: ChartConfig,
+): ChartConfigValidationResult => {
+  const eligible = determineEligibleChartTypes(data, columns)
+  const fieldErrors: string[] = []
+
+  // Check if the chart type is eligible for this data
+  if (!eligible.includes(config.chartType)) {
+    return {
+      valid: false,
+      chartTypeError: `Chart type "${config.chartType}" is not compatible with this data. Eligible chart types: ${eligible.join(', ')}.`,
+      fieldErrors: [],
+      eligibleChartTypes: eligible,
+      suggestedConfig: determineDefaultConfig(data, columns),
+    }
+  }
+
+  // Compute defaults scoped to the user's requested chart type so the suggested
+  // config can auto-fill missing required fields without discarding the user's
+  // other choices (e.g. keep their colorField, fill in the missing xField/yField).
+  const defaultableChartTypes = [
+    'line',
+    'bar',
+    'barh',
+    'point',
+    'geo-map',
+    'tree',
+    'area',
+    'heatmap',
+    'headline',
+    'donut',
+  ] as const
+  type DefaultableChartType = (typeof defaultableChartTypes)[number]
+  const scopedChartType: DefaultableChartType | undefined = (
+    defaultableChartTypes as readonly string[]
+  ).includes(config.chartType)
+    ? (config.chartType as DefaultableChartType)
+    : undefined
+  const typeDefaults = determineDefaultConfig(data, columns, scopedChartType)
+
+  const columnNames = Array.from(columns.keys())
+
+  // Validate that referenced fields exist in the data
+  const fieldKeys: (keyof ChartConfig)[] = [
+    'xField',
+    'yField',
+    'yField2',
+    'colorField',
+    'sizeField',
+    'groupField',
+    'trellisField',
+    'trellisRowField',
+    'geoField',
+    'annotationField',
+  ]
+  for (const key of fieldKeys) {
+    const val = config[key]
+    if (typeof val === 'string' && val !== '' && !columns.has(val)) {
+      fieldErrors.push(
+        `Field "${val}" (${key}) does not exist in the query results. Available columns: ${columnNames.join(', ')}.`,
+      )
+    }
+  }
+
+  // Validate that all required fields for this chart type are specified.
+  // A field is required when a Control entry targets this chart type with allowEmpty=false.
+  const requiredControls = Controls.filter(
+    (c) => !c.allowEmpty && c.visibleFor.includes(config.chartType),
+  )
+  for (const control of requiredControls) {
+    const val = config[control.field]
+    if (typeof val !== 'string' || val === '') {
+      fieldErrors.push(
+        `Chart type "${config.chartType}" requires ${control.label} (${String(control.field)}) to be specified, but it is missing.`,
+      )
+    }
+  }
+
+  // Chart-type-specific field validation
+  if (config.chartType === 'geo-map') {
+    const latCols = filteredColumns('latitude', columns)
+    const lonCols = filteredColumns('longitude', columns)
+    const geoCols = filteredColumns('geographic', columns)
+
+    const hasLatLon = latCols.length > 0 && lonCols.length > 0
+    const hasGeo = geoCols.length > 0
+
+    if (!hasLatLon && !hasGeo) {
+      fieldErrors.push(
+        `geo-map requires geographic columns (latitude/longitude pairs or state/country codes) but none were found. ` +
+          `Available columns: ${columnNames.join(', ')}. ` +
+          `Consider using a different chart type or adjusting the query to include geographic fields.`,
+      )
+    }
+
+    // Validate xField/yField are actual lat/long when used for geo-map without geoField
+    if (!config.geoField && !hasGeo) {
+      if (config.xField && lonCols.length > 0 && !lonCols.some((c) => c.name === config.xField)) {
+        fieldErrors.push(
+          `For geo-map, xField should be a longitude column. "${config.xField}" is not a longitude field. ` +
+            `Available longitude columns: ${lonCols.map((c) => c.name).join(', ') || 'none'}.`,
+        )
+      }
+      if (config.yField && latCols.length > 0 && !latCols.some((c) => c.name === config.yField)) {
+        fieldErrors.push(
+          `For geo-map, yField should be a latitude column. "${config.yField}" is not a latitude field. ` +
+            `Available latitude columns: ${latCols.map((c) => c.name).join(', ') || 'none'}.`,
+        )
+      }
+    }
+  }
+
+  if (config.chartType === 'line' || config.chartType === 'area') {
+    // These chart types work best with temporal x-axis
+    if (config.xField && columns.has(config.xField)) {
+      const col = columns.get(config.xField)!
+      if (!isTemporalColumn(col) && !isCategoricalColumn(col) && !isNumericColumn(col)) {
+        fieldErrors.push(
+          `For ${config.chartType} charts, xField should typically be a temporal or categorical column.`,
+        )
+      }
+    }
+  }
+
+  // Build the suggested config: start from type-scoped defaults, then overlay
+  // the user's explicit (non-empty) choices so auto-correction preserves them.
+  const mergedSuggested: Partial<ChartConfig> = { ...typeDefaults }
+  for (const [k, v] of Object.entries(config)) {
+    if (v === undefined || v === null) continue
+    if (typeof v === 'string' && v === '') continue
+    ;(mergedSuggested as any)[k] = v
+  }
+
+  return {
+    valid: fieldErrors.length === 0,
+    fieldErrors,
+    eligibleChartTypes: eligible,
+    suggestedConfig: mergedSuggested,
+  }
+}
+
+/**
+ * Format a chart config validation result as a user-facing error message
+ * suitable for returning to an LLM agent.
+ */
+export const formatChartConfigValidationError = (
+  validation: ChartConfigValidationResult,
+): string => {
+  const errors = [validation.chartTypeError, ...validation.fieldErrors].filter(Boolean)
+  return (
+    `Chart configuration is invalid for the data:\n` +
+    `${errors.map((e) => `  - ${e}`).join('\n')}\n` +
+    `Eligible chart types for this data: ${validation.eligibleChartTypes.join(', ') || 'none'}.\n` +
+    `Suggested auto-detected config: ${JSON.stringify(validation.suggestedConfig)}\n` +
+    `Tip: Omit chartConfig to let auto-detection choose the best chart type and field mapping.`
+  )
 }
 
 /**
