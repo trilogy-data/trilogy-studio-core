@@ -7,6 +7,7 @@ import type { EditorStoreType } from '../stores/editorStore'
 import type { ChatMessage, ChatArtifact } from '../chats/chat'
 import type { ChartConfig } from '../editors/results'
 import type { CompletionItem, ContentInput } from '../stores/resolver'
+import type { EditorType } from '../editors/editor'
 import { useToolLoop } from './useToolLoop'
 import {
   EditorRefinementToolExecutor,
@@ -14,7 +15,7 @@ import {
   type QueryExecutionResult,
 } from '../llm/editorRefinementToolExecutor'
 import {
-  EDITOR_REFINEMENT_TOOLS,
+  getEditorRefinementTools,
   buildEditorRefinementPrompt,
   type EditorRefinementContext,
 } from '../llm/editorRefinementTools'
@@ -38,6 +39,7 @@ export interface UseEditorRefinementOptions {
 
   // Editor context
   connectionName: string
+  editorType?: EditorType
   initialContent: string
   selectedText?: string
   selectionRange?: { start: number; end: number }
@@ -88,6 +90,7 @@ export function useEditorRefinement(
     queryExecutionService,
     editorStore,
     connectionName,
+    editorType = 'trilogy',
     initialContent,
     selectedText,
     selectionRange,
@@ -208,6 +211,7 @@ export function useEditorRefinement(
 
   // Build editor context for tool executor
   const buildEditorContext = (): EditorContext => ({
+    editorType,
     connectionName,
     editorContents: currentContent.value,
     selectedText,
@@ -237,6 +241,7 @@ export function useEditorRefinement(
   // Build system prompt
   const buildSystemPrompt = (): string => {
     const context: EditorRefinementContext = {
+      editorType,
       connectionName,
       editorContents: currentContent.value,
       selectedText,
@@ -273,7 +278,7 @@ export function useEditorRefinement(
       buildSystemPrompt(),
       toolExecutor,
       {
-        tools: EDITOR_REFINEMENT_TOOLS,
+        tools: getEditorRefinementTools(editorType),
         maxIterations: 20,
         onToolResult: (toolName, result) => {
           // Update available symbols when validation returns them

@@ -5,6 +5,7 @@ import type { EditorStoreType } from '../stores/editorStore'
 import type { ChatArtifact } from '../chats/chat'
 import { generateArtifactId } from '../chats/chat'
 import type { ChartConfig, Results } from '../editors/results'
+import type { EditorType } from '../editors/editor'
 import type { ContentInput, CompletionItem } from '../stores/resolver'
 import { symbolsToFieldPrompt } from './editorRefinementTools'
 import { validateChartConfigForData, formatChartConfigValidationError } from '../dashboards/helpers'
@@ -31,6 +32,7 @@ export interface QueryExecutionResult {
 }
 
 export interface EditorContext {
+  editorType: EditorType
   connectionName: string
   editorContents: string
   editorId?: string
@@ -70,6 +72,8 @@ export class EditorRefinementToolExecutor {
 
   async executeToolCall(toolName: string, toolInput: Record<string, any>): Promise<ToolCallResult> {
     switch (toolName) {
+      case 'browse_database_tree':
+        return this.browseDatabaseTree(toolInput)
       case 'validate_query':
         return this.validateQuery(toolInput.query)
       case 'run_query':
@@ -96,8 +100,88 @@ export class EditorRefinementToolExecutor {
       default:
         return {
           success: false,
-          error: `Unknown tool: ${toolName}. Available tools: validate_query, run_query, run_active_editor_query, format_query, edit_chart_config, edit_editor, request_close, close_session, connect_data_connection`,
+          error: `Unknown tool: ${toolName}.`,
         }
+    }
+  }
+
+  private async browseDatabaseTree(toolInput: Record<string, any>): Promise<ToolCallResult> {
+    const connectionName = this.editorContext.connectionName
+    const connection = this.connectionStore.connections[connectionName]
+    if (!connection) {
+      return {
+        success: false,
+        error: `Connection "${connectionName}" not found`,
+      }
+    }
+
+    if (!connection.connected) {
+      return {
+        success: false,
+        error: `Connection "${connectionName}" is not currently connected`,
+      }
+    }
+
+    const database = typeof toolInput.database === 'string' ? toolInput.database : undefined
+    const schema = typeof toolInput.schema === 'string' ? toolInput.schema : undefined
+    const table = typeof toolInput.table === 'string' ? toolInput.table : undefined
+    const refresh = toolInput.refresh !== false
+
+    if (table && (!database || !schema)) {
+      return {
+        success: false,
+        error: 'table lookup requires both database and schema',
+      }
+    }
+
+    if (schema && !database) {
+      return {
+        success: false,
+        error: 'schema lookup requires database',
+      }
+    }
+
+    try {
+      if (refresh || !connection.databases || connection.databases.length === 0) {
+        await connection.getDatabases()
+      }
+
+      if (database && refresh) {
+        await connection.refreshDatabase(database)
+        if (!connection.hasSchema) {
+          const db = connection.databases?.find((d) => d.name === database)
+          if (db && db.schemas.length > 0) {
+            await connection.refreshSchema(database, db.schemas[0].name)
+          }
+        }
+      }
+
+      if (database && schema && refresh) {
+        await connection.refreshSchema(database, schema)
+      }
+
+      if (database && schema && table && refresh) {
+        const columns = await connection.getColumns(database, schema, table)
+        const localTable = connection
+          .databases?.find((db) => db.name === database)
+          ?.schemas.find((s) => s.name === schema)
+          ?.tables.find((t) => t.name === table)
+        if (localTable) {
+          localTable.columns = columns
+        }
+      }
+
+      const payload = this.serializeDatabaseTree(database, schema, table)
+      return {
+        success: true,
+        message: JSON.stringify(payload, null, 2),
+        metadata: payload,
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to browse database tree',
+      }
     }
   }
 
@@ -118,6 +202,14 @@ export class EditorRefinementToolExecutor {
     }
 
     const queryInput = this.buildQueryInput(query)
+
+    if (queryInput.editorType === 'sql') {
+      return {
+        success: true,
+        message: 'SQL parser validation is not available. Use run_query to validate by execution.',
+        query,
+      }
+    }
 
     try {
       const validation = await this.queryExecutionService.validateQuery(connectionName, queryInput)
@@ -293,7 +385,7 @@ export class EditorRefinementToolExecutor {
       const formatted = await this.queryExecutionService.formatQuery(
         query.trim(),
         connectionName,
-        'trilogy',
+        this.editorContext.editorType,
         [], // imports
         extraContent,
       )
@@ -302,7 +394,7 @@ export class EditorRefinementToolExecutor {
         return {
           success: true,
           formattedQuery: formatted,
-          message: `Query formatted successfully:\n\`\`\`trilogy\n${formatted}\n\`\`\``,
+          message: `Query formatted successfully:\n\`\`\`${this.editorContext.editorType}\n${formatted}\n\`\`\``,
         }
       }
 
@@ -321,6 +413,13 @@ export class EditorRefinementToolExecutor {
   }
 
   private editChartConfig(chartConfig: ChartConfig): ToolCallResult {
+    if (this.editorContext.editorType === 'sql') {
+      return {
+        success: false,
+        error: 'Chart configuration editing is not supported for SQL editors',
+      }
+    }
+
     if (!chartConfig || typeof chartConfig !== 'object') {
       return {
         success: false,
@@ -376,6 +475,13 @@ export class EditorRefinementToolExecutor {
 
     try {
       this.editorContext.onEditorContentChange(content, replaceSelection)
+
+      if (this.editorContext.editorType === 'sql') {
+        return {
+          success: true,
+          message: replaceSelection ? 'Updated selected text in editor.' : 'Updated editor contents.',
+        }
+      }
 
       // Automatically validate the new content
       const validationResult = await this.validateQuery(content)
@@ -520,11 +626,48 @@ export class EditorRefinementToolExecutor {
     return sharedConnectDataConnection(this.connectionStore, connectionName)
   }
 
+  private serializeDatabaseTree(database?: string, schema?: string, table?: string): Record<string, any> {
+    const databases = this.connectionStore.connections[this.editorContext.connectionName].databases || []
+    const filteredDatabases = database
+      ? databases.filter((db) => db.name === database)
+      : databases
+
+    const tree = filteredDatabases.map((db) => {
+      const schemas = schema ? db.schemas.filter((s) => s.name === schema) : db.schemas
+      return {
+        database: db.name,
+        schemas: schemas.map((s) => {
+          const tables = table ? s.tables.filter((t) => t.name === table) : s.tables
+          return {
+            schema: s.name,
+            tables: tables.map((t) => ({
+              name: t.name,
+              assetType: t.assetType,
+              description: t.description,
+              columns: t.columns.map((c) => ({
+                name: c.name,
+                type: c.type,
+                trilogyType: c.trilogyType,
+                nullable: c.nullable,
+              })),
+            })),
+          }
+        }),
+      }
+    })
+
+    return {
+      connection: this.editorContext.connectionName,
+      hasSchema: this.connectionStore.connections[this.editorContext.connectionName].hasSchema,
+      tree,
+    }
+  }
+
   // Helper to build QueryInput with proper context
   private buildQueryInput(query: string): QueryInput {
     return {
       text: query.trim(),
-      editorType: 'trilogy',
+      editorType: this.editorContext.editorType,
       imports: [],
       extraContent: this.buildEditorExtraContent(),
     }

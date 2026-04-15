@@ -2,6 +2,7 @@ import { rulesInput, aggFunctions, functions, datatypes } from './data/constants
 import { conceptsToFieldPrompt } from './data/prompts'
 import type { ModelConceptInput } from './data/models'
 import type { ChartConfig } from '../editors/results'
+import type { EditorType } from '../editors/editor'
 import type { CompletionItem } from '../stores/resolver'
 import {
   chartConfigSchema,
@@ -33,7 +34,7 @@ export function symbolsToFieldPrompt(symbols: CompletionItem[]): string {
 }
 
 // Tool definitions for editor refinement in JSON Schema format
-export const EDITOR_REFINEMENT_TOOLS = [
+export const TRILOGY_EDITOR_REFINEMENT_TOOLS = [
   {
     name: 'validate_query',
     description:
@@ -168,7 +169,133 @@ ${chartConfigGuidance}`,
   connectDataConnectionTool,
 ]
 
+export const SQL_EDITOR_REFINEMENT_TOOLS = [
+  {
+    name: 'browse_database_tree',
+    description:
+      'Browse connection metadata using the same loading pattern as the sidebar tree. Use this to list databases, schemas, tables, and columns before writing SQL. You can optionally scope to a specific database/schema/table and refresh metadata from the connection.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        database: {
+          type: 'string',
+          description: 'Optional database/catalog name to inspect',
+        },
+        schema: {
+          type: 'string',
+          description: 'Optional schema name (requires database)',
+        },
+        table: {
+          type: 'string',
+          description: 'Optional table/view name (requires database and schema)',
+        },
+        refresh: {
+          type: 'boolean',
+          description: 'Whether to refresh metadata from the backend before returning results',
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'run_query',
+    description:
+      'Execute a SQL query and return results to you. Use this to test SQL before writing final editor content.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'The SQL query to execute',
+        },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'edit_editor',
+    description:
+      'Write content to the SQL editor. Use this to update the query in the editor when you are ready.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        content: {
+          type: 'string',
+          description: 'The new SQL content to write to the editor',
+        },
+      },
+      required: ['content'],
+    },
+  },
+  {
+    name: 'run_active_editor_query',
+    description:
+      'Run the current editor query and display results in the main results pane as well as return them to you. Use this when the user asks to run or show results from the current editor content.',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: 'get_artifact_rows',
+    description:
+      'Fetch a specific range of rows from a query result artifact created by run_query or run_active_editor_query in this session. Use this when results were truncated.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        artifact_id: {
+          type: 'string',
+          description: 'The artifact ID to fetch rows from',
+        },
+        start_row: {
+          type: 'number',
+          description: 'First row to return (0-indexed, inclusive)',
+        },
+        end_row: {
+          type: 'number',
+          description: 'Last row to return (0-indexed, inclusive)',
+        },
+      },
+      required: ['artifact_id', 'start_row', 'end_row'],
+    },
+  },
+  {
+    name: 'request_close',
+    description:
+      'Request to close the refinement session. Call this when you believe you are done making changes. The user will have a chance to reply with follow-up requests before confirming.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          description: 'Summary message describing what changes were made',
+        },
+      },
+      required: ['message'],
+    },
+  },
+  {
+    name: 'close_session',
+    description:
+      'Immediately close the refinement session. Only call this after the user has confirmed they are satisfied with the changes, or if they explicitly ask to close/finish/done.',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  connectDataConnectionTool,
+]
+
+export const EDITOR_REFINEMENT_TOOLS = TRILOGY_EDITOR_REFINEMENT_TOOLS
+
+export function getEditorRefinementTools(editorType: EditorType): typeof EDITOR_REFINEMENT_TOOLS {
+  return editorType === 'sql' ? SQL_EDITOR_REFINEMENT_TOOLS : TRILOGY_EDITOR_REFINEMENT_TOOLS
+}
+
 export interface EditorRefinementContext {
+  editorType: EditorType
   connectionName: string
   editorContents: string
   selectedText?: string
@@ -179,6 +306,7 @@ export interface EditorRefinementContext {
 
 export function buildEditorRefinementPrompt(context: EditorRefinementContext): string {
   const {
+    editorType,
     connectionName,
     editorContents,
     selectedText,
@@ -211,6 +339,41 @@ AVAILABLE FIELDS FOR QUERIES (${concepts.length} concepts):
 ${symbolsToFieldPrompt(completionSymbols)}
 `
       : ''
+
+  if (editorType === 'sql') {
+    return `You are a SQL refinement assistant helping the user edit and test SQL queries.
+
+CURRENT EDITOR CONTENTS:
+\`\`\`sql
+${editorContents}
+\`\`\`
+${selectionSection}
+DATA CONNECTION: ${connectionName}
+
+AVAILABLE TOOLS:
+- browse_database_tree: Explore databases/schemas/tables/columns using the same metadata loading methods as the sidebar
+- run_query: Execute SQL privately to test your changes
+- run_active_editor_query: Run the current editor query and show results in the main pane
+- get_artifact_rows: Fetch a row range from a truncated result artifact
+- edit_editor: Write changes to the editor
+- request_close: Request to close the session (user can reply with follow-ups)
+- close_session: Immediately close (only after user confirms or says "done")
+
+WORKFLOW:
+1. Understand what the user wants to change
+2. Use browse_database_tree when you need metadata context (tables/columns)
+3. Use run_query to test candidate SQL
+4. Use edit_editor to apply final SQL changes
+5. Use run_active_editor_query when the user asks to run/show current editor results
+6. Always call request_close with a summary when done
+
+IMPORTANT:
+- You MUST always call a tool; never respond with text only
+- Use browse_database_tree instead of guessing table/column names
+- Always use edit_editor for final query updates
+- request_close gives the user a chance to ask for more changes before closing
+- Only use close_session after the user explicitly confirms (e.g., says "done", "looks good", "close it")`
+  }
 
   return `You are a query refinement assistant helping the user edit their Trilogy query.
 

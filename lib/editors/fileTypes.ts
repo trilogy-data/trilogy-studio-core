@@ -65,7 +65,7 @@ export const supportsEditorSourceTag = (type: EditorType | string): boolean =>
   type === 'trilogy' || type === 'preql'
 
 export const supportsEditorAssistant = (type: EditorType | string): boolean =>
-  type === 'trilogy' || type === 'preql'
+  type === 'trilogy' || type === 'preql' || type === 'sql'
 
 export const supportsEditorLocalExecution = (type: EditorType | string): boolean =>
   type !== 'python'
