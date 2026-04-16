@@ -3,6 +3,7 @@ import {
   getEditorTypeForPath,
   normalizeRemoteEditorPath,
   supportsDirectJobsTarget,
+  supportsEditorAssistant,
   supportsEditorLocalExecution,
   supportsEditorSourceTag,
 } from './fileTypes'
@@ -26,5 +27,9 @@ describe('fileTypes', () => {
   it('blocks direct jobs execution for python targets', () => {
     expect(supportsDirectJobsTarget('raw/loaders/boston_loader.py')).toBe(false)
     expect(supportsDirectJobsTarget('raw/core.preql')).toBe(true)
+  })
+
+  it('supports assistant for sql editors', () => {
+    expect(supportsEditorAssistant('sql')).toBe(true)
   })
 })

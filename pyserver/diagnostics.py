@@ -1,7 +1,9 @@
 from typing import List, Union, Any
 import logging
 from lark import UnexpectedToken
-from trilogy.parsing.parse_engine import PARSER
+from trilogy.parsing.v2.lark_backend import PARSER
+from trilogy.parsing.v2.syntax import syntax_document_from_parser
+from trilogy.parsing.parse_engine_v2 import TopLevelStatementParser
 from trilogy.constants import DEFAULT_NAMESPACE
 from trilogy.core.statements.author import ImportStatement
 from trilogy.core.models.core import TraitDataType, NumericType
@@ -23,7 +25,6 @@ from io_models import (
     TrilogyType,
 )
 from env_helpers import parse_env_from_full_model, normalize_relative_imports
-from trilogy.parsing.parse_engine import ParseToObjects
 from logging import getLogger
 from common import concept_to_description, concept_to_derivation
 
@@ -116,13 +117,14 @@ def get_diagnostics(
         return True
 
     parse_fragment = normalize_relative_imports(doctext, current_filename)
-    tree = None
+    document = None
     loops = 0
     while parse_fragment.count(";") > 0:
         loops += 1
         try:
 
             tree = PARSER.parse(parse_fragment, on_error=on_error)  # type: ignore
+            document = syntax_document_from_parser(text=parse_fragment, tree=tree)
             break
         except Exception:
             parse_fragment = truncate_to_last_semicolon(parse_fragment)
@@ -139,7 +141,7 @@ def get_diagnostics(
             )
         if loops > 20:
             break
-    if not tree:
+    if not document:
         return ValidateResponse(items=diagnostics, completion_items=completions)
     try:
         env = parse_env_from_full_model(sources)
@@ -155,10 +157,8 @@ def get_diagnostics(
             seen.add(k)
         try:
             # get a partial parse tree
-            parser = ParseToObjects(environment=env)
-            parser.prepare_parse()
-            parser.transform(tree)
-            pass_two = parser.run_second_parse_pass()
+            parser = TopLevelStatementParser(environment=env)
+            pass_two = parser.parse(document)
             for x in pass_two:
                 logger.info(x)
                 if isinstance(x, ImportStatement):

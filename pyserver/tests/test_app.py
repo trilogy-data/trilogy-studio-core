@@ -1,5 +1,4 @@
 from fastapi.testclient import TestClient
-import studio_endpoints
 from io_models import (
     ModelInSchema,
     ModelSourceInSchema,
@@ -53,7 +52,7 @@ select 3 as id, 'alice' as name
 def test_format_query(test_client: TestClient):
 
     request = QueryInSchema(
-        imports=[],
+        imports=[Import(name="test", alias="")],
         query="select name, customer_count;",
         dialect=Dialects.DUCK_DB,
         full_model=ModelInSchema(
@@ -175,7 +174,7 @@ def test_generate_query_worker_serializes_errors():
 
     assert payload["__http_error__"]["status_code"] == 422
     assert payload["__http_error__"]["detail"]
-    assert "Unexpected token" in payload["__http_error__"]["detail"]
+    assert "parse error" in payload["__http_error__"]["detail"].lower()
 
 
 def test_generate_query_invalid_filter_returns_422(test_client: TestClient):
@@ -192,135 +191,7 @@ def test_generate_query_invalid_filter_returns_422(test_client: TestClient):
 
     assert response.status_code == 422
     assert response.json()["detail"]
-    assert "Unexpected token" in response.json()["detail"]
-
-
-def test_format_query_bypasses_process_pool(test_client: TestClient, monkeypatch):
-    def fail_run_cpu_bound(*args, **kwargs):
-        raise AssertionError("format_query should not use process pool")
-
-    monkeypatch.setattr(studio_endpoints, "run_cpu_bound", fail_run_cpu_bound)
-
-    request = QueryInSchema(
-        imports=[],
-        query="select name, customer_count;",
-        dialect=Dialects.DUCK_DB,
-        full_model=ModelInSchema(
-            name="test_parse",
-            sources=[
-                ModelSourceInSchema(
-                    alias="test",
-                    contents="""key cuid int;
-property cuid.name string;
-auto customer_count <- count(cuid);
-datasource customers (
-    id: cuid,
-    name: name,
-)
-grain (cuid,)
-query '''
-select 1 as id, 'bob' as name
-'''
-;""",
-                )
-            ],
-        ),
-    )
-
-    response = test_client.post("/format_query", json=request.model_dump(mode="json"))
-
-    assert response.status_code == 200
-    assert "customer_count" in response.json()["text"]
-
-
-def test_validate_query_bypasses_process_pool(test_client: TestClient, monkeypatch):
-    def fail_run_cpu_bound(*args, **kwargs):
-        raise AssertionError("validate_query should not use process pool")
-
-    monkeypatch.setattr(studio_endpoints, "run_cpu_bound", fail_run_cpu_bound)
-    called = {"value": False}
-
-    async def fake_run_aux_task(func, *args, **kwargs):
-        called["value"] = True
-        return func(*args, **kwargs)
-
-    monkeypatch.setattr(studio_endpoints, "run_aux_task", fake_run_aux_task)
-
-    response = test_client.post(
-        "/validate_query",
-        json={
-            "query": "select name;",
-            "imports": [{"name": "test", "alias": ""}],
-            "sources": [
-                {
-                    "alias": "test",
-                    "contents": "key cuid int;\nproperty cuid.name string;\n",
-                }
-            ],
-            "extra_filters": [],
-        },
-    )
-
-    assert response.status_code == 200
-    assert response.json()["items"] == []
-    assert called["value"] is True
-
-
-def test_generate_query_still_uses_process_pool(test_client: TestClient, monkeypatch):
-    called = {"value": False}
-
-    async def fake_run_cpu_bound(func, *args, **kwargs):
-        called["value"] = True
-        return func(*args, **kwargs)
-
-    monkeypatch.setattr(studio_endpoints, "run_cpu_bound", fake_run_cpu_bound)
-
-    request = QueryInSchema(
-        imports=[],
-        query="select 1 as rows;",
-        dialect=Dialects.DUCK_DB,
-        full_model=ModelInSchema(name="test_parse", sources=[]),
-    )
-
-    response = test_client.post("/generate_query", json=request.model_dump(mode="json"))
-
-    assert response.status_code == 200
-    assert called["value"] is True
-
-
-def test_parse_model_uses_aux_pool(test_client: TestClient, monkeypatch):
-    called = {"value": False}
-
-    async def fake_run_cpu_bound(func, *args, **kwargs):
-        called["value"] = True
-        return func(*args, **kwargs)
-
-    monkeypatch.setattr(studio_endpoints, "run_cpu_bound", fake_run_cpu_bound)
-
-    model = ModelInSchema(
-        name="test_parse",
-        sources=[
-            ModelSourceInSchema(
-                alias="test",
-                contents="""key cuid int;
-property cuid.name string;
-datasource customers (
-    id: cuid,
-    name: name,
-)
-grain (cuid,)
-query '''
-select 1 as id, 'bob' as name
-'''
-;""",
-            )
-        ],
-    )
-
-    response = test_client.post("/parse_model", json=model.model_dump(mode="json"))
-
-    assert response.status_code == 200
-    assert called["value"] is True
+    assert "parse error" in response.json()["detail"].lower()
 
 
 # def test_read_models(test_client: TestClient):

@@ -3,6 +3,7 @@ Reusable Trilogy API endpoints module.
 Can be imported and attached to any FastAPI application.
 """
 
+import asyncio
 import time
 import traceback
 from logging import getLogger
@@ -32,7 +33,6 @@ from io_models import (
     ValidateItem,
     ValidateQueryInSchema,
 )
-from process_pool import run_aux_task, run_cpu_bound
 from query_helpers import (
     PARSE_CONFIG,
     generate_multi_query_core,
@@ -93,9 +93,17 @@ def _format_query_task(query_data: dict) -> dict:
     query = QueryInSchema.model_validate(query_data)
     env = parse_env_from_full_model(query.full_model.sources)
     try:
+        base_imp_string = ""
+        for imp in query.imports:
+            resolved = resolve_import_path(imp.name, query.current_filename)
+            if imp.alias:
+                base_imp_string += f"import {resolved} as {imp.alias};\n"
+            else:
+                base_imp_string += f"import {resolved};\n"
         _, parsed = parse_text(
             safe_format_query(
-                normalize_relative_imports(query.query, query.current_filename)
+                base_imp_string
+                + normalize_relative_imports(query.query, query.current_filename)
             ),
             env,
             parse_config=PARSE_CONFIG,
@@ -421,13 +429,13 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
     @router.post("/validate_query")
     async def validate_query(query: ValidateQueryInSchema):
         return _raise_if_worker_error(
-            await run_aux_task(_validate_query_task, query.model_dump(mode="json"))
+            await asyncio.to_thread(_validate_query_task, query.model_dump(mode="json"))
         )
 
     @router.post("/generate_queries")
     async def generate_queries(queries: MultiQueryInSchema):
         return _raise_if_worker_error(
-            await run_cpu_bound(
+            await asyncio.to_thread(
                 _generate_queries_task,
                 queries.model_dump(mode="json"),
                 enable_perf_logging,
@@ -437,7 +445,7 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
     @router.post("/generate_query")
     async def generate_query(query: QueryInSchema):
         return _raise_if_worker_error(
-            await run_cpu_bound(
+            await asyncio.to_thread(
                 _generate_query_task,
                 query.model_dump(mode="json"),
                 enable_perf_logging,
@@ -447,7 +455,7 @@ def create_trilogy_router(enable_perf_logging: bool = False) -> APIRouter:
     @router.post("/parse_model")
     async def parse_model(model: ModelInSchema):
         return _raise_if_worker_error(
-            await run_cpu_bound(
+            await asyncio.to_thread(
                 _parse_model_task,
                 model.model_dump(mode="json"),
                 enable_perf_logging,

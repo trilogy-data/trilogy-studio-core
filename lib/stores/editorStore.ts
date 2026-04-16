@@ -17,7 +17,7 @@ import {
   type QueryExecutionResult,
 } from '../llm/editorRefinementToolExecutor'
 import {
-  EDITOR_REFINEMENT_TOOLS,
+  getEditorRefinementTools,
   buildEditorRefinementPrompt,
   type EditorRefinementContext,
 } from '../llm/editorRefinementTools'
@@ -363,6 +363,7 @@ const useEditorStore = defineStore('editors', {
           const currentSession = this.editors[editorId]?.refinementSession
           if (!currentSession) {
             return {
+              editorType: editor.type,
               connectionName: editor.connection,
               editorContents: '',
               selectedText: undefined,
@@ -374,6 +375,7 @@ const useEditorStore = defineStore('editors', {
             }
           }
           return {
+            editorType: editor.type,
             connectionName: editor.connection,
             editorContents: currentSession.currentContent,
             selectedText: currentSession.selectedText,
@@ -412,6 +414,7 @@ const useEditorStore = defineStore('editors', {
           if (!currentSession) return ''
 
           const context: EditorRefinementContext = {
+            editorType: editor.type,
             connectionName: editor.connection,
             editorContents: currentSession.currentContent,
             selectedText: currentSession.selectedText,
@@ -458,7 +461,7 @@ const useEditorStore = defineStore('editors', {
           toolExecutorFactory,
           stateUpdater,
           {
-            tools: EDITOR_REFINEMENT_TOOLS,
+            tools: getEditorRefinementTools(editor.type),
             maxIterations: 20,
             buildSystemPrompt,
             onToolResult: (toolName, result) => {

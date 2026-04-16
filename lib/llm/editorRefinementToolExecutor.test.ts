@@ -50,6 +50,7 @@ describe('EditorRefinementToolExecutor', () => {
 
     // Create mock editor context
     mockEditorContext = {
+      editorType: 'trilogy',
       connectionName: 'test-connection',
       editorContents: 'SELECT * FROM users;',
       onEditorContentChange: onEditorContentChangeSpy,
@@ -451,6 +452,95 @@ describe('EditorRefinementToolExecutor', () => {
       expect(result.success).toBe(false)
       expect(result.error).toContain('Unknown tool')
       expect(result.error).toContain('unknown_tool')
+    })
+  })
+
+  describe('SQL editor behavior', () => {
+    it('skips validation when editing SQL content', async () => {
+      mockEditorContext.editorType = 'sql'
+      executor = new EditorRefinementToolExecutor(
+        mockQueryExecutionService as unknown as QueryExecutionService,
+        mockConnectionStore as unknown as ConnectionStoreType,
+        mockEditorContext,
+      )
+
+      const result = await executor.executeToolCall('edit_editor', {
+        content: 'select id from users',
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.message).toContain('Updated editor contents')
+      expect(mockQueryExecutionService.validateQuery).not.toHaveBeenCalled()
+    })
+
+    it('returns SQL validation guidance for validate_query', async () => {
+      mockEditorContext.editorType = 'sql'
+      executor = new EditorRefinementToolExecutor(
+        mockQueryExecutionService as unknown as QueryExecutionService,
+        mockConnectionStore as unknown as ConnectionStoreType,
+        mockEditorContext,
+      )
+
+      const result = await executor.executeToolCall('validate_query', {
+        query: 'select 1',
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.message).toContain('SQL parser validation is not available')
+    })
+
+    it('browses database tree metadata', async () => {
+      mockEditorContext.editorType = 'sql'
+      ;(mockConnectionStore.connections as Record<string, any>)['test-connection'] = {
+        connected: true,
+        hasSchema: true,
+        databases: [
+          {
+            name: 'db1',
+            schemas: [
+              {
+                name: 'public',
+                tables: [
+                  {
+                    name: 'users',
+                    schema: 'public',
+                    database: 'db1',
+                    assetType: 'table',
+                    description: null,
+                    columns: [
+                      { name: 'id', type: 'int', trilogyType: 'integer', nullable: false },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        getDatabases: vi.fn().mockResolvedValue([]),
+        refreshDatabase: vi.fn().mockResolvedValue([]),
+        refreshSchema: vi.fn().mockResolvedValue(null),
+        getColumns: vi.fn().mockResolvedValue([
+          { name: 'id', type: 'int', trilogyType: 'integer', nullable: false },
+        ]),
+      }
+
+      executor = new EditorRefinementToolExecutor(
+        mockQueryExecutionService as unknown as QueryExecutionService,
+        mockConnectionStore as unknown as ConnectionStoreType,
+        mockEditorContext,
+      )
+
+      const result = await executor.executeToolCall('browse_database_tree', {
+        database: 'db1',
+        schema: 'public',
+        table: 'users',
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.message).toContain('"connection": "test-connection"')
+      expect(result.message).toContain('"database": "db1"')
+      expect(result.message).toContain('"schema": "public"')
+      expect(result.message).toContain('"name": "users"')
     })
   })
 
