@@ -22,8 +22,6 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, JSONResponse
 from trilogy import __version__
-from contextlib import asynccontextmanager
-from process_pool import init_process_pool, shutdown_process_pool, warm_process_pool
 
 # Import the reusable endpoints module
 from studio_endpoints import create_trilogy_router
@@ -83,19 +81,7 @@ setup_performance_logging()
 PORT = 5678
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    print("Starting up...!")
-    init_process_pool()
-    await warm_process_pool()
-
-    yield
-
-    await shutdown_process_pool()
-    print("Shutting down...!")
-
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 
 @dataclass
