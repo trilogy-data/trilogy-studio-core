@@ -363,6 +363,7 @@ const useEditorStore = defineStore('editors', {
           const currentSession = this.editors[editorId]?.refinementSession
           if (!currentSession) {
             return {
+              editorType: editor.type,
               connectionName: editor.connection,
               editorContents: '',
               selectedText: undefined,

@@ -175,7 +175,6 @@ export class EditorRefinementToolExecutor {
       return {
         success: true,
         message: JSON.stringify(payload, null, 2),
-        metadata: payload,
       }
     } catch (error) {
       return {
