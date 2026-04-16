@@ -11,7 +11,7 @@ from io_models import (
     ModelSourceInSchema,
 )
 from common import concept_to_description
-from trilogy.parsing.parse_engine import ParseError
+from trilogy.parsing.exceptions import ParseError
 from trilogy.core.models.environment import DictImportResolver, EnvironmentConfig
 from trilogy.authoring import (
     Concept,

@@ -53,8 +53,8 @@ select 3 as id, 'alice' as name
 def test_format_query(test_client: TestClient):
 
     request = QueryInSchema(
-        imports=[],
-        query="select name, customer_count;",
+        imports=[Import(name="test", alias="")],
+        query="import test; select name, customer_count;",
         dialect=Dialects.DUCK_DB,
         full_model=ModelInSchema(
             name="test_parse",
@@ -175,7 +175,7 @@ def test_generate_query_worker_serializes_errors():
 
     assert payload["__http_error__"]["status_code"] == 422
     assert payload["__http_error__"]["detail"]
-    assert "Unexpected token" in payload["__http_error__"]["detail"]
+    assert "parse error" in payload["__http_error__"]["detail"].lower()
 
 
 def test_generate_query_invalid_filter_returns_422(test_client: TestClient):
@@ -192,7 +192,7 @@ def test_generate_query_invalid_filter_returns_422(test_client: TestClient):
 
     assert response.status_code == 422
     assert response.json()["detail"]
-    assert "Unexpected token" in response.json()["detail"]
+    assert "parse error" in response.json()["detail"].lower()
 
 
 def test_format_query_bypasses_process_pool(test_client: TestClient, monkeypatch):
@@ -202,8 +202,8 @@ def test_format_query_bypasses_process_pool(test_client: TestClient, monkeypatch
     monkeypatch.setattr(studio_endpoints, "run_cpu_bound", fail_run_cpu_bound)
 
     request = QueryInSchema(
-        imports=[],
-        query="select name, customer_count;",
+        imports=[Import(name="test", alias="")],
+        query="import test; select name, customer_count;",
         dialect=Dialects.DUCK_DB,
         full_model=ModelInSchema(
             name="test_parse",
