@@ -93,9 +93,17 @@ def _format_query_task(query_data: dict) -> dict:
     query = QueryInSchema.model_validate(query_data)
     env = parse_env_from_full_model(query.full_model.sources)
     try:
+        base_imp_string = ""
+        for imp in query.imports:
+            resolved = resolve_import_path(imp.name, query.current_filename)
+            if imp.alias:
+                base_imp_string += f"import {resolved} as {imp.alias};\n"
+            else:
+                base_imp_string += f"import {resolved};\n"
         _, parsed = parse_text(
             safe_format_query(
-                normalize_relative_imports(query.query, query.current_filename)
+                base_imp_string
+                + normalize_relative_imports(query.query, query.current_filename)
             ),
             env,
             parse_config=PARSE_CONFIG,

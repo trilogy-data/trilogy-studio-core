@@ -54,7 +54,7 @@ def test_format_query(test_client: TestClient):
 
     request = QueryInSchema(
         imports=[Import(name="test", alias="")],
-        query="import test; select name, customer_count;",
+        query="select name, customer_count;",
         dialect=Dialects.DUCK_DB,
         full_model=ModelInSchema(
             name="test_parse",
@@ -203,7 +203,7 @@ def test_format_query_bypasses_process_pool(test_client: TestClient, monkeypatch
 
     request = QueryInSchema(
         imports=[Import(name="test", alias="")],
-        query="import test; select name, customer_count;",
+        query="select name, customer_count;",
         dialect=Dialects.DUCK_DB,
         full_model=ModelInSchema(
             name="test_parse",
