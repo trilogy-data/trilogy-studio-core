@@ -125,7 +125,7 @@ describe('ChartControlsManager', () => {
       expect(manager.internalConfig.value.colorField).toBe('revenue')
     })
 
-    it('should backfill colorField for heatmaps after dimension edits when it is empty', () => {
+    it('should preserve an empty colorField after dimension edits (no cascading backfill)', () => {
       manager.internalConfig.value = {
         ...manager.internalConfig.value,
         chartType: 'heatmap',
@@ -136,7 +136,7 @@ describe('ChartControlsManager', () => {
 
       manager.updateConfig('xField', 'region', testData, testColumns)
 
-      expect(manager.internalConfig.value.colorField).toBe('revenue')
+      expect(manager.internalConfig.value.colorField).toBe('')
     })
   })
 

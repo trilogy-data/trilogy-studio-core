@@ -673,4 +673,220 @@ describe('Chart Utils', () => {
       expect(defaults.colorField).toBe('region')
     })
   })
+
+  describe('Decade Trait Handling', () => {
+    const buildDecadeColumns = (): Map<string, ResultColumn> =>
+      new Map<string, ResultColumn>([
+        [
+          'plant_decade',
+          {
+            name: 'plant_decade',
+            type: ColumnType.INTEGER,
+            description: 'Plant Decade',
+            traits: ['decade'],
+          },
+        ],
+        [
+          'ash_share',
+          {
+            name: 'ash_share',
+            type: ColumnType.FLOAT,
+            description: 'Ash Share',
+            traits: ['percent'],
+          },
+        ],
+      ])
+
+    const decadeData: Row[] = [
+      { plant_decade: 1950, ash_share: 0.1 },
+      { plant_decade: 1960, ash_share: 0.2 },
+      { plant_decade: 1970, ash_share: 0.3 },
+      { plant_decade: 1980, ash_share: 0.25 },
+      { plant_decade: 1990, ash_share: 0.15 },
+      { plant_decade: 2000, ash_share: 0.12 },
+      { plant_decade: 2010, ash_share: 0.08 },
+      { plant_decade: 2020, ash_share: 0.05 },
+    ]
+
+    it('classifies decade columns as categorical, not numeric or temporal', () => {
+      const cols = buildDecadeColumns()
+      const decadeCol = cols.get('plant_decade')!
+
+      expect(isNumericColumn(decadeCol)).toBe(false)
+      expect(isTemporalColumn(decadeCol)).toBe(false)
+      expect(isCategoricalColumn(decadeCol)).toBe(true)
+    })
+
+    it('includes decade column in categorical bucket and excludes it from numeric/temporal', () => {
+      const cols = buildDecadeColumns()
+
+      expect(filteredColumns('numeric', cols).map((c) => c.name)).toEqual(['ash_share'])
+      expect(filteredColumns('temporal', cols).map((c) => c.name)).toEqual([])
+      expect(filteredColumns('categorical', cols).map((c) => c.name)).toEqual(['plant_decade'])
+    })
+
+    it('makes line and bar both eligible for decade + numeric data', () => {
+      const cols = buildDecadeColumns()
+      const eligible = determineEligibleChartTypes(decadeData, cols)
+
+      expect(eligible).toContain('line')
+      expect(eligible).toContain('area')
+      expect(eligible).toContain('bar')
+      expect(eligible).toContain('barh')
+    })
+
+    it('defaults decade + numeric data to a vertical bar chart with decade on x', () => {
+      const cols = buildDecadeColumns()
+      const defaults = determineDefaultConfig(decadeData, cols)
+
+      expect(defaults.chartType).toBe('bar')
+      expect(defaults.xField).toBe('plant_decade')
+      expect(defaults.yField).toBe('ash_share')
+    })
+
+    it('uses decade as xField when user explicitly requests a line chart', () => {
+      const cols = buildDecadeColumns()
+      const defaults = determineDefaultConfig(decadeData, cols, 'line')
+
+      expect(defaults.chartType).toBe('line')
+      expect(defaults.xField).toBe('plant_decade')
+      expect(defaults.yField).toBe('ash_share')
+    })
+  })
+
+  describe('Graceful handling of missing column types for explicit chartType', () => {
+    // Helpers: column sets that intentionally lack required types for certain chart types.
+    const numericOnlyColumns = new Map<string, ResultColumn>([
+      ['revenue', { name: 'revenue', type: ColumnType.FLOAT, traits: [] }],
+      ['quantity', { name: 'quantity', type: ColumnType.INTEGER, traits: [] }],
+    ])
+
+    const categoricalOnlyColumns = new Map<string, ResultColumn>([
+      ['category', { name: 'category', type: ColumnType.STRING, traits: [] }],
+      ['region', { name: 'region', type: ColumnType.STRING, traits: [] }],
+    ])
+
+    const singleNumericColumn = new Map<string, ResultColumn>([
+      ['revenue', { name: 'revenue', type: ColumnType.FLOAT, traits: [] }],
+    ])
+
+    const sampleData: Row[] = [
+      { revenue: 100, quantity: 50, category: 'A', region: 'North' },
+      { revenue: 200, quantity: 75, category: 'B', region: 'South' },
+    ]
+
+    it('bar with no categorical columns does not crash', () => {
+      const defaults = determineDefaultConfig(sampleData, numericOnlyColumns, 'bar')
+      expect(defaults.chartType).toBe('bar')
+      // xField should be undefined since there are no categorical columns
+      expect(defaults.xField).toBeUndefined()
+      // yField should still pick a numeric column
+      expect(defaults.yField).toBe('revenue')
+    })
+
+    it('bar with no numeric columns does not crash', () => {
+      const defaults = determineDefaultConfig(sampleData, categoricalOnlyColumns, 'bar')
+      expect(defaults.chartType).toBe('bar')
+      expect(defaults.xField).toBe('category')
+      expect(defaults.yField).toBeUndefined()
+    })
+
+    it('barh with no categorical columns does not crash', () => {
+      const defaults = determineDefaultConfig(sampleData, numericOnlyColumns, 'barh')
+      expect(defaults.chartType).toBe('barh')
+      expect(defaults.yField).toBeUndefined()
+      expect(defaults.xField).toBe('revenue')
+    })
+
+    it('barh with no numeric columns does not crash', () => {
+      const defaults = determineDefaultConfig(sampleData, categoricalOnlyColumns, 'barh')
+      expect(defaults.chartType).toBe('barh')
+      expect(defaults.yField).toBe('category')
+      expect(defaults.xField).toBeUndefined()
+    })
+
+    it('donut with no categorical columns does not crash', () => {
+      const defaults = determineDefaultConfig(sampleData, numericOnlyColumns, 'donut')
+      expect(defaults.chartType).toBe('donut')
+      expect(defaults.yField).toBeUndefined()
+      expect(defaults.xField).toBe('revenue')
+    })
+
+    it('donut with no numeric columns does not crash', () => {
+      const defaults = determineDefaultConfig(sampleData, categoricalOnlyColumns, 'donut')
+      expect(defaults.chartType).toBe('donut')
+      expect(defaults.yField).toBe('category')
+      expect(defaults.xField).toBeUndefined()
+    })
+
+    it('point with only one numeric column does not crash', () => {
+      const defaults = determineDefaultConfig(sampleData, singleNumericColumn, 'point')
+      expect(defaults.chartType).toBe('point')
+      expect(defaults.xField).toBe('revenue')
+      expect(defaults.yField).toBeUndefined()
+    })
+
+    it('point with no numeric columns does not crash', () => {
+      const defaults = determineDefaultConfig(sampleData, categoricalOnlyColumns, 'point')
+      expect(defaults.chartType).toBe('point')
+      expect(defaults.xField).toBeUndefined()
+      expect(defaults.yField).toBeUndefined()
+    })
+
+    it('heatmap with fewer than 2 categorical columns does not crash', () => {
+      const cols = new Map<string, ResultColumn>([
+        ['category', { name: 'category', type: ColumnType.STRING, traits: [] }],
+        ['revenue', { name: 'revenue', type: ColumnType.FLOAT, traits: [] }],
+      ])
+      const defaults = determineDefaultConfig(sampleData, cols, 'heatmap')
+      expect(defaults.chartType).toBe('heatmap')
+      expect(defaults.xField).toBe('category')
+      expect(defaults.yField).toBeUndefined()
+      expect(defaults.colorField).toBe('revenue')
+    })
+
+    it('heatmap with no numeric columns does not crash', () => {
+      const defaults = determineDefaultConfig(sampleData, categoricalOnlyColumns, 'heatmap')
+      expect(defaults.chartType).toBe('heatmap')
+      expect(defaults.xField).toBe('category')
+      expect(defaults.yField).toBe('region')
+      expect(defaults.colorField).toBeUndefined()
+    })
+
+    it('headline with no numeric columns does not crash', () => {
+      const defaults = determineDefaultConfig(sampleData, categoricalOnlyColumns, 'headline')
+      expect(defaults.chartType).toBe('headline')
+      expect(defaults.xField).toBeUndefined()
+    })
+
+    it('line with no temporal or discrete-time columns does not crash', () => {
+      const defaults = determineDefaultConfig(sampleData, numericOnlyColumns, 'line')
+      expect(defaults.chartType).toBe('line')
+      expect(defaults.xField).toBeUndefined()
+      expect(defaults.yField).toBe('revenue')
+    })
+
+    it('area with no temporal or discrete-time columns does not crash', () => {
+      const defaults = determineDefaultConfig(sampleData, numericOnlyColumns, 'area')
+      expect(defaults.chartType).toBe('area')
+      expect(defaults.xField).toBeUndefined()
+      expect(defaults.yField).toBe('revenue')
+    })
+
+    it('line with no numeric columns does not crash', () => {
+      const cols = new Map<string, ResultColumn>([
+        ['date', { name: 'date', type: ColumnType.DATE, traits: [] }],
+        ['category', { name: 'category', type: ColumnType.STRING, traits: [] }],
+      ])
+      const defaults = determineDefaultConfig(sampleData, cols, 'line')
+      expect(defaults.chartType).toBe('line')
+      expect(defaults.xField).toBe('date')
+      expect(defaults.yField).toBeUndefined()
+    })
+
+    it('geo-map with no geo or lat/lng columns does not crash', () => {
+      const defaults = determineDefaultConfig(sampleData, numericOnlyColumns, 'geo-map')
+      expect(defaults.chartType).toBe('geo-map')
+    })
+  })
 })

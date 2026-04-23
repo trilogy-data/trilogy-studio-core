@@ -174,7 +174,7 @@ def test_generate_query_worker_serializes_errors():
 
     assert payload["__http_error__"]["status_code"] == 422
     assert payload["__http_error__"]["detail"]
-    assert "parse error" in payload["__http_error__"]["detail"].lower()
+    assert "syntax error" in payload["__http_error__"]["detail"].lower()
 
 
 def test_generate_query_invalid_filter_returns_422(test_client: TestClient):
@@ -191,7 +191,7 @@ def test_generate_query_invalid_filter_returns_422(test_client: TestClient):
 
     assert response.status_code == 422
     assert response.json()["detail"]
-    assert "parse error" in response.json()["detail"].lower()
+    assert "syntax error" in response.json()["detail"].lower()
 
 
 # def test_read_models(test_client: TestClient):

@@ -112,7 +112,7 @@ import { Results } from '../../editors/results'
 import { ref, onMounted, onUpdated, inject, type PropType } from 'vue'
 import Prism from 'prismjs'
 import VegaLiteChart from '../VegaLiteChart.vue'
-import { getDefaultValueFromHash, pushHashToUrl } from '../../stores/urlStore'
+import { getDefaultValueFromHash, pushHashToUrl, URL_HASH_KEYS } from '../../stores/urlStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import ErrorMessage from '../ErrorMessage.vue'
 import LoadingButton from '../LoadingButton.vue'
@@ -172,7 +172,7 @@ export default {
   emits: ['config-change', 'drilldown-click', 'refresh-click', 'open-chat'],
   data() {
     return {
-      activeTab: this.defaultTab || getDefaultValueFromHash('activeEditorTab', 'results'),
+      activeTab: this.defaultTab || getDefaultValueFromHash(URL_HASH_KEYS.ACTIVE_EDITOR_TAB, 'results'),
       activeDrilldown: null as Drilldown | null,
       TABS_HEIGHT: 26,
     }
@@ -185,7 +185,7 @@ export default {
     },
     setTab(tab: string) {
       this.activeTab = tab
-      pushHashToUrl('activeEditorTab', tab)
+      pushHashToUrl(URL_HASH_KEYS.ACTIVE_EDITOR_TAB, tab)
     },
     handleReconnect() {
       if (this.connection) {

@@ -414,6 +414,22 @@ export const useDashboardStore = defineStore('dashboards', {
       }
     },
 
+    // Hard-removes any dashboard currently flagged as deleted. Mirrors
+    // connectionStore.purgeDeletedConnections: callers should run this after
+    // saveDashboards() so the persistence layer has had a chance to observe
+    // the `deleted` flag and drop the entry from storage.
+    purgeDeletedDashboards() {
+      for (const id of Object.keys(this.dashboards)) {
+        if (this.dashboards[id].deleted) {
+          this.removeQueryExecutor(id)
+          delete this.dashboards[id]
+          if (this.activeDashboardId === id) {
+            this.activeDashboardId = ''
+          }
+        }
+      }
+    },
+
     setState(dashboardId: string, state: DashboardState) {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].state = state
@@ -738,7 +754,8 @@ export const useDashboardStore = defineStore('dashboards', {
         if (results) {
           return results.data.completion_items
         } else {
-          throw new Error('No completion items found.')
+          console.log(`No results returned from validateQuery for dashboard ID "${dashboardId}".`)
+          return []
         }
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)

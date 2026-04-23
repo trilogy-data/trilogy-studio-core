@@ -631,7 +631,10 @@ async function captureDashboardImage(): Promise<{
 
     <div class="dashboard-body" :class="{ 'chat-open': chatPanelOpen }">
       <div class="dashboard-main">
-        <div v-if="dashboard && layout.length === 0" class="empty-dashboard-wrapper">
+        <div
+          v-if="dashboard && layout.length === 0 && !chatPanelOpen"
+          class="empty-dashboard-wrapper"
+        >
           <DashboardCTA :dashboard-id="dashboard.id" @start-chat-with-prompt="openChatWithPrompt" />
         </div>
 

@@ -69,6 +69,10 @@ let llms = useLLMConnectionStore()
 let dashboards = useDashboardStore()
 
 let communityApiStore = useCommunityApiStore()
+// Must run before Manager kicks off remoteStorage.load*() — otherwise the
+// community store hasn't populated this.stores from localStorage yet and the
+// remote-backed editors/models/connections come back empty on refresh.
+communityApiStore.loadStoresFromStorage()
 let jobsApiStore = useJobsApiStore()
 let remoteStorage = new RemoteStoreStorage(communityApiStore)
 

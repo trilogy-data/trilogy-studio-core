@@ -81,25 +81,13 @@ export const fetchStoreFileContent = async (
     }),
   )
 
-  if (response.ok) {
-    return response.text()
-  }
-
-  if (response.status !== 404) {
-    await ensureOk(response, `Failed to fetch ${path}`)
-  }
-
-  const fallbackResponse = await fetch(
-    `${store.baseUrl}/${encodedPath}`,
-    buildAuthRequest(store.token, {
-      method: 'GET',
-    }),
-  )
-
-  await ensureOk(fallbackResponse, `Failed to fetch ${path}`)
-  return fallbackResponse.text()
+  await ensureOk(response, `Failed to fetch ${path}`)
+  return response.text()
 }
 
+// Contract allows POST to return 409 when the file already exists; retry as PUT.
+// Also tolerate 404 on PUT by retrying as POST — the caller's view of whether a
+// file is persisted can drift after deletes/renames.
 export const createStoreFile = async (
   store: GenericModelStore,
   path: string,
@@ -115,6 +103,11 @@ export const createStoreFile = async (
       body: JSON.stringify({ path, content }),
     }),
   )
+
+  if (response.status === 409) {
+    await updateStoreFile(store, path, content)
+    return
+  }
 
   await ensureOk(response, `Failed to create ${path}`)
 }
@@ -135,6 +128,22 @@ export const updateStoreFile = async (
     }),
   )
 
+  if (response.status === 404) {
+    // Fall back to create — mirrors the contract's 404-on-PUT guidance.
+    const createResponse = await fetch(
+      `${store.baseUrl}/files`,
+      buildAuthRequest(store.token, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ path, content }),
+      }),
+    )
+    await ensureOk(createResponse, `Failed to update ${path}`)
+    return
+  }
+
   await ensureOk(response, `Failed to update ${path}`)
 }
 
@@ -145,6 +154,11 @@ export const deleteStoreFile = async (store: GenericModelStore, path: string): P
       method: 'DELETE',
     }),
   )
+
+  // 404 means already absent — the contract specifies idempotent success.
+  if (response.status === 404) {
+    return
+  }
 
   await ensureOk(response, `Failed to delete ${path}`)
 }

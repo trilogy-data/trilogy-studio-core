@@ -137,7 +137,6 @@ import LoadingButton from '../components/LoadingButton.vue'
 import ModelView from './ModelView.vue'
 import UserSettings from '../components/user/UserSettings.vue'
 import UserProfile from '../components/user/UserProfile.vue'
-import HintComponent from '../components/HintComponent.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
@@ -185,7 +184,6 @@ const MobileIDEComponent: Component = defineComponent({
     UserSettings,
     UserProfile,
     LoadingView,
-    HintComponent,
     WelcomePage,
     MobileDashboard,
     DashboardAutoImporter: AssetAutoImporter,

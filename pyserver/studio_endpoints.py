@@ -357,7 +357,9 @@ def _generate_query_task(query_data: dict, enable_perf_logging: bool) -> dict:
         if enable_perf_logging:
             error_time = time.perf_counter() - start_time
             perf_logger.error(f"Syntax error in query: {error_time:.6f}s: {str(exc)}")
-        return _http_error_payload(HTTPException(status_code=422, detail=exc.args[0]))
+        return _http_error_payload(
+            HTTPException(status_code=422, detail=f"Syntax error: {exc.args[0]}")
+        )
     except HTTPException as exc:
         return _http_error_payload(exc)
     except Exception as exc:

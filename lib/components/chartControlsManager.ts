@@ -148,8 +148,6 @@ export class ChartControlsManager {
 
       // Update all config fields
       Object.assign(this.internalConfig.value, configDefaults)
-    } else {
-      this.applyMissingDefaultsForCurrentChartType(data, columns)
     }
 
     // Notify parent component if the callback is provided

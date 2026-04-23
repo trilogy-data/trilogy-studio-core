@@ -2,6 +2,7 @@ import type RemoteStoreStorage from '../data/remoteStoreStorage'
 import type { EditorStoreType } from '../stores/editorStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { ModelConfigStoreType } from '../stores/modelStore'
+import { reconcileRemoteEditor } from '../editors/reconcile'
 
 export const syncRemoteStoreIntoIde = async (
   remoteStorage: RemoteStoreStorage,
@@ -12,8 +13,21 @@ export const syncRemoteStoreIntoIde = async (
 ): Promise<void> => {
   const snapshot = await remoteStorage.loadStore(storeId)
 
-  Object.values(snapshot.editors).forEach((editor) => {
-    editorStore.addEditor(editor)
+  Object.values(snapshot.editors).forEach((snapshotEditor) => {
+    if (!snapshotEditor.remoteStoreId || !snapshotEditor.remotePath) {
+      editorStore.addEditor(snapshotEditor)
+      return
+    }
+    reconcileRemoteEditor(editorStore, {
+      id: snapshotEditor.id,
+      name: snapshotEditor.name,
+      type: snapshotEditor.type,
+      connection: snapshotEditor.connection,
+      contents: snapshotEditor.contents || '',
+      tags: snapshotEditor.tags,
+      remoteStoreId: snapshotEditor.remoteStoreId,
+      remotePath: snapshotEditor.remotePath,
+    })
   })
 
   Object.values(snapshot.connections).forEach((connection) => {

@@ -3,8 +3,7 @@
     <div class="hint-card">
       <div class="hint-header">
         <div>
-          <div class="hint-title">Keyboard shortcuts</div>
-          <div class="hint-subtitle">Shown when an editor has no results yet.</div>
+          <div class="hint-title">Shortcuts</div>
         </div>
       </div>
       <div class="shortcuts">
@@ -32,22 +31,22 @@
 }
 
 .hint-card {
-  width: min(720px, 100%);
+  width: 100%;
+  height: 100%;
   padding: 18px 20px;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--query-window-bg) 92%, transparent);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   opacity: 0.72;
+  box-sizing: border-box;
 }
 
 .hint-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
   margin-bottom: 16px;
-  text-align: left;
+  text-align: center;
 }
 
 .hint-title {
@@ -56,16 +55,9 @@
   color: var(--text);
 }
 
-.hint-subtitle {
-  margin-top: 4px;
-  font-size: 11px;
-  line-height: 1.45;
-  color: var(--text-faint);
-}
-
 .shortcuts {
   display: grid;
-  grid-template-columns: auto auto;
+  grid-template-columns: 1fr 1fr;
   column-gap: 14px;
   row-gap: 5px;
   margin: 0 auto;

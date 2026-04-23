@@ -55,17 +55,20 @@ export const getMonacoLanguageForEditorType = (
   }
 }
 
-export const supportsEditorValidation = (type: EditorType | string): boolean =>
+export const isTrilogyType = (type: EditorType | string): boolean =>
   type === 'trilogy' || type === 'preql'
+
+export const supportsEditorValidation = (type: EditorType | string): boolean =>
+  isTrilogyType(type)
 
 export const supportsEditorFormatting = (type: EditorType | string): boolean =>
-  type === 'trilogy' || type === 'preql'
+  isTrilogyType(type)
 
 export const supportsEditorSourceTag = (type: EditorType | string): boolean =>
-  type === 'trilogy' || type === 'preql'
+  isTrilogyType(type)
 
 export const supportsEditorAssistant = (type: EditorType | string): boolean =>
-  type === 'trilogy' || type === 'preql' || type === 'sql'
+  isTrilogyType(type) || type === 'sql'
 
 export const supportsEditorLocalExecution = (type: EditorType | string): boolean =>
   type !== 'python'

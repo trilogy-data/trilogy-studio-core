@@ -24,7 +24,7 @@ const getAvailablePort = async (): Promise<number> =>
     server.listen(0, '127.0.0.1', () => {
       const address = server.address()
       if (!address || typeof address === 'string') {
-        server.close(() => reject(new Error('Unable to determine mock server port')))
+        server.close(() => reject(new Error('Unable to determine server port')))
         return
       }
 
@@ -42,245 +42,277 @@ const getAvailablePort = async (): Promise<number> =>
 const getStoreIdFromUrl = (url: string): string =>
   url.replace(/^https?:\/\//, '').replace(/\//g, '-')
 
+const getTrilogyExecutable = (): string => {
+  const projectRoot = path.join(__dirname, '..')
+  const isWindows = process.platform === 'win32'
+  const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true'
+  if (isCI) {
+    // pip install in CI puts `trilogy` on PATH
+    return 'trilogy'
+  }
+  return isWindows
+    ? path.join(projectRoot, '.venv', 'Scripts', 'trilogy.exe')
+    : path.join(projectRoot, '.venv', 'bin', 'trilogy')
+}
+
+const startTrilogyServe = async (
+  fixtureRelPath: string,
+  engine: string,
+): Promise<{ proc: ChildProcess; url: string; storeId: string }> => {
+  const projectRoot = path.join(__dirname, '..')
+  const fixturePath = path.join(projectRoot, fixtureRelPath)
+  const port = await getAvailablePort()
+  const url = `http://127.0.0.1:${port}`
+  const storeId = getStoreIdFromUrl(url)
+
+  const proc = spawn(
+    getTrilogyExecutable(),
+    [
+      'serve',
+      fixturePath,
+      engine,
+      '-p',
+      String(port),
+      '-h',
+      '127.0.0.1',
+      '--no-auth',
+      '--no-browser',
+    ],
+    { stdio: 'pipe' },
+  )
+
+  proc.stdout?.on('data', (data) => {
+    console.log(`trilogy serve [${engine}]: ${data}`)
+  })
+  proc.stderr?.on('data', (data) => {
+    console.error(`trilogy serve [${engine}] err: ${data}`)
+  })
+
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(`trilogy serve (${engine}) failed to start within 15 seconds`))
+    }, 15000)
+
+    const check = async () => {
+      try {
+        const response = await fetch(`${url}/`)
+        if (response.ok) {
+          clearTimeout(timeout)
+          resolve()
+        } else {
+          setTimeout(check, 150)
+        }
+      } catch {
+        setTimeout(check, 150)
+      }
+    }
+
+    check()
+  })
+
+  return { proc, url, storeId }
+}
+
+const stopTrilogyServe = async (proc: ChildProcess | null): Promise<void> => {
+  if (!proc) return
+  proc.kill()
+  await new Promise<void>((resolve) => {
+    proc.on('exit', () => resolve())
+    setTimeout(() => {
+      if (!proc.killed) proc.kill('SIGKILL')
+      resolve()
+    }, 5000)
+  })
+}
+
 const shouldSkipCustomStoreTests =
   process.env.TEST_ENV === 'prod' || process.env.TEST_ENV === 'docker'
 
 const customStoreDescribe = shouldSkipCustomStoreTests ? test.describe.skip : test.describe
 
 customStoreDescribe('Custom Model Store', () => {
-  let mockServer: ChildProcess | null = null
-  let mockServerUrl = ''
-  let mockStoreId = ''
+  let duckServer: ChildProcess | null = null
+  let duckServerUrl = ''
+  let duckStoreId = ''
+  let bqServer: ChildProcess | null = null
+  let bqServerUrl = ''
+  let bqStoreId = ''
 
   test.beforeEach(async ({ page }) => {
     await prepareTestPage(page)
   })
 
-  // Start the mock server before all tests
   test.beforeAll(async () => {
-    const projectRoot = path.join(__dirname, '..')
-    const serverPath = path.join(projectRoot, 'pyserver', 'mock_model_server.py')
+    const duck = await startTrilogyServe(
+      'e2e/fixtures/trilogy-serve-stores/example-duckdb-model',
+      'duckdb',
+    )
+    duckServer = duck.proc
+    duckServerUrl = duck.url
+    duckStoreId = duck.storeId
 
-    // Determine the Python executable path based on OS and environment
-    const isWindows = process.platform === 'win32'
-    const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true'
-
-    let pythonExecutable: string
-    if (isCI) {
-      // In CI, use system Python
-      pythonExecutable = 'python'
-    } else {
-      // Locally, use virtual environment
-      pythonExecutable = isWindows
-        ? path.join(projectRoot, '.venv', 'Scripts', 'python.exe')
-        : path.join(projectRoot, '.venv', 'bin', 'python')
-    }
-
-    console.log(`Starting mock server with ${pythonExecutable}...`)
-    const mockServerPort = await getAvailablePort()
-    mockServerUrl = `http://localhost:${mockServerPort}`
-    mockStoreId = getStoreIdFromUrl(mockServerUrl)
-
-    // Start the mock server
-    mockServer = spawn(pythonExecutable, [serverPath], {
-      cwd: path.join(projectRoot, 'pyserver'),
-      stdio: 'pipe',
-      env: {
-        ...process.env,
-        MOCK_MODEL_SERVER_PORT: String(mockServerPort),
-      },
-    })
-
-    // Log server output
-    mockServer.stdout?.on('data', (data) => {
-      console.log(`Mock server: ${data}`)
-    })
-
-    mockServer.stderr?.on('data', (data) => {
-      console.error(`Mock server error: ${data}`)
-    })
-
-    // Wait for server to be ready
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Mock server failed to start within 10 seconds'))
-      }, 10000)
-
-      const checkServer = async () => {
-        try {
-          const response = await fetch(`${mockServerUrl}/`)
-          if (response.ok) {
-            clearTimeout(timeout)
-            console.log('Mock server is ready!')
-            resolve()
-          } else {
-            setTimeout(checkServer, 100)
-          }
-        } catch (error) {
-          // Server not ready yet, try again
-          setTimeout(checkServer, 100)
-        }
-      }
-
-      checkServer()
-    })
+    const bq = await startTrilogyServe(
+      'e2e/fixtures/trilogy-serve-stores/example-bigquery-model',
+      'bigquery',
+    )
+    bqServer = bq.proc
+    bqServerUrl = bq.url
+    bqStoreId = bq.storeId
   })
 
-  // Stop the mock server after all tests
   test.afterAll(async () => {
-    if (mockServer) {
-      console.log('Stopping mock server...')
-      mockServer.kill()
-      // Wait for the process to exit
-      await new Promise<void>((resolve) => {
-        mockServer?.on('exit', () => {
-          console.log('Mock server stopped')
-          resolve()
-        })
-        // Force kill after 5 seconds if it doesn't exit gracefully
-        setTimeout(() => {
-          if (mockServer && !mockServer.killed) {
-            mockServer.kill('SIGKILL')
-            resolve()
-          }
-        }, 5000)
-      })
-    }
+    await stopTrilogyServe(duckServer)
+    await stopTrilogyServe(bqServer)
   })
 
   test('should add custom store and import a model from it', async ({ page, isMobile }) => {
-    // Navigate to the application
     await page.goto('#skipTips=true')
 
-    // Navigate to Community Models
     await openSidebarScreen(page, 'community-models', isMobile)
 
-    // Click "Add Store" button
     await page.getByRole('button', { name: 'Add Store' }).click()
 
-    // Wait for the modal to appear
     await page.waitForSelector('[data-testid="add-store-modal"]', { timeout: 5000 })
 
-    // Select "Generic URL" store type
     await page.getByTestId('store-type-select').selectOption('generic')
 
-    // Fill in store details
     await page.getByTestId('store-name-input').fill('Local Test Store')
-    await page.getByTestId('store-url-input').fill(mockServerUrl)
+    await page.getByTestId('store-url-input').fill(duckServerUrl)
 
-    // Submit the form
     await page.getByTestId('add-store-submit').click()
 
-    // Wait for the store to be added and fetched
     await page.waitForTimeout(2000)
 
-    // Verify the store appears in the sidebar with a connected status
-    const storeId = mockStoreId
+    const storeId = duckStoreId
     await page.waitForSelector(`[data-testid="community-${storeId}"]`, { timeout: 10000 })
 
-    // Verify the status icon shows connected (wait for fetch to complete)
     await page.waitForTimeout(3000)
 
-    // Expand the custom store
     await page.getByTestId(`community-${storeId}`).click()
 
-    // Wait for models to load
     await page.waitForTimeout(1000)
 
-    // Verify we can see the DuckDB engine category
     if (isMobile) {
       await page.getByTestId('mobile-menu-toggle').click()
     }
     await expect(page.getByTestId(`community-${storeId}+duckdb`)).toBeVisible()
 
-    // Expand the DuckDB category
     await page.getByTestId(`community-${storeId}+duckdb`).click()
     if (isMobile) {
       await page.getByTestId('mobile-menu-toggle').click()
     }
-    // Verify we can see the Example DuckDB Model
-    await expect(page.getByTestId(`community-${storeId}+duckdb+Example DuckDB Model`)).toBeVisible()
+    await expect(
+      page.getByTestId(`community-${storeId}+duckdb+example-duckdb-model`),
+    ).toBeVisible()
 
-    // Click on the model to view details
-    await page.getByTestId(`community-${storeId}+duckdb+Example DuckDB Model`).click()
+    await page.getByTestId(`community-${storeId}+duckdb+example-duckdb-model`).click()
 
-    // Wait for the model details page to load
     await page.waitForTimeout(1000)
 
-    // Verify model information is displayed using data-testids
-    await expect(page.getByTestId('model-card-title-Example DuckDB Model')).toBeVisible()
-    await expect(page.getByTestId('model-card-description-Example DuckDB Model')).toBeVisible()
-    await expect(page.getByTestId('model-card-description-Example DuckDB Model')).toContainText(
-      'A simple example model for testing the generic store feature',
-    )
+    await expect(page.getByTestId('model-card-title-example-duckdb-model')).toBeVisible()
+    await expect(page.getByTestId('model-card-description-example-duckdb-model')).toBeVisible()
+    await expect(
+      page.getByTestId('model-card-description-example-duckdb-model'),
+    ).toContainText('A simple example model for testing the generic store feature')
 
-    // Import the model
-    await page.getByTestId('import-Example DuckDB Model').click()
+    await page.getByTestId('import-example-duckdb-model').click()
 
-    // Select connection (create new DuckDB)
     await page.getByTestId('model-creator-connection').selectOption('New DuckDB')
 
-    // Submit import
     await page.getByTestId('model-creation-submit').click()
 
-    // Wait for import to complete
     await page.waitForTimeout(2000)
 
-    // Navigate to connections to verify the model was imported
     await openSidebarScreen(page, 'connections', isMobile)
 
-    const connectionName = 'Example DuckDB Model-connection'
+    const connectionName = 'example-duckdb-model-connection'
 
-    // Verify the connection was created
     await expect(page.getByTestId(`expand-connection-${connectionName}`)).toBeVisible()
 
-    // Test the connection
     await refreshConnection(page, connectionName)
     await waitForConnectionReady(page, connectionName, 10000)
 
-    // Navigate to editors
     await openSidebarScreen(page, 'editors', isMobile)
 
-    // Verify the model appears in the editors tree
     try {
       await page.getByTestId(`editor-c-local-${connectionName}`).click({ timeout: 1000 })
     } catch (e) {
-      // May need to expand first
       await page.getByTestId('editor-s-local').click()
       await page.getByTestId(`editor-c-local-${connectionName}`).click()
     }
 
-    // Create a new editor for the model
     await createEditorFromConnection(page, connectionName, 'trilogy')
 
-    // Verify a new editor was created under the imported model connection
     await expect(page.getByTestId(`editor-run-button`)).toBeVisible()
   })
 
-  test('should show error for unreachable custom store', async ({ page, isMobile }) => {
-    // Navigate to the application
+  test('should browse a BigQuery store without DuckDB-specific assumptions', async ({
+    page,
+    isMobile,
+  }) => {
+    // Browse-only coverage: validates the non-DuckDB path through store registration,
+    // index fetch, model-list render, and detail fetch. Does not run queries (no
+    // BQ credentials in the test environment).
     await page.goto('#skipTips=true')
 
-    // Navigate to Community Models
     await openSidebarScreen(page, 'community-models', isMobile)
 
-    // Click "Add Store" button
     await page.getByRole('button', { name: 'Add Store' }).click()
 
-    // Wait for the modal to appear
     await page.waitForSelector('[data-testid="add-store-modal"]', { timeout: 5000 })
 
-    // Select "Generic URL" store type
+    await page.getByTestId('store-type-select').selectOption('generic')
+    await page.getByTestId('store-name-input').fill('Local BQ Store')
+    await page.getByTestId('store-url-input').fill(bqServerUrl)
+    await page.getByTestId('add-store-submit').click()
+
+    await page.waitForTimeout(2000)
+
+    const storeId = bqStoreId
+    await page.waitForSelector(`[data-testid="community-${storeId}"]`, { timeout: 10000 })
+    await page.waitForTimeout(3000)
+
+    await page.getByTestId(`community-${storeId}`).click()
+    await page.waitForTimeout(1000)
+
+    if (isMobile) {
+      await page.getByTestId('mobile-menu-toggle').click()
+    }
+    await expect(page.getByTestId(`community-${storeId}+bigquery`)).toBeVisible()
+
+    await page.getByTestId(`community-${storeId}+bigquery`).click()
+    if (isMobile) {
+      await page.getByTestId('mobile-menu-toggle').click()
+    }
+    await expect(
+      page.getByTestId(`community-${storeId}+bigquery+example-bigquery-model`),
+    ).toBeVisible()
+
+    await page.getByTestId(`community-${storeId}+bigquery+example-bigquery-model`).click()
+    await page.waitForTimeout(1000)
+
+    await expect(page.getByTestId('model-card-title-example-bigquery-model')).toBeVisible()
+    await expect(
+      page.getByTestId('model-card-description-example-bigquery-model'),
+    ).toContainText('sample BigQuery model')
+  })
+
+  test('should show error for unreachable custom store', async ({ page, isMobile }) => {
+    await page.goto('#skipTips=true')
+
+    await openSidebarScreen(page, 'community-models', isMobile)
+
+    await page.getByRole('button', { name: 'Add Store' }).click()
+
+    await page.waitForSelector('[data-testid="add-store-modal"]', { timeout: 5000 })
+
     await page.getByTestId('store-type-select').selectOption('generic')
 
-    // Fill in store details with unreachable URL
     await page.getByTestId('store-name-input').fill('Unreachable Store')
     await page.getByTestId('store-url-input').fill('http://localhost:9999')
 
-    // Submit the form
     await page.getByTestId('add-store-submit').click()
 
-    // Verify the store appears in the sidebar
     const failedStoreId = 'localhost:9999'
     await page.waitForSelector(`[data-testid="community-${failedStoreId}"]`, { timeout: 10000 })
 
@@ -290,52 +322,38 @@ customStoreDescribe('Custom Model Store', () => {
       .first()
       .locator('xpath=ancestor::div[contains(@class,"sidebar-content")][1]')
 
-    // Verify the sidebar row shows a failed status once the fetch settles.
     const statusIcon = failedStoreRow.getByTestId(`status-icon-${failedStoreId}`).first()
     await expect(statusIcon).toBeVisible()
     await expect(statusIcon).toHaveClass(/failed/, { timeout: 10000 })
   })
 
   test('should allow removing a custom store', async ({ page, isMobile }) => {
-    // Navigate to the application
     await page.goto('#skipTips=true')
 
-    // Navigate to Community Models
     await openSidebarScreen(page, 'community-models', isMobile)
 
-    // Click "Add Store" button
     await page.getByRole('button', { name: 'Add Store' }).click()
 
-    // Wait for the modal to appear
     await page.waitForSelector('[data-testid="add-store-modal"]', { timeout: 5000 })
 
-    // Select "Generic URL" store type
     await page.getByTestId('store-type-select').selectOption('generic')
 
-    // Fill in store details
     await page.getByTestId('store-name-input').fill('Temporary Store')
-    await page.getByTestId('store-url-input').fill(mockServerUrl)
+    await page.getByTestId('store-url-input').fill(duckServerUrl)
 
-    // Submit the form
     await page.getByTestId('add-store-submit').click()
 
-    // Wait for the store to be added
     await page.waitForTimeout(2000)
 
-    // Verify the store appears
-    const storeId = mockStoreId
+    const storeId = duckStoreId
     await page.waitForSelector(`[data-testid="community-${storeId}"]`, { timeout: 10000 })
 
-    // Hover over the store item to show the delete button
     await page.getByTestId(`community-${storeId}`).hover()
 
-    // Click the delete button
     await page.getByTestId(`delete-store-${storeId}`).click()
 
-    // Confirm deletion in the modal
     await page.getByTestId('confirm-store-deletion').click()
 
-    // Verify the store is removed
     await page.waitForSelector(`[data-testid="community-${storeId}"]`, {
       state: 'detached',
       timeout: 5000,
@@ -346,156 +364,32 @@ customStoreDescribe('Custom Model Store', () => {
 const autoImportDescribe = shouldSkipCustomStoreTests ? test.describe.skip : test.describe
 
 autoImportDescribe('Asset Auto-Import via URL', () => {
-  let mockServer: ChildProcess | null = null
-  let mockServerUrl = ''
-  let mockStoreId = ''
+  let duckServer: ChildProcess | null = null
+  let duckServerUrl = ''
 
   test.beforeEach(async ({ page }) => {
     await prepareTestPage(page)
   })
 
-  // Start the mock server before all tests
   test.beforeAll(async () => {
-    const projectRoot = path.join(__dirname, '..')
-    const serverPath = path.join(projectRoot, 'pyserver', 'mock_model_server.py')
-
-    // Determine the Python executable path based on OS and environment
-    const isWindows = process.platform === 'win32'
-    const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true'
-
-    let pythonExecutable: string
-    if (isCI) {
-      pythonExecutable = 'python'
-    } else {
-      pythonExecutable = isWindows
-        ? path.join(projectRoot, '.venv', 'Scripts', 'python.exe')
-        : path.join(projectRoot, '.venv', 'bin', 'python')
-    }
-
-    console.log(`Starting mock server with ${pythonExecutable}...`)
-    const mockServerPort = await getAvailablePort()
-    mockServerUrl = `http://localhost:${mockServerPort}`
-    mockStoreId = getStoreIdFromUrl(mockServerUrl)
-
-    mockServer = spawn(pythonExecutable, [serverPath], {
-      cwd: path.join(projectRoot, 'pyserver'),
-      stdio: 'pipe',
-      env: {
-        ...process.env,
-        MOCK_MODEL_SERVER_PORT: String(mockServerPort),
-      },
-    })
-
-    mockServer.stdout?.on('data', (data) => {
-      console.log(`Mock server: ${data}`)
-    })
-
-    mockServer.stderr?.on('data', (data) => {
-      console.error(`Mock server error: ${data}`)
-    })
-
-    // Wait for server to be ready
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Mock server failed to start within 10 seconds'))
-      }, 10000)
-
-      const checkServer = async () => {
-        try {
-          const response = await fetch(`${mockServerUrl}/`)
-          if (response.ok) {
-            clearTimeout(timeout)
-            console.log('Mock server is ready!')
-            resolve()
-          } else {
-            setTimeout(checkServer, 100)
-          }
-        } catch (error) {
-          setTimeout(checkServer, 100)
-        }
-      }
-
-      checkServer()
-    })
+    const duck = await startTrilogyServe(
+      'e2e/fixtures/trilogy-serve-stores/example-duckdb-model',
+      'duckdb',
+    )
+    duckServer = duck.proc
+    duckServerUrl = duck.url
   })
 
-  // Stop the mock server after all tests
   test.afterAll(async () => {
-    if (mockServer) {
-      console.log('Stopping mock server...')
-      mockServer.kill()
-      await new Promise<void>((resolve) => {
-        mockServer?.on('exit', () => {
-          console.log('Mock server stopped')
-          resolve()
-        })
-        setTimeout(() => {
-          if (mockServer && !mockServer.killed) {
-            mockServer.kill('SIGKILL')
-            resolve()
-          }
-        }, 5000)
-      })
-    }
+    await stopTrilogyServe(duckServer)
   })
 
-  test('should auto-import dashboard via URL with store registration', async ({
-    page,
-    isMobile,
-  }) => {
-    // Build the auto-import URL with all parameters
-    const modelUrl = `${mockServerUrl}/models/example-duckdb.json`
-    const storeUrl = mockServerUrl
-    const assetName = 'Example DuckDB Dashboard'
-    const assetType = 'dashboard'
-    const modelName = 'Example DuckDB Model'
-    const connection = 'duckdb'
-
-    const autoImportUrl =
-      `#skipTips=true` +
-      `&screen=asset-import` +
-      `&import=${encodeURIComponent(modelUrl)}` +
-      `&store=${encodeURIComponent(storeUrl)}` +
-      `&assetType=${encodeURIComponent(assetType)}` +
-      `&assetName=${encodeURIComponent(assetName)}` +
-      `&modelName=${encodeURIComponent(modelName)}` +
-      `&connection=${encodeURIComponent(connection)}`
-
-    // Navigate to the auto-import URL
-    await page.goto(autoImportUrl)
-
-    // Wait for the loading state to appear
-    await page.waitForSelector('.loading-state', { timeout: 10000 })
-
-    // Verify we see the step indicator
-    await expect(page.locator('.step-indicator')).toBeVisible()
-
-    // Wait for import to complete and redirect to dashboard
-    // The import process should auto-redirect to the dashboard
-    await page.waitForFunction(() => window.location.hash.includes('screen=dashboard'), {
-      timeout: 30000,
-    })
-
-    // Verify we're on the dashboard screen
-    await expect(page.getByTestId('dashboard-controls')).toBeVisible({
-      timeout: 10000,
-    })
-
-    // Verify the store was registered by checking the sidebar
-    await openSidebarScreen(page, 'community-models', isMobile)
-
-    // The store should now appear in the community models list
-    const storeId = mockStoreId
-    await expect(page.getByTestId(`community-${storeId}`)).toBeVisible({ timeout: 5000 })
-  })
-
-  test('should auto-import trilogy editor via URL', async ({ page, isMobile }) => {
-    // Build the auto-import URL for a trilogy editor
-    const modelUrl = `${mockServerUrl}/models/example-duckdb.json`
-    const storeUrl = mockServerUrl
-    const assetName = 'Example Query'
+  test('should auto-import trilogy editor via URL', async ({ page }) => {
+    const modelUrl = `${duckServerUrl}/models/example-duckdb-model.json`
+    const storeUrl = duckServerUrl
+    const assetName = 'example'
     const assetType = 'trilogy'
-    const modelName = 'Example DuckDB Model'
+    const modelName = 'example-duckdb-model'
     const connection = 'duckdb'
 
     const autoImportUrl =
@@ -508,28 +402,23 @@ autoImportDescribe('Asset Auto-Import via URL', () => {
       `&modelName=${encodeURIComponent(modelName)}` +
       `&connection=${encodeURIComponent(connection)}`
 
-    // Navigate to the auto-import URL
     await page.goto(autoImportUrl)
 
-    // Wait for the loading state to appear
     await page.waitForSelector('.loading-state', { timeout: 10000 })
 
-    // Wait for import to complete and redirect to editors
     await page.waitForFunction(() => window.location.hash.includes('screen=editors'), {
       timeout: 30000,
     })
 
-    // Verify we're on the editor screen
     await expect(page.getByTestId('editor')).toBeVisible({ timeout: 10000 })
   })
 
   test('should show error for invalid asset name', async ({ page }) => {
-    // Build the auto-import URL with an invalid asset name
-    const modelUrl = `${mockServerUrl}/models/example-duckdb.json`
-    const storeUrl = mockServerUrl
-    const assetName = 'NonExistent Dashboard'
-    const assetType = 'dashboard'
-    const modelName = 'Example DuckDB Model'
+    const modelUrl = `${duckServerUrl}/models/example-duckdb-model.json`
+    const storeUrl = duckServerUrl
+    const assetName = 'nonexistent-editor'
+    const assetType = 'trilogy'
+    const modelName = 'example-duckdb-model'
     const connection = 'duckdb'
 
     const autoImportUrl =
@@ -542,46 +431,10 @@ autoImportDescribe('Asset Auto-Import via URL', () => {
       `&modelName=${encodeURIComponent(modelName)}` +
       `&connection=${encodeURIComponent(connection)}`
 
-    // Navigate to the auto-import URL
     await page.goto(autoImportUrl)
 
-    // Wait for error state to appear
     await page.waitForSelector('.error-state', { timeout: 30000 })
 
-    // Verify error message mentions the missing dashboard
     await expect(page.locator('.error-message')).toContainText('was not found')
-  })
-
-  test('should support legacy dashboard parameter format', async ({ page }) => {
-    // Build the auto-import URL using legacy 'dashboard' parameter
-    const modelUrl = `${mockServerUrl}/models/example-duckdb.json`
-    const dashboardName = 'Example DuckDB Dashboard'
-    const modelName = 'Example DuckDB Model'
-    const connection = 'duckdb'
-
-    // Use the legacy format (dashboard-import screen with dashboard param)
-    const autoImportUrl =
-      `#skipTips=true` +
-      `&screen=dashboard-import` +
-      `&import=${encodeURIComponent(modelUrl)}` +
-      `&dashboard=${encodeURIComponent(dashboardName)}` +
-      `&modelName=${encodeURIComponent(modelName)}` +
-      `&connection=${encodeURIComponent(connection)}`
-
-    // Navigate to the auto-import URL
-    await page.goto(autoImportUrl)
-
-    // Wait for the loading state to appear
-    await page.waitForSelector('.loading-state', { timeout: 10000 })
-
-    // Wait for import to complete and redirect to dashboard
-    await page.waitForFunction(() => window.location.hash.includes('screen=dashboard'), {
-      timeout: 30000,
-    })
-
-    // Verify we're on the dashboard screen
-    await expect(page.getByTestId('dashboard-controls')).toBeVisible({
-      timeout: 10000,
-    })
   })
 })

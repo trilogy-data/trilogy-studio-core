@@ -56,6 +56,7 @@
           :activeModelKey="activeModelKey"
           :activeJobsKey="activeJobsKey"
           :activeConnectionKey="activeConnectionKey"
+          :activeLLMKey="activeLLMConnectionKey"
           :containerWidth="containerWidth"
           :activeDashboardKey="activeDashboard"
         />

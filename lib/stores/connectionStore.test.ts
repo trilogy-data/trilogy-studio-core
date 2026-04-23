@@ -111,6 +111,112 @@ describe('connectionStore', () => {
     }, 10000) // Increase timeout since we're racing with a 60s timeout
   })
 
+  describe('deleteConnection / purgeDeletedConnections', () => {
+    it('flags the connection as deleted but keeps it in the map for the save flow', () => {
+      const store = useConnectionStore()
+      const deleteMock = vi.fn(function (this: any) {
+        this.deleted = true
+        this.changed = true
+      })
+      store.connections['doomed'] = {
+        name: 'doomed',
+        deleted: false,
+        changed: false,
+        delete: deleteMock,
+      } as any
+
+      store.deleteConnection('doomed')
+
+      // Soft-delete: localStorage.saveConnections iterates the passed
+      // connections looking for `deleted === true` to purge them, so the
+      // entry must still be present at this point.
+      expect(deleteMock).toHaveBeenCalledTimes(1)
+      expect(store.connections['doomed']).toBeDefined()
+      expect(store.connections['doomed'].deleted).toBe(true)
+    })
+
+    it('is a no-op when the connection does not exist', () => {
+      const store = useConnectionStore()
+      expect(() => store.deleteConnection('missing')).not.toThrow()
+    })
+
+    it('purgeDeletedConnections hard-removes only entries flagged as deleted', () => {
+      const store = useConnectionStore()
+      store.connections['keep-alive'] = {
+        name: 'keep-alive',
+        deleted: false,
+      } as any
+      store.connections['goodbye'] = {
+        name: 'goodbye',
+        deleted: true,
+      } as any
+
+      store.purgeDeletedConnections()
+
+      expect(store.connections['keep-alive']).toBeDefined()
+      expect(store.connections['goodbye']).toBeUndefined()
+    })
+
+    it('survives round-trip through a localStorage-shaped persistence stub', async () => {
+      // Mirrors the sidebar's confirmDelete sequence: mark deleted, flush to
+      // storage, then purge from memory. Regresses the original bug where
+      // delete left the entry in both memory and localStorage.
+      const store = useConnectionStore()
+      store.connections['local-conn'] = {
+        name: 'local-conn',
+        storage: 'local',
+        deleted: false,
+        changed: false,
+        delete(this: any) {
+          this.deleted = true
+          this.changed = true
+        },
+      } as any
+
+      // Storage stub shaped like localStorage.saveConnections
+      const persisted: Record<string, any> = { 'local-conn': { name: 'local-conn' } }
+      const saveStub = (connections: any[]) => {
+        for (const conn of connections) {
+          if (conn.deleted) {
+            delete persisted[conn.name]
+          } else if (conn.changed) {
+            persisted[conn.name] = conn
+          }
+        }
+      }
+
+      store.deleteConnection('local-conn')
+      saveStub(Object.values(store.connections))
+      store.purgeDeletedConnections()
+
+      expect(persisted['local-conn']).toBeUndefined()
+      expect(store.connections['local-conn']).toBeUndefined()
+    })
+
+    it('delete followed by purge removes the connection from Object.values iteration', () => {
+      // Reproduces the reported UX bug: stale connections leaking into
+      // dashboard pickers etc. after the sidebar delete button is clicked.
+      const store = useConnectionStore()
+      store.connections['ghost'] = {
+        name: 'ghost',
+        model: 'some-model',
+        deleted: false,
+        changed: false,
+        delete(this: any) {
+          this.deleted = true
+          this.changed = true
+        },
+      } as any
+
+      store.deleteConnection('ghost')
+      store.purgeDeletedConnections()
+
+      expect(
+        Object.values(store.connections).some((conn) => conn.name === 'ghost'),
+      ).toBe(false)
+    })
+  })
+
   describe('resetConnection', () => {
     it('should throw error when connection does not exist', async () => {
       const store = useConnectionStore()

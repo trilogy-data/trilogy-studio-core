@@ -26,7 +26,7 @@ import SidebarItem from './GenericSidebarItem.vue'
 import type { EditorStoreType } from '../../stores/editorStore'
 import { documentation } from '../../data/tutorial/documentation'
 import { KeySeparator } from '../../data/constants'
-import { getDefaultValueFromHash } from '../../stores/urlStore'
+import { getDefaultValueFromHash, URL_HASH_KEYS } from '../../stores/urlStore'
 
 export default {
   name: 'DocumentationSidebar',
@@ -43,7 +43,7 @@ export default {
       throw new Error('Editor store is not provided!')
     }
 
-    const current = getDefaultValueFromHash('documentationKey') || ''
+    const current = getDefaultValueFromHash(URL_HASH_KEYS.TUTORIAL) || ''
 
     const collapsed = ref<Record<string, boolean>>({})
 

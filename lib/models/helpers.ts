@@ -1,5 +1,6 @@
 import { Editor, EditorTag } from '../editors'
 import { normalizeRemoteEditorPath } from '../editors/editor'
+import { reconcileRemoteEditor } from '../editors/reconcile'
 import { ModelImport } from './import'
 import { ModelSource } from './model'
 import { type EditorStoreType } from '../stores/editorStore'
@@ -217,45 +218,41 @@ export class ModelImportService {
       ? this.resolveRemotePath(component, options.remoteBaseUrl)
       : null
     const editorName = options.remote ? remotePath || component.name : component.name
-    const existing = Object.values(this.editorStore.editors).find(
-      (editor) =>
-        editor.name === editorName &&
-        editor.connection === connectionName &&
-        (!options.remote ||
-          (editor.storage === 'remote' &&
-            editor.remoteStoreId === (options.remoteStoreId || null))),
-    )
+    const editorType = this.getComponentEditorType(component)
 
     let editor: Editor
-    if (!existing) {
-      const editorType = this.getComponentEditorType(component)
-      editor = this.editorStore.newEditor(
-        editorName,
-        editorType,
-        connectionName,
-        component.content,
-        options.remote
-          ? {
-              storage: 'remote',
-              remoteStoreId: options.remoteStoreId || null,
-              remotePath: remotePath || editorName,
-            }
-          : {},
-      )
+    if (options.remote && options.remoteStoreId) {
+      const path = remotePath || editorName
+      editor = reconcileRemoteEditor(this.editorStore, {
+        id: `remote:${options.remoteStoreId}:${encodeURIComponent(path)}`,
+        name: editorName,
+        type: editorType,
+        connection: connectionName,
+        contents: component.content,
+        tags: [],
+        remoteStoreId: options.remoteStoreId,
+        remotePath: path,
+      })
     } else {
-      editor = existing
-      this.editorStore.setEditorContents(existing.id, component.content)
+      const existing = Object.values(this.editorStore.editors).find(
+        (e) => e.name === editorName && e.connection === connectionName,
+      )
+      if (existing) {
+        editor = existing
+        this.editorStore.setEditorContents(existing.id, component.content)
+      } else {
+        editor = this.editorStore.newEditor(
+          editorName,
+          editorType,
+          connectionName,
+          component.content,
+        )
+      }
     }
 
     // Add purpose as a tag if not already present
     if (component.purpose && !editor.tags.includes(component.purpose)) {
       this.editorStore.editors[editor.id].tags.push(component.purpose)
-    }
-
-    if (options.remote) {
-      editor.remotePersisted = true
-      editor.remoteOriginalPath = null
-      editor.changed = false
     }
 
     return editor

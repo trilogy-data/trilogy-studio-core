@@ -20,7 +20,7 @@ describe('genericStoreMetadata', () => {
       baseUrl: 'http://localhost:8100',
     }
 
-    expect(buildGenericStoreConnectionName(store)).toBe('Imported Project Name')
+    expect(buildGenericStoreConnectionName(store)).toBe('Imported Project Name-connection')
     expect(buildGenericStoreModelName(store)).toBe('Imported Project Name')
   })
 

@@ -1,5 +1,6 @@
 import { Results, type ResultColumn, ColumnType } from '../editors/results'
 import type { EditorType } from '../editors/editor'
+import { isTrilogyType } from '../editors/fileTypes'
 import type { ContentInput } from '../stores/resolver'
 import type {
   Import,
@@ -392,7 +393,7 @@ export default class QueryExecutionService {
               ])
 
               // Handle Trilogy specific column enrichment
-              if (editorType === 'trilogy' || editorType === 'preql') {
+              if (isTrilogyType(editorType)) {
                 this.enrichTrilogyColumns(queryResult.columns || [], sqlResponse)
               }
 
@@ -956,7 +957,7 @@ export default class QueryExecutionService {
       ])
 
       // Handle Trilogy specific column enrichment
-      if (queryInput.editorType === 'trilogy' || queryInput.editorType === 'preql') {
+      if (isTrilogyType(queryInput.editorType)) {
         this.enrichTrilogyColumns(headers, sqlResponse)
       }
 

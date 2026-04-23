@@ -8,6 +8,7 @@ import LoadingButton from '../LoadingButton.vue'
 import { type CompletionItem } from '../../stores/resolver'
 import { type DashboardImport } from '../../dashboards/base'
 import { type Dashboard } from '../../dashboards/base'
+import { isTrilogyType } from '../../editors/fileTypes'
 
 const props = defineProps({
   dashboard: {
@@ -115,7 +116,7 @@ function cancelEditingTitle() {
 
 const availableImports: Ref<DashboardImport[]> = computed(() => {
   const imports = Object.values(editorStore.editors)
-    .filter((editor) => editor.connection === props.selectedConnection)
+    .filter((editor) => editor.connection === props.selectedConnection && isTrilogyType(editor.type))
     .sort((a, b) => a.name.localeCompare(b.name))
 
   return imports.map((importItem) => ({
@@ -188,7 +189,7 @@ const modeIcon = computed(() => {
             >
               <option
                 v-for="conn in Object.values(connectionStore.connections).filter(
-                  (conn) => conn.model,
+                  (conn) => conn.model && !conn.deleted,
                 )"
                 :key="conn.name"
                 :value="conn.name"
