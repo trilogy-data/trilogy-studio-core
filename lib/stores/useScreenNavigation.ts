@@ -354,48 +354,48 @@ const createNavigationStore = (): NavigationStore => {
 
   const cleanupActiveKeys = (): void => {
     let activeKeys = state.tabs.value.map((tab) => tab.screen)
-    let keysToRemove: string[] = []
+    let keysToRemove: UrlHashKey[] = []
     if (!activeKeys.includes('editors')) {
       state.activeEditor.value = ''
-      keysToRemove.push('editors')
-      keysToRemove.push('activeEditorTab')
+      keysToRemove.push(URL_HASH_KEYS.EDITORS)
+      keysToRemove.push(URL_HASH_KEYS.ACTIVE_EDITOR_TAB)
     }
     if (!activeKeys.includes('dashboard')) {
       state.activeDashboard.value = ''
-      keysToRemove.push('dashboard')
+      keysToRemove.push(URL_HASH_KEYS.DASHBOARD)
     }
     if (!activeKeys.includes('connections')) {
       state.activeConnectionKey.value = ''
-      keysToRemove.push('connections')
+      keysToRemove.push(URL_HASH_KEYS.CONNECTIONS)
     }
     if (!activeKeys.includes('models')) {
       state.activeModelKey.value = ''
-      keysToRemove.push('model')
+      keysToRemove.push(URL_HASH_KEYS.MODELS)
     }
     if (!activeKeys.includes('community-models')) {
       state.activeCommunityModelKey.value = ''
-      keysToRemove.push('community-models')
+      keysToRemove.push(URL_HASH_KEYS.COMMUNITY_MODELS)
     }
     if (!activeKeys.includes('jobs')) {
       state.activeJobsKey.value = ''
-      keysToRemove.push('jobs')
+      keysToRemove.push(URL_HASH_KEYS.JOBS)
     }
     if (!activeKeys.includes('tutorial')) {
       state.activeDocumentationKey.value = ''
-      keysToRemove.push('tutorial')
+      keysToRemove.push(URL_HASH_KEYS.TUTORIAL)
     }
     if (!activeKeys.includes('llms')) {
       state.activeLLMConnectionKey.value = ''
-      keysToRemove.push('llms')
+      keysToRemove.push(URL_HASH_KEYS.LLMS)
     }
     if (!activeKeys.includes('settings')) {
-      keysToRemove.push('settings')
+      keysToRemove.push(URL_HASH_KEYS.SETTINGS)
     }
     if (!activeKeys.includes('profile')) {
-      keysToRemove.push('profile')
+      keysToRemove.push(URL_HASH_KEYS.PROFILE)
     }
     if (!activeKeys.includes('welcome')) {
-      keysToRemove.push('welcome')
+      keysToRemove.push(URL_HASH_KEYS.WELCOME)
     }
     removeHashesFromUrl(keysToRemove)
   }
