@@ -50,14 +50,14 @@
         <div v-if="expandedItems[item.id]" class="query-history-item-details">
           <div class="query-tabs" v-if="item.generatedQuery">
             <button
-              class="tab-btn"
+              class="tab-button"
               :class="{ active: !showGeneratedQuery[item.id] }"
               @click="toggleGeneratedQuery(item.id, false)"
             >
               Executed Query
             </button>
             <button
-              class="tab-btn"
+              class="tab-button"
               :class="{ active: showGeneratedQuery[item.id] }"
               @click="toggleGeneratedQuery(item.id, true)"
             >
@@ -336,7 +336,7 @@ onMounted(() => {
   border-bottom: 1px solid var(--border-light);
 }
 
-.tab-btn {
+.tab-button {
   padding: 0 12px;
   min-height: 28px;
   background: none;
@@ -346,13 +346,14 @@ onMounted(() => {
   font-size: 12px;
   color: var(--text-faint);
   transition: all 0.2s ease;
+  border-radius: 0px;
 }
 
-.tab-btn:hover {
+.tab-button:hover {
   color: var(--text-color);
 }
 
-.tab-btn.active {
+.tab-button.active {
   color: var(--special-text);
   border-bottom-color: var(--special-text);
   font-weight: 500;
