@@ -770,10 +770,6 @@ describe('Chart Utils', () => {
       ['revenue', { name: 'revenue', type: ColumnType.FLOAT, traits: [] }],
     ])
 
-    const singleCategoricalColumn = new Map<string, ResultColumn>([
-      ['category', { name: 'category', type: ColumnType.STRING, traits: [] }],
-    ])
-
     const sampleData: Row[] = [
       { revenue: 100, quantity: 50, category: 'A', region: 'North' },
       { revenue: 200, quantity: 75, category: 'B', region: 'South' },

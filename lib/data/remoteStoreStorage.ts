@@ -6,7 +6,7 @@ import { ModelConfig, ModelSource } from '../models'
 import type { DashboardModel } from '../dashboards'
 import type { Chat } from '../chats/chat'
 import type { LLMProvider } from '../llm'
-import type { GenericModelStore } from '../remotes/models'
+import type { GenericModelStore, StoreConnectionSpec } from '../remotes/models'
 import type { CommunityApiStoreType } from '../stores/communityApiStore'
 import type Connection from '../connections/base'
 import {
@@ -123,7 +123,7 @@ export default class RemoteStoreStorage extends AbstractStorage {
             account: (options.account as string) || '',
             username: (options.username as string) || '',
             privateKey: '',
-            warehouse: options.warehouse as string | undefined,
+            warehouse: (options.warehouse as string) || '',
             role: options.role as string | undefined,
             database: options.database as string | undefined,
             schema: options.schema as string | undefined,
