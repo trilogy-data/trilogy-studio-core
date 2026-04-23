@@ -601,10 +601,12 @@ export class DashboardQueryExecutor {
       let errorCallbacks = Object.fromEntries(
         queryArgsList.map((queryArgs) => [
           queryArgs.label,
-          (error: string) => {
+          (failure: { error?: string } | string) => {
+            const errorMessage =
+              typeof failure === 'string' ? failure : failure?.error || 'Unknown error occurred'
             let matched = validQueries.find((q) => q.id === queryArgs.label)
             if (matched) {
-              this.handleQueryError(matched, error)
+              this.handleQueryError(matched, errorMessage)
             }
             this.activeQueries.delete(queryArgs.label)
             this.cleanupQueryTracking(queryArgs.label)

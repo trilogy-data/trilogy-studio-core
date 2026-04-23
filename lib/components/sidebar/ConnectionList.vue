@@ -55,7 +55,7 @@
       @update-snowflake-username="updateSnowflakeUsername"
       @toggle-save-credential="toggleSaveCredential"
       @toggle-mobile-menu="toggleMobileMenu"
-      :delete-connection="deleteConnection"
+      @delete-connection="deleteConnection"
     />
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
       <div class="confirmation-dialog">
@@ -82,6 +82,7 @@ import Tooltip from '../Tooltip.vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { ModelConfigStoreType } from '../../stores/modelStore'
 import type { EditorStoreType } from '../../stores/editorStore'
+import type { DashboardStoreType } from '../../stores/dashboardStore'
 import type {
   BigQueryOauthConnection,
   Connection,
@@ -114,10 +115,16 @@ export default {
   setup(_, { emit }) {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const saveConnections = inject<Function>('saveConnections')
+    const saveEditors = inject<Function>('saveEditors')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const editorStore = inject<EditorStoreType>('editorStore')
+    // Optional: dashboards cascade-delete only when the dashboard store and
+    // saveDashboards are injected. Sidebar contexts without dashboards
+    // (embeds, etc.) should still be able to delete a connection.
+    const dashboardStore = inject<DashboardStoreType | null>('dashboardStore', null)
+    const saveDashboards = inject<Function | null>('saveDashboards', null)
     const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
-    if (!connectionStore || !saveConnections || !modelStore || !editorStore) {
+    if (!connectionStore || !saveConnections || !saveEditors || !modelStore || !editorStore) {
       throw new Error('Connection store is not provided!')
     }
     const connectionModelVisible = ref<Record<string, boolean>>({})
@@ -361,6 +368,7 @@ export default {
     return {
       connectionStore,
       editorStore,
+      dashboardStore,
       contentList,
       filteredContentList,
       toggleCollapse,
@@ -368,6 +376,8 @@ export default {
       toggleMobileMenu,
       collapsed,
       saveConnections,
+      saveEditors,
+      saveDashboards,
       modelStore,
       connectionModelVisible,
       updateMotherDuckToken,
@@ -405,14 +415,38 @@ export default {
       this.showDeleteConfirmationState = false
       this.connectionToDelete = ''
     },
-    confirmDelete() {
+    async confirmDelete() {
       if (this.connectionToDelete) {
         for (const editor of Object.values(this.editorStore.editors)) {
           if (editor.connection === this.connectionToDelete) {
             editor.delete()
           }
         }
+
+        // Cascade: dashboards are bound to a connection by name, so a
+        // disconnected dashboard can't run anyway. Soft-delete them here so
+        // the saveDashboards pass purges from localStorage.
+        if (this.dashboardStore) {
+          for (const dashboard of Object.values(this.dashboardStore.dashboards)) {
+            if (dashboard.connection === this.connectionToDelete) {
+              dashboard.delete()
+            }
+          }
+        }
+
         this.connectionStore.deleteConnection(this.connectionToDelete)
+
+        // Persist the deletion so localStorage.save* passes observe the
+        // `deleted` flag and drop the entries. Then purge from memory so
+        // other consumers (dashboard list, pickers, etc.) stop seeing them.
+        const saves: Promise<unknown>[] = [this.saveConnections(), this.saveEditors()]
+        if (this.saveDashboards) saves.push(this.saveDashboards())
+        await Promise.all(saves)
+
+        this.connectionStore.purgeDeletedConnections()
+        if (this.dashboardStore) {
+          this.dashboardStore.purgeDeletedDashboards()
+        }
       }
 
       this.showDeleteConfirmationState = false

@@ -13,7 +13,10 @@ import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { EditorStoreType } from '../../stores/editorStore'
 import type QueryExecutionService from '../../stores/queryExecutionService'
 import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
-import type { ChatImport, ChatMessage } from '../../chats/chat'
+import type { ChatImport, ChatMessage, ChatToolCall } from '../../chats/chat'
+import type { LLMToolCall, LLMToolResult } from '../../llm/base'
+import { formatToolResultText } from '../../llm/toolLoopCore'
+import { isTrilogyType } from '../../editors/fileTypes'
 
 const props = defineProps<{
   dashboard: DashboardModel
@@ -61,6 +64,13 @@ const MUTATING_TOOLS = new Set([
   'update_dashboard_info',
   'set_dashboard_title',
 ])
+
+// Chat ids that have committed to mutating their current dashboard in place.
+// Populated the first time we decide to skip a fork, so subsequent mutations
+// in the same session stay on the same dashboard even though gridItems is no
+// longer empty. Without this, the second mutating tool call in a brand-new
+// dashboard flow would see items the agent itself just added and spawn a fork.
+const inPlaceChatIds = new Set<string>()
 
 // Ensure this dashboard has a backing chat record, creating one lazily.
 // Returns the chat id.
@@ -131,6 +141,32 @@ async function ensureChatFork(): Promise<void> {
   // so editing in place is the expected behavior.
   if (props.dashboard.parentDashboardId) return
 
+  const chatId = currentChatId.value
+
+  // If this chat already decided to edit in place (e.g. the dashboard started
+  // empty), keep doing so — items the agent itself added shouldn't trigger a
+  // fork on the next tool call.
+  if (chatId && inPlaceChatIds.has(chatId)) return
+
+  // Reconstruct the decision after a panel close/reopen: if this chat has
+  // already successfully mutated this dashboard in prior turns, it owns the
+  // dashboard and should keep editing in place.
+  const chat = chatId ? chatStore.chats[chatId] : null
+  const hasPriorMutation = chat?.messages.some((m) =>
+    m.executedToolCalls?.some((c) => MUTATING_TOOLS.has(c.name) && c.result?.success),
+  )
+  if (hasPriorMutation) {
+    if (chatId) inPlaceChatIds.add(chatId)
+    return
+  }
+
+  // Nothing to preserve on an empty dashboard (e.g. a dashboard created from
+  // the chat-first creator flow), so edit in place instead of forking.
+  if (Object.keys(props.dashboard.gridItems).length === 0) {
+    if (chatId) inPlaceChatIds.add(chatId)
+    return
+  }
+
   const baseId = props.dashboard.id
   const stamp = new Date().toISOString().slice(11, 19).replace(/:/g, '')
   const investigationName = `chat-${stamp}`
@@ -192,7 +228,7 @@ const systemPrompt = computed(() => {
 
   const availableImports: ChatImport[] = editorStore
     ? Object.values(editorStore.editors)
-        .filter((editor) => editor.connection === props.dashboard.connection && !editor.deleted)
+        .filter((editor) => editor.connection === props.dashboard.connection && !editor.deleted && isTrilogyType(editor.type))
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((editor) => ({
           id: editor.id,
@@ -267,6 +303,66 @@ async function handleSend(message: string, _messages: ChatMessage[]) {
 // re-firing if the parent re-passes the same value or the prop is reactive.
 const consumedInitialPrompts = new Set<string>()
 
+// Seed a brand-new dashboard chat with a synthetic select_active_import tool
+// call + result so the agent starts with the chosen import's field list in
+// context. Without this, the agent guesses field names (e.g. `tree.city`)
+// before it gets around to calling select_active_import itself.
+async function seedInitialImportContext(): Promise<void> {
+  const chatId = currentChatId.value
+  if (!chatId) return
+  const chat = chatStore.chats[chatId]
+  if (!chat) return
+  // Only seed on a fresh conversation — otherwise we'd stack duplicates on
+  // every dashboard reopen.
+  if (chat.messages.length > 0) return
+
+  const activeImports = dashboardChatImports.value
+  if (activeImports.length === 0) return
+  const imp = activeImports[0]
+
+  let result
+  try {
+    result = await toolExecutor.value.executeToolCall('select_active_import', {
+      import_name: imp.name,
+    })
+  } catch (err) {
+    console.error('Failed to seed initial import context:', err)
+    return
+  }
+  if (!result.success) return
+
+  const toolCallId = `seed-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const toolCall: LLMToolCall = {
+    id: toolCallId,
+    name: 'select_active_import',
+    input: { import_name: imp.name },
+  }
+  const executedToolCall: ChatToolCall = {
+    id: toolCallId,
+    name: 'select_active_import',
+    input: { import_name: imp.name },
+    result: { success: true, message: result.message },
+  }
+  const toolResult: LLMToolResult = {
+    toolCallId,
+    toolName: 'select_active_import',
+    result: formatToolResultText(result),
+  }
+
+  chatStore.addMessageToChat(chatId, {
+    role: 'assistant',
+    content: `Inspecting the selected data source "${imp.name}" so I know what fields are available.`,
+    toolCalls: [toolCall],
+    executedToolCalls: [executedToolCall],
+  })
+  chatStore.addMessageToChat(chatId, {
+    role: 'user',
+    content: '',
+    toolResults: [toolResult],
+    hidden: true,
+  })
+}
+
 async function maybeAutoSendInitialPrompt(value: string | null | undefined) {
   if (!value) return
   if (consumedInitialPrompts.has(value)) return
@@ -274,6 +370,7 @@ async function maybeAutoSendInitialPrompt(value: string | null | undefined) {
   // Wait a tick so the chat panel is fully mounted and LLMChat has registered
   // its system prompt before we kick off the conversation.
   await nextTick()
+  await seedInitialImportContext()
   await handleSend(value, activeChatMessages.value)
 }
 

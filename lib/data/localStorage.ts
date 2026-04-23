@@ -20,6 +20,14 @@ import { reactive } from 'vue'
 import AbstractStorage from './storage'
 import { DashboardModel } from '../dashboards/base'
 import { Chat } from '../chats/chat'
+import { idbGet, idbSet, idbDel, idbKeys, idbSize } from './idbKv'
+
+// Buckets moved to IndexedDB because their serialized payloads can exceed the
+// ~5 MB localStorage quota (chats carry artifact data, editors/modelConfig can
+// grow). Small, high-write-frequency buckets (connections, llmConnections,
+// userSettings) stay in localStorage for sync read access.
+const IDB_BUCKETS = ['editors', 'modelConfig', 'dashboards', 'chats'] as const
+type IdbBucket = (typeof IDB_BUCKETS)[number]
 
 export default class LocalStorage extends AbstractStorage {
   private editorStorageKey: string
@@ -29,6 +37,7 @@ export default class LocalStorage extends AbstractStorage {
   private userSettingsStorageKey: string
   private dashboardStorageKey: string
   private chatStorageKey: string
+  private migrated = new Set<string>()
   public type: string
 
   constructor(prefix: string = '') {
@@ -43,10 +52,37 @@ export default class LocalStorage extends AbstractStorage {
     this.type = 'local'
   }
 
+  // Reads a bucket stored in IndexedDB. On first read per process, migrates
+  // any pre-existing localStorage payload over to IDB and evicts the old key.
+  private async readIdb(key: string): Promise<string | null> {
+    if (!this.migrated.has(key)) {
+      this.migrated.add(key)
+      const existing = await idbGet(key)
+      if (existing === null) {
+        const legacy = localStorage.getItem(key)
+        if (legacy !== null) {
+          await idbSet(key, legacy)
+          localStorage.removeItem(key)
+          return legacy
+        }
+      } else {
+        // Already migrated in a previous session; clean up any stale copy
+        // left in localStorage (e.g. partial migration).
+        if (localStorage.getItem(key) !== null) localStorage.removeItem(key)
+      }
+    }
+    return idbGet(key)
+  }
+
+  private async writeIdb(key: string, value: string): Promise<void> {
+    this.migrated.add(key)
+    await idbSet(key, value)
+  }
+
   async saveEditor(editor: EditorInterface): Promise<void> {
     const editors = await this.loadEditors()
     editors[editor.name] = editor
-    this.saveEditors(Object.values(editors))
+    await this.saveEditors(Object.values(editors))
   }
 
   async saveEditors(editorsList: EditorInterface[]): Promise<void> {
@@ -61,14 +97,14 @@ export default class LocalStorage extends AbstractStorage {
         delete editors[editor.id]
       }
     })
-    localStorage.setItem(
+    await this.writeIdb(
       this.editorStorageKey,
       JSON.stringify(Object.values(editors).map((editor) => editor.toJSON())),
     )
   }
 
   async loadEditors(): Promise<Record<string, EditorInterface>> {
-    const storedData = localStorage.getItem(this.editorStorageKey)
+    const storedData = await this.readIdb(this.editorStorageKey)
     let raw = storedData ? JSON.parse(storedData) : []
     // map the raw array to a Record<string, EditorInterface> with the editorInterface wrapped in reactive
     return raw.reduce((acc: Record<string, EditorInterface>, editor: EditorInterface) => {
@@ -82,7 +118,7 @@ export default class LocalStorage extends AbstractStorage {
     const editors = await this.loadEditors()
     if (editors[name]) {
       delete editors[name]
-      localStorage.setItem(
+      await this.writeIdb(
         this.editorStorageKey,
         JSON.stringify(Object.values(editors).map((editor) => editor.toJSON())),
       )
@@ -90,7 +126,8 @@ export default class LocalStorage extends AbstractStorage {
   }
 
   async clearEditors(): Promise<void> {
-    localStorage.removeItem(this.editorStorageKey)
+    await idbDel(this.editorStorageKey)
+    this.migrated.add(this.editorStorageKey)
   }
 
   async hasEditor(id: string): Promise<boolean> {
@@ -163,7 +200,7 @@ export default class LocalStorage extends AbstractStorage {
   // model config storage
 
   async loadModelConfig(): Promise<Record<string, ModelConfig>> {
-    const storedData = localStorage.getItem(this.modelStorageKey)
+    const storedData = await this.readIdb(this.modelStorageKey)
     let raw = storedData ? JSON.parse(storedData) : []
     let modelConfigList: Record<string, ModelConfig> = {}
     raw.forEach((modelConfig: ModelConfig) => {
@@ -183,11 +220,13 @@ export default class LocalStorage extends AbstractStorage {
         delete current[model.name]
       }
     })
-    localStorage.setItem(this.modelStorageKey, JSON.stringify(Object.values(current)))
+    await this.writeIdb(this.modelStorageKey, JSON.stringify(Object.values(current)))
   }
 
   clearModelConfig(): void {
-    localStorage.removeItem(this.modelStorageKey)
+    // Fire-and-forget; IDB is async but the interface is sync.
+    void idbDel(this.modelStorageKey)
+    this.migrated.add(this.modelStorageKey)
   }
 
   // user Setting Storage
@@ -293,7 +332,7 @@ export default class LocalStorage extends AbstractStorage {
       }
     })
 
-    localStorage.setItem(
+    await this.writeIdb(
       this.dashboardStorageKey,
       JSON.stringify(
         Object.values(dashboards).map((dashboard) => {
@@ -304,7 +343,7 @@ export default class LocalStorage extends AbstractStorage {
   }
 
   async loadDashboards(): Promise<Record<string, DashboardModel>> {
-    const storedData = localStorage.getItem(this.dashboardStorageKey)
+    const storedData = await this.readIdb(this.dashboardStorageKey)
     let raw = storedData ? JSON.parse(storedData) : []
 
     return raw.reduce((acc: Record<string, DashboardModel>, dashboard: any) => {
@@ -327,7 +366,7 @@ export default class LocalStorage extends AbstractStorage {
     const dashboards = await this.loadDashboards()
     if (dashboards[id]) {
       delete dashboards[id]
-      localStorage.setItem(
+      await this.writeIdb(
         this.dashboardStorageKey,
         JSON.stringify(
           Object.values(dashboards).map((dashboard) => {
@@ -343,7 +382,8 @@ export default class LocalStorage extends AbstractStorage {
   }
 
   async clearDashboards(): Promise<void> {
-    localStorage.removeItem(this.dashboardStorageKey)
+    await idbDel(this.dashboardStorageKey)
+    this.migrated.add(this.dashboardStorageKey)
   }
 
   async hasDashboard(id: string): Promise<boolean> {
@@ -365,14 +405,14 @@ export default class LocalStorage extends AbstractStorage {
       }
     })
 
-    localStorage.setItem(
+    await this.writeIdb(
       this.chatStorageKey,
       JSON.stringify(Object.values(chats).map((chat) => chat.serialize())),
     )
   }
 
   async loadChats(): Promise<Record<string, Chat>> {
-    const storedData = localStorage.getItem(this.chatStorageKey)
+    const storedData = await this.readIdb(this.chatStorageKey)
     let raw = storedData ? JSON.parse(storedData) : []
 
     return raw.reduce((acc: Record<string, Chat>, chatData: any) => {
@@ -387,7 +427,7 @@ export default class LocalStorage extends AbstractStorage {
     const chats = await this.loadChats()
     if (chats[id]) {
       delete chats[id]
-      localStorage.setItem(
+      await this.writeIdb(
         this.chatStorageKey,
         JSON.stringify(Object.values(chats).map((chat) => chat.serialize())),
       )
@@ -395,11 +435,97 @@ export default class LocalStorage extends AbstractStorage {
   }
 
   async clearChats(): Promise<void> {
-    localStorage.removeItem(this.chatStorageKey)
+    await idbDel(this.chatStorageKey)
+    this.migrated.add(this.chatStorageKey)
   }
 
   async hasChat(id: string): Promise<boolean> {
     const chats = await this.loadChats()
     return id in chats
+  }
+
+  /**
+   * Delete chats whose updatedAt is older than `cutoff`. Returns the number
+   * of chats removed. Used by the Storage settings panel.
+   */
+  async pruneChatsOlderThan(cutoff: Date): Promise<number> {
+    const storedData = await this.readIdb(this.chatStorageKey)
+    if (!storedData) return 0
+    const raw = JSON.parse(storedData) as Array<{ updatedAt?: string }>
+    const kept = raw.filter((c) => {
+      if (!c.updatedAt) return true
+      return new Date(c.updatedAt).getTime() >= cutoff.getTime()
+    })
+    const removed = raw.length - kept.length
+    if (removed > 0) {
+      await this.writeIdb(this.chatStorageKey, JSON.stringify(kept))
+    }
+    return removed
+  }
+
+  /**
+   * Per-key byte usage across both backends. Returns an array sorted by size
+   * descending for the Storage settings panel.
+   */
+  async getStorageUsage(): Promise<
+    Array<{ key: string; bytes: number; backend: 'indexeddb' | 'localstorage' }>
+  > {
+    const out: Array<{ key: string; bytes: number; backend: 'indexeddb' | 'localstorage' }> = []
+
+    // IDB buckets we manage
+    for (const bucket of IDB_BUCKETS) {
+      const key = this._prefixedKey(bucket)
+      const bytes = await idbSize(key)
+      out.push({ key, bytes, backend: 'indexeddb' })
+    }
+
+    // Any extra IDB keys (e.g. from older versions or other code paths)
+    const keys = await idbKeys()
+    for (const key of keys) {
+      if (IDB_BUCKETS.some((b) => this._prefixedKey(b) === key)) continue
+      const bytes = await idbSize(key)
+      out.push({ key, bytes, backend: 'indexeddb' })
+    }
+
+    // Everything in localStorage
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key) continue
+      const v = localStorage.getItem(key) ?? ''
+      out.push({
+        key,
+        bytes: new TextEncoder().encode(v).length,
+        backend: 'localstorage',
+      })
+    }
+
+    out.sort((a, b) => b.bytes - a.bytes)
+    return out
+  }
+
+  /** Delete a single key from whichever backend holds it. */
+  async deleteStorageKey(
+    key: string,
+    backend: 'indexeddb' | 'localstorage',
+  ): Promise<void> {
+    if (backend === 'indexeddb') {
+      await idbDel(key)
+      this.migrated.add(key)
+    } else {
+      localStorage.removeItem(key)
+    }
+  }
+
+  private _prefixedKey(bucket: IdbBucket): string {
+    switch (bucket) {
+      case 'editors':
+        return this.editorStorageKey
+      case 'modelConfig':
+        return this.modelStorageKey
+      case 'dashboards':
+        return this.dashboardStorageKey
+      case 'chats':
+        return this.chatStorageKey
+    }
   }
 }

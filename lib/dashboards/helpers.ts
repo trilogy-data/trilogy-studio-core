@@ -7,7 +7,12 @@ import { type FieldEncodingOutput } from './types'
 
 export const HIGHLIGHT_COLOR = '#FF7F7F'
 
-const temporalTraits = ['decade', 'year', 'week', 'day', 'hour', 'minute', 'second', 'quarter']
+/** Safely access an array element by index, returning undefined if out of bounds. */
+const at = <T>(arr: T[], index: number): T | undefined => arr[index]
+
+// Temporal traits: treated as dates by Vega. 'decade' is NOT here — decade values
+// are integer buckets (e.g. 1970, 1980) and should render as categorical ordinal axes.
+const temporalTraits = ['year', 'week', 'day', 'hour', 'minute', 'second', 'quarter']
 
 // Discrete time traits: integer/string buckets that should use ordinal scale on bar charts
 // (continuous/temporal scale makes bars too thin)
@@ -23,22 +28,27 @@ export const discreteTimeTraits = [
   'day_of_week',
 ]
 
+const hasDiscreteTimeTraitOnColumn = (column: ResultColumn): boolean => {
+  if (!column.traits) return false
+  return column.traits.some((t) =>
+    discreteTimeTraits.some((dt) => t === dt || t.endsWith('_' + dt)),
+  )
+}
+
 export const hasDiscreteTimeTrait = (
   fieldName: string,
   columns: Map<string, ResultColumn>,
 ): boolean => {
   const column = columns.get(fieldName)
-  if (!column || !column.traits) return false
-  return column.traits.some((t) =>
-    discreteTimeTraits.some((dt) => t === dt || t.endsWith('_' + dt)),
-  )
+  if (!column) return false
+  return hasDiscreteTimeTraitOnColumn(column)
 }
 
 const geoTraits = ['us_state', 'us_state_short', 'country', 'latitude', 'longitude']
 
 const ordinalTraits = ['rank', 'index', 'grade', 'flag', 'letter_grade']
 
-const categoricalTraits = [...temporalTraits, ...ordinalTraits, 'identifier']
+const categoricalTraits = [...temporalTraits, ...ordinalTraits, 'identifier', 'decade']
 
 export function convertTimestampToISODate(timestamp: number): Date {
   const date = new Date(timestamp)
@@ -67,6 +77,9 @@ const getColumnHasTraitInternal = (column: ResultColumn, trait: string) => {
 // Helper functions to identify column types
 export const isNumericColumn = (column: ResultColumn): boolean => {
   if (column.purpose === 'key') {
+    return false
+  }
+  if (hasDiscreteTimeTraitOnColumn(column)) {
     return false
   }
   return (
@@ -240,6 +253,7 @@ export const determineDefaultConfig = (
     return {}
   }
   if (
+    !chartType &&
     numericColumns.length === 0 &&
     geoColumns.length === 0 &&
     longitudeColumns.length === 0 &&
@@ -248,6 +262,12 @@ export const determineDefaultConfig = (
     defaults.chartType = 'headline'
     return defaults
   }
+
+  // Categorical columns with a discrete time trait (e.g. decade) are ordered time
+  // buckets — they should drive a line chart when present alongside a numeric value.
+  const discreteTimeCategoricalColumns = categoricalColumns.filter((col) =>
+    hasDiscreteTimeTraitOnColumn(col),
+  )
 
   // Select appropriate chart type based on available column types
   if (chartType) {
@@ -260,6 +280,10 @@ export const determineDefaultConfig = (
   } else if (temporalColumns.length > 0 && numericColumns.length > 0) {
     // Time series data - use line chart
     defaults.chartType = 'line'
+  } else if (discreteTimeCategoricalColumns.length > 0 && numericColumns.length > 0) {
+    // Discrete time buckets (e.g. decade) + numeric — vertical bar by default
+    // (line remains eligible via determineEligibleChartTypes).
+    defaults.chartType = 'bar'
   } else if (categoricalColumns.length > 0 && numericColumns.length > 0) {
     // Categorical vs numeric - check category count for bar orientation
     const firstCatField = categoricalColumns[0].name
@@ -294,8 +318,10 @@ export const determineDefaultConfig = (
 
   // now set defaults for each chart type
   if (defaults.chartType === 'barh') {
-    defaults.yField = categoricalColumns[0].name
-    defaults.xField = firstNonCategoricalNumericColumn(defaults, numericColumns).name
+    defaults.yField = at(categoricalColumns, 0)?.name
+    if (numericColumns.length > 0) {
+      defaults.xField = firstNonCategoricalNumericColumn(defaults, numericColumns).name
+    }
     const nonAssignedCategorical = categoricalColumns.filter(
       (col) => col.name !== defaults.yField && col.name !== defaults.xField,
     )
@@ -319,8 +345,8 @@ export const determineDefaultConfig = (
       defaults.trellisField = trellisableCategorical[1].name
     }
   } else if (defaults.chartType === 'donut') {
-    defaults.yField = categoricalColumns[0].name
-    defaults.xField = numericColumns[0].name
+    defaults.yField = at(categoricalColumns, 0)?.name
+    defaults.xField = at(numericColumns, 0)?.name
     const nonAssignedCategorical = categoricalColumns.filter(
       (col) => col.name !== defaults.yField && col.name !== defaults.xField,
     )
@@ -331,8 +357,8 @@ export const determineDefaultConfig = (
       defaults.colorField = numericColumns[1].name
     }
   } else if (defaults.chartType === 'point') {
-    defaults.xField = numericColumns[0].name
-    defaults.yField = numericColumns[1].name
+    defaults.xField = at(numericColumns, 0)?.name
+    defaults.yField = at(numericColumns, 1)?.name
 
     // If we have a categorical column, use it for color
     const nonAssignedCategorical = categoricalColumns.filter(
@@ -366,9 +392,9 @@ export const determineDefaultConfig = (
       defaults.trellisField = trellisableCategorical[1].name
     }
   } else if (defaults.chartType === 'heatmap') {
-    defaults.xField = categoricalColumns[0].name
-    defaults.yField = categoricalColumns[1].name
-    defaults.colorField = numericColumns[0].name
+    defaults.xField = at(categoricalColumns, 0)?.name
+    defaults.yField = at(categoricalColumns, 1)?.name
+    defaults.colorField = at(numericColumns, 0)?.name
     // Use extra categorical columns for trellising
     const trellisableCategorical = categoricalColumns.filter(
       (col) => col.name !== defaults.yField && col.name !== defaults.xField,
@@ -380,11 +406,15 @@ export const determineDefaultConfig = (
       defaults.trellisField = trellisableCategorical[1].name
     }
   } else if (defaults.chartType === 'bar') {
-    defaults.xField = categoricalColumns[0].name
+    // Prefer a discrete time trait column (e.g. decade) as xField so bar charts
+    // render time buckets along the x-axis by default.
+    defaults.xField =
+      at(discreteTimeCategoricalColumns, 0)?.name ?? at(categoricalColumns, 0)?.name
     let nonDateNumeric = numericColumns.filter(
       (col) => !isTemporalColumn(col) && col.name !== defaults.xField,
     )
-    defaults.yField = nonDateNumeric ? nonDateNumeric[0].name : numericColumns[0].name
+    defaults.yField =
+      nonDateNumeric.length > 0 ? nonDateNumeric[0].name : at(numericColumns, 0)?.name
     const nonAssignedCategorical = categoricalColumns.filter(
       (col) => col.name !== defaults.yField && col.name !== defaults.xField,
     )
@@ -408,18 +438,20 @@ export const determineDefaultConfig = (
       defaults.trellisField = trellisableCategorical[1].name
     }
   } else if (defaults.chartType === 'headline') {
-    defaults.xField = numericColumns[0].name
+    defaults.xField = at(numericColumns, 0)?.name
   } else if (['line', 'area'].includes(defaults.chartType || '')) {
-    defaults.xField = temporalColumns[0].name
+    const xFieldColumn =
+      at(temporalColumns, 0) ?? at(discreteTimeCategoricalColumns, 0) ?? null
+    defaults.xField = xFieldColumn?.name
     const nonTemporalNumericColumns = numericColumns.filter(
-      (col) => col.name !== temporalColumns[0].name,
+      (col) => col.name !== xFieldColumn?.name,
     )
 
     // Use the first non-temporal numeric column if available, otherwise use the first numeric column
     defaults.yField =
       nonTemporalNumericColumns.length > 0
         ? nonTemporalNumericColumns[0].name
-        : numericColumns[0].name
+        : at(numericColumns, 0)?.name
     defaults.yField2 =
       nonTemporalNumericColumns.length > 1 ? nonTemporalNumericColumns[1].name : undefined
     // If we have a categorical column, use it for color
@@ -527,8 +559,15 @@ export const determineEligibleChartTypes = (
     return eligibleCharts
   }
 
-  // Time series data - line chart
-  if (temporalColumns.length > 0 && numericColumns.length > 0) {
+  // Time series data - line chart. Also allow columns with a discrete time trait
+  // (e.g. decade) that are categorical but represent an ordered time bucket.
+  const discreteTimeCategoricalColumns = categoricalColumns.filter((col) =>
+    hasDiscreteTimeTraitOnColumn(col),
+  )
+  if (
+    (temporalColumns.length > 0 || discreteTimeCategoricalColumns.length > 0) &&
+    numericColumns.length > 0
+  ) {
     eligibleCharts.push('line')
     // Area chart is also good for time series
     eligibleCharts.push('area')
@@ -583,6 +622,33 @@ export interface ChartConfigValidationResult {
   suggestedConfig: Partial<ChartConfig>
 }
 
+const classifyColumnType = (column: ResultColumn): string => {
+  if (columHasTraitEnding(column, 'latitude')) return 'latitude'
+  if (columHasTraitEnding(column, 'longitude')) return 'longitude'
+  if (
+    column.traits?.some(
+      (trait) =>
+        trait.endsWith('state') || trait.endsWith('state_short') || trait.endsWith('country'),
+    )
+  ) {
+    return 'geographic'
+  }
+  if (isTemporalColumn(column)) return 'temporal'
+  if (hasDiscreteTimeTraitOnColumn(column)) return 'categorical'
+  if (isNumericColumn(column)) return 'numeric'
+  if (isCategoricalColumn(column)) return 'categorical'
+  return 'other'
+}
+
+/** Build a comma-separated "name (type)" summary of the data columns for error messages. */
+const describeFieldTypes = (columns: Map<string, ResultColumn>): string => {
+  const parts: string[] = []
+  columns.forEach((column) => {
+    parts.push(`${column.name} (${classifyColumnType(column)})`)
+  })
+  return parts.length > 0 ? parts.join(', ') : 'no fields'
+}
+
 /**
  * Validate a chart config against actual column metadata.
  * Returns detailed errors if the chart type or field assignments are invalid.
@@ -597,9 +663,10 @@ export const validateChartConfigForData = (
 
   // Check if the chart type is eligible for this data
   if (!eligible.includes(config.chartType)) {
+    const fieldSummary = describeFieldTypes(columns)
     return {
       valid: false,
-      chartTypeError: `Chart type "${config.chartType}" is not compatible with this data. Eligible chart types: ${eligible.join(', ')}.`,
+      chartTypeError: `Chart type "${config.chartType}" is not compatible with the available fields (${fieldSummary}). Eligible chart types: ${eligible.join(', ')}.`,
       fieldErrors: [],
       eligibleChartTypes: eligible,
       suggestedConfig: determineDefaultConfig(data, columns),
@@ -806,6 +873,9 @@ export const getSortOrder = (
   if (isOrdinalColumn(column)) {
     return { sort: { field: fieldName, order: 'ascending' } }
   }
+  if (hasDiscreteTimeTraitOnColumn(column)) {
+    return { sort: { field: fieldName, order: 'ascending' } }
+  }
   if (isTemporalColumn(column)) {
     return { sort: { field: fieldName, order: 'ascending' } }
   } else if (isNumericColumn(column)) {
@@ -845,6 +915,8 @@ export const getVegaFieldType = (
     }
     return 'ordinal'
   } else if (isOrdinalColumn(column)) {
+    return 'ordinal'
+  } else if (hasDiscreteTimeTraitOnColumn(column)) {
     return 'ordinal'
   } else if (isNumericColumn(column)) {
     return 'quantitative'

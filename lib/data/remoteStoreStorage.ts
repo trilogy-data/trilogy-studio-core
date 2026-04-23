@@ -9,8 +9,14 @@ import type { LLMProvider } from '../llm'
 import type { GenericModelStore } from '../remotes/models'
 import type { CommunityApiStoreType } from '../stores/communityApiStore'
 import type Connection from '../connections/base'
-import RemoteProjectConnection from '../connections/remoteProject'
-import { fetchFromStore } from '../remotes/storeService'
+import {
+  DuckDBConnection,
+  BigQueryOauthConnection,
+  SnowflakeJwtConnection,
+  SQLiteConnection,
+  RemoteProjectConnection,
+} from '../connections'
+import { fetchFromStore, fetchGenericStoreIndex } from '../remotes/storeService'
 import {
   createStoreFile,
   deleteStoreFile,
@@ -66,13 +72,80 @@ export default class RemoteStoreStorage extends AbstractStorage {
     return `remote:${store.id}:${encodeURIComponent(path)}`
   }
 
-  private async detectEngine(store: GenericModelStore): Promise<string> {
+  // Fallback engine used purely to populate RemoteProjectConnection.query_type
+  // when we couldn't determine anything better. Does NOT cause a real
+  // queryable connection to be fabricated.
+  private async detectEngineForFallback(store: GenericModelStore): Promise<string> {
     try {
       const result = await fetchFromStore(store)
-      return result.files[0]?.engine || 'duckdb'
+      return result.files[0]?.engine || 'duck_db'
     } catch {
-      return 'duckdb'
+      return 'duck_db'
     }
+  }
+
+  private buildRuntimeConnection(
+    store: GenericModelStore,
+    connectionName: string,
+    modelName: string,
+    spec: StoreConnectionSpec | null | undefined,
+    fallbackEngine: string,
+  ): Connection {
+    const options = spec?.options || {}
+    let connection: Connection
+
+    // Wire values are pytrilogy `Dialects` enum members. Remap to the
+    // client's in-process connection constructors. Dialects the client can't
+    // construct (postgres/presto/trino/sql_server/dataframe) fall through to
+    // the browse-only default. MotherDuck isn't a Dialects value; it's only
+    // reachable via client-local connection setup, not remote advertisement.
+    switch (spec?.type) {
+      case 'duck_db':
+        connection = new DuckDBConnection(connectionName, modelName)
+        break
+      case 'sqlite':
+        connection = new SQLiteConnection(connectionName, modelName)
+        break
+      case 'bigquery':
+        // Per docs/remote-store-contract.md: the server emits the coarse
+        // `bigquery` type; the client defaults to OAuth. Service-account
+        // from a remote store isn't a real use case today.
+        connection = new BigQueryOauthConnection(
+          connectionName,
+          (options.projectId as string) || '',
+          modelName,
+        )
+        break
+      case 'snowflake':
+        connection = new SnowflakeJwtConnection(
+          connectionName,
+          {
+            account: (options.account as string) || '',
+            username: (options.username as string) || '',
+            privateKey: '',
+            warehouse: options.warehouse as string | undefined,
+            role: options.role as string | undefined,
+            database: options.database as string | undefined,
+            schema: options.schema as string | undefined,
+          },
+          modelName,
+        )
+        break
+      default:
+        // No runtime connection advertised, or an unknown type the client
+        // can't construct (e.g. postgres / presto / sql_server). Keep the
+        // store browse-only. Surfacing a warning here so maintainers notice.
+        if (spec?.type) {
+          console.warn(
+            `Remote store "${store.name}" advertised unknown connection type "${spec.type}". Falling back to browse-only RemoteProjectConnection.`,
+          )
+        }
+        return new RemoteProjectConnection(connectionName, store.id, fallbackEngine, modelName)
+    }
+
+    connection.storage = 'remote'
+    connection.model = modelName
+    return connection
   }
 
   async loadStore(storeId: string): Promise<RemoteStoreSnapshot> {
@@ -87,10 +160,18 @@ export default class RemoteStoreStorage extends AbstractStorage {
       models: {},
     }
 
-    const filesResponse = await fetchStoreFiles(store)
-    const remoteEngine = await this.detectEngine(store)
+    const [indexResult, filesResponse] = await Promise.all([
+      fetchGenericStoreIndex(store).catch((err) => {
+        console.warn(`Failed to fetch /index.json for store "${store.name}":`, err)
+        return null
+      }),
+      fetchStoreFiles(store),
+    ])
+
+    const connectionSpec = indexResult?.connection ?? null
     const connectionName = buildGenericStoreConnectionName(store)
     const modelName = buildGenericStoreModelName(store)
+    const startupScripts = new Set(indexResult?.startup_scripts ?? [])
 
     const targets = flattenStoreFileTargets(filesResponse.directories)
     const editorTargets = targets.filter((path) => getEditorTypeForPath(path) !== null)
@@ -108,6 +189,10 @@ export default class RemoteStoreStorage extends AbstractStorage {
         return
       }
 
+      const tags: EditorTag[] = []
+      if (supportsEditorSourceTag(type)) tags.push(EditorTag.SOURCE)
+      if (startupScripts.has(path)) tags.push(EditorTag.STARTUP_SCRIPT)
+
       const editor = reactive(
         new Editor({
           id: this.buildEditorId(store, path),
@@ -116,7 +201,7 @@ export default class RemoteStoreStorage extends AbstractStorage {
           connection: connectionName,
           storage: 'remote',
           contents: content,
-          tags: supportsEditorSourceTag(type) ? [EditorTag.SOURCE] : [],
+          tags,
           remoteStoreId: store.id,
           remotePath: path,
           remotePersisted: true,
@@ -126,11 +211,37 @@ export default class RemoteStoreStorage extends AbstractStorage {
       snapshot.editors[editor.id] = editor
     })
 
-    const remoteConnection = reactive(
-      new RemoteProjectConnection(connectionName, store.id, remoteEngine, modelName),
-    )
-    remoteConnection.changed = false
-    snapshot.connections[connectionName] = remoteConnection
+    let runtimeConnection: Connection
+    if (connectionSpec && connectionSpec.type) {
+      runtimeConnection = this.buildRuntimeConnection(
+        store,
+        connectionName,
+        modelName,
+        connectionSpec,
+        connectionSpec.type,
+      )
+    } else {
+      // No `connection` on /index.json → browse-only. Warn if the
+      // discovered model manifest declares a non-duckdb engine: that
+      // implies the server owner forgot to advertise a runtime
+      // connection and queries will fail.
+      const fallbackEngine = await this.detectEngineForFallback(store)
+      if (fallbackEngine && fallbackEngine !== 'duck_db' && fallbackEngine !== 'duckdb') {
+        console.warn(
+          `Remote store "${store.name}" did not declare a runtime connection but its model engine is "${fallbackEngine}". Queries will not run until /index.json includes a connection block.`,
+        )
+      }
+      runtimeConnection = new RemoteProjectConnection(
+        connectionName,
+        store.id,
+        fallbackEngine,
+        modelName,
+      )
+    }
+
+    const reactiveConnection = reactive(runtimeConnection)
+    reactiveConnection.changed = false
+    snapshot.connections[connectionName] = reactiveConnection
 
     const model = reactive(
       new ModelConfig({

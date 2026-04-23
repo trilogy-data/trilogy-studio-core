@@ -4,6 +4,7 @@ import Editor from '../editors/editor'
 import { ModelConfig, ModelSource } from '../models'
 import type { LLMRequestOptions, LLMResponse } from '../llm'
 import { LLMProvider } from '../llm'
+import { __resetIdbMemoryForTests } from './idbKv'
 
 vi.mock('../connections', () => ({
   BigQueryOauthConnection: {
@@ -57,6 +58,7 @@ beforeEach(() => {
     }
   })()
   vi.stubGlobal('localStorage', localStorageMock)
+  __resetIdbMemoryForTests()
 })
 
 describe('EditorLocalStorage', () => {

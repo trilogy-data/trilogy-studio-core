@@ -12,7 +12,14 @@ import useScreenNavigation from '../stores/useScreenNavigation'
 import { getDefaultValueFromHash, removeHashFromUrl } from '../stores/urlStore'
 import ConfirmDialog from './ConfirmDialog.vue'
 import trilogyIcon from '../static/trilogy.png'
-import { buildGenericStoreId, normalizeGenericStoreBaseUrl } from '../remotes/genericStoreMetadata'
+import {
+  buildGenericStoreConnectionName,
+  buildGenericStoreId,
+  normalizeGenericStoreBaseUrl,
+} from '../remotes/genericStoreMetadata'
+import { syncRemoteStoreIntoIde } from '../remotes/remoteStoreSync'
+import type RemoteStoreStorage from '../data/remoteStoreStorage'
+import type AbstractStorage from '../data/storage'
 
 // Asset types that can be opened after import
 type AssetType = 'dashboard' | 'editor' | 'trilogy'
@@ -30,7 +37,13 @@ const communityApiStore = inject<CommunityApiStoreType>('communityApiStore')
 const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
 const saveDashboards = inject<Function>('saveDashboards')
 const saveAll = inject<Function>('saveAll')
+const storageSources = inject<AbstractStorage[]>('storageSources', [])
 const screenNavigation = useScreenNavigation()
+
+const remoteStorage = computed(
+  () =>
+    storageSources.find((source) => source.type === 'remote') as RemoteStoreStorage | undefined,
+)
 
 if (
   !dashboardStore ||
@@ -92,6 +105,9 @@ const connectionRequirements = {
 
 // Computed properties
 const requiresFields = computed(() => {
+  // Remote-backed imports get connection details from the store's /index.json
+  // — no user input required and no form to render.
+  if (remoteImport.value) return false
   const req = connectionRequirements[connectionType.value as keyof typeof connectionRequirements]
   return req ? !req.autoImport : true
 })
@@ -275,7 +291,9 @@ const confirmOverwrite = async () => {
 }
 
 const startImportFlow = async () => {
-  if (modelStore.models[modelName.value]) {
+  // Remote-backed imports don't fabricate a local model — the model comes
+  // from the remote store's /index.json and sync. Skip the overwrite prompt.
+  if (!remoteImport.value && modelStore.models[modelName.value]) {
     isLoading.value = false
     stopTimer()
     showOverwriteConfirmation.value = true
@@ -285,10 +303,168 @@ const startImportFlow = async () => {
   await performImport()
 }
 
+// Pull editors / model / real runtime connection straight from the remote
+// store. Skips the model manifest fetch entirely — per contract, everything
+// needed to open a remote-backed asset lives in /index.json + /files.
+const performRemoteImport = async (): Promise<{
+  foundAssetId: string
+  connectionName: string
+}> => {
+  if (!remoteStorage.value) {
+    throw new Error('Remote storage is not available in this context.')
+  }
+
+  const remoteStore = getRegisteredStore()
+  if (!remoteStore) {
+    throw new Error('Remote imports require a valid store URL that can be registered.')
+  }
+
+  await syncRemoteStoreIntoIde(
+    remoteStorage.value,
+    remoteStore.id,
+    editorStore,
+    connectionStore,
+    modelStore,
+  )
+
+  const runtimeConnectionName = buildGenericStoreConnectionName(remoteStore)
+
+  if (assetType.value === 'dashboard') {
+    // Dashboards are not part of the remote store contract. Look for a local
+    // dashboard already bound to this remote runtime connection.
+    const existing = Object.values(dashboardStore.dashboards).find(
+      (d) => d.name === assetName.value && d.connection === runtimeConnectionName,
+    )
+    if (!existing) {
+      throw new Error(
+        `Dashboard "${assetName.value}" is not part of the remote store. Remote stores don't serve dashboards — create one locally against this store's connection first.`,
+      )
+    }
+    dashboardStore.warmDashboardQueries(existing.id, queryExecutionService, editorStore)
+    return { foundAssetId: existing.id, connectionName: runtimeConnectionName }
+  }
+
+  // Editor path — match by full name or path-stem (tolerate missing extension).
+  const candidates = Object.values(editorStore.editors).filter(
+    (editor) => editor.connection === runtimeConnectionName,
+  )
+  const stemOf = (name: string) => name.replace(/\.[^.]+$/, '')
+  const foundEditor = candidates.find(
+    (editor) => editor.name === assetName.value || stemOf(editor.name) === assetName.value,
+  )
+
+  if (!foundEditor) {
+    const available = candidates.map((e) => e.name).join(', ')
+    throw new Error(
+      `Editor "${assetName.value}" was not found in the remote store, have ${available}`,
+    )
+  }
+
+  return { foundAssetId: foundEditor.id, connectionName: runtimeConnectionName }
+}
+
+// Manifest-driven (legacy) import — fetches /models/*.json, pulls components
+// into local editors/dashboards, and creates a local runtime connection.
+const performManifestImport = async (): Promise<{
+  foundAssetId: string
+  connectionName: string
+}> => {
+  const connectionName = `${modelName.value}-connection`
+  const modelImportService = new ModelImportService(editorStore, modelStore, dashboardStore)
+
+  if (!modelStore.models[modelName.value]) {
+    modelStore.newModelConfig(modelName.value, true)
+  }
+  if (!connectionStore.connections[connectionName]) {
+    connectionStore.newConnection(connectionName, connectionType.value, {
+      mdToken: connectionOptions.value.mdToken,
+      projectId: connectionOptions.value.projectId,
+      username: connectionOptions.value.username,
+      password: connectionOptions.value.password,
+      account: connectionOptions.value.account,
+      privateKey: connectionOptions.value.sshPrivateKey,
+      model: modelName.value,
+    })
+  }
+
+  const remoteStore = getRegisteredStore()
+
+  let imports = await modelImportService.importModel(
+    modelName.value,
+    modelUrl.value,
+    connectionName,
+    {
+      token: importToken.value || undefined,
+      remote: false,
+      remoteStoreId: remoteStore?.id || null,
+      remoteBaseUrl: remoteStore?.baseUrl || storeUrl.value || null,
+    },
+  )
+
+  connectionStore.connections[connectionName].setModel(modelName.value)
+
+  if (assetType.value === 'dashboard') {
+    let lookup = assetName.value
+    const matched = imports?.dashboards.get(assetName.value)
+    if (matched) {
+      lookup = matched
+    }
+    const importedDashboard = Object.values(dashboardStore.dashboards).find(
+      (dashboard) => dashboard.name === lookup && dashboard.connection === connectionName,
+    )
+
+    if (!importedDashboard) {
+      const connectionDashboards = Object.values(dashboardStore.dashboards)
+        .filter((dashboard) => dashboard.connection === connectionName)
+        .map((d) => d.name)
+        .join(', ')
+      throw new Error(
+        `Dashboard "${assetName.value}" was not found in the imported model, have ${connectionDashboards}`,
+      )
+    }
+
+    dashboardStore.warmDashboardQueries(
+      importedDashboard.id,
+      queryExecutionService,
+      editorStore,
+    )
+    return { foundAssetId: importedDashboard.id, connectionName }
+  }
+
+  let lookup = assetName.value
+  const matched =
+    imports?.trilogy.get(assetName.value) ||
+    imports?.sql.get(assetName.value) ||
+    imports?.python.get(assetName.value)
+  if (matched) {
+    lookup = matched
+  }
+  const importedEditor = Object.values(editorStore.editors).find(
+    (editor) => editor.name === lookup && editor.connection === connectionName,
+  )
+
+  if (!importedEditor) {
+    const connectionEditors = Object.values(editorStore.editors)
+      .filter((editor) => editor.connection === connectionName)
+      .map((e) => e.name)
+      .join(', ')
+    throw new Error(
+      `Editor "${assetName.value}" was not found in the imported model, have ${connectionEditors}`,
+    )
+  }
+
+  return { foundAssetId: importedEditor.id, connectionName }
+}
+
 // Import model and open asset
 const performImport = async () => {
   try {
-    if (!modelUrl.value || !assetName.value || !modelName.value) {
+    if (!modelName.value || !assetName.value) {
+      error.value = 'Missing required import parameters'
+      return
+    }
+    // `modelUrl` is only required for the manifest-driven path.
+    if (!remoteImport.value && !modelUrl.value) {
       error.value = 'Missing required import parameters'
       return
     }
@@ -308,104 +484,22 @@ const performImport = async () => {
       currentStep.value = 'importing'
     }
 
-    // Create new connection for non-DuckDB types
-    let connectionName = `${modelName.value}-connection`
-    const modelImportService = new ModelImportService(editorStore, modelStore, dashboardStore)
-    if (!modelStore.models[modelName.value]) {
-      modelStore.newModelConfig(modelName.value, true)
-    }
-    if (!connectionStore.connections[connectionName]) {
-      connectionStore.newConnection(connectionName, connectionType.value, {
-        mdToken: connectionOptions.value.mdToken,
-        projectId: connectionOptions.value.projectId,
-        username: connectionOptions.value.username,
-        password: connectionOptions.value.password,
-        account: connectionOptions.value.account,
-        privateKey: connectionOptions.value.sshPrivateKey,
-        model: modelName.value,
-      })
-    }
+    const { foundAssetId, connectionName } = remoteImport.value
+      ? await performRemoteImport()
+      : await performManifestImport()
 
-    // Import model (this will also import any dashboards included in the model)
-    const remoteStore = getRegisteredStore()
-    if (remoteImport.value && !remoteStore) {
-      throw new Error('Remote imports require a valid store URL that can be registered.')
-    }
-
-    let imports = await modelImportService.importModel(
-      modelName.value,
-      modelUrl.value,
-      connectionName,
-      {
-        token: importToken.value || undefined,
-        remote: remoteImport.value,
-        remoteStoreId: remoteStore?.id || null,
-        remoteBaseUrl: remoteStore?.baseUrl || storeUrl.value || null,
-      },
-    )
-
-    // Transition to connecting step
     await transitionToStep('connecting')
-
-    connectionStore.connections[connectionName].setModel(modelName.value)
-
-    // Find the imported asset based on type
-    let foundAssetId: string | null = null
-
-    if (assetType.value === 'dashboard') {
-      // Find the imported dashboard by name and connection
-      let lookup = assetName.value
-      let matched = imports?.dashboards.get(assetName.value)
-      if (matched) {
-        lookup = matched
-      }
-      const importedDashboard = Object.values(dashboardStore.dashboards).find(
-        (dashboard) => dashboard.name === lookup && dashboard.connection === connectionName,
-      )
-
-      if (!importedDashboard) {
-        let connectionDashboards = Object.values(dashboardStore.dashboards)
-          .filter((dashboard) => dashboard.connection === connectionName)
-          .map((d) => d.name)
-          .join(', ')
-        throw new Error(
-          `Dashboard "${assetName.value}" was not found in the imported model, have ${connectionDashboards}`,
-        )
-      }
-
-      foundAssetId = importedDashboard.id
-      dashboardStore.warmDashboardQueries(importedDashboard.id, queryExecutionService, editorStore)
-    } else {
-      // Find the imported editor by name and connection (for trilogy/editor types)
-      let lookup = assetName.value
-      let matched =
-        imports?.trilogy.get(assetName.value) ||
-        imports?.sql.get(assetName.value) ||
-        imports?.python.get(assetName.value)
-      if (matched) {
-        lookup = matched
-      }
-      const importedEditor = Object.values(editorStore.editors).find(
-        (editor) => editor.name === lookup && editor.connection === connectionName,
-      )
-
-      if (!importedEditor) {
-        let connectionEditors = Object.values(editorStore.editors)
-          .filter((editor) => editor.connection === connectionName)
-          .map((e) => e.name)
-          .join(', ')
-        throw new Error(
-          `Editor "${assetName.value}" was not found in the imported model, have ${connectionEditors}`,
-        )
-      }
-
-      foundAssetId = importedEditor.id
-    }
 
     importedAssetId.value = foundAssetId
 
-    // Save changes
-    await saveAll()
+    // Manifest imports create local editors/models/connections worth persisting.
+    // Remote imports read from the store of truth — writing anything back here
+    // would round-trip freshly-loaded editors and, if any stale duplicates live
+    // in the editor store, trigger spurious PUTs (including 401s when the
+    // token of a pre-existing registration has gone stale).
+    if (!remoteImport.value) {
+      await saveAll()
+    }
 
     // Ensure connection is valid
     await connectionStore.resetConnection(connectionName)
@@ -491,25 +585,38 @@ onMounted(async () => {
       finalAssetName = dashboardNameParam
     }
 
-    if (!modelUrlParam || !finalAssetName || !modelNameParam || !connectionParam) {
-      error.value =
-        'Missing required import parameters (import, assetName/dashboard, modelName, connection)'
+    const isRemote = ['true', '1', 'yes'].includes((remoteParam || '').toLowerCase())
+
+    // Remote-backed imports don't need a model URL or a connection type in
+    // the hash — both come from the remote store's /index.json. They do
+    // still need `store` so we know where to fetch from.
+    const missingCommon = !finalAssetName || !modelNameParam
+    const missingManifest = !isRemote && (!modelUrlParam || !connectionParam)
+    const missingRemote = isRemote && !storeUrlParam
+    if (missingCommon || missingManifest || missingRemote) {
+      error.value = isRemote
+        ? 'Missing required import parameters (store, assetName/dashboard, modelName)'
+        : 'Missing required import parameters (import, assetName/dashboard, modelName, connection)'
       isLoading.value = false
       stopTimer()
       return
     }
 
-    modelUrl.value = decodeURIComponent(modelUrlParam)
+    modelUrl.value = modelUrlParam ? decodeURIComponent(modelUrlParam) : ''
     storeUrl.value = storeUrlParam ? decodeURIComponent(storeUrlParam) : ''
     importToken.value = tokenParam ? decodeURIComponent(tokenParam) : ''
-    remoteImport.value = ['true', '1', 'yes'].includes((remoteParam || '').toLowerCase())
+    remoteImport.value = isRemote
     assetName.value = decodeURIComponent(finalAssetName)
     assetType.value = finalAssetType
     modelName.value = decodeURIComponent(modelNameParam)
     connectionType.value = connectionParam
 
-    // Validate connection type
-    if (!connectionRequirements[connectionType.value as keyof typeof connectionRequirements]) {
+    // Validate connection type (skipped for remote — the remote store's
+    // /index.json is authoritative for the connection type).
+    if (
+      !remoteImport.value &&
+      !connectionRequirements[connectionType.value as keyof typeof connectionRequirements]
+    ) {
       error.value = `Unsupported connection type: ${connectionType.value}`
       isLoading.value = false
       stopTimer()

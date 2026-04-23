@@ -10,6 +10,7 @@ import {
 import { EditorTag } from '../editors'
 import useEditorStore from './editorStore'
 import useModelConfigStore from './modelStore'
+import { rehydrateRemoteModel } from '../remotes/rehydrateRemoteModel'
 import type { ContentInput } from '../stores/resolver'
 // Track in-progress operations
 const pendingOperations = new Map()
@@ -26,6 +27,16 @@ async function runStartup(connection: Connection) {
       await connection.query(editor.contents)
     }),
   )
+}
+
+// Returns synchronously (undefined) when no rehydration is needed so callers
+// still invoke connection.reset() in the same microtask — required by tests
+// that assert reset is called eagerly.
+function ensureConnectionModel(connection: Connection): Promise<boolean> | void {
+  if (!connection.model) return
+  const modelStore = useModelConfigStore()
+  if (modelStore.models[connection.model]) return
+  return rehydrateRemoteModel(connection.model)
 }
 
 export const connectionTypes = [
@@ -76,6 +87,8 @@ const useConnectionStore = defineStore('connections', {
 
       // The actual connection operation
       const resetPromise = async () => {
+        const rehydrate = ensureConnectionModel(this.connections[name])
+        if (rehydrate) await rehydrate
         await this.connections[name].reset()
         await runStartup(this.connections[name])
       }
@@ -115,7 +128,11 @@ const useConnectionStore = defineStore('connections', {
       })
 
       // The actual reset operation
-      const resetPromise = this.connections[name].reset().then(async () => {
+      const rehydrate = ensureConnectionModel(this.connections[name])
+      const resetStart = rehydrate
+        ? rehydrate.then(() => this.connections[name].reset())
+        : this.connections[name].reset()
+      const resetPromise = resetStart.then(async () => {
         try {
           await runStartup(this.connections[name])
         } catch (error) {
@@ -134,9 +151,22 @@ const useConnectionStore = defineStore('connections', {
 
       return operationPromise
     },
+    // Soft-deletes: leaves the connection in the map with `deleted: true` so
+    // that the next saveConnections() pass can purge it from localStorage.
+    // Call purgeDeletedConnections() after the save to hard-remove from memory.
     deleteConnection(name: string) {
       if (this.connections[name]) {
         this.connections[name].delete()
+      }
+    },
+    // Hard-removes any connection currently marked as deleted. Callers should
+    // run this after saveConnections() so that the persistence layer has had
+    // a chance to observe the `deleted` flag and drop the entry from storage.
+    purgeDeletedConnections() {
+      for (const name of Object.keys(this.connections)) {
+        if (this.connections[name].deleted) {
+          delete this.connections[name]
+        }
       }
     },
     connectionStateToStatus(connection: Connection | null) {

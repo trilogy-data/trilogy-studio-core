@@ -181,17 +181,11 @@ const useCommunityApiStore = defineStore('communityApi', {
      */
     saveStoresToStorage(): void {
       try {
-        // Save only custom stores (not the default one)
-        const customStores = this.stores
-          .filter((s) => s.id !== DEFAULT_GITHUB_STORE.id)
-          .map((store) => {
-            if (store.type !== 'generic') {
-              return store
-            }
-
-            const { token, ...persistedStore } = store
-            return persistedStore
-          })
+        // Save only custom stores (not the default one). Tokens are kept
+        // because they're per-serve-run ephemeral auth for the store, not
+        // long-lived secrets — and losing them on refresh breaks the ability
+        // to refetch remote-backed editors/models.
+        const customStores = this.stores.filter((s) => s.id !== DEFAULT_GITHUB_STORE.id)
         localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(customStores))
       } catch (error) {
         console.error('Error saving stores to localStorage:', error)

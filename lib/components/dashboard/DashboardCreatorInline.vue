@@ -90,6 +90,7 @@ import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 import { type EditorStoreType } from '../../stores/editorStore'
 import { type DashboardImport } from '../../dashboards/base'
+import { isTrilogyType } from '../../editors/fileTypes'
 
 export default {
   name: 'DashboardCreatorInline',
@@ -141,12 +142,14 @@ export default {
     })
 
     const connections = computed(() => {
-      return Object.values(connectionStore.connections).filter((conn) => conn.model)
+      return Object.values(connectionStore.connections).filter(
+        (conn) => conn.model && !conn.deleted,
+      )
     })
 
     const availableImports: Ref<DashboardImport[]> = computed(() => {
       const imports = Object.values(editorStore.editors).filter(
-        (editor) => editor.connection === selectedConnection.value,
+        (editor) => editor.connection === selectedConnection.value && isTrilogyType(editor.type),
       )
 
       return imports.map((importItem) => ({

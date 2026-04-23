@@ -441,9 +441,10 @@ export default defineComponent({
       // Prepare sources for validation
       // Prepare query input
       const conn = this.connectionStore.connections[this.editorData.connection]
+      const model = conn?.model ? this.modelStore.models[conn.model] : undefined
       const sources: ContentInput[] =
-        conn && conn.model
-          ? (this.modelStore.models[conn.model].sources || []).map((source) => ({
+        model
+          ? (model.sources || []).map((source) => ({
               alias: source.alias,
               contents: this.editorStore.editors[source.editor]
                 ? this.editorStore.editors[source.editor].contents

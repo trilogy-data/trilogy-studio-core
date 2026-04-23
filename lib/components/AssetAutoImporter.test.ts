@@ -90,6 +90,13 @@ const mockModelImportService = {
   importModel: vi.fn(),
 }
 
+const mockRemoteStorage = {
+  type: 'remote',
+  loadStore: vi.fn(),
+}
+
+const mockSyncRemoteStoreIntoIde = vi.fn()
+
 vi.mock('../stores/urlStore', () => ({
   getDefaultValueFromHash: vi.fn(),
   removeHashFromUrl: vi.fn(),
@@ -101,6 +108,10 @@ vi.mock('../stores/useScreenNavigation', () => ({
 
 vi.mock('../models/helpers', () => ({
   ModelImportService: vi.fn(() => mockModelImportService),
+}))
+
+vi.mock('../remotes/remoteStoreSync', () => ({
+  syncRemoteStoreIntoIde: (...args: unknown[]) => mockSyncRemoteStoreIntoIde(...args),
 }))
 
 const mockQueryExecutionService = {}
@@ -166,6 +177,7 @@ describe('AssetAutoImporter', () => {
           queryExecutionService: mockQueryExecutionService,
           saveDashboards: mockSaveDashboards,
           saveAll: mockSaveAll,
+          storageSources: [mockRemoteStorage],
         },
         stubs: {
           teleport: true,
@@ -426,8 +438,23 @@ describe('AssetAutoImporter', () => {
       )
     })
 
-    it('should pass remote import options when remote=true is provided', async () => {
-      setupSuccessfulEditorImport(TEST_CONSTANTS.CONNECTIONS.DUCKDB)
+    it('should skip the manifest and sync the remote store when remote=true', async () => {
+      // Runtime connection name derives from the registered store's name
+      // (which registerStoreIfNeeded sets to the URL's modelName for
+      // auto-registered remote stores), plus the `-connection` suffix that
+      // buildGenericStoreConnectionName applies to match the manifest flow.
+      const runtimeConnectionName = `${TEST_CONSTANTS.MODEL_NAME}-connection`
+
+      mockSyncRemoteStoreIntoIde.mockResolvedValue(undefined)
+      mockEditorStore.editors = {
+        [TEST_CONSTANTS.EDITOR_ID]: {
+          id: TEST_CONSTANTS.EDITOR_ID,
+          name: TEST_CONSTANTS.EDITOR_NAME,
+          connection: runtimeConnectionName,
+        },
+      }
+      mockConnectionStore.connections[runtimeConnectionName] =
+        createMockConnection(TEST_CONSTANTS.CONNECTIONS.DUCKDB)
 
       wrapper = await createWrapper({
         ...createUrlParams({
@@ -440,19 +467,21 @@ describe('AssetAutoImporter', () => {
       })
 
       await vi.waitFor(() => {
-        expect(mockModelImportService.importModel).toHaveBeenCalled()
+        expect(mockSyncRemoteStoreIntoIde).toHaveBeenCalled()
       })
 
-      expect(mockModelImportService.importModel).toHaveBeenCalledWith(
-        TEST_CONSTANTS.MODEL_NAME,
-        TEST_CONSTANTS.MODEL_URL,
-        TEST_CONSTANTS.CONNECTION_NAME,
+      // Manifest path must not run for remote-backed imports.
+      expect(mockModelImportService.importModel).not.toHaveBeenCalled()
+      // Store registration still happens, carrying the token through.
+      expect(mockCommunityApiStore.addStore).toHaveBeenCalledWith(
         expect.objectContaining({
+          baseUrl: TEST_CONSTANTS.STORE_URL,
           token: TEST_CONSTANTS.SECURE_TOKEN,
-          remote: true,
-          remoteBaseUrl: TEST_CONSTANTS.STORE_URL,
         }),
       )
+      // Sync is invoked against the registered store (first positional arg
+      // is remoteStorage, second is storeId).
+      expect(mockSyncRemoteStoreIntoIde.mock.calls[0][0]).toBe(mockRemoteStorage)
     })
 
     it('should name auto-registered remote stores from the imported model name', async () => {
