@@ -67,7 +67,7 @@ import DashboardListItem from './DashboardListItem.vue'
 import type { DashboardModel } from '../../dashboards'
 import SidebarList from './SidebarList.vue'
 import LoadingButton from '../LoadingButton.vue'
-import { getDefaultValueFromHash } from '../../stores/urlStore'
+import { getDefaultValueFromHash, URL_HASH_KEYS } from '../../stores/urlStore'
 import ConfirmDialog from '../ConfirmDialog.vue'
 import { useConfirmationState } from '../useConfirmationState'
 
@@ -203,7 +203,7 @@ export default {
       collapsed.value[key] = !collapsed.value[key]
     }
 
-    const current = getDefaultValueFromHash('dashboard') || ''
+    const current = getDefaultValueFromHash(URL_HASH_KEYS.DASHBOARD) || ''
 
     onMounted(() => {
       let anyOpen = false

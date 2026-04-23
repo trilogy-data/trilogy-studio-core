@@ -9,7 +9,7 @@ import { type GenericModelStore } from '../remotes/models'
 import QueryExecutionService from '../stores/queryExecutionService'
 import { ModelImportService } from '../models/helpers'
 import useScreenNavigation from '../stores/useScreenNavigation'
-import { getDefaultValueFromHash, removeHashFromUrl } from '../stores/urlStore'
+import { getDefaultValueFromHash, removeHashFromUrl, URL_HASH_KEYS } from '../stores/urlStore'
 import ConfirmDialog from './ConfirmDialog.vue'
 import trilogyIcon from '../static/trilogy.png'
 import {
@@ -524,13 +524,13 @@ const performImport = async () => {
     emit('importComplete', foundAssetId, assetType.value)
 
     // Clean up URL parameters
-    removeHashFromUrl('import')
-    removeHashFromUrl('store')
-    removeHashFromUrl('token')
-    removeHashFromUrl('assetType')
-    removeHashFromUrl('assetName')
-    removeHashFromUrl('dashboard') // Legacy parameter
-    removeHashFromUrl('remote')
+    removeHashFromUrl(URL_HASH_KEYS.IMPORT)
+    removeHashFromUrl(URL_HASH_KEYS.STORE)
+    removeHashFromUrl(URL_HASH_KEYS.TOKEN)
+    removeHashFromUrl(URL_HASH_KEYS.ASSET_TYPE)
+    removeHashFromUrl(URL_HASH_KEYS.ASSET_NAME)
+    removeHashFromUrl(URL_HASH_KEYS.DASHBOARD) // Legacy parameter
+    removeHashFromUrl(URL_HASH_KEYS.REMOTE)
 
     // Auto-redirect after short delay
     setTimeout(() => {
@@ -562,14 +562,14 @@ onMounted(async () => {
 
     // Get URL parameters
     const modelUrlParam = screenNavigation.modelImport.value
-    const storeUrlParam = getDefaultValueFromHash('store', '')
-    const tokenParam = getDefaultValueFromHash('token', '')
-    const remoteParam = getDefaultValueFromHash('remote', '')
-    const assetTypeParam = getDefaultValueFromHash('assetType', '') as AssetType
-    const assetNameParam = getDefaultValueFromHash('assetName', '')
-    const dashboardNameParam = getDefaultValueFromHash('dashboard', '') // Legacy support
-    const modelNameParam = getDefaultValueFromHash('modelName', '')
-    const connectionParam = getDefaultValueFromHash('connection', '')
+    const storeUrlParam = getDefaultValueFromHash(URL_HASH_KEYS.STORE, '')
+    const tokenParam = getDefaultValueFromHash(URL_HASH_KEYS.TOKEN, '')
+    const remoteParam = getDefaultValueFromHash(URL_HASH_KEYS.REMOTE, '')
+    const assetTypeParam = getDefaultValueFromHash(URL_HASH_KEYS.ASSET_TYPE, '') as AssetType
+    const assetNameParam = getDefaultValueFromHash(URL_HASH_KEYS.ASSET_NAME, '')
+    const dashboardNameParam = getDefaultValueFromHash(URL_HASH_KEYS.DASHBOARD, '') // Legacy support
+    const modelNameParam = getDefaultValueFromHash(URL_HASH_KEYS.MODEL_NAME, '')
+    const connectionParam = getDefaultValueFromHash(URL_HASH_KEYS.CONNECTION, '')
 
     // Determine asset type and name (support legacy 'dashboard' param)
     let finalAssetType: AssetType = 'dashboard'

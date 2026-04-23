@@ -97,10 +97,14 @@ const mockRemoteStorage = {
 
 const mockSyncRemoteStoreIntoIde = vi.fn()
 
-vi.mock('../stores/urlStore', () => ({
-  getDefaultValueFromHash: vi.fn(),
-  removeHashFromUrl: vi.fn(),
-}))
+vi.mock('../stores/urlStore', async () => {
+  const actual = await vi.importActual<typeof import('../stores/urlStore')>('../stores/urlStore')
+  return {
+    ...actual,
+    getDefaultValueFromHash: vi.fn(),
+    removeHashFromUrl: vi.fn(),
+  }
+})
 
 vi.mock('../stores/useScreenNavigation', () => ({
   default: vi.fn(() => mockScreenNavigation),

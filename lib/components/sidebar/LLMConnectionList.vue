@@ -66,7 +66,7 @@ import SidebarList from './SidebarList.vue'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 import type { ChatStoreType } from '../../stores/chatStore'
 import { KeySeparator } from '../../data/constants'
-import { getDefaultValueFromHash } from '../../stores/urlStore'
+import { getDefaultValueFromHash, URL_HASH_KEYS } from '../../stores/urlStore'
 import { LLMProvider } from '../../llm/base'
 import LLMConnectionListItem from './LLMConnectionListItem.vue'
 import LLMConnectionCreator from './LLMConnectionCreator.vue'
@@ -245,7 +245,7 @@ export default {
 
     onMounted(() => {
       document.addEventListener('click', handleDocumentClick)
-      const currentLLMKey = getDefaultValueFromHash('llm-key', '')
+      const currentLLMKey = getDefaultValueFromHash(URL_HASH_KEYS.LLMS, '')
       if (!currentLLMKey) {
         return
       }

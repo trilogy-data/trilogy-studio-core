@@ -4,6 +4,8 @@ import {
   removeHashFromUrl,
   getDefaultValueFromHash,
   removeHashesFromUrl,
+  URL_HASH_KEYS,
+  type UrlHashKey,
 } from './urlStore'
 import {
   useEditorStore,
@@ -124,23 +126,28 @@ const createNavigationStore = (): NavigationStore => {
   const chatStore = useChatStore()
   let eventListener: any = null
   const state: NavigationState = {
-    activeScreen: ref(getDefaultValueFromHash('screen', '')) as Ref<ScreenType>,
+    activeScreen: ref(getDefaultValueFromHash(URL_HASH_KEYS.SCREEN, '')) as Ref<ScreenType>,
     activeSidebarScreen: ref(
-      getDefaultValueFromHash('sidebarScreen', 'editors'),
+      getDefaultValueFromHash(URL_HASH_KEYS.SIDEBAR_SCREEN, 'editors'),
     ) as Ref<ScreenType>,
-    activeEditor: ref(getDefaultValueFromHash('editors', '')),
-    activeDashboard: ref(getDefaultValueFromHash('dashboard', '')),
-    activeConnectionKey: ref(getDefaultValueFromHash('connections', '')),
-    activeModelKey: ref(getDefaultValueFromHash('model', '')),
-    activeCommunityModelKey: ref(getDefaultValueFromHash('community-models', '')),
-    activeJobsKey: ref(getDefaultValueFromHash('jobs', '')),
-    activeLLMConnectionKey: ref(getDefaultValueFromHash('llms', '')),
-    activeDocumentationKey: ref(getDefaultValueFromHash('tutorial', '')),
+    activeEditor: ref(getDefaultValueFromHash(URL_HASH_KEYS.EDITORS, '')),
+    activeDashboard: ref(getDefaultValueFromHash(URL_HASH_KEYS.DASHBOARD, '')),
+    activeConnectionKey: ref(getDefaultValueFromHash(URL_HASH_KEYS.CONNECTIONS, '')),
+    activeModelKey: ref(getDefaultValueFromHash(URL_HASH_KEYS.MODELS, '')),
+    activeCommunityModelKey: ref(getDefaultValueFromHash(URL_HASH_KEYS.COMMUNITY_MODELS, '')),
+    activeJobsKey: ref(getDefaultValueFromHash(URL_HASH_KEYS.JOBS, '')),
+    activeLLMConnectionKey: ref(getDefaultValueFromHash(URL_HASH_KEYS.LLMS, '')),
+    activeDocumentationKey: ref(getDefaultValueFromHash(URL_HASH_KEYS.TUTORIAL, '')),
     // model import is legacy
-    modelImport: ref(getDefaultValueFromHash('import', getDefaultValueFromHash('model', ''))),
-    connectionImport: ref(getDefaultValueFromHash('connection', '')),
+    modelImport: ref(
+      getDefaultValueFromHash(
+        URL_HASH_KEYS.IMPORT,
+        getDefaultValueFromHash(URL_HASH_KEYS.MODELS, ''),
+      ),
+    ),
+    connectionImport: ref(getDefaultValueFromHash(URL_HASH_KEYS.CONNECTION, '')),
     mobileMenuOpen: ref(false),
-    initialSearch: ref(getDefaultValueFromHash('initialSearch', '')),
+    initialSearch: ref(getDefaultValueFromHash(URL_HASH_KEYS.INITIAL_SEARCH, '')),
     tabs: ref<Tab[]>([]),
     activeTab: ref<string | null>(null),
     showTipModal: ref(true),
@@ -173,11 +180,11 @@ const createNavigationStore = (): NavigationStore => {
     }
 
     if (screen) {
-      pushHashToUrl('sidebarScreen', screen)
+      pushHashToUrl(URL_HASH_KEYS.SIDEBAR_SCREEN, screen)
       return
     }
 
-    removeHashFromUrl('sidebarScreen')
+    removeHashFromUrl(URL_HASH_KEYS.SIDEBAR_SCREEN)
   }
 
   const syncSidebarScreenWithTab = (screen: ScreenType, skipUrlUpdate: boolean = false): void => {
@@ -464,7 +471,9 @@ const createNavigationStore = (): NavigationStore => {
       state.showTipModal.value = baseTips.length > 0
       // push last, so the event listener can detect it
       if (tabInfo.address && !skipUrlUpdate) {
-        pushHashToUrl(tabInfo.screen, tabInfo.address)
+        // ScreenType values are a subset of URL_HASH_KEYS by convention — each screen
+        // gets its own hash key named after it. Cast because ScreenType also allows ''.
+        pushHashToUrl(tabInfo.screen as UrlHashKey, tabInfo.address)
       }
     }
   }
@@ -473,7 +482,7 @@ const createNavigationStore = (): NavigationStore => {
       return
     }
     state.activeScreen.value = screen
-    pushHashToUrl('screen', screen)
+    pushHashToUrl(URL_HASH_KEYS.SCREEN, screen)
   }
 
   const setActiveSidebarScreen = (screen: ScreenType): void => {
@@ -487,16 +496,16 @@ const createNavigationStore = (): NavigationStore => {
 
   const setActiveModelKey = (model: string | null): void => {
     if (model === null) {
-      removeHashFromUrl('model')
+      removeHashFromUrl(URL_HASH_KEYS.MODELS)
       return
     }
-    pushHashToUrl('model', model)
+    pushHashToUrl(URL_HASH_KEYS.MODELS, model)
     state.activeModelKey.value = model
   }
 
   const setActiveCommunityModelKey = (communityModel: string | null): void => {
     if (communityModel === null) {
-      removeHashFromUrl('community-models')
+      removeHashFromUrl(URL_HASH_KEYS.COMMUNITY_MODELS)
       state.activeCommunityModelKey.value = ''
       return
     }
@@ -506,7 +515,7 @@ const createNavigationStore = (): NavigationStore => {
 
   const setActiveJobsKey = (jobKey: string | null): void => {
     if (jobKey === null) {
-      removeHashFromUrl('jobs')
+      removeHashFromUrl(URL_HASH_KEYS.JOBS)
       state.activeJobsKey.value = ''
       return
     }
@@ -516,7 +525,7 @@ const createNavigationStore = (): NavigationStore => {
 
   const setActiveEditor = (editor: string): void => {
     if (editor === null) {
-      removeHashFromUrl('editors')
+      removeHashFromUrl(URL_HASH_KEYS.EDITORS)
       state.activeEditor.value = ''
       return
     }
@@ -525,7 +534,7 @@ const createNavigationStore = (): NavigationStore => {
 
   const setActiveDocumentationKey = (documentation: string | null): void => {
     if (documentation === null) {
-      removeHashFromUrl('docs')
+      removeHashFromUrl(URL_HASH_KEYS.TUTORIAL)
       state.activeDocumentationKey.value = ''
       return
     }
@@ -536,7 +545,7 @@ const createNavigationStore = (): NavigationStore => {
 
   const setActiveDashboard = (dashboard: string | null): void => {
     if (dashboard === null) {
-      removeHashFromUrl('dashboard')
+      removeHashFromUrl(URL_HASH_KEYS.DASHBOARD)
       state.activeDashboard.value = ''
       return
     }
@@ -545,7 +554,7 @@ const createNavigationStore = (): NavigationStore => {
 
   const setActiveConnectionKey = (connection: string | null): void => {
     if (connection === null) {
-      removeHashFromUrl('connections')
+      removeHashFromUrl(URL_HASH_KEYS.CONNECTIONS)
       state.activeConnectionKey.value = ''
       return
     }
@@ -554,7 +563,7 @@ const createNavigationStore = (): NavigationStore => {
 
   const setActiveLLMConnectionKey = (llmConnection: string | null): void => {
     if (llmConnection === null) {
-      removeHashFromUrl('llms')
+      removeHashFromUrl(URL_HASH_KEYS.LLMS)
       state.activeLLMConnectionKey.value = ''
       return
     }
@@ -575,14 +584,14 @@ const createNavigationStore = (): NavigationStore => {
     let sidebarScreen: ScreenType = 'editors'
     let isImport = false
 
-    if (getDefaultValueFromHash('skipTips', '') === 'true') {
+    if (getDefaultValueFromHash(URL_HASH_KEYS.SKIP_TIPS, '') === 'true') {
       userSettingsStore.updateSetting('skipAllTips', true)
     }
 
     if (importUrl && connectionType) {
       // Check if we have new-style asset import params or legacy dashboard import
-      const assetType = getDefaultValueFromHash('assetType', '')
-      const assetName = getDefaultValueFromHash('assetName', '')
+      const assetType = getDefaultValueFromHash(URL_HASH_KEYS.ASSET_TYPE, '')
+      const assetName = getDefaultValueFromHash(URL_HASH_KEYS.ASSET_NAME, '')
 
       if (assetType && assetName) {
         // New asset import format
@@ -722,16 +731,19 @@ const createNavigationStore = (): NavigationStore => {
     }
     eventListener = window.addEventListener('hashchange', () => {
       // Get current hash values
-      const currentEditors = getDefaultValueFromHash('editors', '')
-      const currentDashboard = getDefaultValueFromHash('dashboard', '')
-      const currentConnections = getDefaultValueFromHash('connections', '')
-      const currentModels = getDefaultValueFromHash('model', '')
-      const currentCommunityModels = getDefaultValueFromHash('community-models', '')
-      const currentJobs = getDefaultValueFromHash('jobs', '')
-      const currentDocs = getDefaultValueFromHash('docs', '')
-      const currentLLMs = getDefaultValueFromHash('llms', '')
-      const currentScreen = getDefaultValueFromHash('screen', '') as ScreenType
-      const currentSidebarScreen = getDefaultValueFromHash('sidebarScreen', '') as ScreenType
+      const currentEditors = getDefaultValueFromHash(URL_HASH_KEYS.EDITORS, '')
+      const currentDashboard = getDefaultValueFromHash(URL_HASH_KEYS.DASHBOARD, '')
+      const currentConnections = getDefaultValueFromHash(URL_HASH_KEYS.CONNECTIONS, '')
+      const currentModels = getDefaultValueFromHash(URL_HASH_KEYS.MODELS, '')
+      const currentCommunityModels = getDefaultValueFromHash(URL_HASH_KEYS.COMMUNITY_MODELS, '')
+      const currentJobs = getDefaultValueFromHash(URL_HASH_KEYS.JOBS, '')
+      const currentDocs = getDefaultValueFromHash(URL_HASH_KEYS.TUTORIAL, '')
+      const currentLLMs = getDefaultValueFromHash(URL_HASH_KEYS.LLMS, '')
+      const currentScreen = getDefaultValueFromHash(URL_HASH_KEYS.SCREEN, '') as ScreenType
+      const currentSidebarScreen = getDefaultValueFromHash(
+        URL_HASH_KEYS.SIDEBAR_SCREEN,
+        '',
+      ) as ScreenType
       let changedScreen = false
       // Update sidebar screen if it changed
       if (currentSidebarScreen !== state.activeSidebarScreen.value) {

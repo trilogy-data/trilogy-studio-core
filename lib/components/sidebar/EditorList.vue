@@ -76,7 +76,7 @@ import SidebarList from './SidebarList.vue'
 import LoadingButton from '../LoadingButton.vue'
 import { EditorTag } from '../../editors'
 import type { Editor } from '../../editors'
-import { getDefaultValueFromHash } from '../../stores/urlStore'
+import { getDefaultValueFromHash, URL_HASH_KEYS } from '../../stores/urlStore'
 import { buildEditorTree } from '../../editors'
 import EditorListItem from './EditorListItem.vue'
 import ConfirmDialog from '../ConfirmDialog.vue'
@@ -154,7 +154,7 @@ export default {
         filterMenuOpen.value = false
       }
     }
-    const current = getDefaultValueFromHash('editor') || ''
+    const current = getDefaultValueFromHash(URL_HASH_KEYS.EDITORS) || ''
 
     // Helper function to get all folder paths for an editor
     const getFolderPaths = (editorName: string, storage: string, connection: string): string[] => {

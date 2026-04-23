@@ -442,9 +442,22 @@ order by
     return
   }
 
-  // Delete editors and verify folder structure updates
-  await page.getByTestId('editor-f-local-duckdb-test-analysis/reports').click()
-  await page.getByTestId('editor-f-local-duckdb-test-analysis/data').click()
+  // Delete editors and verify folder structure updates.
+  // Folder collapse state after reload is non-deterministic (EditorList.onMounted
+  // currently can't identify the active editor from the URL hash), so only click
+  // to expand when the children are actually hidden.
+  const salesReportLabel = page.getByTestId('editor-e-local-duckdb-test-analysis/reports/sales-report')
+  const customerDataLabel = page.getByTestId('editor-e-local-duckdb-test-analysis/data/customer-data')
+
+  if (!(await salesReportLabel.isVisible().catch(() => false))) {
+    await page.getByTestId('editor-f-local-duckdb-test-analysis/reports').click()
+  }
+  await expect(salesReportLabel).toBeVisible({ timeout: 10000 })
+
+  if (!(await customerDataLabel.isVisible().catch(() => false))) {
+    await page.getByTestId('editor-f-local-duckdb-test-analysis/data').click()
+  }
+  await expect(customerDataLabel).toBeVisible({ timeout: 10000 })
 
   await deleteEditor(page, 'editor-e-local-duckdb-test-analysis/reports/sales-report', isMobile)
 

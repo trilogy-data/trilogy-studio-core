@@ -79,7 +79,7 @@ import type { EditorStoreType } from '../../stores/editorStore'
 import TrilogyResolver from '../../stores/resolver'
 import trilogyIcon from '../../static/trilogy_small.webp'
 import { KeySeparator } from '../../data/constants'
-import { getDefaultValueFromHash } from '../../stores/urlStore'
+import { getDefaultValueFromHash, URL_HASH_KEYS } from '../../stores/urlStore'
 import { useScreenNavigation } from '../../stores'
 import Tooltip from '../Tooltip.vue'
 import SidebarOverflowMenu from './SidebarOverflowMenu.vue'
@@ -102,7 +102,8 @@ export default {
     const navigationStore = useScreenNavigation()
 
     const creatorVisible = ref(false)
-    const current = navigationStore.activeModelKey.value || getDefaultValueFromHash('model') || ''
+    const current =
+      navigationStore.activeModelKey.value || getDefaultValueFromHash(URL_HASH_KEYS.MODELS) || ''
     const currentType = current.split(KeySeparator)[0]
     let currentModel = ''
     let currentSource = ''

@@ -183,7 +183,6 @@ import DashboardList from './DashboardList.vue'
 import CommunityModelList from './CommunityModelList.vue'
 import trilogyIcon from '../../static/trilogy.png'
 import Tooltip from '../Tooltip.vue'
-import { getDefaultValueFromHash } from '../../stores/urlStore'
 
 export interface SidebarProps {
   active?: string
@@ -200,42 +199,15 @@ export interface SidebarProps {
 export default defineComponent({
   name: 'Sidebar',
   props: {
-    active: {
-      type: String,
-      default: getDefaultValueFromHash('screen'),
-    },
-    activeEditor: {
-      type: String,
-      default: getDefaultValueFromHash('editor'),
-    },
-    activeModelKey: {
-      type: String,
-      default: getDefaultValueFromHash('model'),
-    },
-    activeDocumentationKey: {
-      type: String,
-      default: getDefaultValueFromHash('documentationKey'),
-    },
-    activeConnectionKey: {
-      type: String,
-      default: getDefaultValueFromHash('connection'),
-    },
-    activeJobsKey: {
-      type: String,
-      default: getDefaultValueFromHash('jobs'),
-    },
-    activeLLMKey: {
-      type: String,
-      default: getDefaultValueFromHash('llm'),
-    },
-    activeDashboardKey: {
-      type: String,
-      default: getDefaultValueFromHash('dashboard'),
-    },
-    containerWidth: {
-      type: Number,
-      default: 200,
-    },
+    active: { type: String, default: '' },
+    activeEditor: { type: String, default: '' },
+    activeModelKey: { type: String, default: '' },
+    activeDocumentationKey: { type: String, default: '' },
+    activeConnectionKey: { type: String, default: '' },
+    activeJobsKey: { type: String, default: '' },
+    activeLLMKey: { type: String, default: '' },
+    activeDashboardKey: { type: String, default: '' },
+    containerWidth: { type: Number, default: 200 },
   } as const,
   setup() {
     const isSaving = ref(false)
