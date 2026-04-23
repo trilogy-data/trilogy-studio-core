@@ -1,0 +1,13 @@
+# A simple example model for testing the generic store feature. This model demonstrates the basic structure required for Trilogy models.
+
+key example int;
+property example.name string;
+
+datasource seed (
+    example: example,
+    name: name,
+)
+grain (example)
+query '''
+select 1 as example, 'hello' as name
+''';

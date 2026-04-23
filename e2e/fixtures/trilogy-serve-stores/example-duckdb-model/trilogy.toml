@@ -1,0 +1,5 @@
+[project]
+name = "Example DuckDB Model"
+
+[setup]
+sql = ["setup.sql"]

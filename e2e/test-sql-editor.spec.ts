@@ -410,9 +410,13 @@ SELECT 1;
     await page.getByTestId('mobile-menu-toggle').click()
   }
 
-  await analysisFolder.click() // Expand analysis folder again
-  await expect(reportsFolder).toBeVisible()
-  await expect(dataFolder).toBeVisible()
+  // Post-reload the analysis folder's collapsed state is reset by EditorList.onMounted
+  // and depends on which editor the URL hash points at, so only toggle if actually collapsed.
+  if (!(await reportsFolder.isVisible().catch(() => false))) {
+    await analysisFolder.click()
+  }
+  await expect(reportsFolder).toBeVisible({ timeout: 10000 })
+  await expect(dataFolder).toBeVisible({ timeout: 10000 })
 
   // check for errors
   if (isMobile) {

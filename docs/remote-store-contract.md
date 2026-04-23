@@ -2,7 +2,7 @@
 
 A remote store is an HTTP service that a Trilogy Studio client can register as a `GenericModelStore`. The store hosts the editors, model, and runtime connection config for one logical Trilogy project. The client treats it as a single unit: registering the store makes the project's contents available, and editor edits made in the client are written back to it.
 
-The authoritative implementation of this contract is `trilogy serve`; this document describes what the server emits and what the client must do with it. Mock servers (e.g. `pyserver/mock_model_server.py`) should conform to the same contract.
+The authoritative implementation of this contract is `trilogy serve` (from the `pytrilogy` package); this document describes what the server emits and what the client must do with it. The studio e2e suite exercises it via fixtures under `e2e/fixtures/trilogy-serve-stores/`.
 
 **Scope note on dashboards.** Dashboards currently use a Studio-specific serialization format and are intentionally **not** part of this contract. A dashboard created against a remote-backed project is persisted to browser `localStorage` with its `connection` field pointing at the store's runtime connection — so it survives refresh and re-binds to the remote data, but it is never written to the store. A future, format-agnostic dashboard spec may promote dashboards into this contract.
 
@@ -183,11 +183,3 @@ The counter-offer surfaces a few places where the current client needs to change
 - Stores that don't serve `connection` on `/index.json` remain usable as read-only browse targets (`RemoteProjectConnection`). No silent DuckDB fabrication.
 - Stores that haven't switched to literal-slash path encoding: client requires the new encoding. Servers on the old scheme need to update before the client can read them.
 
-## Reference: what changes in `pyserver/mock_model_server.py`
-
-1. Extend `StoreIndex` with `project_name: Optional[str] = None` and `connection: Optional[ConnectionSpec] = None`.
-2. Add `ConnectionSpec(BaseModel)` with `type: str` and `options: dict[str, str] = {}`.
-3. Implement `GET /files`, `GET /files/{path}`, `POST /files`, `PUT /files/{path}`, `DELETE /files/{path}` backed by a directory on disk. Return `201` / `409` / `200` / `404` / `204` per contract. Enforce allowed extensions and reject path traversal with `400`.
-4. Emit literal-slash paths (both in `/files` listings and in any `url` fields inside `/models/*.json`).
-5. Seed the backing directory with at least one `.preql` file so the example store exercises the editor code path.
-6. Existing `/models/*.json` endpoints stay; `/share-link` stays as a mock-only convenience (not part of the production contract).

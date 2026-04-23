@@ -55,22 +55,14 @@ export async function openSidebarScreen(page, screen, isMobile = false) {
     const mobileMenuToggle = page.getByTestId('mobile-menu-toggle')
     await expect(mobileMenuToggle).toBeVisible({ timeout: 10000 })
 
-    let mobileSidebarIcon = page
-      .getByTestId(`sidebar-icon-${screen}`)
-      .filter({ visible: true })
-      .first()
+    const sidebarIcon = page.getByTestId(`sidebar-icon-${screen}`).first()
 
-    if ((await mobileSidebarIcon.count()) === 0) {
+    if (!(await sidebarIcon.isVisible().catch(() => false))) {
       await mobileMenuToggle.click({ force: true })
-      mobileSidebarIcon = page
-        .getByTestId(`sidebar-icon-${screen}`)
-        .filter({ visible: true })
-        .first()
-      await expect(mobileSidebarIcon).toBeVisible({ timeout: 10000 })
+      await expect(sidebarIcon).toBeVisible({ timeout: 10000 })
     }
 
-    await mobileSidebarIcon.scrollIntoViewIfNeeded()
-    await mobileSidebarIcon.click({ force: true })
+    await sidebarIcon.click({ force: true })
     return
   }
 
