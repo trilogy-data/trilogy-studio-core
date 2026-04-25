@@ -345,8 +345,14 @@ const performRemoteImport = async (): Promise<{
   }
 
   // Editor path — match by full name or path-stem (tolerate missing extension).
+  // Scope by the remote store's id prefix on editor.id so a same-named local
+  // editor (or one belonging to a different remote store) can never satisfy
+  // this lookup.
+  const remoteEditorIdPrefix = `remote:${remoteStore.id}:`
   const candidates = Object.values(editorStore.editors).filter(
-    (editor) => editor.connection === runtimeConnectionName,
+    (editor) =>
+      editor.id.startsWith(remoteEditorIdPrefix) &&
+      editor.connection === runtimeConnectionName,
   )
   const stemOf = (name: string) => name.replace(/\.[^.]+$/, '')
   const foundEditor = candidates.find(
@@ -375,7 +381,7 @@ const performManifestImport = async (): Promise<{
   if (!modelStore.models[modelName.value]) {
     modelStore.newModelConfig(modelName.value, true)
   }
-  if (!connectionStore.connections[connectionName]) {
+  if (!connectionStore.connectionByName(connectionName)) {
     connectionStore.newConnection(connectionName, connectionType.value, {
       mdToken: connectionOptions.value.mdToken,
       projectId: connectionOptions.value.projectId,
@@ -401,21 +407,21 @@ const performManifestImport = async (): Promise<{
     },
   )
 
-  connectionStore.connections[connectionName].setModel(modelName.value)
+  connectionStore.connectionByName(connectionName)?.setModel(modelName.value)
 
+  // ImportOutput maps now contain ids, so resolve the asset directly by id
+  // rather than re-scanning by name (which used to mix in same-named editors
+  // from other origins).
   if (assetType.value === 'dashboard') {
-    let lookup = assetName.value
-    const matched = imports?.dashboards.get(assetName.value)
-    if (matched) {
-      lookup = matched
-    }
-    const importedDashboard = Object.values(dashboardStore.dashboards).find(
-      (dashboard) => dashboard.name === lookup && dashboard.connection === connectionName,
-    )
+    const dashboardId = imports?.dashboards.get(assetName.value)
+    const importedDashboard = dashboardId ? dashboardStore.dashboards[dashboardId] : undefined
 
     if (!importedDashboard) {
       const connectionDashboards = Object.values(dashboardStore.dashboards)
-        .filter((dashboard) => dashboard.connection === connectionName)
+        .filter(
+          (dashboard) =>
+            dashboard.connection === connectionName && dashboard.storage !== 'remote',
+        )
         .map((d) => d.name)
         .join(', ')
       throw new Error(
@@ -431,21 +437,17 @@ const performManifestImport = async (): Promise<{
     return { foundAssetId: importedDashboard.id, connectionName }
   }
 
-  let lookup = assetName.value
-  const matched =
+  const editorId =
     imports?.trilogy.get(assetName.value) ||
     imports?.sql.get(assetName.value) ||
     imports?.python.get(assetName.value)
-  if (matched) {
-    lookup = matched
-  }
-  const importedEditor = Object.values(editorStore.editors).find(
-    (editor) => editor.name === lookup && editor.connection === connectionName,
-  )
+  const importedEditor = editorId ? editorStore.editors[editorId] : undefined
 
   if (!importedEditor) {
     const connectionEditors = Object.values(editorStore.editors)
-      .filter((editor) => editor.connection === connectionName)
+      .filter(
+        (editor) => editor.connection === connectionName && editor.storage !== 'remote',
+      )
       .map((e) => e.name)
       .join(', ')
     throw new Error(
@@ -501,8 +503,12 @@ const performImport = async () => {
       await saveAll()
     }
 
-    // Ensure connection is valid
-    await connectionStore.resetConnection(connectionName)
+    // Ensure connection is valid. The store keys by id, but the import flow
+    // tracks the connection by display name; resolve before resetting.
+    const targetConnection = connectionStore.connectionByName(connectionName)
+    if (targetConnection) {
+      await connectionStore.resetConnection(targetConnection.id)
+    }
 
     // Transition to preparing step
     await transitionToStep('preparing')

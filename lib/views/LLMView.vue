@@ -175,16 +175,16 @@ export default defineComponent({
     const autoConnectDBIfNeeded = async () => {
       if (!connectionStore || !chatStore?.activeChat) return
 
-      const dataConnectionName = chatStore.activeChat.dataConnectionName
-      if (!dataConnectionName) return
-
-      const connection = connectionStore.connections[dataConnectionName]
+      const chat = chatStore.activeChat
+      const connection =
+        (chat.dataConnectionId && connectionStore.connections[chat.dataConnectionId]) ||
+        (chat.dataConnectionName ? connectionStore.connectionByName(chat.dataConnectionName) : undefined)
       if (!connection) return
 
       const status = connectionStore.connectionStateToStatus(connection)
       if (status === 'disabled') {
         try {
-          await connectionStore.resetConnection(dataConnectionName)
+          await connectionStore.resetConnection(connection.id)
         } catch (err) {
           console.error('Failed to auto-connect DB:', err)
         }

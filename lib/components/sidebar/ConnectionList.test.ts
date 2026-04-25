@@ -69,7 +69,9 @@ describe('ConnectionList - delete flow', () => {
 
   const seedConnection = (name = 'doomed') => {
     const store = useConnectionStore()
+    const id = `local:${name}`
     const conn: any = {
+      id,
       name,
       deleted: false,
       changed: false,
@@ -81,7 +83,7 @@ describe('ConnectionList - delete flow', () => {
         this.changed = true
       },
     }
-    store.connections[name] = conn
+    store.connections[id] = conn
     return conn
   }
 
@@ -110,7 +112,7 @@ describe('ConnectionList - delete flow', () => {
     await nextTick()
 
     expect(wrapper.vm.showDeleteConfirmationState).toBe(true)
-    expect(wrapper.vm.connectionToDelete).toBe('doomed')
+    expect(wrapper.vm.connectionToDelete).toBe('local:doomed')
     expect(wrapper.find('.confirmation-overlay').exists()).toBe(true)
   })
 
@@ -124,12 +126,14 @@ describe('ConnectionList - delete flow', () => {
       id: 'e1',
       name: 'editor-1',
       connection: 'doomed',
+      connectionId: 'local:doomed',
       delete: editorDelete,
     }
     editorStore.editors['e2'] = {
       id: 'e2',
       name: 'editor-2',
       connection: 'other',
+      connectionId: 'local:other',
       delete: vi.fn(),
     }
 
@@ -144,6 +148,7 @@ describe('ConnectionList - delete flow', () => {
       id: 'd1',
       name: 'cascade-me',
       connection: 'doomed',
+      connectionId: 'local:doomed',
       deleted: false,
       changed: false,
       delete: doomedDashDelete,
@@ -152,6 +157,7 @@ describe('ConnectionList - delete flow', () => {
       id: 'd2',
       name: 'leave-me',
       connection: 'other',
+      connectionId: 'local:other',
       deleted: false,
       changed: false,
       delete: survivorDashDelete,
@@ -180,7 +186,7 @@ describe('ConnectionList - delete flow', () => {
     expect(saveDashboards).toHaveBeenCalledTimes(1)
 
     // After purge the connection + cascaded dashboard must both be gone.
-    expect(store.connections['doomed']).toBeUndefined()
+    expect(store.connections['local:doomed']).toBeUndefined()
     expect(dashboardStore.dashboards['d1']).toBeUndefined()
     expect(dashboardStore.dashboards['d2']).toBeDefined()
     expect(dashboardStore.purgeDeletedDashboards).toHaveBeenCalledTimes(1)
@@ -204,7 +210,7 @@ describe('ConnectionList - delete flow', () => {
     expect(saveConnections).toHaveBeenCalledTimes(1)
     expect(saveEditors).toHaveBeenCalledTimes(1)
     expect(saveDashboards).not.toHaveBeenCalled()
-    expect(store.connections['doomed']).toBeUndefined()
+    expect(store.connections['local:doomed']).toBeUndefined()
   })
 
   it('cancelDelete closes the modal without touching the store', async () => {
@@ -222,8 +228,8 @@ describe('ConnectionList - delete flow', () => {
 
     expect(saveConnections).not.toHaveBeenCalled()
     expect(saveEditors).not.toHaveBeenCalled()
-    expect(store.connections['doomed']).toBeDefined()
-    expect(store.connections['doomed'].deleted).toBe(false)
+    expect(store.connections['local:doomed']).toBeDefined()
+    expect(store.connections['local:doomed'].deleted).toBe(false)
     expect(wrapper.vm.showDeleteConfirmationState).toBe(false)
   })
 })

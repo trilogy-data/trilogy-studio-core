@@ -12,6 +12,12 @@ import type QueryExecutionService from '../stores/queryExecutionService'
 import type { QueryInput, QueryResult } from '../stores/queryExecutionService'
 import { fetchConceptsForImport, type FetchConceptsForImportDeps } from './importConcepts'
 
+function listAvailableConnectionNames(connectionStore: ConnectionStoreType): string {
+  return Object.values(connectionStore.connections)
+    .map((c) => c.name)
+    .join(', ')
+}
+
 export interface ToolCallResult {
   success: boolean
   artifact?: ChatArtifact
@@ -46,15 +52,15 @@ export async function connectDataConnection(
   if (!connectionName || typeof connectionName !== 'string') {
     return {
       success: false,
-      error: `Connection name is required. Available connections: ${Object.keys(connectionStore.connections).join(', ') || 'None'}`,
+      error: `Connection name is required. Available connections: ${listAvailableConnectionNames(connectionStore) || 'None'}`,
     }
   }
 
-  const connection = connectionStore.connections[connectionName]
+  const connection = connectionStore.connectionByName(connectionName)
   if (!connection) {
     return {
       success: false,
-      error: `Connection "${connectionName}" not found. Available connections: ${Object.keys(connectionStore.connections).join(', ') || 'None'}`,
+      error: `Connection "${connectionName}" not found. Available connections: ${listAvailableConnectionNames(connectionStore) || 'None'}`,
     }
   }
 
@@ -67,7 +73,7 @@ export async function connectDataConnection(
   }
 
   try {
-    await connectionStore.connectConnection(connectionName)
+    await connectionStore.connectConnection(connection.id)
     opts?.onConnected?.(connectionName)
     return {
       success: true,
@@ -95,15 +101,19 @@ export function buildExtraContent(
   activeImports?: ChatImport[],
 ): ContentInput[] {
   const extraContentMap = new Map<string, string>()
+  const connection = connectionStore.connectionByName(connectionName)
+  const connectionId = connection?.id || connectionName
 
   // Connection sources first
-  const connectionSources = connectionStore.getConnectionSources(connectionName)
+  const connectionSources = connectionStore.getConnectionSources(connectionId)
   connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
 
-  // Overlay with all editors for this connection
-  if (editorStore) {
+  // Overlay with all editors for this connection. Scope to the connection's
+  // id so a same-named local editor doesn't bleed into a remote connection's
+  // context (or vice versa).
+  if (editorStore && connection) {
     Object.values(editorStore.editors)
-      .filter((editor) => editor.connection === connectionName && !editor.deleted)
+      .filter((editor) => !editor.deleted && editor.connectionId === connection.id)
       .forEach((editor) => {
         extraContentMap.set(editor.name, editor.contents)
       })
@@ -173,11 +183,21 @@ export interface ImportStateAccessor {
 export function getAvailableImports(
   editorStore: EditorStoreType | null,
   connectionName: string,
+  connectionStore?: ConnectionStoreType,
 ): ChatImport[] {
   if (!editorStore) return []
 
+  // Without a connection ref we fall back to the legacy name-only filter.
+  // All current call sites in this module pass connectionStore so the
+  // id-based filter is the live path.
+  const connection = connectionStore?.connectionByName(connectionName)
+
   return Object.values(editorStore.editors)
-    .filter((editor) => editor.connection === connectionName && !editor.deleted)
+    .filter((editor) => {
+      if (editor.deleted) return false
+      if (connection) return editor.connectionId === connection.id
+      return editor.connection === connectionName
+    })
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((editor) => ({
       id: editor.id,
@@ -192,6 +212,7 @@ export async function selectActiveImport(
   accessor: ImportStateAccessor,
   deps: FetchConceptsForImportDeps,
   editorStore: EditorStoreType | null,
+  connectionStore?: ConnectionStoreType,
 ): Promise<ToolCallResult> {
   const connectionName = accessor.getConnectionName()
 
@@ -212,7 +233,7 @@ export async function selectActiveImport(
     }
   }
 
-  const available = getAvailableImports(editorStore, connectionName)
+  const available = getAvailableImports(editorStore, connectionName, connectionStore)
   const importToSelect = available.find(
     (i) => i.name === importName || i.name.endsWith(`.${importName}`),
   )
@@ -248,6 +269,7 @@ export async function selectActiveImport(
 export function listAvailableImports(
   accessor: ImportStateAccessor,
   editorStore: EditorStoreType | null,
+  connectionStore?: ConnectionStoreType,
 ): ToolCallResult {
   const connectionName = accessor.getConnectionName()
   if (!connectionName) {
@@ -257,7 +279,7 @@ export function listAvailableImports(
     }
   }
 
-  const available = getAvailableImports(editorStore, connectionName)
+  const available = getAvailableImports(editorStore, connectionName, connectionStore)
   const activeImports = accessor.getActiveImports()
   const activeImport = activeImports.length > 0 ? activeImports[0] : null
 
@@ -314,16 +336,16 @@ export async function executeTrilogyQueryCore(
   if (!connectionName || typeof connectionName !== 'string') {
     return {
       success: false,
-      error: `Connection name is required. Available connections: ${Object.keys(connectionStore.connections).join(', ') || 'None'}`,
+      error: `Connection name is required. Available connections: ${listAvailableConnectionNames(connectionStore) || 'None'}`,
       query,
     }
   }
 
-  const connection = connectionStore.connections[connectionName]
+  const connection = connectionStore.connectionByName(connectionName)
   if (!connection) {
     return {
       success: false,
-      error: `Connection "${connectionName}" not found. Available connections: ${Object.keys(connectionStore.connections).join(', ') || 'None'}`,
+      error: `Connection "${connectionName}" not found. Available connections: ${listAvailableConnectionNames(connectionStore) || 'None'}`,
       query,
     }
   }
@@ -355,7 +377,7 @@ export async function executeTrilogyQueryCore(
   }
 
   try {
-    const result = await queryExecutionService.executeQuery(connectionName, queryInput)
+    const result = await queryExecutionService.executeQuery(connection.id, queryInput)
     const queryResult: QueryResult = await result.resultPromise
 
     if (!queryResult.success) {

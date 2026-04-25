@@ -48,7 +48,8 @@ export type ChatSource = 'user' | 'dashboard'
 export interface ChatSessionData {
   id: string
   name: string
-  dataConnectionName: string // Data connection for query execution
+  dataConnectionName: string // Display label for the data connection
+  dataConnectionId: string // Stable id used to look up the data connection
   llmConnectionName: string // LLM provider connection (includes model info)
   messages: ChatMessage[]
   artifacts: ChatArtifact[] // Stored separately for right panel display
@@ -70,6 +71,7 @@ export class Chat implements ChatSessionData {
   id: string
   name: string
   dataConnectionName: string
+  dataConnectionId: string
   llmConnectionName: string
   messages: ChatMessage[]
   artifacts: ChatArtifact[]
@@ -87,6 +89,7 @@ export class Chat implements ChatSessionData {
     this.id = data.id || `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     this.name = data.name || `Chat ${new Date().toLocaleTimeString()}`
     this.dataConnectionName = data.dataConnectionName || ''
+    this.dataConnectionId = data.dataConnectionId || ''
     this.llmConnectionName = data.llmConnectionName || ''
     this.messages = data.messages || []
     this.artifacts = data.artifacts || []
@@ -109,9 +112,13 @@ export class Chat implements ChatSessionData {
     }
   }
 
-  setDataConnection(connectionName: string): void {
-    if (this.dataConnectionName !== connectionName) {
+  setDataConnection(connectionName: string, connectionId: string = ''): void {
+    if (
+      this.dataConnectionName !== connectionName ||
+      (connectionId && this.dataConnectionId !== connectionId)
+    ) {
       this.dataConnectionName = connectionName
+      this.dataConnectionId = connectionId
       this.updatedAt = new Date()
       this.changed = true
     }
@@ -243,6 +250,7 @@ export class Chat implements ChatSessionData {
       id: this.id,
       name: this.name,
       dataConnectionName: this.dataConnectionName,
+      dataConnectionId: this.dataConnectionId,
       llmConnectionName: this.llmConnectionName,
       messages: this.messages,
       artifacts: this.artifacts,

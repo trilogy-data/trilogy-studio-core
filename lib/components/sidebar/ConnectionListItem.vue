@@ -375,13 +375,23 @@ export default {
     // Click handler for item expansion/toggling
     const handleItemClick = () => {
       if (isFetchable.value) {
-        emit('click', props.item.id, props.item.connection?.name || '', props.item.type)
+        emit(
+          'click',
+          props.item.id,
+          (props.item.connection as any)?.id || props.item.connection?.name || '',
+          props.item.type,
+        )
       }
     }
 
     const handleToggle = () => {
       if (isFetchable.value) {
-        emit('toggle', props.item.id, props.item.connection?.name || '', props.item.type)
+        emit(
+          'toggle',
+          props.item.id,
+          (props.item.connection as any)?.id || props.item.connection?.name || '',
+          props.item.type,
+        )
       }
     }
 
@@ -421,15 +431,27 @@ export default {
     }
 
     const handleRefreshConnectionClick = () => {
-      emit('refresh', props.item.connection?.name, props.item.connection?.name || '', 'connection')
+      const connKey =
+        (props.item.connection as any)?.id || props.item.connection?.name || ''
+      emit('refresh', connKey, connKey, 'connection')
     }
 
     const handleRefreshDatabaseClick = () => {
-      emit('refresh', props.item.id, props.item.connection?.name || '', 'database')
+      emit(
+        'refresh',
+        props.item.id,
+        (props.item.connection as any)?.id || props.item.connection?.name || '',
+        'database',
+      )
     }
 
     const handleRefreshSchemaClick = () => {
-      emit('refresh', props.item.id, props.item.connection?.name || '', 'schema')
+      emit(
+        'refresh',
+        props.item.id,
+        (props.item.connection as any)?.id || props.item.connection?.name || '',
+        'schema',
+      )
     }
 
     const deleteConnection = (connection: Connection) => {

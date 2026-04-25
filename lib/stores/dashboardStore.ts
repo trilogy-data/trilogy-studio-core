@@ -9,6 +9,7 @@ import {
 } from '../dashboards/base'
 import { type PromptDashboard, parseDashboardSpec } from '../dashboards/prompts'
 import type { LLMConnectionStoreType } from './llmStore'
+import useConnectionStore from './connectionStore'
 import type QueryExecutionService from './queryExecutionService'
 import type { QueryInput } from './queryExecutionService'
 import type { ModelConceptInput } from '../llm'
@@ -47,8 +48,10 @@ export const useDashboardStore = defineStore('dashboards', {
     activeDashboard: (state) =>
       state.activeDashboardId ? state.dashboards[state.activeDashboardId] : null,
 
-    getConnectionDashboards: (state) => (connection: string) =>
-      Object.values(state.dashboards).filter((dashboard) => dashboard.connection === connection),
+    getConnectionDashboards: (state) => (connectionId: string) =>
+      Object.values(state.dashboards).filter(
+        (dashboard) => dashboard.connectionId === connectionId,
+      ),
 
     unsavedDashboards: (state) => {
       return Object.values(state.dashboards).filter((dashboard) => dashboard.changed).length
@@ -142,17 +145,20 @@ export const useDashboardStore = defineStore('dashboards', {
     },
 
     // Create a new dashboard
-    newDashboard(name: string, connection: string) {
+    newDashboard(name: string, connectionId: string) {
       const id = name
 
       if (Object.values(this.dashboards).some((d) => d.name === name)) {
         throw new Error(`A dashboard with name ${name} already exists.`)
       }
 
+      const connectionStore = useConnectionStore()
+      const connection = connectionStore.connections[connectionId]
       const dashboard = new DashboardModel({
         id,
         name,
-        connection,
+        connection: connection?.name || connectionId,
+        connectionId,
         storage: 'local',
         state: 'editing',
       })
@@ -325,9 +331,9 @@ export const useDashboardStore = defineStore('dashboards', {
     },
 
     // Get dashboards by connection
-    getConnectionDashboardsSync(connection: string) {
+    getConnectionDashboardsSync(connectionId: string) {
       return Object.values(this.dashboards).filter(
-        (dashboard) => dashboard.connection === connection,
+        (dashboard) => dashboard.connectionId === connectionId,
       )
     },
 
@@ -612,9 +618,13 @@ export const useDashboardStore = defineStore('dashboards', {
     },
 
     // Update dashboard connection
-    updateDashboardConnection(dashboardId: string, connection: string) {
+    updateDashboardConnection(dashboardId: string, connectionId: string) {
       if (this.dashboards[dashboardId]) {
-        this.dashboards[dashboardId].connection = connection
+        const connectionStore = useConnectionStore()
+        const connection = connectionStore.connections[connectionId]
+        this.dashboards[dashboardId].connection = connection?.name || connectionId
+        this.dashboards[dashboardId].connectionId = connectionId
+        this.dashboards[dashboardId].changed = true
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }

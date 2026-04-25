@@ -35,7 +35,9 @@ const TEST_CONSTANTS = {
   },
 }
 
-const createMockConnection = (connectionType: string) => ({
+const createMockConnection = (connectionType: string, name?: string) => ({
+  id: name ? `local:${name}` : undefined,
+  name,
   setModel: vi.fn(),
   type: connectionType,
 })
@@ -50,9 +52,19 @@ const mockDashboardStore = {
 const mockConnectionStore = {
   connections: {} as Record<string, any>,
   newConnection: vi.fn((name: string, type: string, _: any) => {
-    mockConnectionStore.connections[name] = createMockConnection(type)
+    mockConnectionStore.connections[name] = createMockConnection(type, name)
   }),
   resetConnection: vi.fn().mockResolvedValue(undefined),
+  connectionByName: vi.fn((name: string) => {
+    // Match the production semantics: prefer local entries, then any entry whose name matches.
+    const conns = Object.values(mockConnectionStore.connections) as any[]
+    return (
+      conns.find((c) => c?.name === name && (!c.id || c.id.startsWith('local:'))) ||
+      conns.find((c) => c?.name === name) ||
+      mockConnectionStore.connections[name] ||
+      null
+    )
+  }),
 }
 
 const mockEditorStore = {
@@ -196,8 +208,10 @@ describe('AssetAutoImporter', () => {
   const setupSuccessfulDashboardImport = (
     connectionType: string = TEST_CONSTANTS.CONNECTIONS.DUCKDB,
   ) => {
+    // ImportOutput maps now hold ids, not names — AssetAutoImporter indexes
+    // the stores directly by id.
     mockModelImportService.importModel.mockResolvedValue({
-      dashboards: new Map([[TEST_CONSTANTS.DASHBOARD_NAME, TEST_CONSTANTS.DASHBOARD_NAME]]),
+      dashboards: new Map([[TEST_CONSTANTS.DASHBOARD_NAME, TEST_CONSTANTS.DASHBOARD_ID]]),
       trilogy: new Map(),
       sql: new Map(),
       python: new Map(),
@@ -209,7 +223,10 @@ describe('AssetAutoImporter', () => {
       [TEST_CONSTANTS.DASHBOARD_ID]: mockDashboard,
     }
 
-    mockConnectionStore.connections[connectionName] = createMockConnection(connectionType)
+    mockConnectionStore.connections[connectionName] = createMockConnection(
+      connectionType,
+      connectionName,
+    )
   }
 
   const setupSuccessfulEditorImport = (
@@ -217,7 +234,7 @@ describe('AssetAutoImporter', () => {
   ) => {
     mockModelImportService.importModel.mockResolvedValue({
       dashboards: new Map(),
-      trilogy: new Map([[TEST_CONSTANTS.EDITOR_NAME, TEST_CONSTANTS.EDITOR_NAME]]),
+      trilogy: new Map([[TEST_CONSTANTS.EDITOR_NAME, TEST_CONSTANTS.EDITOR_ID]]),
       sql: new Map(),
       python: new Map(),
     })
@@ -228,7 +245,10 @@ describe('AssetAutoImporter', () => {
       [TEST_CONSTANTS.EDITOR_ID]: mockEditor,
     }
 
-    mockConnectionStore.connections[connectionName] = createMockConnection(connectionType)
+    mockConnectionStore.connections[connectionName] = createMockConnection(
+      connectionType,
+      connectionName,
+    )
   }
 
   describe('Component Initialization', () => {
@@ -457,8 +477,10 @@ describe('AssetAutoImporter', () => {
           connection: runtimeConnectionName,
         },
       }
-      mockConnectionStore.connections[runtimeConnectionName] =
-        createMockConnection(TEST_CONSTANTS.CONNECTIONS.DUCKDB)
+      mockConnectionStore.connections[runtimeConnectionName] = createMockConnection(
+        TEST_CONSTANTS.CONNECTIONS.DUCKDB,
+        runtimeConnectionName,
+      )
 
       wrapper = await createWrapper({
         ...createUrlParams({
@@ -676,6 +698,7 @@ describe('AssetAutoImporter', () => {
       const connectionName = TEST_CONSTANTS.CONNECTION_NAME
       mockConnectionStore.connections[connectionName] = createMockConnection(
         TEST_CONSTANTS.CONNECTIONS.DUCKDB,
+        connectionName,
       )
 
       wrapper = await createWrapper(

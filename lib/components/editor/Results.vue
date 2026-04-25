@@ -189,7 +189,10 @@ export default {
     },
     handleReconnect() {
       if (this.connection) {
-        return this.connectionStore.resetConnection(this.connection).then(() => {})
+        const conn = this.connectionStore.connectionByName(this.connection)
+        if (conn) {
+          return this.connectionStore.resetConnection(conn.id).then(() => {})
+        }
       }
       return Promise.resolve()
     },

@@ -221,21 +221,31 @@ const toolExecutor = computed(() => {
 })
 
 const systemPrompt = computed(() => {
-  const availableConnections = connectionStore ? Object.keys(connectionStore.connections) : []
-  const isDataConnectionActive = props.dashboard.connection
-    ? (connectionStore?.connections[props.dashboard.connection]?.connected ?? false)
-    : false
-
-  const availableImports: ChatImport[] = editorStore
-    ? Object.values(editorStore.editors)
-        .filter((editor) => editor.connection === props.dashboard.connection && !editor.deleted && isTrilogyType(editor.type))
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((editor) => ({
-          id: editor.id,
-          name: editor.name.replace(/\//g, '.'),
-          alias: '',
-        }))
+  const availableConnections = connectionStore
+    ? Object.values(connectionStore.connections).map((c) => c.name)
     : []
+  const dashboardConnection =
+    (props.dashboard.connectionId && connectionStore?.connections[props.dashboard.connectionId]) ||
+    (props.dashboard.connection
+      ? connectionStore?.connectionByName(props.dashboard.connection)
+      : undefined)
+  const isDataConnectionActive = dashboardConnection?.connected ?? false
+  const availableImports: ChatImport[] =
+    editorStore && dashboardConnection
+      ? Object.values(editorStore.editors)
+          .filter(
+            (editor) =>
+              !editor.deleted &&
+              isTrilogyType(editor.type) &&
+              editor.connectionId === dashboardConnection.id,
+          )
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((editor) => ({
+            id: editor.id,
+            name: editor.name.replace(/\//g, '.'),
+            alias: '',
+          }))
+      : []
 
   return buildDashboardAgentSystemPrompt({
     dashboard: props.dashboard,
@@ -268,7 +278,7 @@ async function handleSend(message: string, _messages: ChatMessage[]) {
   // the dashboard's connection changed since the chat was created.
   const chat = chatStore.chats[chatId]
   if (chat && chat.dataConnectionName !== (props.dashboard.connection || '')) {
-    chat.setDataConnection(props.dashboard.connection || '')
+    chat.setDataConnection(props.dashboard.connection || '', props.dashboard.connectionId || '')
   }
 
   await chatStore.executeMessage(

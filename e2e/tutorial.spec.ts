@@ -56,7 +56,7 @@ test('test', async ({ page, isMobile, browserName }) => {
   await page.getByTestId('editor-creator-name-tutorial').fill('my-first-editor')
   await page
     .getByTestId('editor-creator-connection-select-tutorial')
-    .selectOption('demo-model-connection')
+    .selectOption({ label: 'demo-model-connection' })
   await page.getByTestId('editor-creator-submit-tutorial').click()
   await expect(page.getByTestId('model-validator')).toContainText(
     `Great work: "demo-model" found ✓`,

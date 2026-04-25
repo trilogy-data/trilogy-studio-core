@@ -40,24 +40,24 @@
           <div class="select-with-status">
             <select
               id="data-connection"
-              v-model="selectedDataConnection"
+              v-model="selectedDataConnectionId"
               data-testid="data-connection-select"
             >
               <option value="">None - Select later</option>
               <option
                 v-for="conn in sortedDataConnections"
-                :key="conn.name"
-                :value="conn.name"
-                :class="{ 'active-connection': conn.name === activeDataConnectionName }"
+                :key="conn.id"
+                :value="conn.id"
+                :class="{ 'active-connection': conn.id === activeDataConnectionId }"
               >
-                {{ conn.name }}{{ conn.name === activeDataConnectionName ? ' (active)' : '' }}
+                {{ conn.name }}{{ conn.id === activeDataConnectionId ? ' (active)' : '' }}
               </option>
             </select>
             <status-icon
               v-if="selectedDataConnectionStatus"
               :status="selectedDataConnectionStatus.status"
               :message="selectedDataConnectionStatus.message"
-              :testName="'data-' + selectedDataConnection"
+              :testName="'data-' + selectedDataConnectionId"
             />
           </div>
           <small> Optional - Select a data source for running queries </small>
@@ -127,7 +127,7 @@ export default defineComponent({
     const chatStore = inject<ChatStoreType>('chatStore', null as any)
 
     const selectedLLMConnection = ref(props.preselectedConnection || '')
-    const selectedDataConnection = ref('')
+    const selectedDataConnectionId = ref('')
     const chatName = ref('')
 
     // Watch for preselectedConnection changes
@@ -149,7 +149,7 @@ export default defineComponent({
           if (props.preselectedConnection) {
             selectedLLMConnection.value = props.preselectedConnection
           }
-          selectedDataConnection.value = ''
+          selectedDataConnectionId.value = ''
           chatName.value = ''
         }
       },
@@ -203,11 +203,19 @@ export default defineComponent({
       return props.activeDataConnection.split(KeySeparator)[0]
     })
 
+    // Resolve the active connection's id (preferring local on collision) so the
+    // picker can mark the right option, since two connections may share a name.
+    const activeDataConnectionId = computed(() => {
+      if (!activeDataConnectionName.value || !connectionStore) return ''
+      return connectionStore.connectionByName(activeDataConnectionName.value)?.id || ''
+    })
+
     const availableDataConnections = computed(() => {
       if (!connectionStore) return []
       return Object.values(connectionStore.connections)
         .filter((conn: any) => !conn.deleted)
         .map((conn: any) => ({
+          id: conn.id,
           name: conn.name,
           connected: conn.connected === true,
           running: conn.running === true,
@@ -229,9 +237,9 @@ export default defineComponent({
     // Get status for the selected data connection
     const selectedDataConnectionStatus = computed(
       (): { status: Status; message: string } | null => {
-        if (!selectedDataConnection.value) return null
+        if (!selectedDataConnectionId.value) return null
         const conn = availableDataConnections.value.find(
-          (c) => c.name === selectedDataConnection.value,
+          (c) => c.id === selectedDataConnectionId.value,
         )
         if (!conn) return null
 
@@ -257,10 +265,14 @@ export default defineComponent({
       }
 
       // Create the new chat
+      const dataConn = selectedDataConnectionId.value
+        ? connectionStore?.connections[selectedDataConnectionId.value]
+        : null
       const chat = chatStore.newChat(
         selectedLLMConnection.value,
-        selectedDataConnection.value,
+        dataConn?.name || '',
         chatName.value || undefined,
+        dataConn?.id || '',
       )
 
       emit('chat-created', chat)
@@ -269,7 +281,7 @@ export default defineComponent({
 
     return {
       selectedLLMConnection,
-      selectedDataConnection,
+      selectedDataConnectionId,
       chatName,
       availableLLMConnections,
       sortedLLMConnections,
@@ -278,6 +290,7 @@ export default defineComponent({
       sortedDataConnections,
       selectedDataConnectionStatus,
       activeDataConnectionName,
+      activeDataConnectionId,
       createChat,
     }
   },

@@ -86,11 +86,18 @@ describe('ModelImportService', () => {
       },
     )
 
-    expect(imports?.trilogy.get('core_local')).toBe('core_local.preql')
-    expect(imports?.trilogy.get('raw/boston/boston_landmarks')).toBe(
-      'raw/boston/boston_landmarks.preql',
+    // ImportOutput maps now contain editor ids (namespaced for remote stores)
+    // instead of plain editor names — callers can index editorStore.editors
+    // directly without an ambiguous name scan.
+    expect(imports?.trilogy.get('core_local')).toBe(
+      'remote:localhost:8100:core_local.preql',
     )
-    expect(imports?.python.get('raw/boston/boston_loader')).toBe('raw/boston/boston_loader.py')
+    expect(imports?.trilogy.get('raw/boston/boston_landmarks')).toBe(
+      'remote:localhost:8100:raw%2Fboston%2Fboston_landmarks.preql',
+    )
+    expect(imports?.python.get('raw/boston/boston_loader')).toBe(
+      'remote:localhost:8100:raw%2Fboston%2Fboston_loader.py',
+    )
 
     const coreEditor = editorStore.getEditorByName('core_local.preql')
     const nestedEditor = editorStore.getEditorByName('raw/boston/boston_landmarks.preql')

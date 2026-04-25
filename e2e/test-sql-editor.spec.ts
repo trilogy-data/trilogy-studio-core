@@ -30,7 +30,9 @@ test('test', async ({ page, isMobile }) => {
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('test-one')
   await page.getByTestId('editor-creator-type').selectOption('sql')
-  await page.getByTestId('editor-creator-connection-select').selectOption('duckdb-test')
+  await page
+    .getByTestId('editor-creator-connection-select')
+    .selectOption({ label: 'duckdb-test' })
   await page.getByTestId('editor-creator-submit').click()
 
   // Create second editor with folder structure
@@ -38,7 +40,9 @@ test('test', async ({ page, isMobile }) => {
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('analysis/reports/sales-report')
   await page.getByTestId('editor-creator-type').selectOption('sql')
-  await page.getByTestId('editor-creator-connection-select').selectOption('duckdb-test')
+  await page
+    .getByTestId('editor-creator-connection-select')
+    .selectOption({ label: 'duckdb-test' })
   await page.getByTestId('editor-creator-submit').click()
 
   // Create third editor in same folder structure
@@ -46,7 +50,9 @@ test('test', async ({ page, isMobile }) => {
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('analysis/data/customer-data')
   await page.getByTestId('editor-creator-type').selectOption('sql')
-  await page.getByTestId('editor-creator-connection-select').selectOption('duckdb-test')
+  await page
+    .getByTestId('editor-creator-connection-select')
+    .selectOption({ label: 'duckdb-test' })
   await page.getByTestId('editor-creator-submit').click()
 
   // Verify folder structure is created

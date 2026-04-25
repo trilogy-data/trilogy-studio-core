@@ -115,8 +115,13 @@ function cancelEditingTitle() {
 }
 
 const availableImports: Ref<DashboardImport[]> = computed(() => {
+  const conn = props.selectedConnection
+    ? connectionStore.connections[props.selectedConnection] ||
+      connectionStore.connectionByName(props.selectedConnection)
+    : undefined
+  if (!conn) return []
   const imports = Object.values(editorStore.editors)
-    .filter((editor) => editor.connection === props.selectedConnection && isTrilogyType(editor.type))
+    .filter((editor) => isTrilogyType(editor.type) && editor.connectionId === conn.id)
     .sort((a, b) => a.name.localeCompare(b.name))
 
   return imports.map((importItem) => ({

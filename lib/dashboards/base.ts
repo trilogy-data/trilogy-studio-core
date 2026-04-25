@@ -111,6 +111,7 @@ export interface Dashboard {
   name: string
   storage: 'local' | 'remote'
   connection: string
+  connectionId: string
   layout: LayoutItem[]
   gridItems: Record<string, GridItemData>
   nextId: number
@@ -174,6 +175,7 @@ export class DashboardModel implements Dashboard {
   name: string
   storage: 'local' | 'remote'
   connection: string
+  connectionId: string
   layout: LayoutItem[] = []
   gridItems: Record<string, GridItemData> = {}
   nextId: number = 0
@@ -198,6 +200,7 @@ export class DashboardModel implements Dashboard {
     name,
     storage = 'local',
     connection,
+    connectionId = '',
     layout = [],
     gridItems = {},
     nextId = 0,
@@ -218,6 +221,7 @@ export class DashboardModel implements Dashboard {
     this.name = name
     this.storage = storage
     this.connection = connection
+    this.connectionId = connectionId
     this.layout = layout
     this.gridItems = gridItems
     this.nextId = nextId
@@ -838,6 +842,7 @@ export class DashboardModel implements Dashboard {
       name: this.name,
       storage: this.storage,
       connection: this.connection,
+      connectionId: this.connectionId,
       layout: this.layout,
       gridItems: serializedGridItems,
       nextId: this.nextId,

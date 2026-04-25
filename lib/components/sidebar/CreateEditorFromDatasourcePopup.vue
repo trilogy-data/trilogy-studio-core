@@ -262,11 +262,10 @@ const initializeColumnData = async () => {
   if (props.table?.columns.length === 0) {
     console.log('No columns found for table:', props.table.name)
     console.log('Forcing refresh')
-    await connectionStore.connections[props.connection.name].refreshColumns(
-      props.table.database,
-      props.table.schema,
-      props.table.name,
-    )
+    await (
+      connectionStore.connections[props.connection.id] ||
+      connectionStore.connectionByName(props.connection.name)
+    )?.refreshColumns(props.table.database, props.table.schema, props.table.name)
   }
 
   // Clear existing data
@@ -379,11 +378,14 @@ const loadSampleData = async () => {
   error.value = null
 
   try {
-    if (!connectionStore.connections[props.connection.name]) {
+    const conn =
+      connectionStore.connections[props.connection.id] ||
+      connectionStore.connectionByName(props.connection.name)
+    if (!conn) {
       throw new Error('Connection not found')
     }
 
-    const result = await connectionStore.connections[props.connection.name].getTableSample(
+    const result = await conn.getTableSample(
       props.table.database,
       props.table.schema,
       props.table.name,

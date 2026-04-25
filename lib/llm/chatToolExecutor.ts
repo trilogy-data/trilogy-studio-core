@@ -205,7 +205,8 @@ export class ChatToolExecutor {
       }
     }
 
-    if (!this.connectionStore.connections[connectionName]) {
+    const connection = this.connectionStore.connectionByName(connectionName)
+    if (!connection) {
       return {
         success: false,
         error: `Connection "${connectionName}" not found`,
@@ -234,7 +235,7 @@ export class ChatToolExecutor {
     }
 
     try {
-      const validation = await this.queryExecutionService.validateQuery(connectionName, queryInput)
+      const validation = await this.queryExecutionService.validateQuery(connection.id, queryInput)
 
       if (validation && validation.data) {
         return {
@@ -259,14 +260,14 @@ export class ChatToolExecutor {
 
   // Get available connections for the LLM to know about
   getAvailableConnections(): string[] {
-    return Object.keys(this.connectionStore.connections).filter(
-      (name) => this.connectionStore.connections[name].connected,
-    )
+    return Object.values(this.connectionStore.connections)
+      .filter((c) => c.connected)
+      .map((c) => c.name)
   }
 
   // Get all connections (including disconnected)
   getAllConnections(): string[] {
-    return Object.keys(this.connectionStore.connections)
+    return Object.values(this.connectionStore.connections).map((c) => c.name)
   }
 
   /** Build the import state accessor that bridges chat store to the shared helpers. */
@@ -299,16 +300,17 @@ export class ChatToolExecutor {
         queryExecutionService: this.queryExecutionService,
       },
       this.editorStore,
+      this.connectionStore,
     )
   }
 
   private listAvailableImports(): ToolCallResult {
-    return sharedListAvailableImports(this.importAccessor, this.editorStore)
+    return sharedListAvailableImports(this.importAccessor, this.editorStore, this.connectionStore)
   }
 
   // Get available imports for a connection
   getAvailableImports(connectionName: string): ChatImport[] {
-    return sharedGetAvailableImports(this.editorStore, connectionName)
+    return sharedGetAvailableImports(this.editorStore, connectionName, this.connectionStore)
   }
 
   // Connect a data connection
@@ -316,7 +318,8 @@ export class ChatToolExecutor {
     return sharedConnectDataConnection(this.connectionStore, connectionName, {
       onConnected: (name) => {
         if (this.resolvedChatId && this.chatStore) {
-          this.chatStore.updateChatDataConnection(this.resolvedChatId, name)
+          const conn = this.connectionStore.connectionByName(name)
+          this.chatStore.updateChatDataConnection(this.resolvedChatId, name, conn?.id || '')
         }
       },
     })

@@ -60,7 +60,10 @@ const selectModel = async (modelName: string) => {
     )
   }
 
-  connectionStore.connections[props.connection.name].model = nextModel
+  const conn = connectionStore.connections[props.connection.id] || connectionStore.connectionByName(props.connection.name)
+  if (conn) {
+    conn.model = nextModel
+  }
   await saveConnections()
   isModelFormVisible.value = false
 }

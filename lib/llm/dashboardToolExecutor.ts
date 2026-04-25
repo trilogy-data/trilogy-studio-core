@@ -794,11 +794,16 @@ export class DashboardToolExecutor {
         queryExecutionService: this.deps.queryExecutionService,
       },
       this.deps.editorStore,
+      this.deps.connectionStore,
     )
   }
 
   private listAvailableImports(): ToolCallResult {
-    return sharedListAvailableImports(this.importAccessor, this.deps.editorStore)
+    return sharedListAvailableImports(
+      this.importAccessor,
+      this.deps.editorStore,
+      this.deps.connectionStore,
+    )
   }
 
   private async connectDataConnection(connectionName: string): Promise<ToolCallResult> {

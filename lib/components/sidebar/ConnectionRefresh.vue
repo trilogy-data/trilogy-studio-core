@@ -56,7 +56,7 @@ const buttonTestId = computed(() =>
 
 const handleRefresh = async () => {
   try {
-    await connectionStore.resetConnection(props.connection.name)
+    await connectionStore.resetConnection(props.connection.id)
     emit('refresh', props.connection.name)
   } catch (error) {
     console.error('Refresh failed:', error)

@@ -106,7 +106,7 @@ export default {
 
     const connectionInfo = computed(() => {
       if (props.item.type === 'connection') {
-        return connectionStore.connections[props.item.label] || null
+        return connectionStore.connectionByName(props.item.label) || null
       }
       return null
     })

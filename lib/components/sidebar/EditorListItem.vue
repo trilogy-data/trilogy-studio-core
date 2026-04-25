@@ -42,8 +42,8 @@
       <template #name>
         {{ item.label }}
         <span class="text-light" v-if="item.type === 'connection'">
-          <span class="connection-model" v-if="connectionStore.connections[item.label]?.model">
-            ({{ connectionStore.connections[item.label].model }})
+          <span class="connection-model" v-if="connectionStore.connectionByName(item.label)?.model">
+            ({{ connectionStore.connectionByName(item.label).model }})
           </span>
           <span
             v-else
@@ -73,8 +73,8 @@
 
         <template v-else-if="item.type === 'connection'">
           <connection-status-icon
-            v-if="connectionStore.connections[item.label]"
-            :connection="connectionStore.connections[item.label]"
+            v-if="connectionStore.connectionByName(item.label)"
+            :connection="connectionStore.connectionByName(item.label)"
           />
           <sidebar-overflow-menu
             :items="contextMenuItems"
@@ -159,8 +159,9 @@ export default {
         let model = modelConfigStore.newModelConfig(connectionName)
 
         // Update the connection to use this model
-        if (connectionStore.connections[connectionName]) {
-          connectionStore.connections[connectionName].model = model.name
+        const conn = connectionStore.connectionByName(connectionName)
+        if (conn) {
+          conn.model = model.name
         }
 
         // await saveModels and saveConnections
@@ -281,7 +282,7 @@ export default {
           this.$emit('delete-editor', this.item.editor)
           break
         case 'refresh-store': {
-          const connection = this.connectionStore.connections[this.item.label] as
+          const connection = this.connectionStore.connectionByName(this.item.label) as
             | ((typeof this.connectionStore.connections)[string] & {
                 remoteStoreId?: string | null
               })

@@ -197,9 +197,11 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
   const availableImportsForChat = computed((): ChatImport[] => {
     const connectionName = currentDataConnectionName.value
     if (!connectionName || !editorStore) return []
+    const connection = connectionStore?.connectionByName(connectionName)
+    if (!connection) return []
 
     return Object.values(editorStore.editors)
-      .filter((editor) => editor.connection === connectionName)
+      .filter((editor) => editor.connectionId === connection.id)
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((editor) => ({
         id: editor.id,
@@ -227,16 +229,15 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
     // Build extra content: connection sources + all editors for this connection
     // This ensures symbols in files with cross-file dependencies (like 'import etl') can be parsed
     console.log(`[useChatWithTools] Refreshing symbols for connection: "${connectionName}"`)
-    const allConnectionEditors = editorStore
-      ? Object.values(editorStore.editors)
-          .filter((editor) => {
-            const matches = editor.connection === connectionName && !editor.deleted
-            return matches
-          })
-          .map((editor) => ({
-            alias: editor.name,
-            contents: editor.contents,
-          }))
+    const connection = connectionStore?.connectionByName(connectionName)
+    const allConnectionEditors =
+      editorStore && connection
+        ? Object.values(editorStore.editors)
+            .filter((editor) => !editor.deleted && editor.connectionId === connection.id)
+            .map((editor) => ({
+              alias: editor.name,
+              contents: editor.contents,
+            }))
       : []
     console.log(
       `[useChatWithTools] Found ${allConnectionEditors.length} editors:`,
@@ -346,12 +347,14 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
 
   const chatSystemPrompt = computed(() => {
     const dataConnectionName = currentDataConnectionName.value
-    const availableConnections = connectionStore ? Object.keys(connectionStore.connections) : []
+    const availableConnections = connectionStore
+      ? Object.values(connectionStore.connections).map((c) => c.name)
+      : []
 
     // Check if the data connection is currently active/connected
     const isDataConnectionActive =
       dataConnectionName && connectionStore
-        ? (connectionStore.connections[dataConnectionName]?.connected ?? false)
+        ? (connectionStore.connectionByName(dataConnectionName)?.connected ?? false)
         : false
 
     return buildChatAgentSystemPrompt({

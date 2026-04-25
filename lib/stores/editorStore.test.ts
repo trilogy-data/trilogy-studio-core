@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import useEditorStore from './editorStore'
+import { EditorTag } from '../editors'
 
 describe('editorStore', () => {
   beforeEach(() => {
@@ -37,6 +38,49 @@ describe('editorStore', () => {
     expect(second.name).toBe('raw/core.preql')
     expect(first.id).toBe('remote:store-a:raw%2Fcore.preql')
     expect(second.id).toBe('remote:store-a:raw%2Fcore.preql#1')
+  })
+
+  it('getConnectionEditors scopes by connection id so local and remote scripts stay apart', () => {
+    // Regresses a bug where importing a remote that shared a connection name
+    // with an existing local connection ran BOTH startup scripts on connect.
+    const editorStore = useEditorStore()
+
+    const localStartup = editorStore.newEditor(
+      'local-startup',
+      'preql',
+      'shared-name',
+      'local;',
+      { storage: 'local' },
+    )
+    localStartup.tags = [EditorTag.STARTUP_SCRIPT]
+
+    const remoteStartup = editorStore.newEditor(
+      'remote-startup',
+      'preql',
+      'shared-name',
+      'remote;',
+      { storage: 'remote', remoteStoreId: 'store-a', remotePath: 'remote-startup.preql' },
+    )
+    remoteStartup.tags = [EditorTag.STARTUP_SCRIPT]
+
+    const localOnly = editorStore.getConnectionEditors('local:shared-name', [
+      EditorTag.STARTUP_SCRIPT,
+    ])
+    expect(localOnly).toHaveLength(1)
+    expect(localOnly[0].id).toBe(localStartup.id)
+
+    const remoteOnly = editorStore.getConnectionEditors('remote:store-a:shared-name', [
+      EditorTag.STARTUP_SCRIPT,
+    ])
+    expect(remoteOnly).toHaveLength(1)
+    expect(remoteOnly[0].id).toBe(remoteStartup.id)
+
+    // A different remote store with the same connection name must not pick
+    // this store's scripts up.
+    const otherStore = editorStore.getConnectionEditors('remote:store-b:shared-name', [
+      EditorTag.STARTUP_SCRIPT,
+    ])
+    expect(otherStore).toHaveLength(0)
   })
 
   it('normalizes remote python editor paths with a .py suffix', () => {

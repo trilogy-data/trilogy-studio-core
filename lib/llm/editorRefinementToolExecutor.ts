@@ -107,7 +107,7 @@ export class EditorRefinementToolExecutor {
 
   private async browseDatabaseTree(toolInput: Record<string, any>): Promise<ToolCallResult> {
     const connectionName = this.editorContext.connectionName
-    const connection = this.connectionStore.connections[connectionName]
+    const connection = this.connectionStore.connectionByName(connectionName)
     if (!connection) {
       return {
         success: false,
@@ -193,7 +193,8 @@ export class EditorRefinementToolExecutor {
     }
 
     const connectionName = this.editorContext.connectionName
-    if (!this.connectionStore.connections[connectionName]) {
+    const connection = this.connectionStore.connectionByName(connectionName)
+    if (!connection) {
       return {
         success: false,
         error: `Connection "${connectionName}" not found`,
@@ -211,7 +212,7 @@ export class EditorRefinementToolExecutor {
     }
 
     try {
-      const validation = await this.queryExecutionService.validateQuery(connectionName, queryInput)
+      const validation = await this.queryExecutionService.validateQuery(connection.id, queryInput)
 
       if (validation && validation.data) {
         // Check for validation errors (items with severity > 0 are errors/warnings)
@@ -272,7 +273,7 @@ export class EditorRefinementToolExecutor {
     const connectionName = this.editorContext.connectionName
 
     // Verify connection exists and is active
-    const connection = this.connectionStore.connections[connectionName]
+    const connection = this.connectionStore.connectionByName(connectionName)
     if (!connection) {
       return {
         success: false,
@@ -293,7 +294,7 @@ export class EditorRefinementToolExecutor {
 
     try {
       const result = await this.queryExecutionService.executeQuery(
-        connectionName,
+        connection.id,
         queryInput,
         undefined, // onStarted
         undefined, // onProgress
@@ -378,12 +379,13 @@ export class EditorRefinementToolExecutor {
     }
 
     const connectionName = this.editorContext.connectionName
+    const connection = this.connectionStore.connectionByName(connectionName)
     const extraContent = this.buildEditorExtraContent()
 
     try {
       const formatted = await this.queryExecutionService.formatQuery(
         query.trim(),
-        connectionName,
+        connection?.id || connectionName,
         this.editorContext.editorType,
         [], // imports
         extraContent,
@@ -626,7 +628,8 @@ export class EditorRefinementToolExecutor {
   }
 
   private serializeDatabaseTree(database?: string, schema?: string, table?: string): Record<string, any> {
-    const databases = this.connectionStore.connections[this.editorContext.connectionName].databases || []
+    const connection = this.connectionStore.connectionByName(this.editorContext.connectionName)
+    const databases = connection?.databases || []
     const filteredDatabases = database
       ? databases.filter((db) => db.name === database)
       : databases
@@ -657,7 +660,7 @@ export class EditorRefinementToolExecutor {
 
     return {
       connection: this.editorContext.connectionName,
-      hasSchema: this.connectionStore.connections[this.editorContext.connectionName].hasSchema,
+      hasSchema: connection?.hasSchema,
       tree,
     }
   }

@@ -65,6 +65,7 @@ export default class SQLiteConnection extends BaseConnection {
 
   toJSON(): object {
     return {
+      id: this.id,
       name: this.name,
       type: this.type,
       model: this.model,
