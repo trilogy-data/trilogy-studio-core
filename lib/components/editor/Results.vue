@@ -172,7 +172,8 @@ export default {
   emits: ['config-change', 'drilldown-click', 'refresh-click', 'open-chat'],
   data() {
     return {
-      activeTab: this.defaultTab || getDefaultValueFromHash(URL_HASH_KEYS.ACTIVE_EDITOR_TAB, 'results'),
+      activeTab:
+        this.defaultTab || getDefaultValueFromHash(URL_HASH_KEYS.ACTIVE_EDITOR_TAB, 'results'),
       activeDrilldown: null as Drilldown | null,
       TABS_HEIGHT: 26,
     }

@@ -238,7 +238,7 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
               alias: editor.name,
               contents: editor.contents,
             }))
-      : []
+        : []
     console.log(
       `[useChatWithTools] Found ${allConnectionEditors.length} editors:`,
       allConnectionEditors.map((e) => e.alias),

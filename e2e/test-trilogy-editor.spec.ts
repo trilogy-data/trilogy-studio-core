@@ -30,9 +30,7 @@ test('test', async ({ page, isMobile, browser }) => {
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('test-one')
   await page.getByTestId('editor-creator-type').selectOption('preql')
-  await page
-    .getByTestId('editor-creator-connection-select')
-    .selectOption({ label: connectionName })
+  await page.getByTestId('editor-creator-connection-select').selectOption({ label: connectionName })
   await page.getByTestId('editor-creator-submit').click()
 
   // Switch to test-one editor and add content

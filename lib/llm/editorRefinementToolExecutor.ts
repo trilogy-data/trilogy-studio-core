@@ -162,8 +162,8 @@ export class EditorRefinementToolExecutor {
 
       if (database && schema && table && refresh) {
         const columns = await connection.getColumns(database, schema, table)
-        const localTable = connection
-          .databases?.find((db) => db.name === database)
+        const localTable = connection.databases
+          ?.find((db) => db.name === database)
           ?.schemas.find((s) => s.name === schema)
           ?.tables.find((t) => t.name === table)
         if (localTable) {
@@ -480,7 +480,9 @@ export class EditorRefinementToolExecutor {
       if (this.editorContext.editorType === 'sql') {
         return {
           success: true,
-          message: replaceSelection ? 'Updated selected text in editor.' : 'Updated editor contents.',
+          message: replaceSelection
+            ? 'Updated selected text in editor.'
+            : 'Updated editor contents.',
         }
       }
 
@@ -627,12 +629,14 @@ export class EditorRefinementToolExecutor {
     return sharedConnectDataConnection(this.connectionStore, connectionName)
   }
 
-  private serializeDatabaseTree(database?: string, schema?: string, table?: string): Record<string, any> {
+  private serializeDatabaseTree(
+    database?: string,
+    schema?: string,
+    table?: string,
+  ): Record<string, any> {
     const connection = this.connectionStore.connectionByName(this.editorContext.connectionName)
     const databases = connection?.databases || []
-    const filteredDatabases = database
-      ? databases.filter((db) => db.name === database)
-      : databases
+    const filteredDatabases = database ? databases.filter((db) => db.name === database) : databases
 
     const tree = filteredDatabases.map((db) => {
       const schemas = schema ? db.schemas.filter((s) => s.name === schema) : db.schemas

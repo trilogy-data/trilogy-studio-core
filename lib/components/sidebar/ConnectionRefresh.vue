@@ -17,12 +17,10 @@ import { computed, inject } from 'vue'
 import LoadingButton from '../LoadingButton.vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
+import type { Connection } from '../../connections'
 
 export interface RefreshButtonProps {
-  connection: {
-    name: string
-    connected: boolean
-  }
+  connection: Connection
   type?: string
   isConnected?: boolean
 }

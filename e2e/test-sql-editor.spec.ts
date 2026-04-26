@@ -30,9 +30,7 @@ test('test', async ({ page, isMobile }) => {
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('test-one')
   await page.getByTestId('editor-creator-type').selectOption('sql')
-  await page
-    .getByTestId('editor-creator-connection-select')
-    .selectOption({ label: 'duckdb-test' })
+  await page.getByTestId('editor-creator-connection-select').selectOption({ label: 'duckdb-test' })
   await page.getByTestId('editor-creator-submit').click()
 
   // Create second editor with folder structure
@@ -40,9 +38,7 @@ test('test', async ({ page, isMobile }) => {
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('analysis/reports/sales-report')
   await page.getByTestId('editor-creator-type').selectOption('sql')
-  await page
-    .getByTestId('editor-creator-connection-select')
-    .selectOption({ label: 'duckdb-test' })
+  await page.getByTestId('editor-creator-connection-select').selectOption({ label: 'duckdb-test' })
   await page.getByTestId('editor-creator-submit').click()
 
   // Create third editor in same folder structure
@@ -50,9 +46,7 @@ test('test', async ({ page, isMobile }) => {
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('analysis/data/customer-data')
   await page.getByTestId('editor-creator-type').selectOption('sql')
-  await page
-    .getByTestId('editor-creator-connection-select')
-    .selectOption({ label: 'duckdb-test' })
+  await page.getByTestId('editor-creator-connection-select').selectOption({ label: 'duckdb-test' })
   await page.getByTestId('editor-creator-submit').click()
 
   // Verify folder structure is created
@@ -452,8 +446,12 @@ order by
   // Folder collapse state after reload is non-deterministic (EditorList.onMounted
   // currently can't identify the active editor from the URL hash), so only click
   // to expand when the children are actually hidden.
-  const salesReportLabel = page.getByTestId('editor-e-local-duckdb-test-analysis/reports/sales-report')
-  const customerDataLabel = page.getByTestId('editor-e-local-duckdb-test-analysis/data/customer-data')
+  const salesReportLabel = page.getByTestId(
+    'editor-e-local-duckdb-test-analysis/reports/sales-report',
+  )
+  const customerDataLabel = page.getByTestId(
+    'editor-e-local-duckdb-test-analysis/data/customer-data',
+  )
 
   if (!(await salesReportLabel.isVisible().catch(() => false))) {
     await page.getByTestId('editor-f-local-duckdb-test-analysis/reports').click()

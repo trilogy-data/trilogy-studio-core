@@ -258,11 +258,7 @@ export default defineComponent({
         const conn = connectionStore.connectionByName(props.connectionName)
         if (!conn) throw new Error(`Connection "${props.connectionName}" not found`)
 
-        await conn.refreshColumns(
-          props.table.database,
-          props.table.schema,
-          props.table.name,
-        )
+        await conn.refreshColumns(props.table.database, props.table.schema, props.table.name)
 
         const result = await conn.getTableSample(
           props.table.database,

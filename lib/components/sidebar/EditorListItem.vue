@@ -162,7 +162,8 @@ export default {
     const createDefaultModel = async (connectionId: string) => {
       try {
         const conn =
-          connectionStore.connections[connectionId] || connectionStore.connectionByName(connectionId)
+          connectionStore.connections[connectionId] ||
+          connectionStore.connectionByName(connectionId)
         if (!conn) {
           throw new Error(`Connection ${connectionId} not found`)
         }

@@ -37,8 +37,7 @@ export async function fetchConceptsForImport(
     // resolve. Scope to the connection's id so cross-origin editors with the
     // same connection name don't pollute the validation.
     const connection =
-      connectionStore.connections[connectionRef] ||
-      connectionStore.connectionByName(connectionRef)
+      connectionStore.connections[connectionRef] || connectionStore.connectionByName(connectionRef)
     const connectionId = connection?.id || connectionRef
     const allConnectionEditors =
       editorStore && connection

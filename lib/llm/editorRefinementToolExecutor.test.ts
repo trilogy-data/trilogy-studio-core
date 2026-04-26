@@ -517,9 +517,7 @@ describe('EditorRefinementToolExecutor', () => {
                     database: 'db1',
                     assetType: 'table',
                     description: null,
-                    columns: [
-                      { name: 'id', type: 'int', trilogyType: 'integer', nullable: false },
-                    ],
+                    columns: [{ name: 'id', type: 'int', trilogyType: 'integer', nullable: false }],
                   },
                 ],
               },
@@ -529,9 +527,11 @@ describe('EditorRefinementToolExecutor', () => {
         getDatabases: vi.fn().mockResolvedValue([]),
         refreshDatabase: vi.fn().mockResolvedValue([]),
         refreshSchema: vi.fn().mockResolvedValue(null),
-        getColumns: vi.fn().mockResolvedValue([
-          { name: 'id', type: 'int', trilogyType: 'integer', nullable: false },
-        ]),
+        getColumns: vi
+          .fn()
+          .mockResolvedValue([
+            { name: 'id', type: 'int', trilogyType: 'integer', nullable: false },
+          ]),
       }
 
       executor = new EditorRefinementToolExecutor(

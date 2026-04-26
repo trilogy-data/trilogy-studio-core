@@ -41,8 +41,7 @@ const storageSources = inject<AbstractStorage[]>('storageSources', [])
 const screenNavigation = useScreenNavigation()
 
 const remoteStorage = computed(
-  () =>
-    storageSources.find((source) => source.type === 'remote') as RemoteStoreStorage | undefined,
+  () => storageSources.find((source) => source.type === 'remote') as RemoteStoreStorage | undefined,
 )
 
 if (
@@ -351,8 +350,7 @@ const performRemoteImport = async (): Promise<{
   const remoteEditorIdPrefix = `remote:${remoteStore.id}:`
   const candidates = Object.values(editorStore.editors).filter(
     (editor) =>
-      editor.id.startsWith(remoteEditorIdPrefix) &&
-      editor.connection === runtimeConnectionName,
+      editor.id.startsWith(remoteEditorIdPrefix) && editor.connection === runtimeConnectionName,
   )
   const stemOf = (name: string) => name.replace(/\.[^.]+$/, '')
   const foundEditor = candidates.find(
@@ -419,8 +417,7 @@ const performManifestImport = async (): Promise<{
     if (!importedDashboard) {
       const connectionDashboards = Object.values(dashboardStore.dashboards)
         .filter(
-          (dashboard) =>
-            dashboard.connection === connectionName && dashboard.storage !== 'remote',
+          (dashboard) => dashboard.connection === connectionName && dashboard.storage !== 'remote',
         )
         .map((d) => d.name)
         .join(', ')
@@ -429,11 +426,7 @@ const performManifestImport = async (): Promise<{
       )
     }
 
-    dashboardStore.warmDashboardQueries(
-      importedDashboard.id,
-      queryExecutionService,
-      editorStore,
-    )
+    dashboardStore.warmDashboardQueries(importedDashboard.id, queryExecutionService, editorStore)
     return { foundAssetId: importedDashboard.id, connectionName }
   }
 
@@ -445,9 +438,7 @@ const performManifestImport = async (): Promise<{
 
   if (!importedEditor) {
     const connectionEditors = Object.values(editorStore.editors)
-      .filter(
-        (editor) => editor.connection === connectionName && editor.storage !== 'remote',
-      )
+      .filter((editor) => editor.connection === connectionName && editor.storage !== 'remote')
       .map((e) => e.name)
       .join(', ')
     throw new Error(

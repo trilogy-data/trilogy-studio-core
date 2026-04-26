@@ -119,9 +119,7 @@ describe('connectionStore', () => {
       // call signature runStartup uses.
       mockEditorStoreState.getConnectionEditors = vi.fn(
         (connectionId: string, tags: EditorTag[] = []) => {
-          let editors = [localStartup, remoteStartup].filter(
-            (e) => e.connectionId === connectionId,
-          )
+          let editors = [localStartup, remoteStartup].filter((e) => e.connectionId === connectionId)
           if (tags.length > 0) {
             editors = editors.filter((e) => tags.every((t) => e.tags.includes(t)))
           }
@@ -278,9 +276,7 @@ describe('connectionStore', () => {
       store.deleteConnection('ghost')
       store.purgeDeletedConnections()
 
-      expect(
-        Object.values(store.connections).some((conn) => conn.name === 'ghost'),
-      ).toBe(false)
+      expect(Object.values(store.connections).some((conn) => conn.name === 'ghost')).toBe(false)
     })
   })
 

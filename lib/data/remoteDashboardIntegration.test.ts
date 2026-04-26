@@ -48,28 +48,36 @@ describe('remote store → dashboard eligible imports', () => {
       directories: [
         {
           directory: '',
-          files: [
-            'aircraft.preql',
-            'aircraft_model.preql',
-            'airport.preql',
-            'setup.sql',
-          ],
+          files: ['aircraft.preql', 'aircraft_model.preql', 'airport.preql', 'setup.sql'],
         },
       ],
     })
 
-    vi.mocked(fetchStoreFileContent).mockImplementation(async (_, path: string) =>
-      `-- ${path}`,
-    )
+    vi.mocked(fetchStoreFileContent).mockImplementation(async (_, path: string) => `-- ${path}`)
 
     vi.mocked(fetchFromStore).mockResolvedValue({
       files: [{ engine: 'duck_db' }],
     } as any)
 
     // Simulate Pinia-like stores with addEditor/addConnection/addModelConfig
-    const editorStore = { editors: {} as Record<string, any>, addEditor: vi.fn((e: any) => { editorStore.editors[e.id] = e }) } as any
-    const connectionStore = { connections: {} as Record<string, any>, addConnection: vi.fn((c: any) => { connectionStore.connections[c.name] = c }) } as any
-    const modelStore = { models: {} as Record<string, any>, addModelConfig: vi.fn((m: any) => { modelStore.models[m.name] = m }) } as any
+    const editorStore = {
+      editors: {} as Record<string, any>,
+      addEditor: vi.fn((e: any) => {
+        editorStore.editors[e.id] = e
+      }),
+    } as any
+    const connectionStore = {
+      connections: {} as Record<string, any>,
+      addConnection: vi.fn((c: any) => {
+        connectionStore.connections[c.name] = c
+      }),
+    } as any
+    const modelStore = {
+      models: {} as Record<string, any>,
+      addModelConfig: vi.fn((m: any) => {
+        modelStore.models[m.name] = m
+      }),
+    } as any
 
     const storage = new RemoteStoreStorage(communityStore)
     await syncRemoteStoreIntoIde(storage, store.id, editorStore, connectionStore, modelStore)

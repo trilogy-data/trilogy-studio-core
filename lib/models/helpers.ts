@@ -242,8 +242,7 @@ export class ModelImportService {
       // editor that happens to share a name + connection so we don't
       // accidentally overwrite remote-store contents from a local import.
       const existing = Object.values(this.editorStore.editors).find(
-        (e) =>
-          e.name === editorName && e.connection === connectionName && e.storage !== 'remote',
+        (e) => e.name === editorName && e.connection === connectionName && e.storage !== 'remote',
       )
       if (existing) {
         editor = existing
@@ -295,10 +294,7 @@ export class ModelImportService {
         ...imp,
         id:
           this.editorStore.editorList.find(
-            (e) =>
-              e.name === imp.name &&
-              e.connection === connectionName &&
-              e.storage !== 'remote',
+            (e) => e.name === imp.name && e.connection === connectionName && e.storage !== 'remote',
           )?.id || '',
       }))
 

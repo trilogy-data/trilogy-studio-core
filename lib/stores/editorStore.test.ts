@@ -45,13 +45,9 @@ describe('editorStore', () => {
     // with an existing local connection ran BOTH startup scripts on connect.
     const editorStore = useEditorStore()
 
-    const localStartup = editorStore.newEditor(
-      'local-startup',
-      'preql',
-      'shared-name',
-      'local;',
-      { storage: 'local' },
-    )
+    const localStartup = editorStore.newEditor('local-startup', 'preql', 'shared-name', 'local;', {
+      storage: 'local',
+    })
     localStartup.tags = [EditorTag.STARTUP_SCRIPT]
 
     const remoteStartup = editorStore.newEditor(

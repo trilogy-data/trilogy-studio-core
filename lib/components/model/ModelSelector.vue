@@ -26,11 +26,9 @@ import { ref, computed, inject } from 'vue'
 import type { ModelConfigStoreType } from '../../stores/modelStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import { ModelConfig } from '../../models'
+import type { Connection } from '../../connections'
 export interface ModelSelectorProps {
-  connection: {
-    name: string
-    model: string | null
-  }
+  connection: Connection
 }
 const props = defineProps<ModelSelectorProps>()
 const modelStore = inject<ModelConfigStoreType>('modelStore')
@@ -60,7 +58,9 @@ const selectModel = async (modelName: string) => {
     )
   }
 
-  const conn = connectionStore.connections[props.connection.id] || connectionStore.connectionByName(props.connection.name)
+  const conn =
+    connectionStore.connections[props.connection.id] ||
+    connectionStore.connectionByName(props.connection.name)
   if (conn) {
     conn.model = nextModel
   }

@@ -125,7 +125,9 @@ function buildDashboardTree(
         if (!connectionMap[connectionId]) {
           connectionMap[connectionId] = {
             label:
-              connectionStore.connections[connectionId]?.name || dashboard.connection || connectionId,
+              connectionStore.connections[connectionId]?.name ||
+              dashboard.connection ||
+              connectionId,
             dashboards: [],
           }
         }

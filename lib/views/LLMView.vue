@@ -178,7 +178,9 @@ export default defineComponent({
       const chat = chatStore.activeChat
       const connection =
         (chat.dataConnectionId && connectionStore.connections[chat.dataConnectionId]) ||
-        (chat.dataConnectionName ? connectionStore.connectionByName(chat.dataConnectionName) : undefined)
+        (chat.dataConnectionName
+          ? connectionStore.connectionByName(chat.dataConnectionName)
+          : undefined)
       if (!connection) return
 
       const status = connectionStore.connectionStateToStatus(connection)

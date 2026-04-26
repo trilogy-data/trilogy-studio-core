@@ -156,7 +156,11 @@ export const useChatStore = defineStore('chats', {
       }
     },
 
-    updateChatDataConnection(chatId: string, connectionName: string, connectionId: string = ''): void {
+    updateChatDataConnection(
+      chatId: string,
+      connectionName: string,
+      connectionId: string = '',
+    ): void {
       if (this.chats[chatId]) {
         this.chats[chatId].setDataConnection(connectionName, connectionId)
       }

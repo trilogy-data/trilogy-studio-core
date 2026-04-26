@@ -36,7 +36,9 @@ describe('ConnectionList - delete flow', () => {
         plugins: [],
         provide,
         stubs: {
-          SidebarList: { template: '<div><slot name="header" /><slot name="actions" /><slot /></div>' },
+          SidebarList: {
+            template: '<div><slot name="header" /><slot name="actions" /><slot /></div>',
+          },
           ConnectionListItem: true,
           ConnectionCreatorInline: true,
         },
@@ -91,10 +93,7 @@ describe('ConnectionList - delete flow', () => {
   // `@delete-connection="..."`. The child emits this event; the parent has to
   // listen with `@`, otherwise clicks on the child's delete button are no-ops.
   it('listens for @delete-connection from the child in the template', () => {
-    const src = readFileSync(
-      resolve(__dirname, 'ConnectionList.vue'),
-      'utf-8',
-    )
+    const src = readFileSync(resolve(__dirname, 'ConnectionList.vue'), 'utf-8')
     expect(src).toMatch(/@delete-connection\s*=\s*"deleteConnection"/)
     expect(src).not.toMatch(/:delete-connection\s*=/)
   })

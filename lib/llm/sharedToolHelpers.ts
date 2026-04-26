@@ -18,10 +18,7 @@ function listAvailableConnectionNames(connectionStore: ConnectionStoreType): str
     .join(', ')
 }
 
-function resolveConnectionRef(
-  connectionStore: ConnectionStoreType,
-  connectionRef: string,
-) {
+function resolveConnectionRef(connectionStore: ConnectionStoreType, connectionRef: string) {
   return (
     connectionStore.connections[connectionRef] ||
     connectionStore.connectionByName(connectionRef) ||
@@ -201,9 +198,7 @@ export function getAvailableImports(
   // Without a connection ref we fall back to the legacy name-only filter.
   // All current call sites in this module pass connectionStore so the
   // id-based filter is the live path.
-  const connection = connectionStore
-    ? resolveConnectionRef(connectionStore, connectionRef)
-    : null
+  const connection = connectionStore ? resolveConnectionRef(connectionStore, connectionRef) : null
 
   return Object.values(editorStore.editors)
     .filter((editor) => {
@@ -248,7 +243,11 @@ export async function selectActiveImport(
     }
   }
 
-  const available = getAvailableImports(editorStore, connection?.id || connectionName, connectionStore)
+  const available = getAvailableImports(
+    editorStore,
+    connection?.id || connectionName,
+    connectionStore,
+  )
   const importToSelect = available.find(
     (i) => i.name === importName || i.name.endsWith(`.${importName}`),
   )
@@ -301,7 +300,11 @@ export function listAvailableImports(
     }
   }
 
-  const available = getAvailableImports(editorStore, connection?.id || connectionName, connectionStore)
+  const available = getAvailableImports(
+    editorStore,
+    connection?.id || connectionName,
+    connectionStore,
+  )
   const activeImports = accessor.getActiveImports()
   const activeImport = activeImports.length > 0 ? activeImports[0] : null
 
@@ -380,12 +383,7 @@ export async function executeTrilogyQueryCore(
     }
   }
 
-  const extraContent = buildExtraContent(
-    connectionStore,
-    editorStore,
-    connection.id,
-    activeImports,
-  )
+  const extraContent = buildExtraContent(connectionStore, editorStore, connection.id, activeImports)
   const importsForQuery = (activeImports || []).map((imp) => ({
     name: imp.name,
     alias: imp.alias || '',

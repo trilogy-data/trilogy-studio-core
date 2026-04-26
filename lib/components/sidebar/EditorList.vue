@@ -214,11 +214,7 @@ export default {
         const storageKey = `s-${firstEditor.storage}`
         const connectionKeyPart = firstEditor.connectionId || firstEditor.connection
         const connectionKey = `c-${firstEditor.storage}-${connectionKeyPart}`
-        const folderPaths = getFolderPaths(
-          firstEditor.name,
-          firstEditor.storage,
-          connectionKeyPart,
-        )
+        const folderPaths = getFolderPaths(firstEditor.name, firstEditor.storage, connectionKeyPart)
 
         collapsed.value[storageKey] = false
         collapsed.value[connectionKey] = false

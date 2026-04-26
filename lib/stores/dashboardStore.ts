@@ -727,17 +727,17 @@ export const useDashboardStore = defineStore('dashboards', {
             await queryExecutionService?.generateQuery(
               dashboard.connectionId || dashboard.connection,
               {
-              text: query,
-              editorType: 'trilogy',
-              imports: dashboard.imports,
-              extraContent: dashboard.imports.map((imp) => ({
-                alias: imp.name,
-                // legacy handling
-                contents:
-                  editorStore.editors[imp.id]?.contents ||
-                  editorStore.editors[imp.name]?.contents ||
-                  '',
-              })),
+                text: query,
+                editorType: 'trilogy',
+                imports: dashboard.imports,
+                extraContent: dashboard.imports.map((imp) => ({
+                  alias: imp.name,
+                  // legacy handling
+                  contents:
+                    editorStore.editors[imp.id]?.contents ||
+                    editorStore.editors[imp.name]?.contents ||
+                    '',
+                })),
               },
             )
           }

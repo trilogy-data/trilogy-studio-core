@@ -286,7 +286,7 @@ export default {
         // open now see the refresh
         collapsed.value[id] = false
         if (conn.databases?.length === 0 || conn.databases?.length === undefined) {
-          await refreshId(id, connection, type)
+          await refreshId(id, connectionKey, type)
         }
       } else if (type === 'database' && collapsed.value[id] !== false) {
         // open now see the refresh
@@ -295,7 +295,7 @@ export default {
         let db = conn.databases?.find((db) => db.name === dbid)
 
         if (db && db.schemas?.length === 0) {
-          await refreshId(id, connection, type)
+          await refreshId(id, connectionKey, type)
         }
       } else if (type === 'schema' && collapsed.value[id] !== false) {
         // open now see the refresh
@@ -306,7 +306,7 @@ export default {
           ?.find((db) => db.name === dbid)
           ?.schemas?.find((schema) => schema.name === schemaid)
         if (schema && schema.tables?.length === 0) {
-          await refreshId(id, connection, type)
+          await refreshId(id, connectionKey, type)
         }
       }
       // keep this to refresh, but we won't actually add them to the display
@@ -321,7 +321,7 @@ export default {
             ?.schemas?.find((schema) => schema.name === schemaid)
             ?.tables?.find((table) => table.name === tableid)
           if (nTable && nTable.columns.length === 0) {
-            await refreshId(id, connection, type)
+            await refreshId(id, connectionKey, type)
             return
           }
         }

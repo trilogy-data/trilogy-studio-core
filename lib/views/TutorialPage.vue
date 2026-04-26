@@ -248,12 +248,14 @@ export default {
     },
     demoConnectionCorrect() {
       const conn = this.connectionStore.connectionByName(demoConnectionName)
-      return conn?.connected && conn?.model === demoModelName
+      return !!(conn?.connected && conn?.model === demoModelName)
     },
     demoEditorId() {
       const conn = this.connectionStore.connectionByName(demoConnectionName)
       const editor = Object.values(this.editorStore.editors).find(
-        (e: any) => e.name === 'my-first-editor' && (conn ? e.connectionId === conn.id : e.connection === demoConnectionName),
+        (e: any) =>
+          e.name === 'my-first-editor' &&
+          (conn ? e.connectionId === conn.id : e.connection === demoConnectionName),
       )
       return editor ? (editor as any).id : null
     },

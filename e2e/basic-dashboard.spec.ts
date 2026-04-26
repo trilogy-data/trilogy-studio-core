@@ -557,9 +557,7 @@ test('test-custom-editor-dashboard', async ({ page, isMobile }) => {
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('test_one')
   await page.getByTestId('editor-creator-type').selectOption('preql')
-  await page
-    .getByTestId('editor-creator-connection-select')
-    .selectOption({ label: connectionName })
+  await page.getByTestId('editor-creator-connection-select').selectOption({ label: connectionName })
   await page.getByTestId('editor-creator-submit').click()
 
   // Switch to test_one editor and add content
@@ -666,9 +664,7 @@ test('test-drilldown', async ({ page, isMobile, browser }) => {
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('test_one')
   await page.getByTestId('editor-creator-type').selectOption('preql')
-  await page
-    .getByTestId('editor-creator-connection-select')
-    .selectOption({ label: connectionName })
+  await page.getByTestId('editor-creator-connection-select').selectOption({ label: connectionName })
   await page.getByTestId('editor-creator-submit').click()
 
   // Switch to test_one editor and add content

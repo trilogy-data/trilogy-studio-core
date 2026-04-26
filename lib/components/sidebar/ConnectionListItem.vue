@@ -431,8 +431,7 @@ export default {
     }
 
     const handleRefreshConnectionClick = () => {
-      const connKey =
-        (props.item.connection as any)?.id || props.item.connection?.name || ''
+      const connKey = (props.item.connection as any)?.id || props.item.connection?.name || ''
       emit('refresh', connKey, connKey, 'connection')
     }
 

@@ -449,15 +449,14 @@ export default defineComponent({
       // Prepare query input
       const conn = this.editorConnection
       const model = conn?.model ? this.modelStore.models[conn.model] : undefined
-      const sources: ContentInput[] =
-        model
-          ? (model.sources || []).map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor]
-                ? this.editorStore.editors[source.editor].contents
-                : '',
-            }))
-          : []
+      const sources: ContentInput[] = model
+        ? (model.sources || []).map((source) => ({
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
+        : []
       // Prepare imports
       let imports: Import[] = []
       if (supportsEditorValidation(this.editorData.type)) {
