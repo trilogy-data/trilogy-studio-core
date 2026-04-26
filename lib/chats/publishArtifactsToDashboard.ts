@@ -16,6 +16,8 @@ export interface PublishOptions {
   name?: string
   /** Connection name to associate with the dashboard. */
   connection: string
+  /** Stable connection id to associate with the dashboard. */
+  connectionId?: string
   /** Dashboard imports (data sources used by the chat). */
   imports?: { id: string; name: string; alias: string }[]
 }
@@ -34,6 +36,7 @@ export function publishArtifactsToDashboard(
     id: dashboardName,
     name: dashboardName,
     connection: options.connection,
+    connectionId: options.connectionId || '',
     storage: 'local',
     state: 'editing',
   })

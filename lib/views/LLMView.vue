@@ -255,6 +255,7 @@ export default defineComponent({
       const dashboard = publishArtifactsToDashboard(activeChat.artifacts, {
         name: dashboardName,
         connection: connectionName,
+        connectionId: activeChat.dataConnectionId || '',
         imports: activeChat.imports.map((imp) => ({
           id: imp.id,
           name: imp.name,

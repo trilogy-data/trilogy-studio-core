@@ -209,7 +209,7 @@ export function useDashboard(
     if (dashboard.value && dashboard.value.id) {
       filter.value = newFilter
       await queryExecutionService
-        ?.generateQuery(dashboard.value.connection, {
+        ?.generateQuery(dashboard.value.connectionId || dashboard.value.connection, {
           text: 'select 1 as test;',
           editorType: 'trilogy',
           extraFilters: [newFilter],
@@ -236,7 +236,7 @@ export function useDashboard(
 
     if (dashboard.value && dashboard.value.id) {
       let promises = await queryExecutionService?.executeQuery(
-        dashboard.value.connection,
+        dashboard.value.connectionId || dashboard.value.connection,
         {
           text: 'select 1 as test;',
           editorType: 'trilogy',

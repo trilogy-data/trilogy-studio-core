@@ -23,7 +23,7 @@ export interface FetchConceptsForImportDeps {
 export async function fetchConceptsForImport(
   deps: FetchConceptsForImportDeps,
   imp: ChatImport,
-  connectionName: string,
+  connectionRef: string,
 ): Promise<string> {
   const { connectionStore, editorStore, queryExecutionService } = deps
 
@@ -36,8 +36,10 @@ export async function fetchConceptsForImport(
     // Gather all editor sources for this connection so dependent imports
     // resolve. Scope to the connection's id so cross-origin editors with the
     // same connection name don't pollute the validation.
-    const connection = connectionStore.connectionByName(connectionName)
-    const connectionId = connection?.id || connectionName
+    const connection =
+      connectionStore.connections[connectionRef] ||
+      connectionStore.connectionByName(connectionRef)
+    const connectionId = connection?.id || connectionRef
     const allConnectionEditors =
       editorStore && connection
         ? Object.values(editorStore.editors)

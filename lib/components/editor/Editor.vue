@@ -563,6 +563,8 @@ export default defineComponent({
         imports: queryPartial.imports,
         currentFilename: queryPartial.currentFilename,
       }
+      const connectionId =
+        this.editorConnection?.id || this.editorData.connectionId || this.editorData.connection
 
       // Define callbacks with mounting status checks
       const onProgress = (message: QueryUpdate) => {
@@ -619,7 +621,7 @@ export default defineComponent({
 
       // Execute query
       const { resultPromise, cancellation } = await this.queryExecutionService.executeQuery(
-        this.editorData.connection,
+        connectionId,
         queryInput,
         // Starter callback (empty for now)
         () => {},
@@ -642,6 +644,14 @@ export default defineComponent({
       }
 
       const queryResult = await resultPromise
+      if (!queryResult.success) {
+        onError({
+          message: queryResult.error || 'An error occurred during query execution',
+          error: true,
+          running: false,
+          generatedSql: queryResult.generatedSql,
+        })
+      }
       this.$emit('query-finished')
       return queryResult
     },

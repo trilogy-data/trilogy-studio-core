@@ -103,7 +103,7 @@ export class DashboardToolExecutor {
   }
 
   private get connectionName(): string {
-    return this.dashboard?.connection || ''
+    return this.dashboard?.connectionId || this.dashboard?.connection || ''
   }
 
   async executeToolCall(toolName: string, toolInput: Record<string, any>): Promise<ToolCallResult> {

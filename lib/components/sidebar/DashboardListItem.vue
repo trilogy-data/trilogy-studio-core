@@ -106,7 +106,11 @@ export default {
 
     const connectionInfo = computed(() => {
       if (props.item.type === 'connection') {
-        return connectionStore.connectionByName(props.item.label) || null
+        return (
+          (props.item.connectionId && connectionStore.connections[props.item.connectionId]) ||
+          connectionStore.connectionByName(props.item.label) ||
+          null
+        )
       }
       return null
     })
@@ -185,7 +189,10 @@ export default {
       switch (item.id) {
         case 'new-dashboard': {
           const defaultName = `${this.item.label} Dashboard ${Date.now().toString().slice(-4)}`
-          const dashboard = this.dashboardStore.newDashboard(defaultName, this.item.label)
+          const dashboard = this.dashboardStore.newDashboard(
+            defaultName,
+            this.item.connectionId || this.item.label,
+          )
           this.dashboardStore.setActiveDashboard(dashboard.id)
           break
         }

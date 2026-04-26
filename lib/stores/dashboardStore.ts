@@ -724,7 +724,9 @@ export const useDashboardStore = defineStore('dashboards', {
             const query =
               typeof item.content === 'string' ? item.content : item.content?.query || ''
 
-            await queryExecutionService?.generateQuery(dashboard.connection, {
+            await queryExecutionService?.generateQuery(
+              dashboard.connectionId || dashboard.connection,
+              {
               text: query,
               editorType: 'trilogy',
               imports: dashboard.imports,
@@ -736,7 +738,8 @@ export const useDashboardStore = defineStore('dashboards', {
                   editorStore.editors[imp.name]?.contents ||
                   '',
               })),
-            })
+              },
+            )
           }
         }
       }
@@ -748,19 +751,22 @@ export const useDashboardStore = defineStore('dashboards', {
     ) {
       const dashboard = this.dashboards[dashboardId]
       if (dashboard) {
-        let results = await queryExecutionService?.validateQuery(dashboard.connection, {
-          text: 'select 1 as test;',
-          editorType: 'trilogy',
-          imports: dashboard.imports,
-          extraContent: dashboard.imports.map((imp) => ({
-            alias: imp.name,
-            // legacy handling
-            contents:
-              editorStore.editors[imp.id]?.contents ||
-              editorStore.editors[imp.name]?.contents ||
-              '',
-          })),
-        })
+        let results = await queryExecutionService?.validateQuery(
+          dashboard.connectionId || dashboard.connection,
+          {
+            text: 'select 1 as test;',
+            editorType: 'trilogy',
+            imports: dashboard.imports,
+            extraContent: dashboard.imports.map((imp) => ({
+              alias: imp.name,
+              // legacy handling
+              contents:
+                editorStore.editors[imp.id]?.contents ||
+                editorStore.editors[imp.name]?.contents ||
+                '',
+            })),
+          },
+        )
         if (results) {
           return results.data.completion_items
         } else {
@@ -850,7 +856,7 @@ export const useDashboardStore = defineStore('dashboards', {
         }
 
         let results = await queryExecutionService.executeQuery(
-          current.connection,
+          current.connectionId || current.connection,
           queryInput,
           // Starter callback (empty for now)
           () => {},

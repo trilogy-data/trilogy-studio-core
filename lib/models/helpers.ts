@@ -7,6 +7,7 @@ import { type EditorStoreType } from '../stores/editorStore'
 import { type DashboardStoreType } from '../stores/dashboardStore'
 import { type ModelConfigStoreType } from '../stores/modelStore'
 import { DashboardModel } from '../dashboards'
+import { computeConnectionId } from '../connections/base'
 import { normalizeGenericStoreBaseUrl } from '../remotes/genericStoreMetadata'
 import type { EditorType } from '../editors/editor'
 
@@ -284,6 +285,7 @@ export class ModelImportService {
       // Configure dashboard properties
       dashboardObj.storage = 'local'
       dashboardObj.connection = connectionName
+      dashboardObj.connectionId = computeConnectionId({ name: connectionName, storage: 'local' })
       dashboardObj.state = 'published'
 
       // Resolve each import to a local editor ID. Manifest imports only ever

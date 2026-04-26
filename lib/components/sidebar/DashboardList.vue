@@ -72,7 +72,11 @@ import ConfirmDialog from '../ConfirmDialog.vue'
 import { useConfirmationState } from '../useConfirmationState'
 
 // Helper function to build dashboard tree
-function buildDashboardTree(dashboards: any[], collapsed: Record<string, boolean>) {
+function buildDashboardTree(
+  dashboards: any[],
+  collapsed: Record<string, boolean>,
+  connectionStore: ConnectionStoreType,
+) {
   const tree: any[] = []
 
   // Group by storage first — only include root dashboards (not investigations)
@@ -114,31 +118,36 @@ function buildDashboardTree(dashboards: any[], collapsed: Record<string, boolean
     // If not collapsed, add connections
     if (!collapsed[storageKey]) {
       // Group by connection
-      const connectionMap: Record<string, any[]> = {}
+      const connectionMap: Record<string, { label: string; dashboards: any[] }> = {}
 
       storageItems.forEach((dashboard) => {
-        const connection = dashboard.connection || 'default'
-        if (!connectionMap[connection]) {
-          connectionMap[connection] = []
+        const connectionId = dashboard.connectionId || dashboard.connection || 'default'
+        if (!connectionMap[connectionId]) {
+          connectionMap[connectionId] = {
+            label:
+              connectionStore.connections[connectionId]?.name || dashboard.connection || connectionId,
+            dashboards: [],
+          }
         }
-        connectionMap[connection].push(dashboard)
+        connectionMap[connectionId].dashboards.push(dashboard)
       })
 
       // Add connection headers and dashboards
-      Object.entries(connectionMap).forEach(([connection, connectionItems]) => {
+      Object.entries(connectionMap).forEach(([connectionId, entry]) => {
         // Add connection header
-        const connectionKey = `c-${storage}-${connection}`
+        const connectionKey = `c-${storage}-${connectionId}`
         tree.push({
           type: 'connection',
           id: connectionKey,
-          label: connection,
+          label: entry.label,
           key: connectionKey,
           indent: 1,
+          connectionId,
         })
 
         // If not collapsed, add dashboards and their investigations
         if (!collapsed[connectionKey]) {
-          connectionItems.forEach((dashboard) => {
+          entry.dashboards.forEach((dashboard) => {
             const hasInvestigations = (investigationsByParent[dashboard.id] || []).length > 0
             const dashboardKey = `d-${dashboard.id}`
             tree.push({
@@ -209,7 +218,8 @@ export default {
       let anyOpen = false
       Object.values(dashboardStore.dashboards).forEach((item) => {
         let storageKey = `s-${item.storage}`
-        let connectionKey = `c-${item.storage}-${item.connection}`
+        let connectionKeyPart = item.connectionId || item.connection
+        let connectionKey = `c-${item.storage}-${connectionKeyPart}`
 
         if (current === item.id) {
           collapsed.value[storageKey] = false
@@ -237,7 +247,11 @@ export default {
     })
 
     const contentList = computed(() => {
-      return buildDashboardTree(Object.values(dashboardStore.dashboards), collapsed.value)
+      return buildDashboardTree(
+        Object.values(dashboardStore.dashboards),
+        collapsed.value,
+        connectionStore,
+      )
     })
 
     const {
