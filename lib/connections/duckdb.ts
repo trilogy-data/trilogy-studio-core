@@ -109,12 +109,17 @@ async function createDuckDB(
   await db.open(
     isFirefox()
       ? {
-          filesystem: {
-            reliableHeadRequests: false,
-            allowFullHTTPReads: true,
-          },
-        }
-      : {},
+        filesystem: {
+          // reliableHeadRequests: false,
+          // allowFullHTTPReads: true,
+          allowFullHTTPReads: false,
+          reliableHeadRequests: true,
+          forceFullHTTPReads: false
+        },
+      }
+      :
+
+      {},
   )
   const connection = await db.connect()
 

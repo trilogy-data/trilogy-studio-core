@@ -60,6 +60,11 @@ if (
 const isLoading = ref<boolean>(true)
 const modelUrl = ref<string>('')
 const storeUrl = ref<string>('')
+// Optional override for the store's stable identifier. When the auto-import
+// URL passes `storeId=...` we use that verbatim instead of deriving one from
+// the base URL — lets the remote pick a stable id that survives URL changes
+// (dev/staging/prod) and gives e2e tests a deterministic handle to assert on.
+const storeIdOverride = ref<string>('')
 const importToken = ref<string>('')
 const remoteImport = ref<boolean>(false)
 const assetName = ref<string>('')
@@ -220,6 +225,12 @@ function validateForm() {
   isFormValid.value = true
 }
 
+// Resolve the effective store id for the current auto-import context. An
+// explicit `storeId=` URL param wins; otherwise we fall back to the
+// URL-derived id so existing deep links continue to behave the same.
+const resolveStoreId = (normalizedBaseUrl: string): string =>
+  storeIdOverride.value || buildGenericStoreId(normalizedBaseUrl)
+
 // Register store if not already registered
 const registerStoreIfNeeded = async (): Promise<void> => {
   if (!storeUrl.value || !communityApiStore) {
@@ -227,7 +238,7 @@ const registerStoreIfNeeded = async (): Promise<void> => {
   }
 
   const normalizedBaseUrl = normalizeGenericStoreBaseUrl(storeUrl.value)
-  const storeId = buildGenericStoreId(normalizedBaseUrl)
+  const storeId = resolveStoreId(normalizedBaseUrl)
 
   // Check if store already exists
   const existingStore = communityApiStore.stores.find((s) => s.id === storeId)
@@ -271,7 +282,7 @@ const getRegisteredStore = (): GenericModelStore | null => {
   }
 
   const normalizedBaseUrl = normalizeGenericStoreBaseUrl(storeUrl.value)
-  const storeId = buildGenericStoreId(normalizedBaseUrl)
+  const storeId = resolveStoreId(normalizedBaseUrl)
   const store = communityApiStore.stores.find((item) => item.id === storeId)
   return store?.type === 'generic' ? store : null
 }
@@ -523,6 +534,7 @@ const performImport = async () => {
     // Clean up URL parameters
     removeHashFromUrl(URL_HASH_KEYS.IMPORT)
     removeHashFromUrl(URL_HASH_KEYS.STORE)
+    removeHashFromUrl(URL_HASH_KEYS.STORE_ID)
     removeHashFromUrl(URL_HASH_KEYS.TOKEN)
     removeHashFromUrl(URL_HASH_KEYS.ASSET_TYPE)
     removeHashFromUrl(URL_HASH_KEYS.ASSET_NAME)
@@ -560,6 +572,7 @@ onMounted(async () => {
     // Get URL parameters
     const modelUrlParam = screenNavigation.modelImport.value
     const storeUrlParam = getDefaultValueFromHash(URL_HASH_KEYS.STORE, '')
+    const storeIdParam = getDefaultValueFromHash(URL_HASH_KEYS.STORE_ID, '')
     const tokenParam = getDefaultValueFromHash(URL_HASH_KEYS.TOKEN, '')
     const remoteParam = getDefaultValueFromHash(URL_HASH_KEYS.REMOTE, '')
     const assetTypeParam = getDefaultValueFromHash(URL_HASH_KEYS.ASSET_TYPE, '') as AssetType
@@ -601,6 +614,7 @@ onMounted(async () => {
 
     modelUrl.value = modelUrlParam ? decodeURIComponent(modelUrlParam) : ''
     storeUrl.value = storeUrlParam ? decodeURIComponent(storeUrlParam) : ''
+    storeIdOverride.value = storeIdParam ? decodeURIComponent(storeIdParam) : ''
     importToken.value = tokenParam ? decodeURIComponent(tokenParam) : ''
     remoteImport.value = isRemote
     assetName.value = decodeURIComponent(finalAssetName)

@@ -5,6 +5,7 @@ import * as path from 'path'
 import { fileURLToPath } from 'url'
 import {
   createEditorFromConnection,
+  localConnectionId,
   openSidebarScreen,
   prepareTestPage,
   refreshConnection,
@@ -225,18 +226,21 @@ customStoreDescribe('Custom Model Store', () => {
 
     const connectionName = 'example-duckdb-model-connection'
 
-    await expect(page.getByTestId(`expand-connection-${connectionName}`)).toBeVisible()
+    await expect(
+      page.getByTestId(`expand-connection-${localConnectionId(connectionName)}`),
+    ).toBeVisible()
 
     await refreshConnection(page, connectionName)
     await waitForConnectionReady(page, connectionName, 10000)
 
     await openSidebarScreen(page, 'editors', isMobile)
 
+    const editorConnectionTestId = `editor-c-local-${localConnectionId(connectionName)}`
     try {
-      await page.getByTestId(`editor-c-local-${connectionName}`).click({ timeout: 1000 })
+      await page.getByTestId(editorConnectionTestId).click({ timeout: 1000 })
     } catch (e) {
       await page.getByTestId('editor-s-local').click()
-      await page.getByTestId(`editor-c-local-${connectionName}`).click()
+      await page.getByTestId(editorConnectionTestId).click()
     }
 
     await createEditorFromConnection(page, connectionName, 'trilogy')

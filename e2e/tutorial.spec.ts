@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import {
   createEditorFromConnectionList,
+  localConnectionId,
   openSidebarScreen,
   prepareTestPage,
   refreshConnection,
@@ -227,10 +228,11 @@ select count(order.id) as order_count;`
   } else {
     await page.getByTestId('tab-article+Studio+Model Tutorial').click()
   }
-  await page.getByTestId('expand-tutorial-connection-iris-data').click()
+  const irisConnectionId = localConnectionId('iris-data')
+  await page.getByTestId(`expand-tutorial-connection-${irisConnectionId}`).click()
 
-  await page.getByTestId('expand-tutorial-connection-iris-data+memory').click()
-  await page.getByTestId('expand-tutorial-connection-iris-data+memory+main').click()
+  await page.getByTestId(`expand-tutorial-connection-${irisConnectionId}+memory`).click()
+  await page.getByTestId(`expand-tutorial-connection-${irisConnectionId}+memory+main`).click()
   await page.getByTestId('create-datasource-iris_data').click()
   await page.getByTestId('create-datasource-button').click()
 
@@ -282,7 +284,10 @@ address iris_data;`
     await openSidebarScreen(page, 'editors', isMobile)
   }
 
-  await page.locator('[data-testid^="editor-e-local-iris-data-new-editor-"]').last().click()
+  await page
+    .locator(`[data-testid^="editor-e-local-${localConnectionId('iris-data')}-new-editor-"]`)
+    .last()
+    .click()
   if (isMobile) {
     await page.getByTestId('editor').click()
     await page.getByTestId('editor').press('ControlOrMeta+a')
