@@ -98,13 +98,17 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  connectionId: {
+    type: String,
+    required: true,
+  },
 })
 
-// Reactive reference to the current connection name
-const currentConnectionName = computed(() => props.connectionName)
+// Reactive reference to the current connection id (used as the storage key)
+const currentConnectionId = computed(() => props.connectionId)
 
-// Create reactive store with initial connection name
-const historyStore = ref(useQueryHistory(currentConnectionName.value))
+// Create reactive store with initial connection id
+const historyStore = ref(useQueryHistory(currentConnectionId.value))
 
 // Track expanded state for history items
 const expandedItems = ref<Record<number, boolean>>({})
@@ -166,17 +170,17 @@ const clearHistory = () => {
   historyStore.value.clearHistory()
 }
 
-// Watch for connection name changes and update the store
+// Watch for connection id changes and update the store
 watch(
-  () => props.connectionName,
-  (newConnectionName) => {
+  () => props.connectionId,
+  (newConnectionId) => {
     // Reset expanded items when connection changes
     expandedItems.value = {}
     // Reset generated query view state
     showGeneratedQuery.value = {}
 
-    // Create a new store instance with the new connection name
-    historyStore.value = useQueryHistory(newConnectionName)
+    // Create a new store instance with the new connection id
+    historyStore.value = useQueryHistory(newConnectionId)
 
     // Load the history for the new connection
     refreshHistory()

@@ -1,6 +1,10 @@
 <template>
   <div class="view-container">
-    <ConnectionHistory v-if="selectedType === 'connection'" :connectionName="selectedConnection" />
+    <ConnectionHistory
+      v-if="selectedType === 'connection'"
+      :connectionName="selectedConnection"
+      :connectionId="selectedConnectionRef?.id || selectedConnectionKey"
+    />
     <div v-else-if="selectedType === 'table' && selectedTableDetails" class="model-display">
       <ConnectionTable
         :table="selectedTableDetails"
