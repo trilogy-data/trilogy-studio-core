@@ -112,7 +112,7 @@ async function createDuckDB(
         filesystem: {
           // reliableHeadRequests: false,
           // allowFullHTTPReads: true,
-          allowFullHTTPReads: false,
+          allowFullHTTPReads: true,
           reliableHeadRequests: true,
           forceFullHTTPReads: false
         },
