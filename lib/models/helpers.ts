@@ -7,9 +7,13 @@ import { type EditorStoreType } from '../stores/editorStore'
 import { type DashboardStoreType } from '../stores/dashboardStore'
 import { type ModelConfigStoreType } from '../stores/modelStore'
 import { DashboardModel } from '../dashboards'
+import { computeConnectionId } from '../connections/base'
 import { normalizeGenericStoreBaseUrl } from '../remotes/genericStoreMetadata'
 import type { EditorType } from '../editors/editor'
 
+// Maps are component.name -> created editor.id (or dashboard.id).
+// Using IDs avoids ambiguity when a remote import has produced editors that
+// share names with local ones; callers can index editorStore.editors directly.
 export interface ImportOutput {
   dashboards: Map<string, string>
   sql: Map<string, string>
@@ -234,8 +238,11 @@ export class ModelImportService {
         remotePath: path,
       })
     } else {
+      // Manifest imports always produce local editors; ignore any remote
+      // editor that happens to share a name + connection so we don't
+      // accidentally overwrite remote-store contents from a local import.
       const existing = Object.values(this.editorStore.editors).find(
-        (e) => e.name === editorName && e.connection === connectionName,
+        (e) => e.name === editorName && e.connection === connectionName && e.storage !== 'remote',
       )
       if (existing) {
         editor = existing
@@ -277,21 +284,27 @@ export class ModelImportService {
       // Configure dashboard properties
       dashboardObj.storage = 'local'
       dashboardObj.connection = connectionName
+      dashboardObj.connectionId = computeConnectionId({ name: connectionName, storage: 'local' })
       dashboardObj.state = 'published'
 
-      // Update imports with editor IDs
+      // Resolve each import to a local editor ID. Manifest imports only ever
+      // create local editors, so a remote-origin editor that happens to share
+      // the same name + connection must not be referenced here.
       dashboardObj.imports = dashboardObj.imports.map((imp) => ({
         ...imp,
         id:
           this.editorStore.editorList.find(
-            (e) => e.name === imp.name && e.connection === connectionName,
+            (e) => e.name === imp.name && e.connection === connectionName && e.storage !== 'remote',
           )?.id || '',
       }))
 
-      // Check if dashboard already exists
+      // Same scoping for the existing-dashboard lookup: a remote dashboard
+      // sharing the name shouldn't be overwritten by a local manifest import.
       const existingDashboard = Object.values(this.dashboardStore.dashboards).find(
         (dashboard) =>
-          dashboard.name === dashboardObj.name && dashboard.connection === connectionName,
+          dashboard.name === dashboardObj.name &&
+          dashboard.connection === connectionName &&
+          dashboard.storage !== 'remote',
       )
 
       if (existingDashboard) {
@@ -304,7 +317,7 @@ export class ModelImportService {
         this.dashboardStore.addDashboard(dashboardObj)
       }
 
-      dashboards.set(component.name, dashboardObj.name)
+      dashboards.set(component.name, dashboardObj.id)
     } catch (error) {
       console.error(`Error importing dashboard ${component.name}:`, error)
     }
@@ -350,15 +363,16 @@ export class ModelImportService {
 
         const editor = this.createOrUpdateEditor(component, connectionName, options)
 
-        // Track components by type
+        // Track components by type — values are editor IDs so callers can
+        // index editorStore.editors directly without a fragile name lookup.
         if (component.type === 'sql') {
-          sql.set(component.name, editor.name)
+          sql.set(component.name, editor.id)
         } else if (component.type === 'trilogy') {
-          trilogy.set(component.name, editor.name)
+          trilogy.set(component.name, editor.id)
           // Only trilogy components become model sources
           modelSources.push(new ModelSource(editor.id, component.alias || component.name, [], []))
         } else if (component.type === 'python') {
-          python.set(component.name, editor.name)
+          python.set(component.name, editor.id)
         }
       }
 

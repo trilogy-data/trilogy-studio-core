@@ -1,12 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import useConnectionStore from './connectionStore'
+import { EditorTag } from '../editors'
 
-// Mock the editor store
+// Mock the editor store. The factory is hoisted, so per-test behavior is
+// controlled via the mutable `mockEditorStoreState` below.
+const mockEditorStoreState: {
+  getConnectionEditors: ReturnType<typeof vi.fn>
+} = {
+  getConnectionEditors: vi.fn(() => []),
+}
+
 vi.mock('./editorStore', () => ({
-  default: () => ({
-    getConnectionEditors: () => [],
-  }),
+  default: () => mockEditorStoreState,
 }))
 
 // Mock the model store
@@ -20,6 +26,7 @@ vi.mock('./modelStore', () => ({
 describe('connectionStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    mockEditorStoreState.getConnectionEditors = vi.fn(() => [])
   })
 
   describe('connectConnection', () => {
@@ -27,7 +34,7 @@ describe('connectionStore', () => {
       const store = useConnectionStore()
 
       await expect(store.connectConnection('nonexistent')).rejects.toThrow(
-        'Connection with name "nonexistent" not found.',
+        'Connection with id "nonexistent" not found.',
       )
     })
 
@@ -87,6 +94,64 @@ describe('connectionStore', () => {
       // Resolve the reset
       resolveReset!()
       await Promise.all([promise1, promise2])
+    })
+
+    it('runStartup only runs editors matching the connection id', async () => {
+      // Bug repro: a remote import that shares a connection name with an
+      // existing local connection used to run BOTH startup scripts when the
+      // remote connected. Verify runStartup now scopes by connection id.
+      const localStartup = {
+        id: 'local-startup',
+        name: 'local-startup',
+        connectionId: 'local:shared-name',
+        contents: 'LOCAL_STARTUP',
+        tags: [EditorTag.STARTUP_SCRIPT],
+      }
+      const remoteStartup = {
+        id: 'remote:store-a:remote-startup',
+        name: 'remote-startup',
+        connectionId: 'remote:store-a:shared-name',
+        contents: 'REMOTE_STARTUP',
+        tags: [EditorTag.STARTUP_SCRIPT],
+      }
+
+      // Stand-in for the real editorStore filter so we exercise the actual
+      // call signature runStartup uses.
+      mockEditorStoreState.getConnectionEditors = vi.fn(
+        (connectionId: string, tags: EditorTag[] = []) => {
+          let editors = [localStartup, remoteStartup].filter((e) => e.connectionId === connectionId)
+          if (tags.length > 0) {
+            editors = editors.filter((e) => tags.every((t) => e.tags.includes(t)))
+          }
+          return editors
+        },
+      )
+
+      const store = useConnectionStore()
+      const queryMock = vi.fn().mockResolvedValue(undefined)
+      const remoteId = 'remote:store-a:shared-name'
+      store.connections[remoteId] = {
+        id: remoteId,
+        name: 'shared-name',
+        storage: 'remote',
+        remoteStoreId: 'store-a',
+        connected: false,
+        running: false,
+        error: null,
+        model: null,
+        changed: false,
+        reset: vi.fn().mockResolvedValue(undefined),
+        query: queryMock,
+      } as any
+
+      await store.connectConnection(remoteId)
+
+      // Only the remote store's startup script should have been issued.
+      expect(queryMock).toHaveBeenCalledTimes(1)
+      expect(queryMock).toHaveBeenCalledWith('REMOTE_STARTUP')
+      expect(mockEditorStoreState.getConnectionEditors).toHaveBeenCalledWith(remoteId, [
+        EditorTag.STARTUP_SCRIPT,
+      ])
     })
 
     it('should handle reset failures', async () => {
@@ -211,9 +276,7 @@ describe('connectionStore', () => {
       store.deleteConnection('ghost')
       store.purgeDeletedConnections()
 
-      expect(
-        Object.values(store.connections).some((conn) => conn.name === 'ghost'),
-      ).toBe(false)
+      expect(Object.values(store.connections).some((conn) => conn.name === 'ghost')).toBe(false)
     })
   })
 
@@ -222,7 +285,7 @@ describe('connectionStore', () => {
       const store = useConnectionStore()
 
       await expect(store.resetConnection('nonexistent')).rejects.toThrow(
-        'Connection with name "nonexistent" not found.',
+        'Connection with id "nonexistent" not found.',
       )
     })
 

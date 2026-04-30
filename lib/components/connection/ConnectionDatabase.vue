@@ -249,10 +249,10 @@ export default defineComponent({
     const refreshSchema = async (schema: string) => {
       refreshMap.value.set(schema, true)
       try {
-        await connectionStore.connections[props.connectionName].refreshSchema(
-          props.database.name,
-          schema,
-        )
+        const conn = connectionStore.connectionByName(props.connectionName)
+        if (conn) {
+          await conn.refreshSchema(props.database.name, schema)
+        }
       } finally {
         refreshMap.value.set(schema, false)
       }

@@ -9,6 +9,7 @@ function makeConnection(overrides: {
   databases: Database[]
 }) {
   return {
+    id: `local:${overrides.name}`,
     name: overrides.name,
     type: overrides.type,
     hasSchema: overrides.hasSchema,
@@ -36,7 +37,7 @@ describe('buildConnectionTree', () => {
     })
 
     it('skips the schema node and shows tables at indent 2', () => {
-      const collapsed = { 'sqlite-test': false, 'sqlite-test+main': false }
+      const collapsed = { 'local:sqlite-test': false, 'local:sqlite-test+main': false }
       const tree = buildConnectionTree([conn], collapsed, {}, {})
 
       const schemaNodes = tree.filter((n) => n.type === 'schema')
@@ -50,7 +51,7 @@ describe('buildConnectionTree', () => {
     })
 
     it('shows table count on the database node', () => {
-      const collapsed = { 'sqlite-test': false, 'sqlite-test+main': false }
+      const collapsed = { 'local:sqlite-test': false, 'local:sqlite-test+main': false }
       const tree = buildConnectionTree([conn], collapsed, {}, {})
 
       const dbNode = tree.find((n) => n.type === 'database')
@@ -67,7 +68,7 @@ describe('buildConnectionTree', () => {
         databases: [emptyDb],
       })
 
-      const collapsed = { 'sqlite-empty': false, 'sqlite-empty+main': false }
+      const collapsed = { 'local:sqlite-empty': false, 'local:sqlite-empty+main': false }
       const tree = buildConnectionTree([emptyConn], collapsed, {}, {})
 
       const dbNode = tree.find((n) => n.type === 'database')
@@ -76,7 +77,7 @@ describe('buildConnectionTree', () => {
     })
 
     it('hides tables when database is collapsed', () => {
-      const collapsed = { 'sqlite-test': false, 'sqlite-test+main': true }
+      const collapsed = { 'local:sqlite-test': false, 'local:sqlite-test+main': true }
       const tree = buildConnectionTree([conn], collapsed, {}, {})
 
       const tableNodes = tree.filter((n) => n.type === 'table')
@@ -98,9 +99,9 @@ describe('buildConnectionTree', () => {
 
     it('includes the schema node at indent 2 and tables at indent 3', () => {
       const collapsed = {
-        'pg-test': false,
-        'pg-test+mydb': false,
-        'pg-test+mydb+public': false,
+        'local:pg-test': false,
+        'local:pg-test+mydb': false,
+        'local:pg-test+mydb+public': false,
       }
       const tree = buildConnectionTree([conn], collapsed, {}, {})
 
@@ -115,7 +116,7 @@ describe('buildConnectionTree', () => {
     })
 
     it('shows schema count on the database node', () => {
-      const collapsed = { 'pg-test': false, 'pg-test+mydb': false }
+      const collapsed = { 'local:pg-test': false, 'local:pg-test+mydb': false }
       const tree = buildConnectionTree([conn], collapsed, {}, {})
 
       const dbNode = tree.find((n) => n.type === 'database')
@@ -124,9 +125,9 @@ describe('buildConnectionTree', () => {
 
     it('hides tables when schema is collapsed', () => {
       const collapsed = {
-        'pg-test': false,
-        'pg-test+mydb': false,
-        'pg-test+mydb+public': true,
+        'local:pg-test': false,
+        'local:pg-test+mydb': false,
+        'local:pg-test+mydb+public': true,
       }
       const tree = buildConnectionTree([conn], collapsed, {}, {})
 

@@ -42,13 +42,13 @@
       <template #name>
         {{ item.label }}
         <span class="text-light" v-if="item.type === 'connection'">
-          <span class="connection-model" v-if="connectionStore.connections[item.label]?.model">
-            ({{ connectionStore.connections[item.label].model }})
+          <span class="connection-model" v-if="resolvedConnection?.model">
+            ({{ resolvedConnection.model }})
           </span>
           <span
             v-else
             class="no-model-text"
-            @click.stop="createDefaultModel(item.label)"
+            @click.stop="createDefaultModel(item.connectionId || item.objectKey)"
             title="Click to create a default model"
           >
             (No Model Set)
@@ -72,10 +72,7 @@
         </template>
 
         <template v-else-if="item.type === 'connection'">
-          <connection-status-icon
-            v-if="connectionStore.connections[item.label]"
-            :connection="connectionStore.connections[item.label]"
-          />
+          <connection-status-icon v-if="resolvedConnection" :connection="resolvedConnection" />
           <sidebar-overflow-menu
             :items="contextMenuItems"
             tooltip="Connection actions"
@@ -153,26 +150,41 @@ export default {
     }
 
     const modelConfigStore = useModelConfigStore()
-    const createDefaultModel = async (connectionName: string) => {
-      try {
-        // Create a new model with the same name as the connection
-        let model = modelConfigStore.newModelConfig(connectionName)
+    const resolvedConnection = computed(() => {
+      const connectionId = props.item.connectionId || props.item.objectKey
+      return (
+        (connectionId && connectionStore.connections[connectionId]) ||
+        connectionStore.connectionByName(props.item.label) ||
+        null
+      )
+    })
 
-        // Update the connection to use this model
-        if (connectionStore.connections[connectionName]) {
-          connectionStore.connections[connectionName].model = model.name
+    const createDefaultModel = async (connectionId: string) => {
+      try {
+        const conn =
+          connectionStore.connections[connectionId] ||
+          connectionStore.connectionByName(connectionId)
+        if (!conn) {
+          throw new Error(`Connection ${connectionId} not found`)
         }
+        // Create a new model with the same name as the connection
+        let model = modelConfigStore.newModelConfig(conn.name)
+        conn.model = model.name
 
         // await saveModels and saveConnections
         await saveModels()
         await saveConnections()
       } catch (error) {
-        console.error(`Error creating model for connection ${connectionName}:`, error)
+        console.error(`Error creating model for connection ${connectionId}:`, error)
       }
     }
 
-    const createNewEditor = async (connection: string, type: string, root = '') => {
+    const createNewEditor = async (connectionId: string, type: string, root = '') => {
       try {
+        const connection = connectionStore.connections[connectionId]
+        if (!connection) {
+          throw new Error(`Connection ${connectionId} not found`)
+        }
         const timestamp = Date.now()
         let editorName = `new-editor-${timestamp}`
         if (root) {
@@ -185,12 +197,15 @@ export default {
         const editor = editorStore.newEditor(
           editorName,
           editorType,
-          connection,
+          connection.name,
           undefined,
           isRemote
             ? {
                 storage: 'remote',
-                remoteStoreId: props.item.remoteStoreId || null,
+                remoteStoreId:
+                  props.item.remoteStoreId ||
+                  (connection as unknown as { remoteStoreId?: string | null }).remoteStoreId ||
+                  null,
                 remotePath: editorName,
               }
             : undefined,
@@ -266,6 +281,7 @@ export default {
 
     return {
       connectionStore,
+      resolvedConnection,
       trilogyIcon,
       createDefaultModel,
       createNewEditor,
@@ -281,7 +297,8 @@ export default {
           this.$emit('delete-editor', this.item.editor)
           break
         case 'refresh-store': {
-          const connection = this.connectionStore.connections[this.item.label] as
+          const connection = (this.item.connectionId &&
+            this.connectionStore.connections[this.item.connectionId]) as
             | ((typeof this.connectionStore.connections)[string] & {
                 remoteStoreId?: string | null
               })
@@ -293,21 +310,27 @@ export default {
         }
         case 'new-sql':
           this.createNewEditor(
-            this.item.type === 'connection' ? this.item.label : this.item.connection,
+            this.item.type === 'connection'
+              ? this.item.connectionId || this.item.objectKey
+              : this.item.connectionId,
             'sql',
             this.item.type === 'folder' ? this.item.objectKey : '',
           )
           break
         case 'new-trilogy':
           this.createNewEditor(
-            this.item.type === 'connection' ? this.item.label : this.item.connection,
+            this.item.type === 'connection'
+              ? this.item.connectionId || this.item.objectKey
+              : this.item.connectionId,
             'trilogy',
             this.item.type === 'folder' ? this.item.objectKey : '',
           )
           break
         case 'new-python':
           this.createNewEditor(
-            this.item.type === 'connection' ? this.item.label : this.item.connection,
+            this.item.type === 'connection'
+              ? this.item.connectionId || this.item.objectKey
+              : this.item.connectionId,
             'python',
             this.item.type === 'folder' ? this.item.objectKey : '',
           )

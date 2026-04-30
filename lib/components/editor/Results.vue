@@ -44,7 +44,8 @@
           @click="$emit('open-chat')"
           title="Open AI Chat"
         >
-          <i class="mdi mdi-chat-outline"></i>
+          <i class="mdi mdi-creation-outline"></i>
+          <span class="chat-button-label">Chat</span>
         </button>
       </div>
     </div>
@@ -172,7 +173,8 @@ export default {
   emits: ['config-change', 'drilldown-click', 'refresh-click', 'open-chat'],
   data() {
     return {
-      activeTab: this.defaultTab || getDefaultValueFromHash(URL_HASH_KEYS.ACTIVE_EDITOR_TAB, 'results'),
+      activeTab:
+        this.defaultTab || getDefaultValueFromHash(URL_HASH_KEYS.ACTIVE_EDITOR_TAB, 'results'),
       activeDrilldown: null as Drilldown | null,
       TABS_HEIGHT: 26,
     }
@@ -189,7 +191,10 @@ export default {
     },
     handleReconnect() {
       if (this.connection) {
-        return this.connectionStore.resetConnection(this.connection).then(() => {})
+        const conn = this.connectionStore.connectionByName(this.connection)
+        if (conn) {
+          return this.connectionStore.resetConnection(conn.id).then(() => {})
+        }
       }
       return Promise.resolve()
     },
@@ -308,8 +313,9 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
+  gap: 4px;
   height: 22px;
+  padding: 0 6px;
   border: none;
   background: transparent;
   color: var(--text-faint);
@@ -325,6 +331,11 @@ export default {
 
 .chat-button i {
   font-size: 14px;
+}
+
+.chat-button-label {
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .tab-button {

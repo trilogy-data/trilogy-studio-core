@@ -13,6 +13,11 @@ const __dirname = path.dirname(__filename)
 const TEST_TOKEN = 'abc123'
 const TEST_MODEL_NAME = 'urban_forest'
 const TEST_CONNECTION_NAME = `${TEST_MODEL_NAME}-connection`
+// Pin the store id so the spec can address sidebar rows by exact test id
+// (`editor-c-remote-remote:<TEST_STORE_ID>:<TEST_CONNECTION_NAME>`). Without
+// the override, the auto-importer would derive an id from the dynamically
+// allocated mock-server URL, which the spec can't predict.
+const TEST_STORE_ID = `${TEST_MODEL_NAME}-store`
 
 const getAvailablePort = async (): Promise<number> =>
   await new Promise((resolve, reject) => {
@@ -166,6 +171,7 @@ remoteStoreImportDescribe('Remote Store Auto Import', () => {
       `&modelName=${encodeURIComponent(TEST_MODEL_NAME)}` +
       `&connection=duckdb` +
       `&store=${encodeURIComponent(remoteStoreUrl)}` +
+      `&storeId=${encodeURIComponent(TEST_STORE_ID)}` +
       `&remote=true` +
       `&token=${encodeURIComponent(TEST_TOKEN)}`
 
@@ -209,6 +215,7 @@ remoteStoreImportDescribe('Remote Store Auto Import', () => {
       `&modelName=${encodeURIComponent(TEST_MODEL_NAME)}` +
       `&connection=duckdb` +
       `&store=${encodeURIComponent(remoteStoreUrl)}` +
+      `&storeId=${encodeURIComponent(TEST_STORE_ID)}` +
       `&remote=true` +
       `&token=${encodeURIComponent(TEST_TOKEN)}`
 
@@ -218,7 +225,7 @@ remoteStoreImportDescribe('Remote Store Auto Import', () => {
     })
 
     await openSidebarScreen(page, 'editors', isMobile)
-    await createEditorFromConnection(page, TEST_CONNECTION_NAME, 'trilogy')
+    await createEditorFromConnection(page, TEST_CONNECTION_NAME, 'trilogy', TEST_STORE_ID)
 
     await expect(page.getByTestId('editor-name-display')).toContainText('new-editor-', {
       timeout: 30000,
@@ -228,7 +235,10 @@ remoteStoreImportDescribe('Remote Store Auto Import', () => {
 
     await openSidebarScreen(page, 'editors', isMobile)
     await expect(
-      page.getByTestId(`editor-c-remote-${TEST_CONNECTION_NAME}`).filter({ visible: true }).first(),
+      page
+        .getByTestId(`editor-c-remote-remote:${TEST_STORE_ID}:${TEST_CONNECTION_NAME}`)
+        .filter({ visible: true })
+        .first(),
     ).toBeVisible({ timeout: 30000 })
 
     const filesResponse = await fetch(`${remoteStoreUrl}/files`, {

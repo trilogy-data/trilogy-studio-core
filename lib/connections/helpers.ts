@@ -40,9 +40,14 @@ export function buildConnectionTree(
     if (connection.deleted) {
       return // Skip deleted connections
     }
+    // Use connection.id (e.g. `local:foo` / `remote:store:foo`) as the tree key
+    // so two connections that share a display name don't collide on selection,
+    // tab routing, or URL hash. Older tree entries fall back to the name to
+    // tolerate test fixtures and any older persisted state.
+    const connKey = (connection as any).id || connection.name
     let databases = connection.databases ? connection.databases : []
     list.push({
-      id: connection.name,
+      id: connKey,
       name: connection.name,
       indent: 0,
       count: databases.length,
@@ -51,10 +56,10 @@ export function buildConnectionTree(
       connection,
     })
 
-    if (collapsed[connection.name] === false) {
+    if (collapsed[connKey] === false) {
       if (['duckdb', 'sqlite'].includes(connection.type)) {
         list.push({
-          id: `${connection.name}-upload`,
+          id: `${connKey}-upload`,
           name: 'Upload',
           indent: 1,
           count: 0,
@@ -64,7 +69,7 @@ export function buildConnectionTree(
         })
       }
       list.push({
-        id: `${connection.name}-model`,
+        id: `${connKey}-model`,
         name: 'Model',
         indent: 1,
         count: 0,
@@ -75,7 +80,7 @@ export function buildConnectionTree(
 
       if (connection.type === 'motherduck') {
         list.push({
-          id: `${connection.name}-md-token`,
+          id: `${connKey}-md-token`,
           name: 'MotherDuck Token',
           indent: 1,
           count: 0,
@@ -86,7 +91,7 @@ export function buildConnectionTree(
       }
       if (connection.type === 'bigquery-oauth') {
         list.push({
-          id: `${connection.name}-billing-project`,
+          id: `${connKey}-billing-project`,
           name: 'Billing Project',
           indent: 1,
           count: 0,
@@ -95,7 +100,7 @@ export function buildConnectionTree(
           connection,
         })
         list.push({
-          id: `${connection.name}-browsing-project`,
+          id: `${connKey}-browsing-project`,
           name: 'Browsing Project',
           indent: 1,
           count: 0,
@@ -106,7 +111,7 @@ export function buildConnectionTree(
       }
       if (connection.type === 'snowflake') {
         list.push({
-          id: `${connection.name}-account`,
+          id: `${connKey}-account`,
           name: 'Account',
           indent: 1,
           count: 0,
@@ -115,7 +120,7 @@ export function buildConnectionTree(
           connection,
         })
         list.push({
-          id: `${connection.name}-username`,
+          id: `${connKey}-username`,
           name: 'Username',
           indent: 1,
           count: 0,
@@ -124,7 +129,7 @@ export function buildConnectionTree(
           connection,
         })
         list.push({
-          id: `${connection.name}-private-key`,
+          id: `${connKey}-private-key`,
           name: 'Private Key',
           indent: 1,
           count: 0,
@@ -135,7 +140,7 @@ export function buildConnectionTree(
       }
       if (['snowflake', 'motherduck'].includes(connection.type)) {
         list.push({
-          id: `${connection.name}-toggle-save-credential`,
+          id: `${connKey}-toggle-save-credential`,
           name: 'Toggle Credential Saving',
           indent: 1,
           count: 0,
@@ -144,19 +149,21 @@ export function buildConnectionTree(
           connection,
         })
       }
-
-      // list.push({
-      //   id: `${connection.name}${KeySeparator}refresh`,
-      //   name: 'Refresh Databases',
-      //   indent: 1,
-      //   count: 0,
-      //   type: 'refresh-connection',
-      //   searchPath: connection.name,
-      //   connection,
-      // })
-      if (isLoading[connection.name]) {
+      if (connection.type === 'duckdb') {
         list.push({
-          id: `${connection.name}-loading`,
+          id: `${connKey}-toggle-compatible-fetch`,
+          name: 'Disable Optimized Scans',
+          indent: 1,
+          count: 0,
+          type: 'duckdb-toggle-compatible-fetch',
+          searchPath: connection.name,
+          connection,
+        })
+      }
+
+      if (isLoading[connKey]) {
+        list.push({
+          id: `${connKey}-loading`,
           name: 'Loading...',
           indent: 1,
           count: 0,
@@ -165,10 +172,10 @@ export function buildConnectionTree(
           connection,
         })
       }
-      if (isErrored[connection.name]) {
+      if (isErrored[connKey]) {
         list.push({
-          id: `${connection.name}-error`,
-          name: isErrored[connection.name],
+          id: `${connKey}-error`,
+          name: isErrored[connKey],
           indent: 1,
           count: 0,
           type: 'error',
@@ -177,7 +184,7 @@ export function buildConnectionTree(
         })
       }
       databases.forEach((db) => {
-        const dbId = `${connection.name}${KeySeparator}${db.name}`
+        const dbId = `${connKey}${KeySeparator}${db.name}`
         const skipSchema = !connection.hasSchema
         list.push({
           id: dbId,

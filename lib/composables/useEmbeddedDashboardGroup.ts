@@ -96,6 +96,7 @@ export function useEmbeddedDashboardGroup(options: UseEmbeddedDashboardGroupOpti
     name: options.dashboardId,
     storage: 'local',
     connection: options.connectionId,
+    connectionId: options.connectionId,
     layout: [],
     gridItems: {},
     nextId: 1,
@@ -171,6 +172,7 @@ export function useEmbeddedDashboardGroup(options: UseEmbeddedDashboardGroupOpti
 
   function setConnection(connectionId: string) {
     dashboard.connection = connectionId
+    dashboard.connectionId = connectionId
     executor.setConnection(connectionId)
   }
 

@@ -461,6 +461,29 @@ for (let source of props.storageSources) {
 // Wait for all promises to resolve, then set loaded to true
 Promise.all(loadingPromises)
   .then(() => {
+    // One-time backfill for entities persisted before connectionId existed.
+    // Editors derive their id from existing fields in the constructor, so they
+    // come up correct on their own. Dashboards and chats stored only the
+    // display name; resolve it via the now-loaded connection store and stamp
+    // the id so subsequent code paths can compare ids directly.
+    for (const dashboard of Object.values(props.dashboardStore.dashboards)) {
+      if (!dashboard.connectionId && dashboard.connection) {
+        const match = props.connectionStore.connectionByName(dashboard.connection)
+        if (match) {
+          dashboard.connectionId = match.id
+          dashboard.changed = true
+        }
+      }
+    }
+    for (const chat of Object.values(props.chatStore.chats)) {
+      if (!chat.dataConnectionId && chat.dataConnectionName) {
+        const match = props.connectionStore.connectionByName(chat.dataConnectionName)
+        if (match) {
+          chat.dataConnectionId = match.id
+          chat.changed = true
+        }
+      }
+    }
     loaded.value = true
   })
   .catch((error) => {

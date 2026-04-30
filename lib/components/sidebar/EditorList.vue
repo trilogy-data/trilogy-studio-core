@@ -157,13 +157,17 @@ export default {
     const current = getDefaultValueFromHash(URL_HASH_KEYS.EDITORS) || ''
 
     // Helper function to get all folder paths for an editor
-    const getFolderPaths = (editorName: string, storage: string, connection: string): string[] => {
+    const getFolderPaths = (
+      editorName: string,
+      storage: string,
+      connectionKey: string,
+    ): string[] => {
       const pathParts = editorName.split('/')
       const folderPaths: string[] = []
 
       for (let i = 0; i < pathParts.length - 1; i++) {
         const folderPath = pathParts.slice(0, i + 1).join('/')
-        folderPaths.push(`f-${storage}-${connection}-${folderPath}`)
+        folderPaths.push(`f-${storage}-${connectionKey}-${folderPath}`)
       }
 
       return folderPaths
@@ -175,8 +179,9 @@ export default {
 
       editorsArray.forEach((editor) => {
         const storageKey = `s-${editor.storage}`
-        const connectionKey = `c-${editor.storage}-${editor.connection}`
-        const folderPaths = getFolderPaths(editor.name, editor.storage, editor.connection)
+        const connectionKeyPart = editor.connectionId || editor.connection
+        const connectionKey = `c-${editor.storage}-${connectionKeyPart}`
+        const folderPaths = getFolderPaths(editor.name, editor.storage, connectionKeyPart)
         if (current === editor.id) {
           // If this is the current editor, open all parent containers
           collapsed.value[storageKey] = false
@@ -207,12 +212,9 @@ export default {
       if (!anyOpen && editorsArray.length > 0) {
         const firstEditor = editorsArray[0]
         const storageKey = `s-${firstEditor.storage}`
-        const connectionKey = `c-${firstEditor.storage}-${firstEditor.connection}`
-        const folderPaths = getFolderPaths(
-          firstEditor.name,
-          firstEditor.storage,
-          firstEditor.connection,
-        )
+        const connectionKeyPart = firstEditor.connectionId || firstEditor.connection
+        const connectionKey = `c-${firstEditor.storage}-${connectionKeyPart}`
+        const folderPaths = getFolderPaths(firstEditor.name, firstEditor.storage, connectionKeyPart)
 
         collapsed.value[storageKey] = false
         collapsed.value[connectionKey] = false

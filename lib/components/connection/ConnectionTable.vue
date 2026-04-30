@@ -255,13 +255,12 @@ export default defineComponent({
           throw new Error('Connection store not found')
         }
 
-        await connectionStore.connections[props.connectionName].refreshColumns(
-          props.table.database,
-          props.table.schema,
-          props.table.name,
-        )
+        const conn = connectionStore.connectionByName(props.connectionName)
+        if (!conn) throw new Error(`Connection "${props.connectionName}" not found`)
 
-        const result = await connectionStore.connections[props.connectionName].getTableSample(
+        await conn.refreshColumns(props.table.database, props.table.schema, props.table.name)
+
+        const result = await conn.getTableSample(
           props.table.database,
           props.table.schema,
           props.table.name,
@@ -325,7 +324,7 @@ export default defineComponent({
 
     const connectionInfo = computed(() => {
       if (!connectionStore) return null
-      return connectionStore.connections[props.connectionName]
+      return connectionStore.connectionByName(props.connectionName)
     })
 
     return {

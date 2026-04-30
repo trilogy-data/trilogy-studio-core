@@ -22,6 +22,7 @@ import type { DashboardImport, DashboardState } from '../../dashboards/base'
 import QueryExecutionService from '../../stores/queryExecutionService'
 import useScreenNavigation from '../../stores/useScreenNavigation'
 import useEditorStore from '../../stores/editorStore'
+import useConnectionStore from '../../stores/connectionStore'
 import { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
 import type { DashboardModel } from '../../dashboards/base'
 import {
@@ -52,6 +53,7 @@ export function useDashboard(
   // Initialize services and stores
   const dashboardStore = useDashboardStore()
   const editorStore = useEditorStore()
+  const connectionStore = useConnectionStore()
   let queryExecutionService = providedQueryExecutionService
     ? providedQueryExecutionService
     : inject<QueryExecutionService>('queryExecutionService')
@@ -88,7 +90,11 @@ export function useDashboard(
 
   const selectedConnection = computed(() => {
     if (!dashboard.value) return ''
-    return dashboard.value.connection
+    if (dashboard.value.connectionId) return dashboard.value.connectionId
+    // Legacy fallback for dashboards loaded before the connectionId migration
+    // landed: resolve the persisted name to its current connection id.
+    const fallback = connectionStore.connectionByName(dashboard.value.connection)
+    return fallback?.id || dashboard.value.connection
   })
 
   const editMode = computed(() => {
@@ -203,7 +209,7 @@ export function useDashboard(
     if (dashboard.value && dashboard.value.id) {
       filter.value = newFilter
       await queryExecutionService
-        ?.generateQuery(dashboard.value.connection, {
+        ?.generateQuery(dashboard.value.connectionId || dashboard.value.connection, {
           text: 'select 1 as test;',
           editorType: 'trilogy',
           extraFilters: [newFilter],
@@ -230,7 +236,7 @@ export function useDashboard(
 
     if (dashboard.value && dashboard.value.id) {
       let promises = await queryExecutionService?.executeQuery(
-        dashboard.value.connection,
+        dashboard.value.connectionId || dashboard.value.connection,
         {
           text: 'select 1 as test;',
           editorType: 'trilogy',
@@ -573,9 +579,13 @@ export function useDashboard(
       throw new Error('Dashboard not found or not initialized')
     if (!queryExecutionService) throw new Error('Query execution service not found')
     let dashboardData = dashboardStore.dashboards[dashboardId]
+    const resolvedConnectionId =
+      dashboardData.connectionId ||
+      connectionStore.connectionByName(dashboardData.connection)?.id ||
+      dashboardData.connection
     const executor = dashboardStore.getOrCreateQueryExecutor(dashboardId, {
       queryExecutionService,
-      connectionName: dashboardData.connection,
+      connectionName: resolvedConnectionId,
       dashboardId: dashboardId,
       getDashboardData: (id: string) => dashboardStore.dashboards[id],
       getItemData,

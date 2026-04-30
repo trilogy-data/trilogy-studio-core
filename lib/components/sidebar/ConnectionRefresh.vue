@@ -17,12 +17,10 @@ import { computed, inject } from 'vue'
 import LoadingButton from '../LoadingButton.vue'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
+import type { Connection } from '../../connections'
 
 export interface RefreshButtonProps {
-  connection: {
-    name: string
-    connected: boolean
-  }
+  connection: Connection
   type?: string
   isConnected?: boolean
 }
@@ -56,7 +54,7 @@ const buttonTestId = computed(() =>
 
 const handleRefresh = async () => {
   try {
-    await connectionStore.resetConnection(props.connection.name)
+    await connectionStore.resetConnection(props.connection.id)
     emit('refresh', props.connection.name)
   } catch (error) {
     console.error('Refresh failed:', error)

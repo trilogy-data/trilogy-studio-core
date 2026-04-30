@@ -830,6 +830,13 @@ export default class QueryExecutionService {
     // Check connection
     const conn = this.connectionProvider.getConnection(connectionId)
     if (!conn) {
+      if (onFailure) {
+        onFailure({
+          message: `Connection ${connectionId} not found.`,
+          error: true,
+          running: false,
+        })
+      }
       return {
         success: false,
         error: `Connection ${connectionId} not found.`,

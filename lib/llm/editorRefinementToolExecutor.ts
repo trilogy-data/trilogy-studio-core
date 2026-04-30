@@ -107,7 +107,7 @@ export class EditorRefinementToolExecutor {
 
   private async browseDatabaseTree(toolInput: Record<string, any>): Promise<ToolCallResult> {
     const connectionName = this.editorContext.connectionName
-    const connection = this.connectionStore.connections[connectionName]
+    const connection = this.connectionStore.connectionByName(connectionName)
     if (!connection) {
       return {
         success: false,
@@ -162,8 +162,8 @@ export class EditorRefinementToolExecutor {
 
       if (database && schema && table && refresh) {
         const columns = await connection.getColumns(database, schema, table)
-        const localTable = connection
-          .databases?.find((db) => db.name === database)
+        const localTable = connection.databases
+          ?.find((db) => db.name === database)
           ?.schemas.find((s) => s.name === schema)
           ?.tables.find((t) => t.name === table)
         if (localTable) {
@@ -193,7 +193,8 @@ export class EditorRefinementToolExecutor {
     }
 
     const connectionName = this.editorContext.connectionName
-    if (!this.connectionStore.connections[connectionName]) {
+    const connection = this.connectionStore.connectionByName(connectionName)
+    if (!connection) {
       return {
         success: false,
         error: `Connection "${connectionName}" not found`,
@@ -211,7 +212,7 @@ export class EditorRefinementToolExecutor {
     }
 
     try {
-      const validation = await this.queryExecutionService.validateQuery(connectionName, queryInput)
+      const validation = await this.queryExecutionService.validateQuery(connection.id, queryInput)
 
       if (validation && validation.data) {
         // Check for validation errors (items with severity > 0 are errors/warnings)
@@ -272,7 +273,7 @@ export class EditorRefinementToolExecutor {
     const connectionName = this.editorContext.connectionName
 
     // Verify connection exists and is active
-    const connection = this.connectionStore.connections[connectionName]
+    const connection = this.connectionStore.connectionByName(connectionName)
     if (!connection) {
       return {
         success: false,
@@ -293,7 +294,7 @@ export class EditorRefinementToolExecutor {
 
     try {
       const result = await this.queryExecutionService.executeQuery(
-        connectionName,
+        connection.id,
         queryInput,
         undefined, // onStarted
         undefined, // onProgress
@@ -378,12 +379,13 @@ export class EditorRefinementToolExecutor {
     }
 
     const connectionName = this.editorContext.connectionName
+    const connection = this.connectionStore.connectionByName(connectionName)
     const extraContent = this.buildEditorExtraContent()
 
     try {
       const formatted = await this.queryExecutionService.formatQuery(
         query.trim(),
-        connectionName,
+        connection?.id || connectionName,
         this.editorContext.editorType,
         [], // imports
         extraContent,
@@ -478,7 +480,9 @@ export class EditorRefinementToolExecutor {
       if (this.editorContext.editorType === 'sql') {
         return {
           success: true,
-          message: replaceSelection ? 'Updated selected text in editor.' : 'Updated editor contents.',
+          message: replaceSelection
+            ? 'Updated selected text in editor.'
+            : 'Updated editor contents.',
         }
       }
 
@@ -625,11 +629,14 @@ export class EditorRefinementToolExecutor {
     return sharedConnectDataConnection(this.connectionStore, connectionName)
   }
 
-  private serializeDatabaseTree(database?: string, schema?: string, table?: string): Record<string, any> {
-    const databases = this.connectionStore.connections[this.editorContext.connectionName].databases || []
-    const filteredDatabases = database
-      ? databases.filter((db) => db.name === database)
-      : databases
+  private serializeDatabaseTree(
+    database?: string,
+    schema?: string,
+    table?: string,
+  ): Record<string, any> {
+    const connection = this.connectionStore.connectionByName(this.editorContext.connectionName)
+    const databases = connection?.databases || []
+    const filteredDatabases = database ? databases.filter((db) => db.name === database) : databases
 
     const tree = filteredDatabases.map((db) => {
       const schemas = schema ? db.schemas.filter((s) => s.name === schema) : db.schemas
@@ -657,7 +664,7 @@ export class EditorRefinementToolExecutor {
 
     return {
       connection: this.editorContext.connectionName,
-      hasSchema: this.connectionStore.connections[this.editorContext.connectionName].hasSchema,
+      hasSchema: connection?.hasSchema,
       tree,
     }
   }

@@ -23,7 +23,7 @@ export interface FetchConceptsForImportDeps {
 export async function fetchConceptsForImport(
   deps: FetchConceptsForImportDeps,
   imp: ChatImport,
-  connectionName: string,
+  connectionRef: string,
 ): Promise<string> {
   const { connectionStore, editorStore, queryExecutionService } = deps
 
@@ -33,14 +33,20 @@ export async function fetchConceptsForImport(
       return 'No fields found in this data source.'
     }
 
-    // Gather all editor sources for this connection so dependent imports resolve
-    const allConnectionEditors = editorStore
-      ? Object.values(editorStore.editors)
-          .filter((editor) => editor.connection === connectionName && !editor.deleted)
-          .map((editor) => ({ alias: editor.name, contents: editor.contents }))
-      : []
+    // Gather all editor sources for this connection so dependent imports
+    // resolve. Scope to the connection's id so cross-origin editors with the
+    // same connection name don't pollute the validation.
+    const connection =
+      connectionStore.connections[connectionRef] || connectionStore.connectionByName(connectionRef)
+    const connectionId = connection?.id || connectionRef
+    const allConnectionEditors =
+      editorStore && connection
+        ? Object.values(editorStore.editors)
+            .filter((editor) => !editor.deleted && editor.connectionId === connection.id)
+            .map((editor) => ({ alias: editor.name, contents: editor.contents }))
+        : []
 
-    const connectionSources = connectionStore.getConnectionSources(connectionName)
+    const connectionSources = connectionStore.getConnectionSources(connectionId)
     const extraContentMap = new Map<string, string>()
     connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
     allConnectionEditors.forEach((s) => extraContentMap.set(s.alias, s.contents))
@@ -56,7 +62,7 @@ export async function fetchConceptsForImport(
       extraContent,
     }
 
-    const validation = await queryExecutionService.validateQuery(connectionName, queryInput, false)
+    const validation = await queryExecutionService.validateQuery(connectionId, queryInput, false)
 
     if (validation?.data?.completion_items) {
       const concepts = validation.data.completion_items.filter(

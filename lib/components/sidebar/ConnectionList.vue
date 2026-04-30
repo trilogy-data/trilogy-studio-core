@@ -54,6 +54,7 @@
       @update-snowflake-account="updateSnowflakeAccount"
       @update-snowflake-username="updateSnowflakeUsername"
       @toggle-save-credential="toggleSaveCredential"
+      @toggle-duckdb-compatible-fetch="toggleDuckdbCompatibleFetch"
       @toggle-mobile-menu="toggleMobileMenu"
       @delete-connection="deleteConnection"
     />
@@ -142,7 +143,7 @@ export default {
     const updateMotherDuckToken = (connection: MotherDuckConnection, token: string) => {
       if (connection.type === 'motherduck') {
         connection.setAttribute('mdToken', token)
-        connectionStore.resetConnection(connection.name)
+        connectionStore.resetConnection(connection.id)
       }
     }
 
@@ -150,7 +151,7 @@ export default {
       if (connection.type === 'snowflake') {
         connection.setPrivateKey(token)
         await saveConnections()
-        await connectionStore.resetConnection(connection.name)
+        await connectionStore.resetConnection(connection.id)
       }
     }
 
@@ -158,7 +159,7 @@ export default {
       if (connection.type === 'snowflake') {
         connection.setAccount(account)
         await saveConnections()
-        connectionStore.resetConnection(connection.name)
+        connectionStore.resetConnection(connection.id)
       }
     }
 
@@ -169,7 +170,7 @@ export default {
       if (connection.type === 'snowflake') {
         connection.setUsername(username)
         await saveConnections()
-        connectionStore.resetConnection(connection.name)
+        connectionStore.resetConnection(connection.id)
       }
     }
 
@@ -177,7 +178,7 @@ export default {
       if (connection.type === 'bigquery-oauth') {
         connection.setAttribute('projectId', project)
         await saveConnections()
-        connectionStore.resetConnection(connection.name)
+        connectionStore.resetConnection(connection.id)
       }
     }
     const updateBigqueryBrowsingProject = async (
@@ -193,7 +194,19 @@ export default {
     }
     const toggleSaveCredential = (connection: any) => {
       connection.saveCredential = !connection.saveCredential
-      connectionStore.resetConnection(connection.name)
+      connectionStore.resetConnection(connection.id)
+    }
+
+    // Flip the DuckDB compatibility fetch flag and reset so the new flags take
+    // effect. setUseCompatibleHttpFetch invalidates the AsyncDuckDB cache,
+    // making the upcoming reset() rebuild the underlying instance.
+    const toggleDuckdbCompatibleFetch = async (connection: any) => {
+      if (connection?.type !== 'duckdb' || typeof connection.setUseCompatibleHttpFetch !== 'function') {
+        return
+      }
+      connection.setUseCompatibleHttpFetch(!connection.useCompatibleHttpFetch)
+      await saveConnections()
+      await connectionStore.resetConnection(connection.id)
     }
 
     const toggleMobileMenu = () => {
@@ -202,54 +215,55 @@ export default {
 
     const collapsed = ref<Record<string, boolean>>({})
 
-    const refreshId = async (id: string, connection: string, type: string) => {
+    const refreshId = async (id: string, connectionKey: string, type: string) => {
       try {
         isLoading.value[id] = true
-        if (!connectionStore.connections[connection]?.connected) {
-          await connectionStore.resetConnection(connection)
+        // connectionKey is preferred to be a connection id (`local:foo` /
+        // `remote:store:foo`); we fall back to a name lookup so any older
+        // listeners that still pass a name keep working.
+        const conn =
+          connectionStore.connections[connectionKey] ||
+          connectionStore.connectionByName(connectionKey)
+        if (!conn) return
+        if (!conn.connected) {
+          await connectionStore.resetConnection(conn.id)
         }
         if (type === 'connection') {
           console.log('getting databases')
-          let databases = await connectionStore.connections[connection].getDatabases()
+          let databases = await conn.getDatabases()
           for (let db of databases) {
-            let dbid = `${connection}${KeySeparator}${db.name}`
+            let dbid = `${conn.id}${KeySeparator}${db.name}`
             collapsed.value[dbid] = true
           }
         }
         if (type === 'database') {
           console.log('getting schemas')
           let dbid = id.split(KeySeparator)[1]
-          await connectionStore.connections[connection].refreshDatabase(dbid)
+          await conn.refreshDatabase(dbid)
           // For schema-less connections, also refresh the schema to load tables
-          if (!connectionStore.connections[connection].hasSchema) {
-            let db = connectionStore.connections[connection].databases?.find(
-              (db) => db.name === dbid,
-            )
+          if (!conn.hasSchema) {
+            let db = conn.databases?.find((db) => db.name === dbid)
             if (db && db.schemas.length > 0) {
-              await connectionStore.connections[connection].refreshSchema(dbid, db.schemas[0].name)
+              await conn.refreshSchema(dbid, db.schemas[0].name)
             }
           }
         }
         if (type === 'schema') {
           let dbid = id.split(KeySeparator)[1]
           let schemaid = id.split(KeySeparator)[2]
-          await connectionStore.connections[connection].refreshSchema(dbid, schemaid)
+          await conn.refreshSchema(dbid, schemaid)
         }
         if (type === 'table') {
           let dbid = id.split(KeySeparator)[1]
           let schemaid = id.split(KeySeparator)[2]
           let tableid = id.split(KeySeparator)[3]
 
-          let cTable = connectionStore.connections[connection].databases
+          let cTable = conn.databases
             ?.find((db) => db.name === dbid)
             ?.schemas.find((schema) => schema.name === schemaid)
             ?.tables.find((table) => table.name === tableid)
           if (cTable) {
-            let nTable = await connectionStore.connections[connection].getColumns(
-              dbid,
-              schemaid,
-              tableid,
-            )
+            let nTable = await conn.getColumns(dbid, schemaid, tableid)
             cTable.columns = nTable
           }
         }
@@ -270,38 +284,42 @@ export default {
       console.log('emitting connection key selected:', id)
       emit('connection-key-selected', id)
     }
-    const toggleCollapse = async (id: string, connection: string, type: string) => {
+    const toggleCollapse = async (id: string, connectionKey: string, type: string) => {
+      // connectionKey is preferred to be a connection id (`local:foo` /
+      // `remote:store:foo`); we fall back to a name lookup so older listeners
+      // that still pass a name keep working.
+      const conn =
+        connectionStore.connections[connectionKey] ||
+        connectionStore.connectionByName(connectionKey)
+      if (!conn) return
       if (
         type === 'connection' &&
         (collapsed.value[id] === undefined || collapsed.value[id] === true)
       ) {
         // open now see the refresh
         collapsed.value[id] = false
-        if (
-          connectionStore.connections[connection].databases?.length === 0 ||
-          connectionStore.connections[connection].databases?.length === undefined
-        ) {
-          await refreshId(id, connection, type)
+        if (conn.databases?.length === 0 || conn.databases?.length === undefined) {
+          await refreshId(id, connectionKey, type)
         }
       } else if (type === 'database' && collapsed.value[id] !== false) {
         // open now see the refresh
         collapsed.value[id] = false
         let dbid = id.split(KeySeparator)[1]
-        let db = connectionStore.connections[connection].databases?.find((db) => db.name === dbid)
+        let db = conn.databases?.find((db) => db.name === dbid)
 
         if (db && db.schemas?.length === 0) {
-          await refreshId(id, connection, type)
+          await refreshId(id, connectionKey, type)
         }
       } else if (type === 'schema' && collapsed.value[id] !== false) {
         // open now see the refresh
         collapsed.value[id] = false
         let dbid = id.split(KeySeparator)[1]
         let schemaid = id.split(KeySeparator)[2]
-        let schema = connectionStore.connections[connection].databases
+        let schema = conn.databases
           ?.find((db) => db.name === dbid)
           ?.schemas?.find((schema) => schema.name === schemaid)
         if (schema && schema.tables?.length === 0) {
-          await refreshId(id, connection, type)
+          await refreshId(id, connectionKey, type)
         }
       }
       // keep this to refresh, but we won't actually add them to the display
@@ -311,12 +329,12 @@ export default {
         let schemaid = id.split(KeySeparator)[2]
         if (schemaid) {
           // if we have a schema, we need to find the table by schema
-          let nTable = await connectionStore.connections[connection].databases
+          let nTable = await conn.databases
             ?.find((db) => db.name === dbid)
             ?.schemas?.find((schema) => schema.name === schemaid)
             ?.tables?.find((table) => table.name === tableid)
           if (nTable && nTable.columns.length === 0) {
-            await refreshId(id, connection, type)
+            await refreshId(id, connectionKey, type)
             return
           }
         }
@@ -385,6 +403,7 @@ export default {
       updateSnowflakeAccount,
       updateSnowflakeUsername,
       toggleSaveCredential,
+      toggleDuckdbCompatibleFetch,
       updateBigqueryProject,
       updateBigqueryBrowsingProject,
       refreshId,
@@ -405,10 +424,10 @@ export default {
   },
   methods: {
     resetConnection(connection: Connection) {
-      return this.connectionStore.resetConnection(connection.name)
+      return this.connectionStore.resetConnection(connection.id)
     },
     showDeleteConfirmation(connection: Connection) {
-      this.connectionToDelete = connection.name
+      this.connectionToDelete = connection.id
       this.showDeleteConfirmationState = true
     },
     cancelDelete() {
@@ -417,20 +436,24 @@ export default {
     },
     async confirmDelete() {
       if (this.connectionToDelete) {
+        // Cascade deletes by connection id (Editor.connectionId / Dashboard.connectionId)
+        // so a remote store's editors / dashboards don't get caught up when a
+        // same-named local connection is removed.
+        const targetConnection = this.connectionStore.connections[this.connectionToDelete]
+        if (!targetConnection) {
+          this.showDeleteConfirmationState = false
+          this.connectionToDelete = ''
+          return
+        }
         for (const editor of Object.values(this.editorStore.editors)) {
-          if (editor.connection === this.connectionToDelete) {
-            editor.delete()
-          }
+          if (editor.connectionId !== this.connectionToDelete) continue
+          editor.delete()
         }
 
-        // Cascade: dashboards are bound to a connection by name, so a
-        // disconnected dashboard can't run anyway. Soft-delete them here so
-        // the saveDashboards pass purges from localStorage.
         if (this.dashboardStore) {
           for (const dashboard of Object.values(this.dashboardStore.dashboards)) {
-            if (dashboard.connection === this.connectionToDelete) {
-              dashboard.delete()
-            }
+            if (dashboard.connectionId !== this.connectionToDelete) continue
+            dashboard.delete()
           }
         }
 

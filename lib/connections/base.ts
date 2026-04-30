@@ -89,7 +89,27 @@ export class Database {
   }
 }
 
+/**
+ * Compute the deterministic id for a connection.
+ *
+ * IDs distinguish a local + remote connection that share the same display
+ * name (which used to silently collide in the connection store). Remote
+ * connections embed their store id so two remote stores that advertise the
+ * same connection name remain distinct.
+ */
+export function computeConnectionId(args: {
+  name: string
+  storage: string
+  remoteStoreId?: string | null
+}): string {
+  if (args.storage === 'remote') {
+    return `remote:${args.remoteStoreId || 'unknown'}:${args.name}`
+  }
+  return `local:${args.name}`
+}
+
 export default abstract class BaseConnection {
+  id: string
   name: string
   type: string
   storage: string
@@ -122,6 +142,7 @@ export default abstract class BaseConnection {
     this.model = model || null
     // hardcoded for dev
     this.storage = 'local'
+    this.id = computeConnectionId({ name, storage: this.storage })
     this.query_type = 'abstract'
     this.saveCredential = saveCredential
     this.connected = false // Default to disconnected
@@ -161,6 +182,19 @@ export default abstract class BaseConnection {
     }
     this.changed = true
     ;(this as any)[key] = value
+    if (key === 'name' || key === 'storage' || key === 'remoteStoreId') {
+      this.recomputeId()
+    }
+  }
+
+  /**
+   * Recompute the deterministic id after a field that participates in id
+   * derivation changes (rename, storage migration, remote store re-target).
+   * Subclasses that mutate `remoteStoreId` directly must call this.
+   */
+  recomputeId(): void {
+    const remoteStoreId = (this as unknown as { remoteStoreId?: string | null }).remoteStoreId
+    this.id = computeConnectionId({ name: this.name, storage: this.storage, remoteStoreId })
   }
   getSecret(): string | null {
     return null

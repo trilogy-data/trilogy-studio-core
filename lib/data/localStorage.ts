@@ -504,10 +504,7 @@ export default class LocalStorage extends AbstractStorage {
   }
 
   /** Delete a single key from whichever backend holds it. */
-  async deleteStorageKey(
-    key: string,
-    backend: 'indexeddb' | 'localstorage',
-  ): Promise<void> {
+  async deleteStorageKey(key: string, backend: 'indexeddb' | 'localstorage'): Promise<void> {
     if (backend === 'indexeddb') {
       await idbDel(key)
       this.migrated.add(key)

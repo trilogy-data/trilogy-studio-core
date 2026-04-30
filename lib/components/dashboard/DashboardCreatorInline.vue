@@ -41,7 +41,7 @@
           testTag ? `dashboard-creator-connection-${testTag}` : 'dashboard-creator-connection'
         "
       >
-        <option v-for="conn in connections" :key="conn.name" :value="conn.name">
+        <option v-for="conn in connections" :key="conn.id" :value="conn.id">
           {{ conn.name }}
         </option>
       </select>
@@ -148,8 +148,12 @@ export default {
     })
 
     const availableImports: Ref<DashboardImport[]> = computed(() => {
+      const conn = selectedConnection.value
+        ? connectionStore.connections[selectedConnection.value]
+        : undefined
+      if (!conn) return []
       const imports = Object.values(editorStore.editors).filter(
-        (editor) => editor.connection === selectedConnection.value && isTrilogyType(editor.type),
+        (editor) => isTrilogyType(editor.type) && editor.connectionId === conn.id,
       )
 
       return imports.map((importItem) => ({
@@ -171,7 +175,7 @@ export default {
     })
     // Set default connection when connections are available
     if (connections.value.length > 0 && !selectedConnection.value) {
-      selectedConnection.value = connections.value[0].name
+      selectedConnection.value = connections.value[0].id
     }
 
     const createDashboard = async () => {

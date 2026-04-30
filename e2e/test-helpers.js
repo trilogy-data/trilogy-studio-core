@@ -3,6 +3,21 @@ import { getResolverUrl } from './test-env.js'
 
 export { getResolverUrl }
 
+// Mirrors lib/connections/base.ts computeConnectionId for the local storage
+// path used by every Playwright fixture. Connection rows now key their test
+// ids off the deterministic connection id rather than the display name so two
+// connections sharing a name (e.g. local + remote) don't collide.
+export function localConnectionId(name) {
+  return `local:${name}`
+}
+
+// Remote-storage analogue. The auto-import flow accepts an explicit `storeId`
+// URL param so tests can pin the id to a known value (see
+// `remote-store-import.spec.ts`).
+export function remoteConnectionId(storeId, name) {
+  return `remote:${storeId}:${name}`
+}
+
 export async function prepareTestPage(page) {
   const resolverUrl = getResolverUrl()
 
@@ -28,7 +43,8 @@ export async function prepareTestPage(page) {
 }
 
 async function ensureConnectionsSidebarVisible(page, connectionName) {
-  const visibleRow = page.getByTestId(`connection-${connectionName}`).filter({ visible: true })
+  const connectionTestId = `connection-${localConnectionId(connectionName)}`
+  const visibleRow = page.getByTestId(connectionTestId).filter({ visible: true })
   if ((await visibleRow.count()) > 0) {
     return
   }
@@ -38,7 +54,7 @@ async function ensureConnectionsSidebarVisible(page, connectionName) {
     await mobileMenuToggle.first().click()
     await page.getByTestId(`sidebar-icon-connections`).click()
     await expect(
-      page.getByTestId(`connection-${connectionName}`).filter({ visible: true }).first(),
+      page.getByTestId(connectionTestId).filter({ visible: true }).first(),
     ).toBeVisible()
   }
 }
@@ -86,9 +102,11 @@ export async function openSidebarScreen(page, screen, isMobile = false) {
 
 async function getVisibleConnectionRow(page, connectionName) {
   await ensureConnectionsSidebarVisible(page, connectionName)
-  const rowByTestIdLabel = page.getByTestId(`connection-${connectionName}`).filter({
-    visible: true,
-  })
+  const rowByTestIdLabel = page
+    .getByTestId(`connection-${localConnectionId(connectionName)}`)
+    .filter({
+      visible: true,
+    })
   const rowByTextLabel = page.getByText(connectionName, { exact: true }).filter({
     visible: true,
   })
@@ -114,23 +132,25 @@ export async function refreshConnection(page, connectionName) {
     return
   }
 
+  const connectionId = localConnectionId(connectionName)
   const connectionRow = await getVisibleConnectionRow(page, connectionName)
 
   await expect(connectionRow).toBeVisible()
   await connectionRow.hover()
-  await connectionRow.getByTestId(`connection-actions-${connectionName}-trigger`).click()
-  await clickMenuItem(page, `connection-actions-${connectionName}-refresh`)
+  await connectionRow.getByTestId(`connection-actions-${connectionId}-trigger`).click()
+  await clickMenuItem(page, `connection-actions-${connectionId}-refresh`)
 }
 
 export async function createEditorFromConnectionList(page, connectionName, type = 'trilogy') {
+  const connectionId = localConnectionId(connectionName)
   const connectionRow = await getVisibleConnectionRow(page, connectionName)
 
   await expect(connectionRow).toBeVisible()
   await connectionRow.hover()
-  await connectionRow.getByTestId(`connection-actions-${connectionName}-trigger`).click()
+  await connectionRow.getByTestId(`connection-actions-${connectionId}-trigger`).click()
 
   const actionId = type === 'sql' ? 'new-sql' : 'new-trilogy'
-  await page.getByTestId(`connection-actions-${connectionName}-${actionId}`).click()
+  await page.getByTestId(`connection-actions-${connectionId}-${actionId}`).click()
 }
 
 export async function refreshLLMConnection(page, connectionName) {
@@ -147,7 +167,12 @@ export async function refreshLLMConnection(page, connectionName) {
   await clickMenuItem(page, `llm-connection-actions-${connectionName}-refresh`)
 }
 
-export async function createEditorFromConnection(page, connectionName, type = 'trilogy') {
+export async function createEditorFromConnection(
+  page,
+  connectionName,
+  type = 'trilogy',
+  remoteStoreId = null,
+) {
   const directButton = page.getByTestId(`quick-new-editor-${connectionName}-${type}`).filter({
     visible: true,
   })
@@ -157,34 +182,29 @@ export async function createEditorFromConnection(page, connectionName, type = 't
     return
   }
 
-  const localEditorConnectionLabel = page.getByTestId(`editor-c-local-${connectionName}`).filter({
-    visible: true,
-  })
-  const remoteEditorConnectionLabel = page.getByTestId(`editor-c-remote-${connectionName}`).filter({
-    visible: true,
-  })
-  const editorConnectionLabel =
-    (await remoteEditorConnectionLabel.count()) > 0
-      ? remoteEditorConnectionLabel.first()
-      : localEditorConnectionLabel.first()
-  const connectionRow = editorConnectionLabel.locator(
-    'xpath=ancestor::div[contains(@class,"sidebar-content")][1]',
-  )
+  // Editor sidebar rows key off the connection id (`editor-c-local-local:foo`
+  // or `editor-c-remote-remote:<storeId>:<name>`). Callers pass an explicit
+  // `remoteStoreId` when targeting a remote row; otherwise we resolve the
+  // local row deterministically.
+  const isRemote = remoteStoreId != null
+  const editorConnId = isRemote
+    ? remoteConnectionId(remoteStoreId, connectionName)
+    : localConnectionId(connectionName)
+  const storage = isRemote ? 'remote' : 'local'
+  const editorConnectionLabel = page
+    .getByTestId(`editor-c-${storage}-${editorConnId}`)
+    .filter({ visible: true })
+  const connectionRow = editorConnectionLabel
+    .first()
+    .locator('xpath=ancestor::div[contains(@class,"sidebar-content")][1]')
 
   await expect(connectionRow).toBeVisible()
   await connectionRow.hover()
-  const actionKey =
-    (await remoteEditorConnectionLabel.count()) > 0
-      ? `editor-actions-c-remote-${connectionName}-trigger`
-      : `editor-actions-c-local-${connectionName}-trigger`
-  await connectionRow.getByTestId(actionKey).click()
-
   const actionId = type === 'sql' ? 'new-sql' : 'new-trilogy'
-  const actionTestId =
-    (await remoteEditorConnectionLabel.count()) > 0
-      ? `editor-actions-c-remote-${connectionName}-${actionId}`
-      : `editor-actions-c-local-${connectionName}-${actionId}`
-  await page.getByTestId(actionTestId).click()
+  await connectionRow
+    .getByTestId(`editor-actions-c-${storage}-${editorConnId}-trigger`)
+    .click()
+  await page.getByTestId(`editor-actions-c-${storage}-${editorConnId}-${actionId}`).click()
 }
 
 async function openSidebarOverflowMenu(page, labelLocator, triggerTestId) {

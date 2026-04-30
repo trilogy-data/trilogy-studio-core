@@ -143,7 +143,9 @@ export default class RemoteStoreStorage extends AbstractStorage {
         return new RemoteProjectConnection(connectionName, store.id, fallbackEngine, modelName)
     }
 
+    ;(connection as Connection & { remoteStoreId?: string | null }).remoteStoreId = store.id
     connection.storage = 'remote'
+    connection.recomputeId()
     connection.model = modelName
     return connection
   }

@@ -94,7 +94,9 @@ export default defineComponent({
           return 'running'
         }
 
-        const connection = connectionStore.connections[editor.connection]
+        const connection =
+          (editor.connectionId && connectionStore.connections[editor.connectionId]) ||
+          connectionStore.connectionByName(editor.connection)
         if (connection?.connected) {
           return 'connected'
         }

@@ -12,6 +12,7 @@ export default class RemoteProjectConnection extends BaseConnection {
     this.query_type = remoteEngine || 'duckdb'
     this.storage = 'remote'
     this.connected = true
+    this.recomputeId()
   }
 
   static fromJSON(fields: {
@@ -62,6 +63,7 @@ export default class RemoteProjectConnection extends BaseConnection {
 
   toJSON(): object {
     return {
+      id: this.id,
       name: this.name,
       type: this.type,
       model: this.model,

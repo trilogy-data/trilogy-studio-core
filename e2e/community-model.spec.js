@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import {
   createEditorFromConnection,
+  localConnectionId,
   openSidebarScreen,
   prepareTestPage,
   refreshConnection,
@@ -27,11 +28,12 @@ test('test', async ({ page, isMobile }) => {
 
   // this status is flaky depending on device
   // so handle both cases - where we need to expand or not
+  const titanicEditorConnectionTestId = `editor-c-local-${localConnectionId('titanic-connection')}`
   try {
-    await page.getByTestId('editor-c-local-titanic-connection').click({ timeout: 1000 })
+    await page.getByTestId(titanicEditorConnectionTestId).click({ timeout: 1000 })
   } catch (e) {
     await page.getByTestId('editor-s-local').click()
-    await page.getByTestId('editor-c-local-titanic-connection').click()
+    await page.getByTestId(titanicEditorConnectionTestId).click()
   }
   await createEditorFromConnection(page, 'titanic-connection', 'trilogy')
   await runEditorQueryAndExpectCount(page, 1)

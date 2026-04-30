@@ -34,12 +34,12 @@
               ? `editor-creator-connection-select-${testTag}`
               : 'editor-creator-connection-select'
           "
-          v-model="editorDetails.connection"
+          v-model="editorDetails.connectionId"
           class="sidebar-control-select"
           id="connection-name"
           required
         >
-          <option v-for="connection in connections" :key="connection.name" :value="connection.name">
+          <option v-for="connection in connections" :key="connection.id" :value="connection.id">
             {{ connection.name }}
           </option>
         </select>
@@ -99,12 +99,6 @@ export default defineComponent({
   setup(props, { emit }) {
     // Placeholder for editor details
     const error = ref('')
-    const editorDetails = ref({
-      name: '',
-      type: 'preql', // Default value
-      connection: props.connection,
-    })
-
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
     const saveEditors = inject<Function>('saveEditors')
@@ -113,25 +107,44 @@ export default defineComponent({
       throw 'must inject connectionStore, editorStore, save to EditorCreator'
     }
 
+    const initialConnectionId = props.connection
+      ? connectionStore.connectionByName(props.connection)?.id || ''
+      : ''
+
+    const editorDetails = ref({
+      name: '',
+      type: 'preql', // Default value
+      connectionId: initialConnectionId,
+    })
+
     let connections = connectionStore.connections
 
     // Function to create the editor by collecting details from the form
     const createEditor = () => {
       editorDetails.value.name = '' // Reset name field
       editorDetails.value.type = 'preql' // Reset type dropdown
-      editorDetails.value.connection = props.connection // Reset connection selection
+      editorDetails.value.connectionId = initialConnectionId // Reset connection selection
       error.value = ''
     }
 
     // Function to submit the editor details
     const submitEditorCreation = () => {
-      if (editorDetails.value.name && editorDetails.value.type && editorDetails.value.connection) {
+      if (
+        editorDetails.value.name &&
+        editorDetails.value.type &&
+        editorDetails.value.connectionId
+      ) {
         try {
+          const conn = connectionStore.connections[editorDetails.value.connectionId]
+          if (!conn) {
+            error.value = 'Selected connection no longer exists'
+            return
+          }
           editorStore.newEditor(
             editorDetails.value.name,
             // @ts-ignore
             editorDetails.value.type,
-            editorDetails.value.connection,
+            conn.name,
             '',
           )
           saveEditors()

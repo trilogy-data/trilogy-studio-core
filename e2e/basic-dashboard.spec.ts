@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import {
+  localConnectionId,
   openDashboardItemEditor,
   openSidebarScreen,
   prepareTestPage,
@@ -136,7 +137,9 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     const elementExists = await page.isVisible('[data-testid="dashboard-d-faa-test"]')
     if (!elementExists) {
       await page.getByTestId('dashboard-s-local').click()
-      await page.getByTestId('dashboard-c-local-faa-connection').click()
+      await page
+        .getByTestId(`dashboard-c-local-${localConnectionId('faa-connection')}`)
+        .click()
     }
 
     await page.getByTestId('dashboard-d-faa-test').click()
@@ -557,11 +560,13 @@ test('test-custom-editor-dashboard', async ({ page, isMobile }) => {
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('test_one')
   await page.getByTestId('editor-creator-type').selectOption('preql')
-  await page.getByTestId('editor-creator-connection-select').selectOption(connectionName)
+  await page.getByTestId('editor-creator-connection-select').selectOption({ label: connectionName })
   await page.getByTestId('editor-creator-submit').click()
 
   // Switch to test_one editor and add content
-  await page.getByTestId('editor-e-local-duckdb-test2-test_one').click()
+  await page
+    .getByTestId(`editor-e-local-${localConnectionId('duckdb-test2')}-test_one`)
+    .click()
   const editor = page.getByTestId('editor')
   await editor.click({ clickCount: 3 })
   // await page.keyboard.press('Control+A')
@@ -593,9 +598,13 @@ select rows;
     )
     if (!elementExists) {
       await page.getByTestId('dashboard-s-local').click()
-      await page.getByTestId(`dashboard-c-local-${connectionName}`).click()
+      await page
+        .getByTestId(`dashboard-c-local-${localConnectionId(connectionName)}`)
+        .click()
     }
-    await page.getByTestId('dashboard-c-local-duckdb-test2').click()
+    await page
+      .getByTestId(`dashboard-c-local-${localConnectionId('duckdb-test2')}`)
+      .click()
   }
 
   // Verify dashboard is using custom editor as source
@@ -664,11 +673,13 @@ test('test-drilldown', async ({ page, isMobile, browser }) => {
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('test_one')
   await page.getByTestId('editor-creator-type').selectOption('preql')
-  await page.getByTestId('editor-creator-connection-select').selectOption(connectionName)
+  await page.getByTestId('editor-creator-connection-select').selectOption({ label: connectionName })
   await page.getByTestId('editor-creator-submit').click()
 
   // Switch to test_one editor and add content
-  await page.getByTestId('editor-e-local-duckdb-test2-test_one').click()
+  await page
+    .getByTestId(`editor-e-local-${localConnectionId('duckdb-test2')}-test_one`)
+    .click()
   const editor = page.getByTestId('editor')
   await editor.click({ clickCount: 3 })
   // await page.keyboard.press('Control+A')
@@ -702,9 +713,13 @@ select rows;
     )
     if (!elementExists) {
       await page.getByTestId('dashboard-s-local').click()
-      await page.getByTestId(`dashboard-c-local-${connectionName}`).click()
+      await page
+        .getByTestId(`dashboard-c-local-${localConnectionId(connectionName)}`)
+        .click()
     }
-    await page.getByTestId('dashboard-c-local-duckdb-test2').click()
+    await page
+      .getByTestId(`dashboard-c-local-${localConnectionId('duckdb-test2')}`)
+      .click()
   }
 
   // Verify dashboard is using custom editor as source

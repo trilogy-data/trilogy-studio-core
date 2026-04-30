@@ -408,8 +408,7 @@ export const determineDefaultConfig = (
   } else if (defaults.chartType === 'bar') {
     // Prefer a discrete time trait column (e.g. decade) as xField so bar charts
     // render time buckets along the x-axis by default.
-    defaults.xField =
-      at(discreteTimeCategoricalColumns, 0)?.name ?? at(categoricalColumns, 0)?.name
+    defaults.xField = at(discreteTimeCategoricalColumns, 0)?.name ?? at(categoricalColumns, 0)?.name
     let nonDateNumeric = numericColumns.filter(
       (col) => !isTemporalColumn(col) && col.name !== defaults.xField,
     )
@@ -440,8 +439,7 @@ export const determineDefaultConfig = (
   } else if (defaults.chartType === 'headline') {
     defaults.xField = at(numericColumns, 0)?.name
   } else if (['line', 'area'].includes(defaults.chartType || '')) {
-    const xFieldColumn =
-      at(temporalColumns, 0) ?? at(discreteTimeCategoricalColumns, 0) ?? null
+    const xFieldColumn = at(temporalColumns, 0) ?? at(discreteTimeCategoricalColumns, 0) ?? null
     defaults.xField = xFieldColumn?.name
     const nonTemporalNumericColumns = numericColumns.filter(
       (col) => col.name !== xFieldColumn?.name,

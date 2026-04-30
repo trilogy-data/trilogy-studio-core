@@ -2,9 +2,9 @@
   <div class="storage-container">
     <div class="intro">
       <p>
-        Large data (chats, editors, dashboards, model config) is stored in IndexedDB.
-        Smaller items (connections, LLM settings, user settings, credentials) stay in
-        localStorage. Clear individual keys or prune old chats below.
+        Large data (chats, editors, dashboards, model config) is stored in IndexedDB. Smaller items
+        (connections, LLM settings, user settings, credentials) stay in localStorage. Clear
+        individual keys or prune old chats below.
       </p>
       <button class="button" @click="refresh" :disabled="loading">Refresh</button>
     </div>
@@ -23,7 +23,9 @@
       <tbody>
         <tr v-for="row in rows" :key="`${row.backend}:${row.key}`">
           <td class="key">{{ row.key }}</td>
-          <td><span class="backend-badge" :class="row.backend">{{ row.backend }}</span></td>
+          <td>
+            <span class="backend-badge" :class="row.backend">{{ row.backend }}</span>
+          </td>
           <td class="numeric">{{ formatBytes(row.bytes) }}</td>
           <td>
             <button
@@ -39,7 +41,9 @@
       <tfoot>
         <tr>
           <td colspan="2"><strong>Total</strong></td>
-          <td class="numeric"><strong>{{ formatBytes(totalBytes) }}</strong></td>
+          <td class="numeric">
+            <strong>{{ formatBytes(totalBytes) }}</strong>
+          </td>
           <td></td>
         </tr>
       </tfoot>
@@ -48,8 +52,8 @@
     <div class="section">
       <h3>Prune old chats</h3>
       <p class="muted">
-        Deletes chats whose last activity is older than the selected age. Artifact
-        payloads stored in chats are the most common cause of quota errors.
+        Deletes chats whose last activity is older than the selected age. Artifact payloads stored
+        in chats are the most common cause of quota errors.
       </p>
       <div class="prune-row">
         <label for="prune-days">Delete chats older than</label>
@@ -60,9 +64,7 @@
           <option :value="180">180 days</option>
           <option :value="365">1 year</option>
         </select>
-        <button class="button" @click="pruneChats" :disabled="loading">
-          Prune
-        </button>
+        <button class="button" @click="pruneChats" :disabled="loading">Prune</button>
       </div>
       <div v-if="pruneMessage" class="prune-message">{{ pruneMessage }}</div>
     </div>
@@ -83,18 +85,16 @@ export default defineComponent({
   name: 'StorageManager',
   setup() {
     const storageSources = inject<AbstractStorage[]>('storageSources', [])
-    const local = (storageSources || []).find(
-      (s) => s instanceof LocalStorage,
-    ) as LocalStorage | undefined
+    const local = (storageSources || []).find((s) => s instanceof LocalStorage) as
+      | LocalStorage
+      | undefined
 
     const rows = ref<UsageRow[]>([])
     const loading = ref(false)
     const pruneDays = ref(30)
     const pruneMessage = ref('')
 
-    const totalBytes = computed(() =>
-      rows.value.reduce((sum, r) => sum + r.bytes, 0),
-    )
+    const totalBytes = computed(() => rows.value.reduce((sum, r) => sum + r.bytes, 0))
 
     async function refresh() {
       if (!local) return
