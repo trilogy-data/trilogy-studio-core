@@ -187,6 +187,28 @@
           </label>
         </div>
 
+        <div
+          v-else-if="item.type === 'duckdb-toggle-compatible-fetch'"
+          class="md-token-container"
+          @click.stop
+        >
+          <tooltip
+            position="left"
+            content="Check to support fetches from remote sources with unreliable headers, especially when using FireFox"
+          >
+            <label class="save-credential-toggle sidebar-toggle-row">
+              <input
+                type="checkbox"
+                :checked="
+                  (item.connection as any as ConnectionWithCompatibleFetch).useCompatibleHttpFetch
+                "
+                @change="toggleCompatibleFetch(item.connection)"
+              />
+              <span class="checkbox-label">Disable Optimized Scans</span>
+            </label>
+          </tooltip>
+        </div>
+
         <span
           v-else
           class="title-pad-left truncate-text"
@@ -261,6 +283,10 @@ interface ConnectionWithSaveCredential {
   saveCredential?: boolean
 }
 
+interface ConnectionWithCompatibleFetch {
+  useCompatibleHttpFetch?: boolean
+}
+
 interface BigQueryLikeConnection {
   projectId?: string
   browsingProjectId?: string
@@ -326,6 +352,7 @@ export default {
     'updateSnowflakeAccount',
     'updateSnowflakeUsername',
     'toggleSaveCredential',
+    'toggleDuckdbCompatibleFetch',
     'deleteConnection',
     'toggleMobileMenu',
   ],
@@ -364,6 +391,7 @@ export default {
         'snowflake-account',
         'snowflake-username',
         'toggle-save-credential',
+        'duckdb-toggle-compatible-fetch',
       ]
 
       if (complexTypes.includes(props.item.type)) {
@@ -584,6 +612,10 @@ export default {
       emit('toggleSaveCredential', connection)
     }
 
+    const toggleCompatibleFetch = (connection: any) => {
+      emit('toggleDuckdbCompatibleFetch', connection)
+    }
+
     return {
       isMobile,
       isExpandable,
@@ -618,6 +650,7 @@ export default {
       debouncedUpdateSnowflakeUsername,
       updateMotherDuckToken,
       toggleSaveCredential,
+      toggleCompatibleFetch,
     }
   },
 }

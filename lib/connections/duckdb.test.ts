@@ -100,6 +100,7 @@ describe('DuckDBConnection', () => {
         name: 'test-connection',
         type: 'duckdb',
         model: null,
+        useCompatibleHttpFetch: true,
       })
     })
   })

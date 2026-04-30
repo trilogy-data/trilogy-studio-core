@@ -149,6 +149,17 @@ export function buildConnectionTree(
           connection,
         })
       }
+      if (connection.type === 'duckdb') {
+        list.push({
+          id: `${connKey}-toggle-compatible-fetch`,
+          name: 'Disable Optimized Scans',
+          indent: 1,
+          count: 0,
+          type: 'duckdb-toggle-compatible-fetch',
+          searchPath: connection.name,
+          connection,
+        })
+      }
 
       if (isLoading[connKey]) {
         list.push({

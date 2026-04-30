@@ -48,8 +48,41 @@ export function configureDuckDBAssets(assetUrls: DuckDBAssetUrls | null): void {
 // use a singleton pattern to help avoid memory issues
 const connectionCache: Record<string, { db: AsyncDuckDB; connection: AsyncDuckDBConnection }> = {}
 
+// Default fetch options trust HEAD responses and use range requests, which is
+// faster but breaks on Firefox + some CDNs (notably GitHub Pages) that report
+// inconsistent Content-Length on HEAD vs GET. Compatibility mode falls back
+// to the older permissive flags for those cases.
+function duckdbFilesystemOptions(useCompatibleFetch: boolean) {
+  if (useCompatibleFetch) {
+    return {
+      filesystem: {
+        reliableHeadRequests: false,
+        allowFullHTTPReads: true,
+      },
+    }
+  }
+  if (isFirefox()) {
+    return {
+      filesystem: {
+        allowFullHTTPReads: true,
+        reliableHeadRequests: true,
+        forceFullHTTPReads: false,
+      },
+    }
+  }
+  return {}
+}
+
+// Drop the cached AsyncDuckDB so the next createDuckDB() rebuilds with fresh
+// flags. Used when a per-connection setting (e.g. compatibility fetch mode)
+// flips and the existing instance was opened with the old configuration.
+export function invalidateDuckDBCache(connectionName: string): void {
+  delete connectionCache[connectionName]
+}
+
 async function createDuckDB(
   connectionName: string = 'default',
+  useCompatibleFetch: boolean = false,
 ): Promise<{ db: AsyncDuckDB; connection: AsyncDuckDBConnection }> {
   // Return existing connection if it exists in the cache
   if (connectionCache[connectionName]) {
@@ -106,21 +139,7 @@ async function createDuckDB(
 
   // Initialize the database
   await db.instantiate(bundle.mainModule, bundle.pthreadWorker)
-  await db.open(
-    isFirefox()
-      ? {
-        filesystem: {
-          // reliableHeadRequests: false,
-          // allowFullHTTPReads: true,
-          allowFullHTTPReads: true,
-          reliableHeadRequests: true,
-          forceFullHTTPReads: false
-        },
-      }
-      :
-
-      {},
-  )
+  await db.open(duckdbFilesystemOptions(useCompatibleFetch))
   const connection = await db.connect()
 
   // Cache the connection
@@ -137,11 +156,25 @@ export default class DuckDBConnection extends BaseConnection {
   // @ts-ignore
   public db: AsyncDuckDB
   private currentQueryIdentifier: string | null = null
+  // Toggle the slower-but-more-tolerant HTTP filesystem flags. Defaults to
+  // ON (legacy behavior) so users hitting CDNs that mis-report HEAD metadata
+  // (e.g. GitHub Pages on Firefox) work out of the box; uncheck to opt into
+  // the optimized HEAD+range path.
+  useCompatibleHttpFetch: boolean = true
 
-  static fromJSON(fields: { name: string; model: string | null }): DuckDBConnection {
+  static fromJSON(fields: {
+    name: string
+    model: string | null
+    useCompatibleHttpFetch?: boolean
+  }): DuckDBConnection {
     let base = new DuckDBConnection(fields.name)
     if (fields.model) {
       base.model = fields.model
+    }
+    // Respect an explicit persisted value (true/false). Pre-field connections
+    // have it undefined and inherit the new default (compatibility on).
+    if (fields.useCompatibleHttpFetch !== undefined) {
+      base.useCompatibleHttpFetch = fields.useCompatibleHttpFetch
     }
     return base
   }
@@ -152,13 +185,27 @@ export default class DuckDBConnection extends BaseConnection {
       name: this.name,
       type: this.type,
       model: this.model,
+      useCompatibleHttpFetch: this.useCompatibleHttpFetch,
     }
   }
 
   async connect() {
-    const conn = await createDuckDB(this.name)
+    const conn = await createDuckDB(this.name, this.useCompatibleHttpFetch)
     this.connection = conn.connection
     this.db = conn.db
+    return true
+  }
+
+  // Flip compatibility fetch mode and drop the cached AsyncDuckDB so the next
+  // reset() rebuilds the underlying instance with the new filesystem flags.
+  // Returns true when the value changed (so callers know to trigger a reset).
+  setUseCompatibleHttpFetch(value: boolean): boolean {
+    if (this.useCompatibleHttpFetch === value) {
+      return false
+    }
+    this.useCompatibleHttpFetch = value
+    this.changed = true
+    invalidateDuckDBCache(this.name)
     return true
   }
 

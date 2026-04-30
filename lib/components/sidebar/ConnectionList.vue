@@ -54,6 +54,7 @@
       @update-snowflake-account="updateSnowflakeAccount"
       @update-snowflake-username="updateSnowflakeUsername"
       @toggle-save-credential="toggleSaveCredential"
+      @toggle-duckdb-compatible-fetch="toggleDuckdbCompatibleFetch"
       @toggle-mobile-menu="toggleMobileMenu"
       @delete-connection="deleteConnection"
     />
@@ -194,6 +195,18 @@ export default {
     const toggleSaveCredential = (connection: any) => {
       connection.saveCredential = !connection.saveCredential
       connectionStore.resetConnection(connection.id)
+    }
+
+    // Flip the DuckDB compatibility fetch flag and reset so the new flags take
+    // effect. setUseCompatibleHttpFetch invalidates the AsyncDuckDB cache,
+    // making the upcoming reset() rebuild the underlying instance.
+    const toggleDuckdbCompatibleFetch = async (connection: any) => {
+      if (connection?.type !== 'duckdb' || typeof connection.setUseCompatibleHttpFetch !== 'function') {
+        return
+      }
+      connection.setUseCompatibleHttpFetch(!connection.useCompatibleHttpFetch)
+      await saveConnections()
+      await connectionStore.resetConnection(connection.id)
     }
 
     const toggleMobileMenu = () => {
@@ -390,6 +403,7 @@ export default {
       updateSnowflakeAccount,
       updateSnowflakeUsername,
       toggleSaveCredential,
+      toggleDuckdbCompatibleFetch,
       updateBigqueryProject,
       updateBigqueryBrowsingProject,
       refreshId,
