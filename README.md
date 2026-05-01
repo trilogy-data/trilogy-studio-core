@@ -1,8 +1,8 @@
 # Trilogy Studio Core
 
-A open-source IDE for exploring [Trilogy](https://github.com/trilogy-data/pytrilogy), an experiment in streamlined analytic SQL. 
+A open-source IDE for exploring [Trilogy](https://github.com/trilogy-data/pytrilogy), an experiment in streamlined SQL. 
 
-Try a hosted studio instance here [here](https://trilogydata.dev/trilogy-studio-core/).
+Try a hosted studio instance [here](https://trilogydata.dev/trilogy-studio-core/), or run locally in docker.
 
 Supports
 - DuckDB
@@ -17,15 +17,16 @@ This repo contains the studio frontend, a minimal FastAPI language server that p
 
 ## Docker
 
-The suggested local execution option for now. (An app will come at some point!)
+The suggested local execution option.
 
 A docker container is available in the base repo. Image runs resolution service [FastAPI] + statically serves frontend. 
 
 No telemetry enabled by default.
 
-From repo root:
 
-### Bash
+### Quick Start
+
+From repo root:
 ```bash
 docker build -t trilogy-studio:latest && docker run -p 8080:80 trilogy-studio:latest   
 ```
@@ -39,7 +40,7 @@ Access on http://localhost:8080 (or alternative port used).
 
 ## Creating Direct Links
 
-You can create shareable links that automatically import dashboards or editors from model stores into Trilogy Studio and open the relevant file.. This is useful for sharing pre-configured dashboards or example queries with others.
+You can create shareable links that automatically import dashboards or editors from model stores into Trilogy Studio and open the relevant file. This is useful for sharing pre-configured dashboards or example queries with others.
 
 ### URL Format
 
@@ -154,7 +155,7 @@ On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 ## Run Language Server
 
 > [!TIP]
-> Quick Setup: Run `npm install` in the root, followed by `pip install -r requirements.txt` in the pyserver subfolder. You can then use `npm run local` to start a local instance.
+> Quick Setup: Run `pnpm install` in the root, followed by `pip install -r requirements.txt` in the pyserver subfolder. You can then use `pnpm run local` to start a local instance.
 
 This will run the frontend with Vite as well as the backend language server.
 
@@ -186,9 +187,8 @@ Exists thanks to the following:
 
 Frontend
 - Vue
+- Vite
 - Vega/Altair
 - Tabulator
 
-Backend
-- Lark (python)
 
