@@ -15,6 +15,8 @@ Read more about Trilogy, the language [here](https://trilogydata.dev/).
 
 This repo contains the studio frontend, a minimal FastAPI language server that powers language features, and an MCP server example that can run queries.
 
+It also hosts a sibling app: **[explorer/](./explorer/)**, an AI-native desktop chat experience that reuses studio's `lib/` primitives (chat, charts, tools, providers). See [explorer/README.md](./explorer/README.md) for the plan and the principles that keep the two apps from drifting apart.
+
 ## Docker
 
 The suggested local execution option.

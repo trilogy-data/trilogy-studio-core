@@ -1,6 +1,7 @@
 <template>
-  <div v-if="currentData" class="section-header">{{ currentData.title }}</div>
-  <div v-if="currentData" class="tutorial-container">
+  <div v-if="currentData" class="tutorial-root" data-testid="tutorial-root">
+    <div class="section-header tutorial-header">{{ currentData.title }}</div>
+    <div class="tutorial-container" data-testid="tutorial-container">
     <section id="navigation" class="tutorial-section">
       <template v-for="paragraph in visibleParagraphs">
         <highlight-component v-if="paragraph.type === 'tip'" type="tip">
@@ -129,6 +130,7 @@
     >
       <loading-button :action="setupDemo">Reset Demo</loading-button>
     </section>
+    </div>
   </div>
 </template>
 
@@ -331,9 +333,22 @@ export default {
 </script>
 
 <style scoped>
+.tutorial-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.tutorial-header {
+  flex: 0 0 auto;
+}
+
 .tutorial-container {
   padding: 5px 20px;
   color: var(--text-color);
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
 }
 
