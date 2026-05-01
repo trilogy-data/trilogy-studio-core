@@ -81,15 +81,6 @@
     <div class="model-content-expanded" v-if="isComponentsExpanded">
       <div class="content-header">
         <h4>Model Components</h4>
-        <button
-          class="collapse-button"
-          @click="toggleComponents"
-          :data-testid="`collapse-${file.name}`"
-          title="Collapse"
-        >
-          <i class="mdi mdi-chevron-up"></i>
-          <span class="collapse-text">Collapse</span>
-        </button>
       </div>
       <div class="components-grid">
         <div v-for="component in file.components" :key="component.url" class="component-item">
@@ -433,10 +424,6 @@ defineExpose({
 
 .content-header {
   margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
 }
 
 .content-header h4 {
@@ -444,29 +431,6 @@ defineExpose({
   font-size: 16px;
   font-weight: 600;
   color: var(--heading-color);
-}
-
-.collapse-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  background-color: var(--card-bg-color, rgba(255, 255, 255, 0.05));
-  color: var(--text-color);
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.2s ease;
-}
-
-.collapse-button:hover {
-  background-color: var(--button-hover-bg, rgba(255, 255, 255, 0.1));
-  border-color: var(--accent-color);
-  color: var(--accent-color);
-}
-
-.collapse-button .mdi {
-  font-size: 16px;
 }
 
 .components-grid {
