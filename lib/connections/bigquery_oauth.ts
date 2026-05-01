@@ -38,6 +38,7 @@ export default class BigQueryOauthConnection extends BaseConnection {
 
   toJSON(): object {
     return {
+      id: this.id,
       name: this.name,
       type: this.type,
       model: this.model,

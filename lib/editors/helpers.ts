@@ -15,6 +15,7 @@ export function buildEditorTree(
     indent: number
     editor?: any
     connection?: string
+    connectionId?: string
     storage?: string
     remoteStoreId?: string | null
   }> = []
@@ -22,7 +23,7 @@ export function buildEditorTree(
 
   const connectionLookup = connections.reduce(
     (acc, conn) => {
-      acc[conn.name] = conn
+      acc[conn.id] = conn
       return acc
     },
     {} as Record<string, Connection>,
@@ -35,14 +36,20 @@ export function buildEditorTree(
     if (storageComparison !== 0) return storageComparison
 
     // Then prioritize active connections
-    const aIsActive = connectionLookup[a.connection]?.connected || false
-    const bIsActive = connectionLookup[b.connection]?.connected || false
+    const aConnectionId = a.connectionId || a.connection
+    const bConnectionId = b.connectionId || b.connection
+    const aConn = connectionLookup[aConnectionId]
+    const bConn = connectionLookup[bConnectionId]
+    const aIsActive = aConn?.connected || false
+    const bIsActive = bConn?.connected || false
 
     if (aIsActive && !bIsActive) return -1
     if (!aIsActive && bIsActive) return 1
 
     // If both have same active status, fall back to alphabetical
-    const connectionComparison = a.connection.localeCompare(b.connection)
+    const connectionComparison = (aConn?.name || a.connection).localeCompare(
+      bConn?.name || b.connection,
+    )
     if (connectionComparison !== 0) return connectionComparison
 
     // Finally sort by name
@@ -50,14 +57,28 @@ export function buildEditorTree(
   })
 
   // Group editors by storage and connection for clearer organization
-  const storageGroups: Record<string, Record<string, any[]>> = {}
+  const storageGroups: Record<
+    string,
+    Record<
+      string,
+      {
+        label: string
+        editors: Editor[]
+        remoteStoreId?: string | null
+      }
+    >
+  > = {}
   // first, collect all connections
   connections.forEach((conn) => {
     if (!storageGroups[conn.storage]) {
       storageGroups[conn.storage] = {}
     }
-    if (!storageGroups[conn.storage][conn.name]) {
-      storageGroups[conn.storage][conn.name] = []
+    if (!storageGroups[conn.storage][conn.id]) {
+      storageGroups[conn.storage][conn.id] = {
+        label: conn.name,
+        editors: [],
+        remoteStoreId: (conn as unknown as { remoteStoreId?: string | null }).remoteStoreId ?? null,
+      }
     }
   })
 
@@ -69,17 +90,23 @@ export function buildEditorTree(
     if (!storageGroups[editor.storage]) {
       storageGroups[editor.storage] = {}
     }
-    if (!storageGroups[editor.storage][editor.connection]) {
-      storageGroups[editor.storage][editor.connection] = []
+    const connectionId = editor.connectionId || editor.connection
+    if (!storageGroups[editor.storage][connectionId]) {
+      storageGroups[editor.storage][connectionId] = {
+        label: connectionLookup[connectionId]?.name || editor.connection,
+        editors: [],
+        remoteStoreId: editor.remoteStoreId ?? null,
+      }
     }
-    storageGroups[editor.storage][editor.connection].push(editor)
+    storageGroups[editor.storage][connectionId].editors.push(editor)
   })
 
   // Helper function to build folder structure for a connection
   function buildFolderStructure(
     editors: Editor[],
     storage: string,
-    connection: string,
+    connectionId: string,
+    connectionLabel: string,
     baseIndent: number,
   ) {
     // Create a tree structure for folders
@@ -145,7 +172,7 @@ export function buildEditorTree(
       entries.forEach(([key, node]) => {
         if (node.type === 'folder') {
           const folderPath = pathPrefix ? `${pathPrefix}/${key}` : key
-          const folderKey = `f-${storage}-${connection}-${folderPath}`
+          const folderKey = `f-${storage}-${connectionId}-${folderPath}`
 
           list.push({
             key: folderKey,
@@ -153,7 +180,8 @@ export function buildEditorTree(
             label: key,
             type: 'folder',
             indent: currentIndent,
-            connection: connection,
+            connection: connectionLabel,
+            connectionId,
             storage,
             remoteStoreId:
               storage === 'remote'
@@ -166,7 +194,7 @@ export function buildEditorTree(
             addToList(node.children, currentIndent + 1, folderPath)
           }
         } else if (node.type === 'editor') {
-          const editorKey = `e-${storage}-${connection}-${node.editor.id}`
+          const editorKey = `e-${storage}-${connectionId}-${node.editor.id}`
           list.push({
             objectKey: node.editor.id,
             key: editorKey,
@@ -205,30 +233,33 @@ export function buildEditorTree(
         if (aIsActive && !bIsActive) return -1
         if (!aIsActive && bIsActive) return 1
 
-        return connA.localeCompare(connB)
+        const aLabel = connections[connA].label
+        const bLabel = connections[connB].label
+        return aLabel.localeCompare(bLabel)
       })
 
-      sortedConnections.forEach(([connection, editors]) => {
-        const connectionKey = `c-${storage}-${connection}`
+      sortedConnections.forEach(([connectionId, group]) => {
+        const connectionKey = `c-${storage}-${connectionId}`
         // Add connection item if not already processed
         if (!processedConnections.has(connectionKey)) {
           list.push({
             key: connectionKey,
-            objectKey: connection,
-            label: connection,
+            objectKey: connectionId,
+            label: group.label,
             type: 'connection',
             indent: 1,
+            connectionId,
             storage,
             remoteStoreId:
               storage === 'remote'
-                ? (editors.find((editor) => editor.remoteStoreId)?.remoteStoreId ?? null)
+                ? (group.editors.find((editor) => editor.remoteStoreId)?.remoteStoreId ?? null)
                 : null,
           })
           processedConnections.add(connectionKey)
 
           // If connection is not collapsed, add folder structure
           if (!collapsed[connectionKey]) {
-            buildFolderStructure(editors, storage, connection, 2)
+            buildFolderStructure(group.editors, storage, connectionId, group.label, 2)
           }
         }
       })

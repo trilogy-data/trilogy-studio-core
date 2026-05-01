@@ -96,9 +96,11 @@ describe('DuckDBConnection', () => {
       //@ts-ignore
       const json = connection.toJSON()
       expect(json).toEqual({
+        id: 'local:test-connection',
         name: 'test-connection',
         type: 'duckdb',
         model: null,
+        useCompatibleHttpFetch: true,
       })
     })
   })

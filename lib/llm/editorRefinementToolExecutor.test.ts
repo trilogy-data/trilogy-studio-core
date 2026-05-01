@@ -11,7 +11,8 @@ type MockQueryExecutionService = {
 }
 
 type MockConnectionStore = {
-  connections: Record<string, { connected: boolean }>
+  connections: Record<string, { id: string; name: string; connected: boolean }>
+  connectionByName: (name: string) => { id: string; name: string; connected: boolean } | undefined
   getConnectionSources: ReturnType<typeof vi.fn>
   connectConnection: ReturnType<typeof vi.fn>
 }
@@ -42,7 +43,14 @@ describe('EditorRefinementToolExecutor', () => {
 
     mockConnectionStore = {
       connections: {
-        'test-connection': { connected: true },
+        'local:test-connection': {
+          id: 'local:test-connection',
+          name: 'test-connection',
+          connected: true,
+        },
+      },
+      connectionByName(name: string) {
+        return Object.values(this.connections).find((c) => c.name === name)
       },
       getConnectionSources: vi.fn().mockReturnValue([]),
       connectConnection: vi.fn().mockResolvedValue(undefined),
@@ -223,7 +231,7 @@ describe('EditorRefinementToolExecutor', () => {
     })
 
     it('should fail when connection is not connected', async () => {
-      mockConnectionStore.connections['test-connection'].connected = false
+      mockConnectionStore.connections['local:test-connection'].connected = false
 
       const result = await executor.executeToolCall('run_query', {
         query: 'SELECT * FROM users;',
@@ -393,7 +401,7 @@ describe('EditorRefinementToolExecutor', () => {
   describe('connect_data_connection tool', () => {
     it('should connect a disconnected connection', async () => {
       // Set up a disconnected connection
-      mockConnectionStore.connections['test-connection'].connected = false
+      mockConnectionStore.connections['local:test-connection'].connected = false
       mockConnectionStore.connectConnection = vi.fn().mockResolvedValue(undefined)
 
       const result = await executor.executeToolCall('connect_data_connection', {
@@ -402,7 +410,7 @@ describe('EditorRefinementToolExecutor', () => {
 
       expect(result.success).toBe(true)
       expect(result.message).toContain('Successfully connected')
-      expect(mockConnectionStore.connectConnection).toHaveBeenCalledWith('test-connection')
+      expect(mockConnectionStore.connectConnection).toHaveBeenCalledWith('local:test-connection')
     })
 
     it('should report already connected for active connections', async () => {
@@ -432,7 +440,7 @@ describe('EditorRefinementToolExecutor', () => {
     })
 
     it('should handle connection errors', async () => {
-      mockConnectionStore.connections['test-connection'].connected = false
+      mockConnectionStore.connections['local:test-connection'].connected = false
       mockConnectionStore.connectConnection = vi.fn().mockRejectedValue(new Error('Auth failed'))
 
       const result = await executor.executeToolCall('connect_data_connection', {
@@ -491,7 +499,9 @@ describe('EditorRefinementToolExecutor', () => {
 
     it('browses database tree metadata', async () => {
       mockEditorContext.editorType = 'sql'
-      ;(mockConnectionStore.connections as Record<string, any>)['test-connection'] = {
+      ;(mockConnectionStore.connections as Record<string, any>)['local:test-connection'] = {
+        id: 'local:test-connection',
+        name: 'test-connection',
         connected: true,
         hasSchema: true,
         databases: [
@@ -507,9 +517,7 @@ describe('EditorRefinementToolExecutor', () => {
                     database: 'db1',
                     assetType: 'table',
                     description: null,
-                    columns: [
-                      { name: 'id', type: 'int', trilogyType: 'integer', nullable: false },
-                    ],
+                    columns: [{ name: 'id', type: 'int', trilogyType: 'integer', nullable: false }],
                   },
                 ],
               },
@@ -519,9 +527,11 @@ describe('EditorRefinementToolExecutor', () => {
         getDatabases: vi.fn().mockResolvedValue([]),
         refreshDatabase: vi.fn().mockResolvedValue([]),
         refreshSchema: vi.fn().mockResolvedValue(null),
-        getColumns: vi.fn().mockResolvedValue([
-          { name: 'id', type: 'int', trilogyType: 'integer', nullable: false },
-        ]),
+        getColumns: vi
+          .fn()
+          .mockResolvedValue([
+            { name: 'id', type: 'int', trilogyType: 'integer', nullable: false },
+          ]),
       }
 
       executor = new EditorRefinementToolExecutor(

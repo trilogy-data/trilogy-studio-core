@@ -58,14 +58,11 @@ export const getMonacoLanguageForEditorType = (
 export const isTrilogyType = (type: EditorType | string): boolean =>
   type === 'trilogy' || type === 'preql'
 
-export const supportsEditorValidation = (type: EditorType | string): boolean =>
-  isTrilogyType(type)
+export const supportsEditorValidation = (type: EditorType | string): boolean => isTrilogyType(type)
 
-export const supportsEditorFormatting = (type: EditorType | string): boolean =>
-  isTrilogyType(type)
+export const supportsEditorFormatting = (type: EditorType | string): boolean => isTrilogyType(type)
 
-export const supportsEditorSourceTag = (type: EditorType | string): boolean =>
-  isTrilogyType(type)
+export const supportsEditorSourceTag = (type: EditorType | string): boolean => isTrilogyType(type)
 
 export const supportsEditorAssistant = (type: EditorType | string): boolean =>
   isTrilogyType(type) || type === 'sql'

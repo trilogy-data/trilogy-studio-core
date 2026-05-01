@@ -187,6 +187,28 @@
           </label>
         </div>
 
+        <div
+          v-else-if="item.type === 'duckdb-toggle-compatible-fetch'"
+          class="md-token-container"
+          @click.stop
+        >
+          <tooltip
+            position="left"
+            content="Check to support fetches from remote sources with unreliable headers, especially when using FireFox"
+          >
+            <label class="save-credential-toggle sidebar-toggle-row">
+              <input
+                type="checkbox"
+                :checked="
+                  (item.connection as any as ConnectionWithCompatibleFetch).useCompatibleHttpFetch
+                "
+                @change="toggleCompatibleFetch(item.connection)"
+              />
+              <span class="checkbox-label">Disable Optimized Scans</span>
+            </label>
+          </tooltip>
+        </div>
+
         <span
           v-else
           class="title-pad-left truncate-text"
@@ -261,6 +283,10 @@ interface ConnectionWithSaveCredential {
   saveCredential?: boolean
 }
 
+interface ConnectionWithCompatibleFetch {
+  useCompatibleHttpFetch?: boolean
+}
+
 interface BigQueryLikeConnection {
   projectId?: string
   browsingProjectId?: string
@@ -326,6 +352,7 @@ export default {
     'updateSnowflakeAccount',
     'updateSnowflakeUsername',
     'toggleSaveCredential',
+    'toggleDuckdbCompatibleFetch',
     'deleteConnection',
     'toggleMobileMenu',
   ],
@@ -364,6 +391,7 @@ export default {
         'snowflake-account',
         'snowflake-username',
         'toggle-save-credential',
+        'duckdb-toggle-compatible-fetch',
       ]
 
       if (complexTypes.includes(props.item.type)) {
@@ -375,13 +403,23 @@ export default {
     // Click handler for item expansion/toggling
     const handleItemClick = () => {
       if (isFetchable.value) {
-        emit('click', props.item.id, props.item.connection?.name || '', props.item.type)
+        emit(
+          'click',
+          props.item.id,
+          (props.item.connection as any)?.id || props.item.connection?.name || '',
+          props.item.type,
+        )
       }
     }
 
     const handleToggle = () => {
       if (isFetchable.value) {
-        emit('toggle', props.item.id, props.item.connection?.name || '', props.item.type)
+        emit(
+          'toggle',
+          props.item.id,
+          (props.item.connection as any)?.id || props.item.connection?.name || '',
+          props.item.type,
+        )
       }
     }
 
@@ -421,15 +459,26 @@ export default {
     }
 
     const handleRefreshConnectionClick = () => {
-      emit('refresh', props.item.connection?.name, props.item.connection?.name || '', 'connection')
+      const connKey = (props.item.connection as any)?.id || props.item.connection?.name || ''
+      emit('refresh', connKey, connKey, 'connection')
     }
 
     const handleRefreshDatabaseClick = () => {
-      emit('refresh', props.item.id, props.item.connection?.name || '', 'database')
+      emit(
+        'refresh',
+        props.item.id,
+        (props.item.connection as any)?.id || props.item.connection?.name || '',
+        'database',
+      )
     }
 
     const handleRefreshSchemaClick = () => {
-      emit('refresh', props.item.id, props.item.connection?.name || '', 'schema')
+      emit(
+        'refresh',
+        props.item.id,
+        (props.item.connection as any)?.id || props.item.connection?.name || '',
+        'schema',
+      )
     }
 
     const deleteConnection = (connection: Connection) => {
@@ -563,6 +612,10 @@ export default {
       emit('toggleSaveCredential', connection)
     }
 
+    const toggleCompatibleFetch = (connection: any) => {
+      emit('toggleDuckdbCompatibleFetch', connection)
+    }
+
     return {
       isMobile,
       isExpandable,
@@ -597,6 +650,7 @@ export default {
       debouncedUpdateSnowflakeUsername,
       updateMotherDuckToken,
       toggleSaveCredential,
+      toggleCompatibleFetch,
     }
   },
 }

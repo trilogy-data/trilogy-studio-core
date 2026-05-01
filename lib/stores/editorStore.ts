@@ -90,7 +90,7 @@ const useEditorStore = defineStore('editors', {
       } = {},
     ) {
       const connectionStore = useConnectionStore()
-      const connectionRef = connectionStore.connections[connection] as
+      const connectionRef = connectionStore.connectionByName(connection) as
         | { storage?: string; remoteStoreId?: string | null }
         | undefined
       const storage = options.storage || connectionRef?.storage || 'local'
@@ -135,9 +135,10 @@ const useEditorStore = defineStore('editors', {
     getEditorByName(name: string): Editor | undefined {
       return Object.values(this.editors).find((editor) => editor.name === name)
     },
-    getConnectionEditors(connection: string, tags: EditorTag[] = []) {
-      // return Object.values(this.editors).filter((editor) => editor.connection === connection)
-      let base = Object.values(this.editors).filter((editor) => editor.connection === connection)
+    getConnectionEditors(connectionId: string, tags: EditorTag[] = []) {
+      const base = Object.values(this.editors).filter(
+        (editor) => editor.connectionId === connectionId,
+      )
       if (tags.length === 0) {
         return base
       }

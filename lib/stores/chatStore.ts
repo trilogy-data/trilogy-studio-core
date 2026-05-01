@@ -109,10 +109,16 @@ export const useChatStore = defineStore('chats', {
   },
 
   actions: {
-    newChat(llmConnectionName: string, dataConnectionName: string = '', name?: string): Chat {
+    newChat(
+      llmConnectionName: string,
+      dataConnectionName: string = '',
+      name?: string,
+      dataConnectionId: string = '',
+    ): Chat {
       const chat = new Chat({
         llmConnectionName,
         dataConnectionName,
+        dataConnectionId,
         name: name || `Chat ${new Date().toLocaleTimeString()}`,
       })
       this.chats[chat.id] = chat
@@ -150,9 +156,13 @@ export const useChatStore = defineStore('chats', {
       }
     },
 
-    updateChatDataConnection(chatId: string, connectionName: string): void {
+    updateChatDataConnection(
+      chatId: string,
+      connectionName: string,
+      connectionId: string = '',
+    ): void {
       if (this.chats[chatId]) {
-        this.chats[chatId].setDataConnection(connectionName)
+        this.chats[chatId].setDataConnection(connectionName, connectionId)
       }
     },
 
@@ -481,25 +491,29 @@ export const useChatStore = defineStore('chats', {
 
       const { connectionStore, editorStore } = deps
       const dataConnectionName = chat.dataConnectionName
-      const availableConnections = Object.keys(connectionStore.connections)
+      const availableConnections = Object.values(connectionStore.connections).map((c) => c.name)
 
-      // Check if the data connection is currently active/connected
-      const isDataConnectionActive =
-        dataConnectionName && connectionStore
-          ? (connectionStore.connections[dataConnectionName]?.connected ?? false)
-          : false
+      // Resolve the chat's persisted connection FK: prefer the migrated id,
+      // fall back to looking the legacy name string up in the store.
+      const dataConnection =
+        (chat.dataConnectionId && connectionStore.connections[chat.dataConnectionId]) ||
+        (dataConnectionName ? connectionStore.connectionByName(dataConnectionName) : undefined)
+      const isDataConnectionActive = dataConnection?.connected ?? false
 
-      // Get available imports for the connection
-      const availableImports: ChatImport[] = editorStore
-        ? Object.values(editorStore.editors)
-            .filter((editor: any) => editor.connection === dataConnectionName)
-            .sort((a: any, b: any) => a.name.localeCompare(b.name))
-            .map((editor: any) => ({
-              id: editor.id,
-              name: editor.name.replace(/\//g, '.'),
-              alias: '',
-            }))
-        : []
+      // Get available imports for the connection — scoped by connection id so
+      // a same-named editor from a different origin can't show up in the
+      // agent's prompt.
+      const availableImports: ChatImport[] =
+        editorStore && dataConnection
+          ? Object.values(editorStore.editors)
+              .filter((editor: any) => editor.connectionId === dataConnection.id)
+              .sort((a: any, b: any) => a.name.localeCompare(b.name))
+              .map((editor: any) => ({
+                id: editor.id,
+                name: editor.name.replace(/\//g, '.'),
+                alias: '',
+              }))
+          : []
 
       // Note: concepts are passed separately via options.onSymbolsRefresh
       // For now, we pass an empty array - the composable will handle concept refresh

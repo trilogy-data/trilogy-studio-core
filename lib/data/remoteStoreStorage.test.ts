@@ -100,6 +100,7 @@ describe('RemoteStoreStorage', () => {
     expect(conn.type).toBe('duckdb')
     expect(conn.storage).toBe('remote')
     expect(conn.model).toBe('urban_forest')
+    expect(conn.id).toBe('remote:remote-store:urban_forest-connection')
     // fetchFromStore should NOT be consulted when a runtime connection is advertised.
     expect(fetchFromStore).not.toHaveBeenCalled()
   })

@@ -299,7 +299,7 @@ export default defineComponent({
       }
 
       // Set the model in the connection
-      connectionStore.connections[connectionName].setModel(modelDetails.value.name)
+      connectionStore.connectionByName(connectionName)?.setModel(modelDetails.value.name)
 
       // Import model from URL if specified
       if (modelDetails.value.importAddress) {

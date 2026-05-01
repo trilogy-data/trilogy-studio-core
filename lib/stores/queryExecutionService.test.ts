@@ -95,6 +95,38 @@ describe('QueryExecutionService', () => {
     expect(result.results?.data).toEqual([{ value: 1 }])
   })
 
+  it('calls failure callbacks when the connection id cannot be resolved', async () => {
+    const resolver = {
+      resolve_query: vi.fn(),
+    } as any
+    const { provider } = makeProvider({ connected: true })
+    const service = new QueryExecutionService(resolver, provider, false)
+    const onFailure = vi.fn()
+
+    const { resultPromise } = await service.executeQuery(
+      'missing-connection',
+      {
+        text: 'select value',
+        editorType: 'trilogy',
+        imports: [],
+      },
+      undefined,
+      undefined,
+      onFailure,
+    )
+
+    const result = await resultPromise
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Connection missing-connection not found.')
+    expect(onFailure).toHaveBeenCalledWith({
+      message: 'Connection missing-connection not found.',
+      error: true,
+      running: false,
+    })
+    expect(resolver.resolve_query).not.toHaveBeenCalled()
+  })
+
   it('creates drilldown queries through provider-derived connection metadata', async () => {
     const resolver = {
       drilldown_query: vi.fn(async () => ({

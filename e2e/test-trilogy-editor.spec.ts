@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import {
+  localConnectionId,
   openSidebarScreen,
   prepareTestPage,
   refreshConnection,
@@ -30,11 +31,13 @@ test('test', async ({ page, isMobile, browser }) => {
   await page.getByTestId('editor-creator-name').click()
   await page.getByTestId('editor-creator-name').fill('test-one')
   await page.getByTestId('editor-creator-type').selectOption('preql')
-  await page.getByTestId('editor-creator-connection-select').selectOption(connectionName)
+  await page.getByTestId('editor-creator-connection-select').selectOption({ label: connectionName })
   await page.getByTestId('editor-creator-submit').click()
 
   // Switch to test-one editor and add content
-  await page.getByTestId('editor-e-local-duckdb-test2-test-one').click()
+  await page
+    .getByTestId(`editor-e-local-${localConnectionId(connectionName)}-test-one`)
+    .click()
   const editor = page.getByTestId('editor')
   await editor.click()
   if (browser.browserType().name() === 'webkit') {

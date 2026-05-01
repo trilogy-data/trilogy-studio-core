@@ -1,6 +1,10 @@
 <template>
   <div class="view-container">
-    <ConnectionHistory v-if="selectedType === 'connection'" :connectionName="selectedConnection" />
+    <ConnectionHistory
+      v-if="selectedType === 'connection'"
+      :connectionName="selectedConnection"
+      :connectionId="selectedConnectionRef?.id || selectedConnectionKey"
+    />
     <div v-else-if="selectedType === 'table' && selectedTableDetails" class="model-display">
       <ConnectionTable
         :table="selectedTableDetails"
@@ -127,24 +131,36 @@ export default defineComponent({
     selectedSchema() {
       return this.activeConnectionKey.split(KeySeparator)[2]
     },
-    selectedConnection() {
+    // Position [0] is the connection id (e.g. `local:foo`); the resolved
+    // connection's display name is what child components want to render.
+    selectedConnectionKey() {
       return this.activeConnectionKey.split(KeySeparator)[0]
+    },
+    selectedConnectionRef() {
+      return (
+        this.connectionStore.connections[this.selectedConnectionKey] ||
+        this.connectionStore.connectionByName(this.selectedConnectionKey) ||
+        null
+      )
+    },
+    selectedConnection() {
+      return this.selectedConnectionRef?.name || this.selectedConnectionKey
     },
     selectedDatabase() {
       return this.activeConnectionKey.split(KeySeparator)[1]
     },
     selectedDatabaseDetails() {
-      return this.connectionStore.connections[this.selectedConnection]?.databases?.find(
-        (db) => db.name === this.selectedDatabase,
+      return this.selectedConnectionRef?.databases?.find(
+        (db: any) => db.name === this.selectedDatabase,
       )
     },
     selectedSchemaDetails() {
       return this.selectedDatabaseDetails?.schemas?.find(
-        (schema) => schema.name === this.selectedSchema,
+        (schema: any) => schema.name === this.selectedSchema,
       )
     },
     selectedTableDetails() {
-      return this.connectionStore.connections[this.selectedConnection].getLocalTable(
+      return this.selectedConnectionRef?.getLocalTable(
         this.selectedDatabase,
         this.selectedSchema,
         this.selectedTable,

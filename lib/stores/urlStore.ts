@@ -30,6 +30,7 @@ export const URL_HASH_KEYS = {
   INITIAL_SEARCH: 'initialSearch',
   IMPORT: 'import',
   STORE: 'store',
+  STORE_ID: 'storeId',
   TOKEN: 'token',
   REMOTE: 'remote',
   ASSET_TYPE: 'assetType',

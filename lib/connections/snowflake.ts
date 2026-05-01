@@ -511,6 +511,7 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
 
   toJSON(): object {
     return {
+      id: this.id,
       name: this.name,
       type: this.type,
       model: this.model,

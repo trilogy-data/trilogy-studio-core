@@ -10,6 +10,7 @@ describe('DashboardModel transient state persistence', () => {
       id: 'dashboard-1',
       name: 'Revenue Dashboard',
       connection: 'duckdb',
+      connectionId: 'local:duckdb',
       gridItems: {
         '0': {
           type: CELL_TYPES.CHART,
@@ -39,6 +40,7 @@ describe('DashboardModel transient state persistence', () => {
       name: 'Revenue Dashboard',
       storage: 'local',
       connection: 'duckdb',
+      connectionId: 'local:duckdb',
       layout: [],
       nextId: 1,
       createdAt: new Date('2025-01-01T00:00:00Z'),
@@ -73,6 +75,7 @@ describe('DashboardModel transient state persistence', () => {
       id: 'dashboard-1',
       name: 'Revenue Dashboard',
       connection: 'duckdb',
+      connectionId: 'local:duckdb',
       gridItems: {
         source: {
           type: CELL_TYPES.CHART,
@@ -117,6 +120,7 @@ describe('DashboardModel transient state persistence', () => {
       id: 'dashboard-1',
       name: 'Revenue Dashboard',
       connection: 'duckdb',
+      connectionId: 'local:duckdb',
       gridItems: {
         source: {
           type: CELL_TYPES.CHART,

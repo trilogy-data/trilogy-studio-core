@@ -103,7 +103,7 @@ export class DashboardToolExecutor {
   }
 
   private get connectionName(): string {
-    return this.dashboard?.connection || ''
+    return this.dashboard?.connectionId || this.dashboard?.connection || ''
   }
 
   async executeToolCall(toolName: string, toolInput: Record<string, any>): Promise<ToolCallResult> {
@@ -794,11 +794,16 @@ export class DashboardToolExecutor {
         queryExecutionService: this.deps.queryExecutionService,
       },
       this.deps.editorStore,
+      this.deps.connectionStore,
     )
   }
 
   private listAvailableImports(): ToolCallResult {
-    return sharedListAvailableImports(this.importAccessor, this.deps.editorStore)
+    return sharedListAvailableImports(
+      this.importAccessor,
+      this.deps.editorStore,
+      this.deps.connectionStore,
+    )
   }
 
   private async connectDataConnection(connectionName: string): Promise<ToolCallResult> {

@@ -203,11 +203,18 @@ export default defineComponent({
     }
   },
   computed: {
+    editorConnection() {
+      if (!this.editorData) return null
+      if (this.editorData.connectionId) {
+        return this.connectionStore.connections[this.editorData.connectionId] || null
+      }
+      return this.connectionStore.connectionByName(this.editorData.connection) || null
+    },
     connectionHasModel(): boolean {
       if (!this.editorData || !this.editorData.connection) {
         return false
       }
-      return this.connectionStore.connections[this.editorData.connection]?.model !== null
+      return this.editorConnection?.model !== null
     },
     editorData() {
       return this.editorStore.editors[this.editorId]
@@ -231,7 +238,7 @@ export default defineComponent({
   methods: {
     goToDefinition(e: GoToDefinitionEvent): void {
       let parsedPath = e.importPath.replace('.', '/')
-      let model = this.connectionStore.connections[this.editorData.connection].model
+      let model = this.editorConnection?.model
       // if the parsedPath starts with 'std', not supported yet
       // exit early
       if (parsedPath.startsWith('std')) {
@@ -259,7 +266,7 @@ export default defineComponent({
       this.editorStore.updateEditorName(this.editorId, newName)
       let isSource = this.editorData.tags.includes(EditorTag.SOURCE)
       if (isSource) {
-        let model = this.connectionStore.connections[this.editorData.connection].model
+        let model = this.editorConnection?.model
         if (model) {
           this.modelStore.models[model].updateModelSourceName(this.editorData.id, newName)
           this.$emit('save-models')
@@ -275,7 +282,7 @@ export default defineComponent({
         let isSource = this.editorData.tags.includes(tag)
 
         if (!isSource) {
-          let model = this.connectionStore.connections[this.editorData.connection].model
+          let model = this.editorConnection?.model
           if (model) {
             this.modelStore.models[model].addModelSourceSimple(
               this.editorData.id,
@@ -285,7 +292,7 @@ export default defineComponent({
           }
         } else {
           // If it's a source, we need to remove it from the model
-          let model = this.connectionStore.connections[this.editorData.connection].model
+          let model = this.editorConnection?.model
           if (model) {
             this.modelStore.models[model].removeModelSourceSimple(this.editorData.id)
             this.$emit('save-models')
@@ -347,7 +354,7 @@ export default defineComponent({
         console.log(error)
       }
 
-      const conn = this.connectionStore.connections[this.editorData.connection]
+      const conn = this.editorConnection
       if (!conn) {
         console.log('Connection not found')
         this.editorData.setError(`Connection ${this.editorData.connection} not found.`)
@@ -440,17 +447,16 @@ export default defineComponent({
 
       // Prepare sources for validation
       // Prepare query input
-      const conn = this.connectionStore.connections[this.editorData.connection]
+      const conn = this.editorConnection
       const model = conn?.model ? this.modelStore.models[conn.model] : undefined
-      const sources: ContentInput[] =
-        model
-          ? (model.sources || []).map((source) => ({
-              alias: source.alias,
-              contents: this.editorStore.editors[source.editor]
-                ? this.editorStore.editors[source.editor].contents
-                : '',
-            }))
-          : []
+      const sources: ContentInput[] = model
+        ? (model.sources || []).map((source) => ({
+            alias: source.alias,
+            contents: this.editorStore.editors[source.editor]
+              ? this.editorStore.editors[source.editor].contents
+              : '',
+          }))
+        : []
       // Prepare imports
       let imports: Import[] = []
       if (supportsEditorValidation(this.editorData.type)) {
@@ -556,6 +562,8 @@ export default defineComponent({
         imports: queryPartial.imports,
         currentFilename: queryPartial.currentFilename,
       }
+      const connectionId =
+        this.editorConnection?.id || this.editorData.connectionId || this.editorData.connection
 
       // Define callbacks with mounting status checks
       const onProgress = (message: QueryUpdate) => {
@@ -612,7 +620,7 @@ export default defineComponent({
 
       // Execute query
       const { resultPromise, cancellation } = await this.queryExecutionService.executeQuery(
-        this.editorData.connection,
+        connectionId,
         queryInput,
         // Starter callback (empty for now)
         () => {},
@@ -635,6 +643,14 @@ export default defineComponent({
       }
 
       const queryResult = await resultPromise
+      if (!queryResult.success) {
+        onError({
+          message: queryResult.error || 'An error occurred during query execution',
+          error: true,
+          running: false,
+          generatedSql: queryResult.generatedSql,
+        })
+      }
       this.$emit('query-finished')
       return queryResult
     },

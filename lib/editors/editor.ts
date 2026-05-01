@@ -3,6 +3,7 @@ import type { ResultsInterface, ChartConfig } from './results'
 import { type CompletionItem } from '../stores/resolver'
 import type { ChatMessage, ChatArtifact } from '../chats/chat'
 import { type EditorType, normalizeRemoteEditorPath } from './fileTypes'
+import { computeConnectionId } from '../connections/base'
 
 export { type EditorType, normalizeRemoteEditorPath } from './fileTypes'
 
@@ -29,12 +30,33 @@ export enum EditorTag {
   // SCHEDULED = 'scheduled',
 }
 
+/**
+ * Compute an editor's owning connection id from its origin fields. The
+ * `'github'`-storage editors belong to the user's local connection, so only
+ * `'remote'` storage routes through the remote-store namespace.
+ */
+export function editorConnectionId(editor: {
+  connection: string
+  storage?: string
+  remoteStoreId?: string | null
+}): string {
+  if (editor.storage === 'remote') {
+    return computeConnectionId({
+      name: editor.connection,
+      storage: 'remote',
+      remoteStoreId: editor.remoteStoreId || null,
+    })
+  }
+  return computeConnectionId({ name: editor.connection, storage: 'local' })
+}
+
 export interface EditorInterface {
   id: string
   name: string
   type: EditorType
   syntax: string
   connection: string
+  connectionId: string
   results: ResultsInterface
   contents: string
   loading: boolean
@@ -64,6 +86,7 @@ export default class Editor implements EditorInterface {
   type: EditorType
   syntax: string
   connection: string
+  connectionId: string
   results: Results
   contents: string
   loading: boolean
@@ -129,6 +152,7 @@ export default class Editor implements EditorInterface {
     this.type = type
     this.syntax = type === 'python' ? 'python' : 'preql'
     this.connection = connection
+    this.connectionId = editorConnectionId({ connection, storage, remoteStoreId })
     this.results = new Results(new Map(), [])
     this.contents = contents ? contents : this.defaultContents(type)
     this.loading = false
@@ -188,6 +212,17 @@ export default class Editor implements EditorInterface {
     this.name = nextName
   }
 
+  setConnection(connection: string): void {
+    if (this.connection === connection) return
+    this.connection = connection
+    this.connectionId = editorConnectionId({
+      connection,
+      storage: this.storage,
+      remoteStoreId: this.remoteStoreId,
+    })
+    this.changed = true
+  }
+
   addTag(tag: EditorTag) {
     if (!this.tags.includes(tag)) {
       this.tags.push(tag)
@@ -234,6 +269,7 @@ export default class Editor implements EditorInterface {
       type: this.type,
       syntax: this.syntax,
       connection: this.connection,
+      connectionId: this.connectionId,
       results: preserveResults ? this.results.toJSON() : null,
       contents: this.contents,
       loading: false,

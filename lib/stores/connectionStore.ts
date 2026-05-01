@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import Connection from '../connections/base'
+import Connection, { computeConnectionId } from '../connections/base'
 import {
   DuckDBConnection,
   BigQueryOauthConnection,
@@ -19,7 +19,7 @@ const connectionTimeout = 60000 // 60 seconds - includes startup time;
 
 async function runStartup(connection: Connection) {
   let editors = useEditorStore()
-  const startupEditors = editors.getConnectionEditors(connection.name, [EditorTag.STARTUP_SCRIPT])
+  const startupEditors = editors.getConnectionEditors(connection.id, [EditorTag.STARTUP_SCRIPT])
 
   await Promise.all(
     startupEditors.map(async (editor) => {
@@ -59,19 +59,31 @@ const useConnectionStore = defineStore('connections', {
     unsavedConnections: (state) => {
       return Object.values(state.connections).filter((connection) => connection.changed).length
     },
+    /**
+     * Resolve a display name to a connection. Local matches win over remote so
+     * legacy entities (dashboards, chats) that persisted only the name stay
+     * pointed at the local-side connection they originally referenced.
+     * Returns undefined when no match exists.
+     */
+    connectionByName: (state) => (name: string) => {
+      const matches = Object.values(state.connections).filter((c) => c.name === name)
+      if (matches.length === 0) return undefined
+      const local = matches.find((c) => c.storage !== 'remote')
+      return local || matches[0]
+    },
   },
   actions: {
     addConnection(connection: Connection) {
-      this.connections[connection.name] = connection
+      this.connections[connection.id] = connection
       return connection
     },
-    async connectConnection(name: string) {
-      if (!this.connections[name]) {
-        throw new Error(`Connection with name "${name}" not found.`)
+    async connectConnection(id: string) {
+      if (!this.connections[id]) {
+        throw new Error(`Connection with id "${id}" not found.`)
       }
 
       // Check if there's already a pending operation for this connection
-      const operationKey = `connect:${name}`
+      const operationKey = `connect:${id}`
       if (pendingOperations.has(operationKey)) {
         // Return the existing promise to deduplicate calls
         return pendingOperations.get(operationKey)
@@ -87,10 +99,10 @@ const useConnectionStore = defineStore('connections', {
 
       // The actual connection operation
       const resetPromise = async () => {
-        const rehydrate = ensureConnectionModel(this.connections[name])
+        const rehydrate = ensureConnectionModel(this.connections[id])
         if (rehydrate) await rehydrate
-        await this.connections[name].reset()
-        await runStartup(this.connections[name])
+        await this.connections[id].reset()
+        await runStartup(this.connections[id])
       }
 
       // Use Promise.race to implement timeout
@@ -104,13 +116,13 @@ const useConnectionStore = defineStore('connections', {
 
       return operationPromise
     },
-    async resetConnection(name: string) {
-      if (!this.connections[name]) {
-        throw new Error(`Connection with name "${name}" not found.`)
+    async resetConnection(id: string) {
+      if (!this.connections[id]) {
+        throw new Error(`Connection with id "${id}" not found.`)
       }
 
       // Check if there's already a pending operation for this connection
-      const operationKey = `reset:${name}`
+      const operationKey = `reset:${id}`
       if (pendingOperations.has(operationKey)) {
         // Return the existing promise to deduplicate calls
         return pendingOperations.get(operationKey)
@@ -128,15 +140,15 @@ const useConnectionStore = defineStore('connections', {
       })
 
       // The actual reset operation
-      const rehydrate = ensureConnectionModel(this.connections[name])
+      const rehydrate = ensureConnectionModel(this.connections[id])
       const resetStart = rehydrate
-        ? rehydrate.then(() => this.connections[name].reset())
-        : this.connections[name].reset()
+        ? rehydrate.then(() => this.connections[id].reset())
+        : this.connections[id].reset()
       const resetPromise = resetStart.then(async () => {
         try {
-          await runStartup(this.connections[name])
+          await runStartup(this.connections[id])
         } catch (error) {
-          this.connections[name].setError((error as Error).message)
+          this.connections[id].setError((error as Error).message)
           throw error
         }
       })
@@ -154,18 +166,18 @@ const useConnectionStore = defineStore('connections', {
     // Soft-deletes: leaves the connection in the map with `deleted: true` so
     // that the next saveConnections() pass can purge it from localStorage.
     // Call purgeDeletedConnections() after the save to hard-remove from memory.
-    deleteConnection(name: string) {
-      if (this.connections[name]) {
-        this.connections[name].delete()
+    deleteConnection(id: string) {
+      if (this.connections[id]) {
+        this.connections[id].delete()
       }
     },
     // Hard-removes any connection currently marked as deleted. Callers should
     // run this after saveConnections() so that the persistence layer has had
     // a chance to observe the `deleted` flag and drop the entry from storage.
     purgeDeletedConnections() {
-      for (const name of Object.keys(this.connections)) {
-        if (this.connections[name].deleted) {
-          delete this.connections[name]
+      for (const id of Object.keys(this.connections)) {
+        if (this.connections[id].deleted) {
+          delete this.connections[id]
         }
       }
     },
@@ -184,8 +196,8 @@ const useConnectionStore = defineStore('connections', {
         return 'disabled'
       }
     },
-    getConnectionSources(name: string) {
-      const conn = this.connections[name]
+    getConnectionSources(id: string) {
+      const conn = this.connections[id]
       const modelStore = useModelConfigStore()
       const editorStore = useEditorStore()
       let sources: ContentInput[] =
@@ -199,32 +211,28 @@ const useConnectionStore = defineStore('connections', {
           : []
       return sources
     },
+    /**
+     * Create a new local connection. The display name must be unique among
+     * local connections (its derived id, `local:<name>`, is the store key).
+     * Remote connections share the local namespace by storage prefix, so the
+     * same display name on a remote import does not conflict.
+     */
     newConnection(name: string, type: string, options: Record<string, any>): Connection {
-      if (this.connections[name]) {
+      const id = computeConnectionId({ name, storage: 'local' })
+      if (this.connections[id]) {
         throw new Error(`Connection with name "${name}" already exists.`)
       }
+      let connection: Connection
       if (type === 'duckdb') {
-        this.connections[name] = new DuckDBConnection(name)
+        connection = new DuckDBConnection(name)
       } else if (type === 'sqlite') {
-        this.connections[name] = new SQLiteConnection(name)
+        connection = new SQLiteConnection(name)
       } else if (type === 'bigquery-oauth') {
-        this.connections[name] = new BigQueryOauthConnection(name, options.projectId)
+        connection = new BigQueryOauthConnection(name, options.projectId)
       } else if (type === 'bigquery') {
-        this.connections[name] = new BigQueryOauthConnection(name, options.projectId)
-      }
-      // else if (type === 'snowflake-basic') {
-      //   this.connections[name] = new SnowflakeBasicAuthConnection(name, {
-      //     account: options.account,
-      //     username: options.username,
-      //     password: options.password,
-      //     warehouse: options.warehouse,
-      //     role: options.role,
-      //     database: options.database,
-      //     schema: options.schema,
-      //   })
-      // }
-      else if (type === 'snowflake') {
-        this.connections[name] = new SnowflakeJwtConnection(name, {
+        connection = new BigQueryOauthConnection(name, options.projectId)
+      } else if (type === 'snowflake') {
+        connection = new SnowflakeJwtConnection(name, {
           account: options.account,
           username: options.username,
           privateKey: options.privateKey,
@@ -234,25 +242,18 @@ const useConnectionStore = defineStore('connections', {
           schema: options.schema,
         })
       } else if (type === 'motherduck') {
-        this.connections[name] = new MotherDuckConnection(
-          name,
-          options.mdToken,
-          options.saveCredential,
-        )
-      }
-      // else if (type === 'sqlserver') {
-      //   this.connections[name] = new SQLServerConnection(name, options.username, options.password);
-      // }
-      else {
+        connection = new MotherDuckConnection(name, options.mdToken, options.saveCredential)
+      } else {
         throw new Error(`Connection type "${type}" not found.`)
       }
+      this.connections[connection.id] = connection
       if (options.model) {
-        this.connections[name].model = options.model
+        connection.model = options.model
       } else {
         const modelStore = useModelConfigStore()
-        this.connections[name].model = modelStore.newModelConfig(name).name
+        connection.model = modelStore.newModelConfig(name).name
       }
-      return this.connections[name]
+      return connection
     },
   },
 })

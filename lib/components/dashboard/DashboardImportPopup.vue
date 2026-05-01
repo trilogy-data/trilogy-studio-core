@@ -127,7 +127,7 @@ const importDashboard = async () => {
       let typeName = connectionName.replace('new-', '')
       connectionName = `dashboard-${dashboardObj.name || 'imported'}-connection`
 
-      if (!connectionStore.connections[connectionName]) {
+      if (!connectionStore.connectionByName(connectionName)) {
         connectionStore.newConnection(connectionName, typeName, {
           mdToken: connectionOptions.value.mdToken,
           projectId: connectionOptions.value.projectId,
@@ -140,7 +140,11 @@ const importDashboard = async () => {
     }
 
     // Set connection to the selected/created connection
+    const dashboardConn = connectionStore.connectionByName(connectionName)
     dashboardObj.connection = connectionName
+    if (dashboardConn) {
+      dashboardObj.connectionId = dashboardConn.id
+    }
 
     // Set id to a random string
     dashboardObj.id = Math.random().toString(36).substring(2, 15)

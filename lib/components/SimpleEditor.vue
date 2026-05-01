@@ -377,7 +377,9 @@ export default defineComponent({
         const text = globalEditor.getValue()
 
         // Execute validation via injected service
-        const conn = connectionStore.connections[this.editor.connection]
+        const conn =
+          (this.editor.connectionId && connectionStore.connections[this.editor.connectionId]) ||
+          connectionStore.connectionByName(this.editor.connection)
         const queryInput = {
           text,
           queryType: conn ? conn.query_type : 'trilogy',
@@ -388,7 +390,7 @@ export default defineComponent({
         }
 
         const annotations = await queryExecutionService.validateQuery(
-          this.editor.connection,
+          conn?.id || this.editor.connection,
           queryInput,
         )
 
@@ -422,7 +424,9 @@ export default defineComponent({
       const text = getEditorText(monacoInstance, this.editor.contents)
 
       if (!text || !monacoInstance) return
-      let conn = this.connectionStore?.connections[this.editor.connection]
+      let conn =
+        (this.editor.connectionId && this.connectionStore?.connections[this.editor.connectionId]) ||
+        this.connectionStore?.connectionByName(this.editor.connection)
       let queryExecutionService = this.queryExecutionService
       if (!queryExecutionService) return
       try {
@@ -472,7 +476,9 @@ export default defineComponent({
         this.editor.startTime = Date.now()
 
         // Prepare query input
-        const conn = connectionStore.connections[this.editor.connection]
+        const conn =
+          (this.editor.connectionId && connectionStore.connections[this.editor.connectionId]) ||
+          connectionStore.connectionByName(this.editor.connection)
 
         // Get selected text or full content
         const text = getEditorText(monacoInstance, this.editor.contents)
@@ -493,7 +499,7 @@ export default defineComponent({
 
         // Execute query
         const { resultPromise, cancellation } = await queryExecutionService.executeQuery(
-          this.editor.connection,
+          conn?.id || this.editor.connection,
           queryInput,
           // Progress callback for connection issues
           () => {},
@@ -610,7 +616,9 @@ export default defineComponent({
 
         // Create validator function
         const validator = async (generatedText: string): Promise<boolean> => {
-          const conn = connectionStore.connections[this.editor.connection]
+          const conn =
+            (this.editor.connectionId && connectionStore.connections[this.editor.connectionId]) ||
+            connectionStore.connectionByName(this.editor.connection)
           const queryInput = {
             text: generatedText,
             queryType: conn ? conn.query_type : '',
@@ -621,7 +629,7 @@ export default defineComponent({
 
           try {
             const { resultPromise } = await queryExecutionService.executeQuery(
-              this.editor.connection,
+              conn?.id || this.editor.connection,
               queryInput,
               () => {},
               () => {},

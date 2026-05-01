@@ -141,13 +141,18 @@ export function useEditorRefinement(
     const connectionSources = connectionStore.getConnectionSources(connectionName)
     connectionSources.forEach((s) => extraContentMap.set(s.alias, s.contents))
 
-    // Add all editors for this connection
+    // Add all editors for this connection — scope by origin so a remote
+    // editor with the same connection name doesn't sneak into a local
+    // refinement (or vice versa).
     if (editorStore) {
-      Object.values(editorStore.editors)
-        .filter((editor) => editor.connection === connectionName && !editor.deleted)
-        .forEach((editor) => {
-          extraContentMap.set(editor.name, editor.contents)
-        })
+      const connection = connectionStore.connectionByName(connectionName)
+      if (connection) {
+        Object.values(editorStore.editors)
+          .filter((editor) => !editor.deleted && editor.connectionId === connection.id)
+          .forEach((editor) => {
+            extraContentMap.set(editor.name, editor.contents)
+          })
+      }
     }
 
     return Array.from(extraContentMap.entries()).map(([alias, contents]) => ({

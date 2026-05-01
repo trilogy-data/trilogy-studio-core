@@ -5,6 +5,7 @@ import * as path from 'path'
 import { fileURLToPath } from 'url'
 import {
   createEditorFromConnection,
+  localConnectionId,
   openSidebarScreen,
   prepareTestPage,
   refreshConnection,
@@ -201,9 +202,7 @@ customStoreDescribe('Custom Model Store', () => {
     if (isMobile) {
       await page.getByTestId('mobile-menu-toggle').click()
     }
-    await expect(
-      page.getByTestId(`community-${storeId}+duckdb+example-duckdb-model`),
-    ).toBeVisible()
+    await expect(page.getByTestId(`community-${storeId}+duckdb+example-duckdb-model`)).toBeVisible()
 
     await page.getByTestId(`community-${storeId}+duckdb+example-duckdb-model`).click()
 
@@ -211,9 +210,9 @@ customStoreDescribe('Custom Model Store', () => {
 
     await expect(page.getByTestId('model-card-title-example-duckdb-model')).toBeVisible()
     await expect(page.getByTestId('model-card-description-example-duckdb-model')).toBeVisible()
-    await expect(
-      page.getByTestId('model-card-description-example-duckdb-model'),
-    ).toContainText('A simple example model for testing the generic store feature')
+    await expect(page.getByTestId('model-card-description-example-duckdb-model')).toContainText(
+      'A simple example model for testing the generic store feature',
+    )
 
     await page.getByTestId('import-example-duckdb-model').click()
 
@@ -227,18 +226,21 @@ customStoreDescribe('Custom Model Store', () => {
 
     const connectionName = 'example-duckdb-model-connection'
 
-    await expect(page.getByTestId(`expand-connection-${connectionName}`)).toBeVisible()
+    await expect(
+      page.getByTestId(`expand-connection-${localConnectionId(connectionName)}`),
+    ).toBeVisible()
 
     await refreshConnection(page, connectionName)
     await waitForConnectionReady(page, connectionName, 10000)
 
     await openSidebarScreen(page, 'editors', isMobile)
 
+    const editorConnectionTestId = `editor-c-local-${localConnectionId(connectionName)}`
     try {
-      await page.getByTestId(`editor-c-local-${connectionName}`).click({ timeout: 1000 })
+      await page.getByTestId(editorConnectionTestId).click({ timeout: 1000 })
     } catch (e) {
       await page.getByTestId('editor-s-local').click()
-      await page.getByTestId(`editor-c-local-${connectionName}`).click()
+      await page.getByTestId(editorConnectionTestId).click()
     }
 
     await createEditorFromConnection(page, connectionName, 'trilogy')
@@ -292,9 +294,9 @@ customStoreDescribe('Custom Model Store', () => {
     await page.waitForTimeout(1000)
 
     await expect(page.getByTestId('model-card-title-example-bigquery-model')).toBeVisible()
-    await expect(
-      page.getByTestId('model-card-description-example-bigquery-model'),
-    ).toContainText('sample BigQuery model')
+    await expect(page.getByTestId('model-card-description-example-bigquery-model')).toContainText(
+      'sample BigQuery model',
+    )
   })
 
   test('should show error for unreachable custom store', async ({ page, isMobile }) => {
