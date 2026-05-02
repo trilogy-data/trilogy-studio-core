@@ -22,17 +22,17 @@
           {{ file.name }} <span class="text-faint">({{ file.engine }})</span>
         </div>
 
-        <!-- Expand button below title -->
+        <!-- Expand/Collapse button below title -->
         <button
-          v-if="!initialComponentsExpanded"
           class="expand-button"
           @click="toggleComponents"
           :class="{ expanded: isComponentsExpanded }"
-          :title="isComponentsExpanded ? 'Hide Content' : 'Show Content'"
+          :title="isComponentsExpanded ? 'Collapse Content' : 'Show Content'"
+          :data-testid="`${isComponentsExpanded ? 'collapse' : 'expand'}-${file.name}`"
         >
           <i class="mdi mdi-chevron-down expand-icon"></i>
           <span class="expand-text"
-            >{{ isComponentsExpanded ? 'Hide' : 'Expand' }} ({{
+            >{{ isComponentsExpanded ? 'Collapse' : 'Expand' }} ({{
               file.components.length
             }}
             items)</span

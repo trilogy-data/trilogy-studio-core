@@ -1,0 +1,14 @@
+node_modules
+dist
+.tmp
+
+# Tauri (Phase 1.5+)
+src-tauri/target
+src-tauri/Cargo.lock
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.log

@@ -188,16 +188,23 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
   }
 
-  await page.keyboard.type('select\n    origin.state,\n    count,\norder by count desc;')
+  await page.keyboard.type('where flight_date = \'2025-01-01\'::date \nselect\n    origin.state,\n    count,\norder by count desc;')
   await page.getByTestId('editor-run-button').click()
-  await page.getByTestId('simple-editor-results')
+  // Wait for the editor preview query to complete before saving so the chart's
+  // query doesn't race the editor's against the same DuckDB WASM worker. On
+  // Firefox the FAA query runs slowly enough that two concurrent renders blow
+  // through the chart waitFor timeout below (the editor's render aborts the
+  // chart's first render and the second has to start over).
+  await page
+    .getByTestId('simple-editor-results')
+    .waitFor({ state: 'visible', timeout: 90000 })
 
   // save it
   await page.getByTestId('save-dashboard-chart').click()
 
   // toggle it
   const firstChartCanvas = page.locator(vegaSelector).first()
-  await firstChartCanvas.waitFor({ state: 'visible', timeout: 45000 })
+  await firstChartCanvas.waitFor({ state: 'visible', timeout: 90000 })
   await firstChartCanvas.hover({ force: true })
   const firstDashboardItem = page.getByTestId('dashboard-component-0')
   await firstDashboardItem.hover({ force: true })
@@ -404,7 +411,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
   }
 
-  await page.keyboard.type('select\n    origin.state,\n    count,\norder by count desc;')
+  await page.keyboard.type('where flight_date = \'2025-01-01\'::date  select\n    origin.state,\n    count,\norder by count desc;')
   await page.getByTestId('editor-run-button').click()
   await page.getByTestId('simple-editor-results')
 
