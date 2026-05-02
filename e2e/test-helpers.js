@@ -73,12 +73,32 @@ export async function openSidebarScreen(page, screen, isMobile = false) {
 
     const sidebarIcon = page.getByTestId(`sidebar-icon-${screen}`).first()
 
-    if (!(await sidebarIcon.isVisible().catch(() => false))) {
-      await mobileMenuToggle.click({ force: true })
-      await expect(sidebarIcon).toBeVisible({ timeout: 10000 })
-    }
+    // The mobile menu auto-closes on tab navigation: setActiveTab in
+    // useScreenNavigation sets mobileMenuOpen=false AND pushes a hash
+    // entry, which fires a delayed hashchange task whose listener can
+    // call setActiveTab again. That task can land between our visibility
+    // check and the actual click — the icon reads visible, then the menu
+    // closes microseconds later, and the click times out on the now-
+    // hidden icon. Drain pending tasks first, then drive the open+click
+    // through a retry so a late close doesn't kill the run.
+    await page.evaluate(() => new Promise((r) => setTimeout(r, 0)))
 
-    await sidebarIcon.click({ force: true })
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        await expect(sidebarIcon).toBeVisible({ timeout: 500 })
+      } catch {
+        await mobileMenuToggle.click()
+        await expect(sidebarIcon).toBeVisible({ timeout: 5000 })
+      }
+      try {
+        await sidebarIcon.click({ timeout: 2000 })
+        return
+      } catch (err) {
+        if (attempt === 3) throw err
+        // Menu probably closed on us — drain again and re-open on next loop.
+        await page.evaluate(() => new Promise((r) => setTimeout(r, 0)))
+      }
+    }
     return
   }
 
