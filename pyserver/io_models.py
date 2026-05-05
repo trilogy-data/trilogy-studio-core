@@ -110,6 +110,10 @@ class MultiQueryInSchema(BaseModel):
     queries: List[MultiQueryComponent]
     extra_filters: Optional[list[str]] = None
     parameters: Optional[dict[str, str | int | float]] = None
+    # Names (or paths) of files the client has registered locally. Used to
+    # bypass the server's filesystem-existence check on `file '...'` datasource
+    # addresses and rewrite the location to a basename the client can resolve.
+    files: Optional[list[str]] = None
 
 
 class QueryInSchema(BaseModel):
@@ -120,6 +124,8 @@ class QueryInSchema(BaseModel):
     current_filename: str | None = None
     extra_filters: Optional[list[str]] = None
     parameters: Optional[dict[str, str | int | float]] = None
+    # See MultiQueryInSchema.files
+    files: Optional[list[str]] = None
     # chart_type: ChartType | None = None
 
 
@@ -136,6 +142,8 @@ class ValidateQueryInSchema(BaseModel):
     current_filename: str | None = None
     extra_filters: Optional[list[str]] = None
     parameters: Optional[dict[str, str | int | float]] = None
+    # See MultiQueryInSchema.files
+    files: Optional[list[str]] = None
 
 
 class QueryOutColumn(BaseModel):

@@ -1,5 +1,6 @@
 import copy
 from pathlib import PurePosixPath
+from typing import Iterable
 
 from trilogy import Environment
 from io_models import (
@@ -16,12 +17,55 @@ from trilogy.core.models.environment import DictImportResolver, EnvironmentConfi
 from trilogy.authoring import (
     Concept,
 )
-from trilogy.core.enums import ConceptSource
+from trilogy.core.enums import ConceptSource, DatasourceState
 from trilogy.core.models.datasource import Address
 
 from common import flatten_lineage
 
 PARSE_DEPENDENCY_RESOLUTION_ATTEMPTS = 10
+
+
+def _file_basename(path_str: str) -> str:
+    """Cross-platform basename: trilogy resolves file addresses against the
+    server's CWD, so the location may use either separator depending on the
+    server's OS. Normalize before extracting the name."""
+    return PurePosixPath(path_str.replace("\\", "/")).name
+
+
+def mark_known_files(env: Environment, files: Iterable[str] | None) -> None:
+    """Patch file-backed datasources whose paths the client has confirmed exist.
+
+    Trilogy's parser does ``Path(addr.location).exists()`` against the server's
+    filesystem and marks a datasource ``UNPOPULATED`` (which the build phase
+    skips) if the file isn't there. For the explorer / Tauri app, files live on
+    the client and the server can't see them — so we explicitly tell trilogy
+    which files to trust by name, rewrite the address to the basename (so the
+    rendered SQL is something the client can resolve against its own
+    duckdb-wasm filesystem), and reset the datasource state.
+
+    Matching is by basename only. ``files`` may contain bare filenames or full
+    paths; only the trailing component is compared.
+    """
+    if not files:
+        return
+    known = {_file_basename(f) for f in files if f}
+    if not known:
+        return
+    for ds in env.datasources.values():
+        addr = ds.address
+        if not isinstance(addr, Address) or not addr.is_file:
+            continue
+        primary_name = _file_basename(addr.location)
+        if primary_name in known:
+            addr.location = primary_name
+            addr.exists = True
+            if ds.status == DatasourceState.UNPOPULATED:
+                ds.status = DatasourceState.PUBLISHED
+        if addr.additional_locations:
+            addr.additional_locations = [
+                _file_basename(p) if _file_basename(p) in known else p
+                for p in addr.additional_locations
+            ]
 
 
 class StudioEnvironmentConfig(EnvironmentConfig):

@@ -5,9 +5,20 @@ import type { LLMConnectionStoreType } from './llmStore'
 import type { ConnectionStoreType } from './connectionStore'
 import type QueryExecutionService from './queryExecutionService'
 import type { EditorStoreType } from './editorStore'
+import type { ProjectStoreType } from './projectStore'
 import { ChatToolExecutor } from '../llm/chatToolExecutor'
+import { OverseerToolExecutor } from '../llm/overseerToolExecutor'
+import { ArchitectToolExecutor } from '../llm/architectToolExecutor'
+import { summarizeSubchat } from '../llm/subchatSummarize'
 import type { ToolCallResult } from '../llm/sharedToolHelpers'
 import { buildChatAgentSystemPrompt, CHAT_TOOLS } from '../llm/chatAgentPrompt'
+import {
+  buildOverseerSystemPrompt,
+  OVERSEER_TOOLS,
+  type SubchatStatus,
+  type SubchatKind,
+} from '../llm/overseerAgentPrompt'
+import { buildArchitectSystemPrompt, ARCHITECT_TOOLS } from '../llm/architectAgentPrompt'
 import type { CompletionItem } from './resolver'
 import type { LLMToolDefinition } from '../llm/base'
 import {
@@ -53,6 +64,11 @@ export interface ChatExecutionDependencies {
   connectionStore: ConnectionStoreType
   queryExecutionService: QueryExecutionService
   editorStore: EditorStoreType
+  /** Required when executing overseer/subchat flows: the overseer reads
+   *  active project at tool-call time to know where to spawn subchats and
+   *  what to put in the system prompt. Studio chats (kind=user) don't
+   *  need this. */
+  projectStore?: ProjectStoreType
 }
 
 export const useChatStore = defineStore('chats', {
@@ -331,6 +347,10 @@ export const useChatStore = defineStore('chats', {
         /** Replace the generic chat tools + executor + prompt with a caller-supplied set.
          *  When provided, onSymbolsRefresh and the default ChatToolExecutor are bypassed. */
         overrides?: ExecuteMessageOverrides
+        /** Mark the injected user message as hidden so it doesn't render in
+         *  the UI as a user-typed message. Used for subchat-completion
+         *  injections into the overseer. */
+        hiddenUserMessage?: boolean
       } = {},
     ): Promise<{ response?: string; artifacts?: ChatArtifact[] } | void> {
       const chat = this.chats[chatId]
@@ -358,6 +378,7 @@ export const useChatStore = defineStore('chats', {
       this.addMessageToChat(chatId, {
         role: 'user',
         content: message,
+        hidden: options.hiddenUserMessage ?? false,
       })
 
       try {
@@ -404,24 +425,47 @@ export const useChatStore = defineStore('chats', {
           getMessages: () => chat.messages,
         }
 
-        // Build tool executor: either caller-provided override, or the default
-        // generic chat executor that uses editor/query tools.
+        // Build tool executor: caller-provided override > overseer-kind
+        // executor > default chat executor.
         const toolExecutorFactory: ToolExecutorFactory = options.overrides
           ? {
               getToolExecutor: () => ({
                 executeToolCall: options.overrides!.executeToolCall,
               }),
             }
-          : (() => {
-              const toolExecutor = new ChatToolExecutor(
-                queryExecutionService,
-                connectionStore,
-                this,
-                editorStore,
-                chatId,
-              )
-              return { getToolExecutor: () => toolExecutor }
-            })()
+          : chat.kind === 'overseer'
+            ? (() => {
+                if (!deps.projectStore) {
+                  throw new Error('Overseer chats require deps.projectStore')
+                }
+                const exec = new OverseerToolExecutor(this, deps.projectStore, chatId, deps)
+                return { getToolExecutor: () => exec }
+              })()
+            : chat.kind === 'architect'
+              ? (() => {
+                  if (!deps.projectStore) {
+                    throw new Error('Architect subchats require deps.projectStore')
+                  }
+                  const exec = new ArchitectToolExecutor(
+                    this,
+                    deps.projectStore,
+                    editorStore,
+                    connectionStore,
+                    queryExecutionService,
+                    chatId,
+                  )
+                  return { getToolExecutor: () => exec }
+                })()
+              : (() => {
+                  const toolExecutor = new ChatToolExecutor(
+                    queryExecutionService,
+                    connectionStore,
+                    this,
+                    editorStore,
+                    chatId,
+                  )
+                  return { getToolExecutor: () => toolExecutor }
+                })()
 
         const stateUpdater: ExecutionStateUpdater = {
           setActiveToolName: (name) => this.setActiveToolName(chatId, name),
@@ -442,6 +486,14 @@ export const useChatStore = defineStore('chats', {
               }
             }
 
+        const tools = options.overrides
+          ? options.overrides.tools
+          : chat.kind === 'overseer'
+            ? OVERSEER_TOOLS
+            : chat.kind === 'architect'
+              ? ARCHITECT_TOOLS
+              : CHAT_TOOLS
+
         await runToolLoop(
           message,
           llmConnectionName,
@@ -450,7 +502,7 @@ export const useChatStore = defineStore('chats', {
           toolExecutorFactory,
           stateUpdater,
           {
-            tools: options.overrides ? options.overrides.tools : CHAT_TOOLS,
+            tools,
             maxIterations: 50,
             noToolCallReminder:
               options.overrides?.noToolCallReminder ??
@@ -463,11 +515,11 @@ export const useChatStore = defineStore('chats', {
 
         // Don't return response - messages are synced to UI via watchers in useChatWithTools
         // Returning a response here would cause duplicate messages in the UI
-        return undefined
       } catch (err) {
         // Handle abort errors gracefully - don't add error message to chat
         if (err instanceof DOMException && err.name === 'AbortError') {
           // User stopped the execution - no error message needed
+          this.completeExecution(chatId)
           return
         }
 
@@ -478,16 +530,113 @@ export const useChatStore = defineStore('chats', {
           content: `Error: ${errorMessage}`,
         })
         this.completeExecution(chatId, errorMessage)
-        return
       } finally {
         this.completeExecution(chatId)
       }
+
+      // Post-execution: if this is a subchat, inject its summary into the
+      // parent overseer (auto-trigger or queue). Then drain any pending
+      // injections this chat itself accumulated while busy.
+      this.handleSubchatCompletion(chatId, deps).catch((e) =>
+        console.error('handleSubchatCompletion failed', e),
+      )
+      this.drainPendingInjections(chatId, deps).catch((e) =>
+        console.error('drainPendingInjections failed', e),
+      )
+
+      return undefined
+    },
+
+    /**
+     * If `chatId` is a subchat (kind != 'user' && parentChatId set), build
+     * a summary message and either auto-trigger the parent's executeMessage
+     * (if idle) or queue into the parent's pendingInjections (if busy).
+     *
+     * The summary is generated by running the subchat's transcript through
+     * the provider's fastModel — guarantees the overseer sees something
+     * useful even when the LLM hit max iterations or returned text without
+     * calling return_to_user.
+     */
+    async handleSubchatCompletion(
+      chatId: string,
+      deps: ChatExecutionDependencies,
+    ): Promise<void> {
+      const chat = this.chats[chatId]
+      if (!chat || chat.kind === 'user' || !chat.parentChatId) return
+      const parent = this.chats[chat.parentChatId]
+      if (!parent) return
+
+      const provider =
+        deps.llmConnectionStore.connections[chat.llmConnectionName] ??
+        deps.llmConnectionStore.connections[parent.llmConnectionName] ??
+        null
+
+      let summary: string
+      if (provider) {
+        try {
+          summary = await summarizeSubchat(provider, chat, 'completion')
+        } catch (e) {
+          console.error('subchat summarization failed; falling back', e)
+          const last = chat.messages[chat.messages.length - 1]
+          summary =
+            last?.content?.trim() ||
+            '(no summary available — subchat finished but the auto-summary call failed)'
+        }
+      } else {
+        const last = chat.messages[chat.messages.length - 1]
+        summary = last?.content?.trim() || '(no summary — provider unavailable)'
+      }
+
+      const injection = `[subchat ${chat.id} (${chat.kind}) "${chat.name}" completed]\n\n${summary}`
+
+      if (this.isChatExecuting(chat.parentChatId)) {
+        parent.pendingInjections.push(injection)
+        parent.changed = true
+      } else {
+        // Auto-wake the parent. Fire and forget; the recursion is bounded
+        // because each subchat only injects once per terminal state.
+        void this.executeMessage(chat.parentChatId, injection, deps, {
+          hiddenUserMessage: true,
+        }).catch((e) => console.error('Parent auto-wake failed', e))
+      }
+    },
+
+    /**
+     * After a chat finishes, if it accumulated subchat injections while
+     * busy, fire them as a follow-up turn.
+     */
+    async drainPendingInjections(
+      chatId: string,
+      deps: ChatExecutionDependencies,
+    ): Promise<void> {
+      const chat = this.chats[chatId]
+      if (!chat) return
+      if (chat.pendingInjections.length === 0) return
+      if (this.isChatExecuting(chatId)) return // re-entrant; let next drain handle it
+
+      const drained = chat.pendingInjections.splice(0)
+      const combined = drained.join('\n\n---\n\n')
+      void this.executeMessage(chatId, combined, deps, {
+        hiddenUserMessage: true,
+      }).catch((e) => console.error('Drain failed', e))
     },
 
     /** Build the system prompt for a chat based on its current state */
     buildSystemPrompt(chatId: string, deps: ChatExecutionDependencies): string {
       const chat = this.chats[chatId]
       if (!chat) return ''
+
+      // Overseer chats use a completely different prompt — they never query
+      // data directly, only orchestrate subchats.
+      if (chat.kind === 'overseer') {
+        return this.buildOverseerPrompt(chatId, deps)
+      }
+
+      // Architect subchats use a file-centric prompt. We resolve their
+      // operating project from parentProjectId set at spawn.
+      if (chat.kind === 'architect') {
+        return this.buildArchitectPrompt(chatId, deps)
+      }
 
       const { connectionStore, editorStore } = deps
       const dataConnectionName = chat.dataConnectionName
@@ -517,13 +666,89 @@ export const useChatStore = defineStore('chats', {
 
       // Note: concepts are passed separately via options.onSymbolsRefresh
       // For now, we pass an empty array - the composable will handle concept refresh
-      return buildChatAgentSystemPrompt({
+      const basePrompt = buildChatAgentSystemPrompt({
         dataConnectionName,
         availableConnections,
         availableConcepts: [], // Concepts managed by composable
         activeImports: chat.imports,
         availableImportsForConnection: availableImports,
         isDataConnectionActive,
+      })
+
+      // Analyst subchats still ride on the generic CHAT_TOOLS for now —
+      // give them a short role preamble. Architect handled above with its
+      // own dedicated prompt.
+      if (chat.kind === 'analyst') {
+        return `You are an ANALYST subchat. Your job is to answer the overseer's question — run queries, build charts, surface findings. When done, call return_to_user with a concise summary the overseer can show the user.\n\n${basePrompt}`
+      }
+      return basePrompt
+    },
+
+    /** Architect subchat prompt — file-centric. Reads context from the
+     *  subchat's parentProjectId set at spawn. */
+    buildArchitectPrompt(chatId: string, deps: ChatExecutionDependencies): string {
+      const chat = this.chats[chatId]
+      if (!chat) return ''
+      const projectId = chat.parentProjectId || deps.projectStore?.activeProjectId || ''
+      const project = projectId ? deps.projectStore?.projects[projectId] : null
+
+      const files = project
+        ? project.editorIds
+            .map((id) => deps.editorStore.editors[id])
+            .filter((e) => e && !e.deleted)
+            .map((ed) => ({ name: ed.name, type: ed.type, size: (ed.contents || '').length }))
+        : []
+
+      const conn =
+        (project?.dataConnectionId &&
+          deps.connectionStore.connections[project.dataConnectionId]) ||
+        null
+
+      return buildArchitectSystemPrompt({
+        projectName: project?.name,
+        projectDescription: project?.description,
+        files,
+        dataConnectionName: conn?.name ?? '',
+        isDataConnectionActive: conn?.connected ?? false,
+      })
+    },
+
+    /** Build the overseer-specific system prompt (orchestration only). */
+    buildOverseerPrompt(chatId: string, deps: ChatExecutionDependencies): string {
+      const chat = this.chats[chatId]
+      if (!chat) return ''
+      const { projectStore, connectionStore, editorStore } = deps
+      // Overseer is global. Read active project at prompt-build time so it
+      // always reflects what the user is currently looking at.
+      const project = projectStore?.activeProject ?? null
+
+      const subchats: SubchatStatus[] = []
+      if (project) {
+        for (const subId of project.subchatIds) {
+          const sub = this.chats[subId]
+          if (!sub || sub.deleted) continue
+          const last = sub.messages[sub.messages.length - 1]
+          subchats.push({
+            id: sub.id,
+            kind: sub.kind as SubchatKind,
+            status: this.isChatExecuting(subId) ? 'running' : 'idle',
+            lastMessage: last?.content,
+          })
+        }
+      }
+
+      const editorNames = project
+        ? project.editorIds
+            .map((id) => editorStore?.editors[id]?.name)
+            .filter((n): n is string => !!n)
+        : []
+
+      return buildOverseerSystemPrompt({
+        projectName: project?.name,
+        projectDescription: project?.description,
+        subchats,
+        availableConnections: Object.values(connectionStore.connections).map((c) => c.name),
+        availableEditors: editorNames,
       })
     },
   },

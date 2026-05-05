@@ -44,7 +44,7 @@
           :symbols="editorData.completionSymbols || []"
           @select-symbol="insertSymbol"
           ref="symbolsPane"
-          v-if="!isMobile"
+          v-if="!isMobile && !hideEditorSymbols"
           :editorHeight="containerHeight"
         />
       </div>
@@ -166,6 +166,10 @@ export default defineComponent({
     const trilogyResolver = inject<FetchResolver>('trilogyResolver')
     const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     const isMobile = inject<boolean>('isMobile', false)
+    // Optional inject — host apps that mount the editor in a narrow column
+    // (e.g. explorer's center pane) can suppress the symbols pane without
+    // pretending to be a mobile context.
+    const hideEditorSymbols = inject<boolean>('hideEditorSymbols', false)
     const setActiveEditor = inject<Function>('setActiveEditor')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
@@ -189,6 +193,7 @@ export default defineComponent({
 
     return {
       isMobile,
+      hideEditorSymbols,
       connectionStore,
       modelStore,
       llmStore,

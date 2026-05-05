@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default permissions: core webview + dialog plugin for native folder/file pickers. Filesystem read goes through our custom fs_* commands so we don't need fs plugin scopes.",
+  "windows": ["main"],
+  "permissions": ["core:default", "dialog:default"]
+}

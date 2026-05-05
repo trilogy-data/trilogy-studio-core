@@ -45,6 +45,18 @@ export interface ChatMessage extends LLMMessage {
 
 export type ChatSource = 'user' | 'dashboard'
 
+/**
+ * Conversational role of a chat in the explorer's overseer/subchat model.
+ *  - 'user': default for studio chats and any standalone conversation
+ *  - 'overseer': explorer's primary chat — orchestrates work via subchats
+ *  - 'architect': subchat focused on data model setup
+ *  - 'analyst': subchat focused on analysis / dashboards
+ *
+ * Studio chats are always 'user' (the default) — the dispatch in chatStore
+ * only takes a different path when kind === 'overseer'.
+ */
+export type ChatKind = 'user' | 'overseer' | 'architect' | 'analyst'
+
 export interface ChatSessionData {
   id: string
   name: string
@@ -63,6 +75,18 @@ export interface ChatSessionData {
   source: ChatSource
   /** For non-user sources, the id of the owning entity (e.g. dashboard id). */
   sourceRefId?: string | null
+  /** Overseer/subchat role. Defaults to 'user' (studio's standalone chats). */
+  kind: ChatKind
+  /** Parent chat id when this is a subchat. Undefined for top-level chats. */
+  parentChatId?: string | null
+  /** Project the subchat operates on. Set by the overseer when spawning so
+   *  the subchat's tools (architect file edits, analyst queries) target a
+   *  specific workspace even if the user navigates elsewhere mid-run. */
+  parentProjectId?: string | null
+  /** Hidden user-message content queued to be re-injected after the current
+   * execution finishes. Used by the overseer flow: when a subchat completes
+   * while its parent is busy, the result waits here until the parent is idle. */
+  pendingInjections: string[]
   changed: boolean
   deleted: boolean
 }
@@ -82,6 +106,10 @@ export class Chat implements ChatSessionData {
   storage: 'local' | 'github' | 'remote'
   source: ChatSource
   sourceRefId?: string | null
+  kind: ChatKind
+  parentChatId?: string | null
+  parentProjectId?: string | null
+  pendingInjections: string[]
   changed: boolean
   deleted: boolean
 
@@ -100,6 +128,10 @@ export class Chat implements ChatSessionData {
     this.storage = data.storage || 'local'
     this.source = data.source || 'user'
     this.sourceRefId = data.sourceRefId ?? null
+    this.kind = data.kind || 'user'
+    this.parentChatId = data.parentChatId ?? null
+    this.parentProjectId = data.parentProjectId ?? null
+    this.pendingInjections = data.pendingInjections || []
     this.changed = data.changed ?? true
     this.deleted = data.deleted ?? false
   }
@@ -261,6 +293,10 @@ export class Chat implements ChatSessionData {
       storage: this.storage,
       source: this.source,
       sourceRefId: this.sourceRefId ?? null,
+      kind: this.kind,
+      parentChatId: this.parentChatId ?? null,
+      parentProjectId: this.parentProjectId ?? null,
+      pendingInjections: this.pendingInjections,
     }
   }
 

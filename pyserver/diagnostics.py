@@ -24,7 +24,11 @@ from io_models import (
     Import,
     TrilogyType,
 )
-from env_helpers import parse_env_from_full_model, normalize_relative_imports
+from env_helpers import (
+    mark_known_files,
+    parse_env_from_full_model,
+    normalize_relative_imports,
+)
 from logging import getLogger
 from common import concept_to_description, concept_to_derivation
 
@@ -98,6 +102,7 @@ def get_diagnostics(
     doctext: str,
     sources: List[ModelSourceInSchema],
     current_filename: str | None = None,
+    files: List[str] | None = None,
 ) -> ValidateResponse:
     diagnostics: List[ValidateItem] = []
     completions: List[CompletionItem] = []
@@ -163,6 +168,7 @@ def get_diagnostics(
                 logger.info(x)
                 if isinstance(x, ImportStatement):
                     imports.append(Import(name=str(x.path), alias=x.alias))
+            mark_known_files(env, files)
 
         except Exception:
             logging.exception("text parse error, may have partial results")

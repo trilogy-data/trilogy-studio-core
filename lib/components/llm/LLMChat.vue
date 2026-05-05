@@ -616,10 +616,10 @@ export default defineComponent({
 .chat-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  height: 48px;
-  min-height: 48px;
+  gap: var(--panel-header-gap, 8px);
+  padding: 0 var(--panel-header-padding-inline, 12px);
+  height: var(--panel-header-height, 48px);
+  min-height: var(--panel-header-height, 48px);
   background-color: var(--panel-header-bg);
   border-bottom: 1px solid var(--border-light);
   overflow: visible;
@@ -642,9 +642,12 @@ export default defineComponent({
 }
 
 .chat-title {
-  font-size: var(--font-size);
-  font-weight: 600;
-  color: var(--text-color);
+  color: var(--panel-header-title-color, var(--text-color));
+  font-size: var(--panel-header-title-font-size, var(--font-size));
+  font-weight: var(--panel-header-title-font-weight, 600);
+  letter-spacing: var(--panel-header-title-letter-spacing, 0);
+  line-height: var(--panel-header-title-line-height, normal);
+  text-transform: var(--panel-header-title-text-transform, none);
   flex: 1 1 auto;
   min-width: 112px;
   white-space: nowrap;
@@ -654,8 +657,8 @@ export default defineComponent({
 
 @media (max-width: 768px) {
   .chat-header {
-    gap: 6px;
-    padding: 0 8px;
+    gap: var(--panel-header-gap, 6px);
+    padding: 0 var(--panel-header-padding-inline, 8px);
   }
 
   .chat-header-left {

@@ -79,6 +79,7 @@
       </div>
       <error-message
         v-else-if="error"
+        :flushChrome="true"
         :type="
           error === 'Connection is not active... Attempting to automatically reconnect.'
             ? 'information'

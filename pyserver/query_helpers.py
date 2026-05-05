@@ -35,6 +35,7 @@ from trilogy.core.models.core import TraitDataType, ListWrapper
 from logging import getLogger
 
 from env_helpers import (
+    mark_known_files,
     parse_env_from_full_model,
     normalize_relative_imports,
     resolve_import_path,
@@ -233,6 +234,7 @@ def generate_single_query(
     extra_conditional: WhereClause | None = None,
     base_filter_idx: int = 0,
     cleanup_concepts: bool = False,
+    files: list[str] | None = None,
 ) -> tuple[
     PROCESSED_STATEMENT_TYPES | None,
     list[QueryOutColumn],
@@ -251,6 +253,9 @@ def generate_single_query(
     else:
         pre_concepts = {}
     env, parsed = parse_text(safe_format_query(query), env, parse_config=PARSE_CONFIG)
+    # Files may have been declared inline in the query body (e.g. `file
+    # 'ratings.csv'`) or come in via imports parsed earlier — patch both.
+    mark_known_files(env, files)
     parse_time = time.time() - parse_start
     default_return: list[QueryOutColumn] = []
     default_values: list[dict] | None = None
@@ -450,6 +455,7 @@ def generate_query_core(
     if import_strings:
         full_imp_string = "\n".join(import_strings)
         parse_text(full_imp_string, env, parse_config=PARSE_CONFIG)
+        mark_known_files(env, query.files)
 
     if enable_performance_logging:
         import_time = time.time() - import_start
@@ -457,7 +463,12 @@ def generate_query_core(
 
     # Generate query
     target, columns, results, select_count = generate_single_query(
-        normalized_query, env, dialect, query.extra_filters, query.parameters
+        normalized_query,
+        env,
+        dialect,
+        query.extra_filters,
+        query.parameters,
+        files=query.files,
     )
 
     if enable_performance_logging:
@@ -506,6 +517,7 @@ def generate_multi_query_core(
                 imports.append(f"import {imp.name};")
         imp_string = "\n".join(imports)
         parse_text(imp_string, benv, parse_config=PARSE_CONFIG)
+        mark_known_files(benv, query.files)
         conditional = None
         if extra_filters:
             conditional = filters_to_conditional(extra_filters, variables, benv)
@@ -539,6 +551,7 @@ def generate_multi_query_core(
                 extra_conditional=conditional,
                 base_filter_idx=idx,
                 cleanup_concepts=cleanup_concepts,
+                files=query.files,
             )
             all.append((subquery.label, generated, columns, values))
         except Exception as e:

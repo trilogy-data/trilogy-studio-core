@@ -4,6 +4,7 @@ import { DashboardModel } from '../dashboards'
 import type Connection from '../connections/base'
 import { LLMProvider } from '../llm'
 import { Chat } from '../chats/chat'
+import { Project } from '../projects/project'
 export default abstract class AbstractStorage {
   public type: string
 
@@ -38,4 +39,21 @@ export default abstract class AbstractStorage {
   abstract loadChats(): Promise<Record<string, Chat>>
   abstract deleteChat(id: string): Promise<void>
   abstract clearChats(): Promise<void>
+
+  // Project persistence — concrete defaults so storages that don't yet
+  // support projects keep compiling. Explorer's LocalStorage overrides these.
+  // Studio doesn't currently use projects; if it adopts them later,
+  // GitHubStorage and RemoteStoreStorage can implement these too.
+  async saveProjects(_projects: Project[]): Promise<void> {
+    /* default no-op */
+  }
+  async loadProjects(): Promise<Record<string, Project>> {
+    return {}
+  }
+  async deleteProject(_id: string): Promise<void> {
+    /* default no-op */
+  }
+  async clearProjects(): Promise<void> {
+    /* default no-op */
+  }
 }
