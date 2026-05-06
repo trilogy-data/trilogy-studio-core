@@ -18,6 +18,7 @@ import { useExecutionContext } from './composables/useExecutionContext'
 import ProjectSidebar from './components/ProjectSidebar.vue'
 import OverseerPanel from './components/OverseerPanel.vue'
 import ProviderSetup from './components/ProviderSetup.vue'
+import PromptManager from './components/PromptManager.vue'
 import SubchatViewer from './components/SubchatViewer.vue'
 import ArtifactsView from './components/ArtifactsView.vue'
 import FileEditor from './components/FileEditor.vue'
@@ -124,9 +125,14 @@ function closeSubchat() {
   viewingSubchatId.value = ''
 }
 
-// Provider settings modal — first-time setup + updating an existing key.
+// Overseer settings modal — first-time setup, updating an existing key, and
+// per-project agent prompt management. Tabs let the user pivot between
+// connection config and prompt overrides without leaving the modal.
 const showProviderSettings = ref(false)
+type SettingsTab = 'connection' | 'prompts'
+const settingsTab = ref<SettingsTab>('connection')
 function openProviderSettings() {
+  settingsTab.value = 'connection'
   showProviderSettings.value = true
 }
 function closeProviderSettings() {
@@ -171,11 +177,26 @@ function onProviderAdded() {
     <div v-if="showProviderSettings" class="settings-backdrop" @click.self="closeProviderSettings">
       <div class="settings-modal" role="dialog">
         <header class="settings-head">
-          <span>LLM providers</span>
+          <span>Overseer settings</span>
+          <nav class="settings-tabs">
+            <button
+              :class="{ active: settingsTab === 'connection' }"
+              @click="settingsTab = 'connection'"
+            >
+              Connection
+            </button>
+            <button
+              :class="{ active: settingsTab === 'prompts' }"
+              @click="settingsTab = 'prompts'"
+            >
+              Prompts
+            </button>
+          </nav>
           <button class="close-btn" @click="closeProviderSettings" title="Close">×</button>
         </header>
         <div class="settings-body">
-          <ProviderSetup @added="onProviderAdded" />
+          <ProviderSetup v-if="settingsTab === 'connection'" @added="onProviderAdded" />
+          <PromptManager v-else />
         </div>
       </div>
     </div>
@@ -239,12 +260,43 @@ function onProviderAdded() {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  width: min(560px, 92vw);
-  max-height: 88vh;
+  width: min(880px, 94vw);
+  height: min(720px, 90vh);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.settings-tabs {
+  display: flex;
+  gap: 0.3rem;
+  margin-left: 1.4rem;
+  flex: 1;
+}
+
+.settings-tabs button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.settings-tabs button:hover {
+  background: rgba(127, 127, 127, 0.12);
+  color: var(--fg);
+}
+
+.settings-tabs button.active {
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.12);
 }
 
 .settings-head {
@@ -280,5 +332,8 @@ function onProviderAdded() {
 .settings-body {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 </style>

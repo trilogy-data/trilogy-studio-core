@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { Project } from '../projects/project'
+import type { PromptOverrideKind } from '../projects/project'
 
 /**
  * Project store. Mirrors the shape of chatStore: state holds Project
@@ -111,6 +112,16 @@ export const useProjectStore = defineStore('projects', {
 
     removeEditorFromProject(id: string, editorId: string): boolean {
       return this.projects[id]?.removeEditor(editorId) ?? false
+    },
+
+    /** Set the per-project instructions override for an agent kind. Pass
+     *  undefined or an empty string to revert to the default. */
+    setProjectPromptOverride(
+      id: string,
+      kind: PromptOverrideKind,
+      value: string | undefined,
+    ): void {
+      this.projects[id]?.setPromptOverride(kind, value)
     },
 
     /** Hydrate from a Record produced by AbstractStorage.loadProjects(). */

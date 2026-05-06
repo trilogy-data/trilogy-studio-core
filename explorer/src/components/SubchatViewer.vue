@@ -13,13 +13,27 @@ const emit = defineEmits<{ close: [] }>()
 
 const chatStore = useChatStore()
 const chat = computed(() => chatStore.chats[props.chatId] || null)
-const status = computed(() => (chatStore.isChatExecuting(props.chatId) ? 'running' : 'idle'))
+const isExecuting = computed(() => chatStore.isChatExecuting(props.chatId))
+const isPaused = computed(() => chatStore.isChatPaused(props.chatId))
+const status = computed(() => {
+  if (!isExecuting.value) return 'idle'
+  return isPaused.value ? 'paused' : 'running'
+})
 const activeTool = computed(() => chatStore.getChatActiveToolName(props.chatId))
 
 const noopSendHandler = async (): Promise<void> => {}
 
 function onBackdropClick(e: MouseEvent) {
   if (e.target === e.currentTarget) emit('close')
+}
+
+function togglePause() {
+  if (!isExecuting.value) return
+  if (isPaused.value) {
+    chatStore.resumeExecution(props.chatId)
+  } else {
+    chatStore.pauseExecution(props.chatId)
+  }
 }
 </script>
 
@@ -31,6 +45,16 @@ function onBackdropClick(e: MouseEvent) {
         <span class="modal-title" :title="chat.name">{{ chat.name }}</span>
         <span class="modal-status" :class="`status-${status}`">{{ status }}</span>
         <span class="modal-readonly">read-only</span>
+        <button
+          v-if="isExecuting"
+          class="pause-btn"
+          :class="{ paused: isPaused }"
+          @click="togglePause"
+          :title="isPaused ? 'Resume loop' : 'Pause after current iteration'"
+        >
+          <i :class="isPaused ? 'mdi mdi-play' : 'mdi mdi-pause'" />
+          {{ isPaused ? 'Resume' : 'Pause' }}
+        </button>
         <button class="close-btn" @click="emit('close')" title="Close">×</button>
       </header>
       <div class="modal-body">
@@ -119,6 +143,38 @@ function onBackdropClick(e: MouseEvent) {
 .modal-status.status-running {
   background: rgba(245, 158, 11, 0.18);
   color: #d97706;
+}
+
+.modal-status.status-paused {
+  background: rgba(59, 130, 246, 0.18);
+  color: var(--accent);
+}
+
+.pause-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--fg);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.18rem 0.55rem;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.pause-btn:hover {
+  background: rgba(127, 127, 127, 0.12);
+}
+
+.pause-btn.paused {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent);
+  border-color: rgba(59, 130, 246, 0.4);
 }
 
 .modal-readonly {

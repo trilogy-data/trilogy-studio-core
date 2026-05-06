@@ -1119,11 +1119,23 @@ export default class QueryExecutionService {
         selectCount,
       }
     } catch (error) {
+      // Diagnostic: log the raw thrown value so non-Error, non-string
+      // throws don't get hidden behind 'Unknown error occurred'. Remove
+      // once the explorer's remote-worker error path is settled.
+      console.error('[query catch] raw error:', error, 'type:', typeof error, 'ctor:', error?.constructor?.name)
       const errorMessage = controller.signal.aborted
         ? 'Query cancelled by user'
         : error instanceof Error
           ? error.message
-          : 'Unknown error occurred'
+          : typeof error === 'string'
+            ? error
+            : (() => {
+                try {
+                  return `Unknown error: ${JSON.stringify(error)}`
+                } catch {
+                  return `Unknown error: ${String(error)}`
+                }
+              })()
       if (this.storeHistory) {
         useQueryHistoryService(connectionId).recordQuery({
           query: queryInput.text,

@@ -43,6 +43,10 @@ export interface ToolExecutorFactory {
 export interface ExecutionStateUpdater {
   setActiveToolName(name: string): void
   checkAborted(): boolean
+  /** Optional pause check. When it returns true, the loop holds at the top
+   *  of the next iteration (no further LLM calls or tool executions) until
+   *  it returns false or the run is aborted. */
+  isPaused?(): boolean
 }
 
 /** Options for running the tool loop */
@@ -210,6 +214,25 @@ export async function runToolLoop(
 
   for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
     // Check for abort before starting iteration
+    if (stateUpdater.checkAborted()) {
+      messagePersistence.addMessage({
+        role: 'assistant',
+        content: lastResponseText || '(Response in progress when stopped)',
+      })
+      messagePersistence.addMessage({
+        role: 'user',
+        content: `${SYSTEM_INPUT_START}[User requested pause - conversation can be continued]${SYSTEM_INPUT_END}`,
+        hidden: true,
+      })
+      return { terminated: false, stopped: true, finalMessage: 'Stopped by user' }
+    }
+
+    // Hold here while user has the loop paused. Re-check abort each tick so
+    // a pause-then-stop sequence still terminates promptly.
+    while (stateUpdater.isPaused?.()) {
+      if (stateUpdater.checkAborted()) break
+      await new Promise((resolve) => setTimeout(resolve, 200))
+    }
     if (stateUpdater.checkAborted()) {
       messagePersistence.addMessage({
         role: 'assistant',

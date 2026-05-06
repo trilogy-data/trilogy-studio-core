@@ -15,6 +15,18 @@
  * through AbstractStorage exactly like Editors, Dashboards, and Chats.
  */
 
+/** Per-agent instructions text overrides. Each entry, when present and
+ *  non-empty, replaces the default instructions block for that agent kind
+ *  while the agent is running in the context of this project. Dynamic
+ *  context (files, connections, subchats) is still appended automatically. */
+export interface ProjectPromptOverrides {
+  overseer?: string
+  architect?: string
+  analyst?: string
+}
+
+export type PromptOverrideKind = keyof ProjectPromptOverrides
+
 export interface ProjectData {
   id: string
   name: string
@@ -31,6 +43,9 @@ export interface ProjectData {
    *  When set, the host can re-scan it on demand to import new files
    *  without manual re-attachment. Only meaningful in the Tauri shell. */
   directoryPath: string
+  /** Per-agent instructions text overrides. Empty / missing entries mean
+   *  "use the default." */
+  promptOverrides: ProjectPromptOverrides
   createdAt: Date
   updatedAt: Date
   storage: 'local' | 'github' | 'remote'
@@ -51,6 +66,7 @@ export class Project implements ProjectData {
   editorIds: string[]
   subchatIds: string[]
   directoryPath: string
+  promptOverrides: ProjectPromptOverrides
   createdAt: Date
   updatedAt: Date
   storage: 'local' | 'github' | 'remote'
@@ -66,6 +82,7 @@ export class Project implements ProjectData {
     this.editorIds = data.editorIds || []
     this.subchatIds = data.subchatIds || []
     this.directoryPath = data.directoryPath || ''
+    this.promptOverrides = data.promptOverrides ? { ...data.promptOverrides } : {}
     this.createdAt = data.createdAt || new Date()
     this.updatedAt = data.updatedAt || new Date()
     this.storage = data.storage || 'local'
@@ -88,6 +105,21 @@ export class Project implements ProjectData {
   setDirectoryPath(path: string): void {
     if (this.directoryPath === path) return
     this.directoryPath = path
+    this.touch()
+  }
+
+  /** Set or clear an agent prompt override. Pass undefined / empty string to
+   *  revert to the default. */
+  setPromptOverride(kind: PromptOverrideKind, value: string | undefined): void {
+    const trimmed = value?.trim() ?? ''
+    const current = this.promptOverrides[kind]
+    if (!trimmed) {
+      if (current === undefined) return
+      delete this.promptOverrides[kind]
+    } else {
+      if (current === trimmed) return
+      this.promptOverrides[kind] = trimmed
+    }
     this.touch()
   }
 
@@ -136,6 +168,7 @@ export class Project implements ProjectData {
       editorIds: this.editorIds,
       subchatIds: this.subchatIds,
       directoryPath: this.directoryPath,
+      promptOverrides: { ...this.promptOverrides },
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
       storage: this.storage,

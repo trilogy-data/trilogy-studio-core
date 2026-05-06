@@ -29,6 +29,16 @@ pub trait QueryWorker: Send {
         schema: Option<&str>,
         table: &str,
     ) -> Result<TableDTO>;
+
+    /// Set the directory the engine should resolve relative file references
+    /// against. The explorer pushes its project's `directoryPath` here so
+    /// `read_csv('movies.csv')` (basename, as the trilogy resolver renders it)
+    /// finds the file in the project root. Default is a no-op for drivers
+    /// without a notion of file CWD; DuckDB maps this to
+    /// `SET file_search_path`.
+    fn set_working_directory(&mut self, _directory: &str) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// Out-of-band cancel signal. Lives outside the worker's mutex so the

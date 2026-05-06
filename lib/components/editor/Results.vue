@@ -296,7 +296,6 @@ export default {
   background: var(--query-window-bg);
   min-height: 24px;
   height: 24px;
-  z-index: 99;
 }
 
 .tabs-left {

@@ -124,6 +124,16 @@ export interface RemoteWorkerHost {
   ): Promise<RemoteTableDTO>
 
   disconnect(sessionId: string): Promise<void>
+
+  /**
+   * Tell the remote engine which directory to resolve relative file
+   * references against — i.e. what `read_csv('foo.csv')` (basename, the
+   * shape the trilogy resolver renders for explorer queries) should be
+   * anchored at. The DuckDB worker maps this to `SET file_search_path`;
+   * other drivers may no-op. Optional on hosts that don't ship a driver
+   * with a notion of file CWD.
+   */
+  setWorkingDirectory?(sessionId: string, directory: string): Promise<void>
 }
 
 // --- Host registration -----------------------------------------------------
@@ -196,6 +206,11 @@ export default class RemoteWorkerConnection extends BaseConnection {
   private sessionId: string | null = null
   private capabilities: RemoteWorkerCapabilities | null = null
   private explicitHost: RemoteWorkerHost | null
+  // The directory the engine should resolve `read_csv('foo.csv')`-style
+  // basename file references against. The host pushes this whenever the
+  // owning project's directory changes; we cache it here so a reconnect
+  // (idle reap, worker restart) re-applies it transparently.
+  private pendingWorkingDirectory: string | null = null
 
   constructor(name: string, opts: RemoteWorkerConnectionOptions, model?: string) {
     super(name, `remote-worker:${opts.driver}`, false, model)
@@ -203,6 +218,37 @@ export default class RemoteWorkerConnection extends BaseConnection {
     this.config = opts.config ?? {}
     this.query_type = opts.queryType || opts.driver
     this.explicitHost = opts.host ?? null
+  }
+
+  // Push the working directory through to the remote worker. Stores the
+  // value either way so we can re-apply on reconnect. No-op when the host
+  // doesn't implement the optional method (drivers without a file CWD
+  // notion). Errors during push are swallowed — the working directory is a
+  // hint, not a correctness boundary; if the host loses it we'll just see
+  // a "file not found" at query time, which is the same failure mode as
+  // before the call.
+  async setWorkingDirectory(directory: string): Promise<void> {
+    this.pendingWorkingDirectory = directory
+    console.log(
+      `[setWorkingDirectory] conn=${this.name} sessionId=${this.sessionId} dir=${directory}`,
+    )
+    if (!this.sessionId) {
+      console.log(`[setWorkingDirectory] cached (not connected yet)`)
+      return
+    }
+    const host = this.explicitHost ?? registeredHost
+    if (!host || typeof host.setWorkingDirectory !== 'function') {
+      console.log(`[setWorkingDirectory] host has no setWorkingDirectory — skipping`)
+      return
+    }
+    try {
+      await host.setWorkingDirectory(this.sessionId, directory)
+      console.log(`[setWorkingDirectory] pushed OK to host`)
+    } catch (err) {
+      console.warn(
+        `RemoteWorkerConnection "${this.name}" failed to set working directory: ${err}`,
+      )
+    }
   }
 
   static fromJSON(fields: {
@@ -282,6 +328,25 @@ export default class RemoteWorkerConnection extends BaseConnection {
       this.query_type = res.queryType
     }
     this.capabilities = res.capabilities
+    // Re-apply any working directory the host pushed before we had a
+    // session (first-run / reconnect after idle reap). Best-effort.
+    if (this.pendingWorkingDirectory !== null && typeof host.setWorkingDirectory === 'function') {
+      console.log(
+        `[setWorkingDirectory] re-applying on connect: dir=${this.pendingWorkingDirectory} sessionId=${res.sessionId}`,
+      )
+      try {
+        await host.setWorkingDirectory(res.sessionId, this.pendingWorkingDirectory)
+        console.log(`[setWorkingDirectory] re-apply on connect OK`)
+      } catch (err) {
+        console.warn(
+          `RemoteWorkerConnection "${this.name}" failed to re-apply working directory on connect: ${err}`,
+        )
+      }
+    } else {
+      console.log(
+        `[setWorkingDirectory] connect: no cached dir to re-apply (pending=${this.pendingWorkingDirectory}, hostHasMethod=${typeof host.setWorkingDirectory === 'function'})`,
+      )
+    }
     return true
   }
 

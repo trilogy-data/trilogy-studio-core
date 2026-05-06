@@ -196,6 +196,66 @@ export function useExecutionContext(prefix = 'explorer:'): ExecutionContext {
     { deep: true },
   )
 
+  // Push the owning project's directoryPath through to the connection so
+  // its remote worker can resolve `read_csv('foo.csv')` (basename, the
+  // shape the trilogy resolver renders for explorer queries) against the
+  // user's actual project directory. The connection caches the value and
+  // re-applies it on reconnect, so we don't need to retry on connect-state
+  // changes here.
+  //
+  // We include `connectionType` and `connectionPresent` in the watched
+  // value so a connection-swap (e.g. ProjectEngineSection.applyEngine
+  // replacing a wasm DuckDBConnection with a RemoteWorkerConnection at the
+  // same id) actually re-fires the watcher. Without this, deep equality
+  // sees `{connectionId, directory}` unchanged and skips the push, so the
+  // newly-installed RemoteWorker never gets told about the project's
+  // directoryPath.
+  watch(
+    () => {
+      const out: Array<{
+        connectionId: string
+        directory: string
+        connectionType: string | null
+        connectionPresent: boolean
+      }> = []
+      for (const project of Object.values(projectStore.projects)) {
+        if (project.deleted || !project.dataConnectionId || !project.directoryPath) continue
+        const conn = connectionStore.connections[project.dataConnectionId] as
+          | { type?: string }
+          | undefined
+        out.push({
+          connectionId: project.dataConnectionId,
+          directory: project.directoryPath,
+          connectionType: conn?.type ?? null,
+          connectionPresent: Boolean(conn),
+        })
+      }
+      return out
+    },
+    (entries) => {
+      console.log(`[setWorkingDirectory:watcher] entries=`, entries)
+      for (const { connectionId, directory } of entries) {
+        const conn = connectionStore.connections[connectionId] as
+          | { setWorkingDirectory?: (directory: string) => Promise<void> }
+          | undefined
+        if (!conn) {
+          console.log(`[setWorkingDirectory:watcher] no connection for id=${connectionId}`)
+          continue
+        }
+        if (typeof conn.setWorkingDirectory !== 'function') {
+          console.log(
+            `[setWorkingDirectory:watcher] connection ${connectionId} has no setWorkingDirectory method — skipping`,
+          )
+          continue
+        }
+        conn.setWorkingDirectory(directory).catch((err) => {
+          console.warn(`setWorkingDirectory failed for ${connectionId}: ${err}`)
+        })
+      }
+    },
+    { deep: true, immediate: true },
+  )
+
   return {
     queryExecutionService,
     trilogyResolver,

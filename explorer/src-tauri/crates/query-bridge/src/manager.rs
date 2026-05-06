@@ -146,6 +146,12 @@ impl SessionManager {
         let guard = w.lock();
         guard.describe_table(database, schema, table)
     }
+
+    pub fn set_working_directory(&self, session_id: &str, directory: &str) -> Result<()> {
+        let w = self.worker(session_id)?;
+        let mut guard = w.lock();
+        guard.set_working_directory(directory)
+    }
 }
 
 impl Default for SessionManager {

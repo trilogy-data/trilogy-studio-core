@@ -32,6 +32,7 @@ const projectStore = useProjectStore()
 
 const isLoading = computed(() => chatStore.isChatExecuting(props.overseer.id))
 const activeTool = computed(() => chatStore.getChatActiveToolName(props.overseer.id))
+const isPaused = computed(() => chatStore.isChatPaused(props.overseer.id))
 
 const activeSubchatCount = computed(() => {
   const project = projectStore.activeProject
@@ -80,6 +81,15 @@ function interrupt() {
   chatStore.stopExecution(props.overseer.id)
 }
 
+function togglePause() {
+  if (!isLoading.value) return
+  if (isPaused.value) {
+    chatStore.resumeExecution(props.overseer.id)
+  } else {
+    chatStore.pauseExecution(props.overseer.id)
+  }
+}
+
 const placeholder = computed(() =>
   projectStore.activeProject
     ? `Talk to the overseer about “${projectStore.activeProject.name}”…`
@@ -111,6 +121,15 @@ const placeholder = computed(() =>
         </span>
       </template>
       <template #header-actions>
+        <button
+          v-if="isLoading"
+          class="hdr-btn"
+          :class="{ 'pause-active': isPaused }"
+          @click="togglePause"
+          :title="isPaused ? 'Resume overseer loop' : 'Pause after current iteration'"
+        >
+          <i :class="isPaused ? 'mdi mdi-play' : 'mdi mdi-pause'" />
+        </button>
         <button
           class="hdr-btn"
           :disabled="isLoading || overseer.messages.length === 0"
@@ -168,6 +187,11 @@ const placeholder = computed(() =>
 .hdr-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.hdr-btn.pause-active {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent);
 }
 
 .active-badge {

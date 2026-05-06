@@ -107,4 +107,8 @@ export const tauriRemoteWorkerHost: RemoteWorkerHost = {
       table,
     })
   },
+
+  async setWorkingDirectory(sessionId: string, directory: string): Promise<void> {
+    await invoke('remote_set_working_directory', { sessionId, directory })
+  },
 }

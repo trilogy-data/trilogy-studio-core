@@ -15,6 +15,7 @@ import { buildChatAgentSystemPrompt, CHAT_TOOLS } from '../llm/chatAgentPrompt'
 import {
   buildOverseerSystemPrompt,
   OVERSEER_TOOLS,
+  ANALYST_DEFAULT_INSTRUCTIONS,
   type SubchatStatus,
   type SubchatKind,
 } from '../llm/overseerAgentPrompt'
@@ -56,6 +57,9 @@ export interface ChatExecution {
   error: string | null
   rateLimitBackoff: RateLimitBackoff | null
   abortController: AbortController | null
+  /** When true, the tool loop holds at the top of the next iteration until
+   *  flipped back to false (or aborted). Mid-iteration work is not interrupted. */
+  paused: boolean
 }
 
 /** Dependencies needed to execute a chat message */
@@ -122,6 +126,12 @@ export const useChatStore = defineStore('chats', {
       (state) =>
       (chatId: string): RateLimitBackoff | null =>
         state.chatExecutions[chatId]?.rateLimitBackoff ?? null,
+
+    /** Whether the chat's loop is currently paused. */
+    isChatPaused:
+      (state) =>
+      (chatId: string): boolean =>
+        state.chatExecutions[chatId]?.paused ?? false,
   },
 
   actions: {
@@ -276,7 +286,24 @@ export const useChatStore = defineStore('chats', {
         error: null,
         rateLimitBackoff: null,
         abortController: new AbortController(),
+        paused: false,
       }
+    },
+
+    /** Toggle pause for an in-progress chat — the loop will hold before its
+     *  next iteration and stay there until resumeExecution is called. Has no
+     *  effect on idle chats or chats already paused. */
+    pauseExecution(chatId: string): void {
+      const execution = this.chatExecutions[chatId]
+      if (!execution || !execution.isLoading) return
+      execution.paused = true
+    },
+
+    /** Release a paused chat so its tool loop resumes from the next iteration. */
+    resumeExecution(chatId: string): void {
+      const execution = this.chatExecutions[chatId]
+      if (!execution) return
+      execution.paused = false
     },
 
     /** Stop an in-progress execution for a chat */
@@ -470,6 +497,7 @@ export const useChatStore = defineStore('chats', {
         const stateUpdater: ExecutionStateUpdater = {
           setActiveToolName: (name) => this.setActiveToolName(chatId, name),
           checkAborted: () => signal?.aborted ?? false,
+          isPaused: () => this.chatExecutions[chatId]?.paused ?? false,
         }
 
         // Build system prompt function (called each iteration for freshness)
@@ -679,7 +707,10 @@ export const useChatStore = defineStore('chats', {
       // give them a short role preamble. Architect handled above with its
       // own dedicated prompt.
       if (chat.kind === 'analyst') {
-        return `You are an ANALYST subchat. Your job is to answer the overseer's question — run queries, build charts, surface findings. When done, call return_to_user with a concise summary the overseer can show the user.\n\n${basePrompt}`
+        const projectId = chat.parentProjectId || deps.projectStore?.activeProjectId || ''
+        const project = projectId ? deps.projectStore?.projects[projectId] : null
+        const preamble = project?.promptOverrides.analyst?.trim() || ANALYST_DEFAULT_INSTRUCTIONS
+        return `${preamble}\n\n${basePrompt}`
       }
       return basePrompt
     },
@@ -710,6 +741,7 @@ export const useChatStore = defineStore('chats', {
         files,
         dataConnectionName: conn?.name ?? '',
         isDataConnectionActive: conn?.connected ?? false,
+        instructionsOverride: project?.promptOverrides.architect,
       })
     },
 
@@ -749,6 +781,7 @@ export const useChatStore = defineStore('chats', {
         subchats,
         availableConnections: Object.values(connectionStore.connections).map((c) => c.name),
         availableEditors: editorNames,
+        instructionsOverride: project?.promptOverrides.overseer,
       })
     },
   },

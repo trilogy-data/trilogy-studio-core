@@ -20,25 +20,20 @@ export interface ArchitectPromptOptions {
   /** Whether the data connection is currently live. Subchats can't call
    *  connect_data_connection (overseer scope), so this is informational. */
   isDataConnectionActive: boolean
+  /** Optional instructions text that replaces ARCHITECT_DEFAULT_INSTRUCTIONS.
+   *  Dynamic context (files, data connection) is still appended automatically. */
+  instructionsOverride?: string
 }
 
 function describeFile(f: { name: string; type: string; size: number }): string {
   return `  - ${f.name}  (${f.type}, ${f.size} bytes)`
 }
 
-export function buildArchitectSystemPrompt(opts: ArchitectPromptOptions): string {
-  const filesBlock =
-    opts.files.length > 0
-      ? `\nFILES IN THIS PROJECT:\n${opts.files.map(describeFile).join('\n')}`
-      : '\nNo files in this project yet.'
-
-  const connectionBlock = opts.dataConnectionName
-    ? `\nDATA CONNECTION: ${opts.dataConnectionName}${opts.isDataConnectionActive ? '' : ' (not yet connected — first run_trilogy_query will boot it)'}`
-    : '\nNo data connection bound.'
-
+/** Static instructions block — overridable per-project. Kept as a function so
+ *  the embedded Trilogy constants (functions, data types) refresh with the
+ *  build, even though the prose around them is stable. */
+export function getArchitectDefaultInstructions(): string {
   return `You are an ARCHITECT subchat. Your job is to build a Trilogy data model from the raw files attached to this project. The user does not see this conversation — your overseer does. Work autonomously; when finished, call return_to_user with a brief summary.
-${filesBlock}
-${connectionBlock}
 
 TYPICAL WORKFLOW:
 1. list_project_files to confirm what's there.
@@ -59,7 +54,25 @@ OPERATIONAL GUIDELINES:
 - Always include a \`datasource\` block bound to the underlying table, with a sensible \`grain\`.
 - Define concepts for every column the user is likely to want; favor descriptive names over the raw column header.
 - Don't return until at least one file validates cleanly and a smoke query succeeds, OR you've exhausted reasonable attempts and need to report blockers.
-- Errors from the resolver are authoritative — read them carefully; don't guess fixes.
+- Errors from the resolver are authoritative — read them carefully; don't guess fixes.`
+}
+
+export function buildArchitectSystemPrompt(opts: ArchitectPromptOptions): string {
+  const filesBlock =
+    opts.files.length > 0
+      ? `FILES IN THIS PROJECT:\n${opts.files.map(describeFile).join('\n')}`
+      : 'No files in this project yet.'
+
+  const connectionBlock = opts.dataConnectionName
+    ? `DATA CONNECTION: ${opts.dataConnectionName}${opts.isDataConnectionActive ? '' : ' (not yet connected — first run_trilogy_query will boot it)'}`
+    : 'No data connection bound.'
+
+  const instructions = opts.instructionsOverride?.trim() || getArchitectDefaultInstructions()
+
+  return `${instructions}
+
+${filesBlock}
+${connectionBlock}
 `
 }
 
@@ -109,6 +122,31 @@ export const ARCHITECT_TOOLS = [
         content: { type: 'string' },
       },
       required: ['name', 'content'],
+    },
+  },
+  {
+    name: 'rename_project_file',
+    description:
+      'Rename a file in the project. Both .preql and other attached files (CSV, SQL, markdown, …) can be renamed. Fails if `new_name` collides with an existing file.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Current file name including extension.' },
+        new_name: { type: 'string', description: 'New file name including extension.' },
+      },
+      required: ['name', 'new_name'],
+    },
+  },
+  {
+    name: 'delete_project_file',
+    description:
+      'Remove a file from the project. Use to clean up obsolete .preql models or stale attachments. CSV deletions only detach from the project — the underlying registered DuckDB table is not dropped here.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'File name including extension.' },
+      },
+      required: ['name'],
     },
   },
   {

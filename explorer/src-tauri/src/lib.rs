@@ -254,6 +254,17 @@ fn remote_describe_table(
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn remote_set_working_directory(
+    state: State<'_, SessionManager>,
+    session_id: String,
+    directory: String,
+) -> Result<(), String> {
+    state
+        .set_working_directory(&session_id, &directory)
+        .map_err(|e| e.to_string())
+}
+
 // ---------------------------------------------------------------------------
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -277,6 +288,7 @@ pub fn run() {
             remote_describe_tables,
             remote_describe_columns,
             remote_describe_table,
+            remote_set_working_directory,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

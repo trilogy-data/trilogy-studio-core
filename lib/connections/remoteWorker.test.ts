@@ -390,6 +390,92 @@ describe('RemoteWorkerConnection', () => {
     await conn.connect()
     expect(conn.query_type).toBe('postgres')
   })
+
+  describe('setWorkingDirectory', () => {
+    function hostWithWorkingDir(state: MockState) {
+      const calls: Array<{ sessionId: string; directory: string }> = []
+      const host: RemoteWorkerHost = {
+        ...makeHost(state),
+        async setWorkingDirectory(sessionId: string, directory: string) {
+          calls.push({ sessionId, directory })
+        },
+      }
+      return { host, calls }
+    }
+
+    it('forwards to the host with the live session id when connected', async () => {
+      const state = freshState()
+      const { host, calls } = hostWithWorkingDir(state)
+      const conn = new RemoteWorkerConnection('cn', { driver: 'duckdb', host })
+      await conn.connect()
+
+      await conn.setWorkingDirectory('/projects/movies')
+
+      expect(calls).toEqual([{ sessionId: 'session-xyz', directory: '/projects/movies' }])
+    })
+
+    it('caches the directory when called before connect and applies on connect', async () => {
+      const state = freshState()
+      const { host, calls } = hostWithWorkingDir(state)
+      const conn = new RemoteWorkerConnection('cn', { driver: 'duckdb', host })
+
+      // Project's directoryPath is known before the connection's first
+      // connect (e.g. rehydrated project state). Caching here means the
+      // host doesn't have to coordinate "wait until connected".
+      await conn.setWorkingDirectory('/projects/movies')
+      expect(calls).toEqual([])
+
+      await conn.connect()
+      expect(calls).toEqual([{ sessionId: 'session-xyz', directory: '/projects/movies' }])
+    })
+
+    it('re-applies the cached directory after a reconnect', async () => {
+      const state = freshState()
+      const { host, calls } = hostWithWorkingDir(state)
+      const conn = new RemoteWorkerConnection('cn', { driver: 'duckdb', host })
+
+      await conn.connect()
+      await conn.setWorkingDirectory('/projects/movies')
+      // Push call (1) records sessionId=session-xyz.
+
+      // Simulate a reconnect (e.g. after the worker reaped an idle session).
+      await conn.connect()
+      // The connection re-pushes the cached directory using the new
+      // session id. In our mock host the session id is constant
+      // ('session-xyz'), but the *call count* going up by one is what
+      // proves the re-apply ran.
+      expect(calls.length).toBe(2)
+      expect(calls[1].directory).toBe('/projects/movies')
+    })
+
+    it('is a no-op when the host does not implement setWorkingDirectory', async () => {
+      const state = freshState()
+      // Host without the optional method (older / minimal driver).
+      const conn = new RemoteWorkerConnection('cn', {
+        driver: 'duckdb',
+        host: makeHost(state),
+      })
+      await conn.connect()
+      // Should not throw, just silently skip.
+      await expect(conn.setWorkingDirectory('/anything')).resolves.toBeUndefined()
+    })
+
+    it('swallows host errors so a failed push does not break query()', async () => {
+      const state = freshState()
+      const host: RemoteWorkerHost = {
+        ...makeHost(state),
+        async setWorkingDirectory() {
+          throw new Error('worker rejected SET file_search_path')
+        },
+      }
+      const conn = new RemoteWorkerConnection('cn', { driver: 'duckdb', host })
+      await conn.connect()
+      // Working directory is a hint, not a correctness boundary; if the
+      // worker rejects it the user gets a clearer error at query time
+      // (file not found) than they would from a hard failure here.
+      await expect(conn.setWorkingDirectory('/oops')).resolves.toBeUndefined()
+    })
+  })
 })
 
 // Make sure unused-vi import doesn't break tsc; vi is referenced above.

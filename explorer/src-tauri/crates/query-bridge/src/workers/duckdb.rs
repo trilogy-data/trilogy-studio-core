@@ -318,6 +318,32 @@ impl QueryWorker for DuckDbWorker {
             columns,
         })
     }
+
+    fn set_working_directory(&mut self, directory: &str) -> Result<()> {
+        // `SET file_search_path = '<dir>'` makes DuckDB resolve unqualified
+        // filenames in `read_csv`, `read_parquet`, etc. against `<dir>`.
+        // Per-session and stays in effect until next SET, so the host can
+        // call us at connect-time and only re-push when the project's
+        // directory actually changes. We use the literal-string form (rather
+        // than parameter binding) because DuckDB's bind path doesn't accept
+        // params for SET; quotes in the path are escaped by doubling, which
+        // is the standard SQL string-literal escape. An empty directory
+        // resets the setting.
+        eprintln!("[set_working_directory] dir={:?}", directory);
+        let conn = self.conn.lock();
+        if directory.is_empty() {
+            conn.execute_batch("SET file_search_path = ''")
+                .map_err(|e| BridgeError::Driver(e.to_string()))?;
+        } else {
+            let escaped = directory.replace('\'', "''");
+            let sql = format!("SET file_search_path = '{}'", escaped);
+            eprintln!("[set_working_directory] running: {}", sql);
+            conn.execute_batch(&sql)
+                .map_err(|e| BridgeError::Driver(e.to_string()))?;
+        }
+        eprintln!("[set_working_directory] done");
+        Ok(())
+    }
 }
 
 // Map duckdb's information_schema string types to the lib's ColumnType values
@@ -416,6 +442,59 @@ mod tests {
             matches!(result, Err(BridgeError::Canceled)),
             "execute should report Canceled when the flag flips mid-stream, got {result:?}",
         );
+    }
+
+    #[test]
+    fn set_working_directory_makes_basename_csv_resolve() {
+        // Lay down a CSV in a temp dir, point the worker's file_search_path
+        // at it, and confirm `read_csv('foo.csv')` (basename only — the
+        // shape the trilogy resolver renders for explorer queries) opens
+        // successfully without an absolute path. Regression guard for the
+        // original bug: the rust DuckDB worker was running with whatever
+        // CWD `cargo run` happened to inherit, so basename CSV references
+        // never resolved.
+        use std::io::Write;
+        let dir = tempfile::tempdir().expect("create tempdir");
+        let csv_path = dir.path().join("foo.csv");
+        {
+            let mut f = std::fs::File::create(&csv_path).expect("create csv");
+            writeln!(f, "a,b").unwrap();
+            writeln!(f, "1,2").unwrap();
+            writeln!(f, "3,4").unwrap();
+        }
+
+        let factory = DuckDbFactory;
+        let built = factory.build(&serde_json::Value::Null).unwrap();
+        let mut worker = built.worker;
+
+        // Before the call: basename read fails.
+        let pre = worker.execute("select count(*) from read_csv('foo.csv')", None, "pre");
+        assert!(
+            pre.is_err(),
+            "without file_search_path, basename CSV read should fail"
+        );
+
+        worker
+            .set_working_directory(dir.path().to_str().unwrap())
+            .expect("set_working_directory should succeed");
+
+        let (_bytes, summary) = worker
+            .execute("select count(*) from read_csv('foo.csv')", None, "post")
+            .expect("basename read should succeed once file_search_path is set");
+        assert_eq!(summary.row_count, 1);
+    }
+
+    #[test]
+    fn set_working_directory_handles_path_with_quote() {
+        // Single quotes get escaped by doubling. The worker shouldn't blow
+        // up; the path itself doesn't have to exist for this test (we're
+        // only checking that the SET statement parses and runs).
+        let factory = DuckDbFactory;
+        let built = factory.build(&serde_json::Value::Null).unwrap();
+        let mut worker = built.worker;
+        worker
+            .set_working_directory("/tmp/has 'quote'/sub")
+            .expect("escape should produce a valid SET statement");
     }
 
     #[test]

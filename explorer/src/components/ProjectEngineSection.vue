@@ -4,6 +4,7 @@ import {
   BigQueryOauthConnection,
   DuckDBConnection,
   MotherDuckConnection,
+  RemoteWorkerConnection,
   SQLiteConnection,
   SnowflakeJwtConnection,
 } from '@lib/connections'
@@ -11,6 +12,7 @@ import type Connection from '@lib/connections/base'
 import useConnectionStore from '@lib/stores/connectionStore'
 import useEditorStore from '@lib/stores/editorStore'
 import useProjectStore from '@lib/stores/projectStore'
+import { isTauri } from '../storage/tauriKvBackend'
 
 type EngineKind = 'duckdb' | 'sqlite' | 'motherduck' | 'bigquery-oauth' | 'snowflake'
 
@@ -97,7 +99,18 @@ function updateProjectEditors(connectionName: string) {
 
 function createConnection(kind: EngineKind): Connection {
   const name = projectConnectionName(props.projectId)
-  if (kind === 'duckdb') return new DuckDBConnection(name)
+  // In Tauri we have native DuckDB via the Rust query-bridge; the wasm
+  // DuckDBConnection runs in a sandbox that can't read the user's
+  // filesystem at all, which defeats the whole point of the explorer's
+  // file-backed datasource flow. Route to the native worker instead.
+  // (Outside Tauri — pure browser shell — fall back to wasm so this stays
+  // a no-op for any non-explorer embedding of this component.)
+  if (kind === 'duckdb') {
+    if (isTauri()) {
+      return new RemoteWorkerConnection(name, { driver: 'duckdb' })
+    }
+    return new DuckDBConnection(name)
+  }
   if (kind === 'sqlite') return new SQLiteConnection(name)
   if (kind === 'motherduck') {
     return new MotherDuckConnection(name, mdToken.value.trim(), undefined, true)
@@ -121,7 +134,14 @@ function syncFormFromConnection(conn: Connection | null) {
     selectedEngine.value = 'duckdb'
     return
   }
-  selectedEngine.value = conn.type as EngineKind
+  // In Tauri the duckdb engine is backed by `remote-worker:duckdb`; map it
+  // back to the user-facing 'duckdb' label so the form picks the right
+  // option on rehydration.
+  if (conn.type === 'remote-worker:duckdb') {
+    selectedEngine.value = 'duckdb'
+  } else {
+    selectedEngine.value = conn.type as EngineKind
+  }
 
   if (conn instanceof MotherDuckConnection) {
     mdToken.value = conn.mdToken && conn.mdToken !== 'saved' ? conn.mdToken : mdToken.value

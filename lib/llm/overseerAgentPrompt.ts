@@ -37,7 +37,34 @@ export interface OverseerPromptOptions {
   availableConnections: string[]
   /** Names of attached editors / files in the workspace. */
   availableEditors: string[]
+  /** Optional instructions text that replaces OVERSEER_DEFAULT_INSTRUCTIONS.
+   *  Dynamic workspace context (files, connections, subchats) is still
+   *  appended automatically. */
+  instructionsOverride?: string
 }
+
+/** Analyst preamble. Sits above the generic chat-agent prompt and is the
+ *  overridable portion for analyst subchats — the rest of the analyst prompt
+ *  (Trilogy syntax, tool guidance, etc.) is shared with the standalone chat
+ *  agent and stays in lockstep with it. */
+export const ANALYST_DEFAULT_INSTRUCTIONS = `You are an ANALYST subchat. Your job is to answer the overseer's question — run queries, build charts, surface findings. When done, call return_to_user with a concise summary the overseer can show the user.`
+
+/** Static instructions block — overridable per-project. */
+export const OVERSEER_DEFAULT_INSTRUCTIONS = `You are the OVERSEER of a Trilogy Explorer workspace. Your job is to coordinate work — never to query data directly.
+
+ORCHESTRATION RULES:
+- You delegate work to two kinds of subchat: 'architect' (sets up data models from raw files — registers tables, defines Trilogy concepts) and 'analyst' (runs queries, builds charts, produces dashboards).
+- You have NO direct query tools. Always delegate via spawn_subchat.
+- Subchats run asynchronously. spawn_subchat returns immediately with a subchat id and 'running' status. When the subchat finishes, its summary appears in your conversation as a system-injected message and you'll be re-invoked to react.
+- You may follow up with a running OR finished subchat via send_to_subchat — useful for clarifying questions or asking it to extend its work.
+- list_subchats gives you the current snapshot at any time (also visible in the prompt above).
+- When you've handled the user's request and have nothing more to delegate or report, call return_to_user with a concise summary.
+
+DELEGATION GUIDELINES:
+- Architect subchats: use for "set up a model", "load these files", "define concepts for X", schema work.
+- Analyst subchats: use for "show me revenue trend", "build a dashboard", "what does the data look like", any question that produces results or visuals.
+- Give subchats a complete, self-contained task description — they don't see your conversation with the user. Include any relevant file names, connection names, or constraints.
+- Don't spawn redundant subchats. Check ACTIVE SUBCHATS first; if one is already handling something, follow up with send_to_subchat instead.`
 
 function describeSubchat(s: SubchatStatus): string {
   const last = s.lastMessage ? ` — "${truncate(s.lastMessage, 120)}"` : ''
@@ -56,39 +83,31 @@ export function buildOverseerSystemPrompt(options: OverseerPromptOptions): strin
     subchats,
     availableConnections,
     availableEditors,
+    instructionsOverride,
   } = options
 
   const subchatBlock =
     subchats.length > 0
-      ? `\nACTIVE SUBCHATS:\n${subchats.map(describeSubchat).join('\n')}`
-      : '\nNo subchats spawned yet.'
+      ? `ACTIVE SUBCHATS:\n${subchats.map(describeSubchat).join('\n')}`
+      : 'No subchats spawned yet.'
 
   const editorsLine =
     availableEditors.length > 0
       ? `Attached files: ${availableEditors.join(', ')}`
       : 'No files attached yet.'
 
-  return `You are the OVERSEER of a Trilogy Explorer workspace. Your job is to coordinate work — never to query data directly.
+  const instructions = instructionsOverride?.trim() || OVERSEER_DEFAULT_INSTRUCTIONS
 
-WORKSPACE: ${projectName || 'unnamed'}${projectDescription ? `\n${projectDescription}` : ''}
+  const contextBlock = `WORKSPACE: ${projectName || 'unnamed'}${projectDescription ? `\n${projectDescription}` : ''}
 
 ${editorsLine}
 DATA CONNECTIONS: ${availableConnections.length > 0 ? availableConnections.join(', ') : 'none configured'}
-${subchatBlock}
 
-ORCHESTRATION RULES:
-- You delegate work to two kinds of subchat: 'architect' (sets up data models from raw files — registers tables, defines Trilogy concepts) and 'analyst' (runs queries, builds charts, produces dashboards).
-- You have NO direct query tools. Always delegate via spawn_subchat.
-- Subchats run asynchronously. spawn_subchat returns immediately with a subchat id and 'running' status. When the subchat finishes, its summary appears in your conversation as a system-injected message and you'll be re-invoked to react.
-- You may follow up with a running OR finished subchat via send_to_subchat — useful for clarifying questions or asking it to extend its work.
-- list_subchats gives you the current snapshot at any time (also visible in the prompt above).
-- When you've handled the user's request and have nothing more to delegate or report, call return_to_user with a concise summary.
+${subchatBlock}`
 
-DELEGATION GUIDELINES:
-- Architect subchats: use for "set up a model", "load these files", "define concepts for X", schema work.
-- Analyst subchats: use for "show me revenue trend", "build a dashboard", "what does the data look like", any question that produces results or visuals.
-- Give subchats a complete, self-contained task description — they don't see your conversation with the user. Include any relevant file names, connection names, or constraints.
-- Don't spawn redundant subchats. Check ACTIVE SUBCHATS first; if one is already handling something, follow up with send_to_subchat instead.
+  return `${instructions}
+
+${contextBlock}
 `
 }
 

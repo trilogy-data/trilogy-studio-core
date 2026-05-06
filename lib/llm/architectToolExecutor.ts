@@ -71,6 +71,10 @@ export class ArchitectToolExecutor {
         return this.createTrilogyFile(toolInput.name, toolInput.content)
       case 'update_trilogy_file':
         return this.updateTrilogyFile(toolInput.name, toolInput.content)
+      case 'rename_project_file':
+        return this.renameProjectFile(toolInput.name, toolInput.new_name)
+      case 'delete_project_file':
+        return this.deleteProjectFile(toolInput.name)
       case 'validate_trilogy_file':
         return this.validateTrilogyFile(toolInput.name)
       case 'run_trilogy_query':
@@ -84,7 +88,7 @@ export class ArchitectToolExecutor {
       default:
         return {
           success: false,
-          error: `Unknown tool: ${toolName}. Available: list_project_files, read_project_file, create_trilogy_file, update_trilogy_file, validate_trilogy_file, run_trilogy_query, return_to_user`,
+          error: `Unknown tool: ${toolName}. Available: list_project_files, read_project_file, create_trilogy_file, update_trilogy_file, rename_project_file, delete_project_file, validate_trilogy_file, run_trilogy_query, return_to_user`,
         }
     }
   }
@@ -175,6 +179,47 @@ export class ArchitectToolExecutor {
     return {
       success: true,
       message: `Updated ${name}.\n${validation}`,
+      triggersSymbolRefresh: true,
+    }
+  }
+
+  private renameProjectFile(name: string, newName: string): ToolCallResult {
+    if (!name) return { success: false, error: 'name is required' }
+    if (!newName) return { success: false, error: 'new_name is required' }
+    if (name === newName) {
+      return { success: false, error: 'new_name is identical to current name.' }
+    }
+    const editor = this.findEditorByName(name)
+    if (!editor) {
+      return { success: false, error: `File "${name}" not found in project.` }
+    }
+    if (this.findEditorByName(newName)) {
+      return {
+        success: false,
+        error: `Cannot rename: "${newName}" already exists in this project.`,
+      }
+    }
+    editor.setName(newName)
+    return {
+      success: true,
+      message: `Renamed "${name}" to "${newName}".`,
+      triggersSymbolRefresh: true,
+    }
+  }
+
+  private deleteProjectFile(name: string): ToolCallResult {
+    if (!name) return { success: false, error: 'name is required' }
+    const project = this.project
+    if (!project) return { success: false, error: 'No project context.' }
+    const editor = this.findEditorByName(name)
+    if (!editor) {
+      return { success: false, error: `File "${name}" not found in project.` }
+    }
+    this.projectStore.removeEditorFromProject(project.id, editor.id)
+    this.editorStore.removeEditor(editor.id)
+    return {
+      success: true,
+      message: `Deleted "${name}" from project.`,
       triggersSymbolRefresh: true,
     }
   }
