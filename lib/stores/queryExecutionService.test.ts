@@ -1,11 +1,18 @@
 import { describe, expect, it, vi } from 'vitest'
 import QueryExecutionService, {
+  ConnectionStoreExecutionConnectionProvider,
   type ExecutionConnection,
   type ExecutionConnectionProvider,
 } from './queryExecutionService'
 import { Results, ColumnType } from '../editors/results'
 
-function makeProvider(options: { connected?: boolean; queryType?: string; queryResult?: Results }) {
+function makeProvider(options: {
+  connected?: boolean
+  queryType?: string
+  queryResult?: Results
+  registeredFiles?: string[]
+  registeredFilesOverride?: string[] | null
+}) {
   const queryResult =
     options.queryResult ||
     new Results(
@@ -35,6 +42,7 @@ function makeProvider(options: { connected?: boolean; queryType?: string; queryR
     queryType: options.queryType ?? 'duckdb',
     isConnected: () => state.connected,
     executeSql,
+    listRegisteredFiles: () => options.registeredFiles ?? [],
   }
 
   const provider: ExecutionConnectionProvider = {
@@ -45,10 +53,18 @@ function makeProvider(options: { connected?: boolean; queryType?: string; queryR
     getConnectionSources: vi.fn(() => [{ alias: 'core', contents: 'const source <- 1;' }]),
   }
 
+  // Caller can opt into a host-side file-list override (the explorer's
+  // workspace-driven flow). `undefined` means "don't define the hook" — this
+  // exercises the optional-chaining fallback to the connection's own list.
+  if (options.registeredFilesOverride !== undefined) {
+    provider.getConnectionRegisteredFiles = vi.fn(() => options.registeredFilesOverride ?? null)
+  }
+
   return {
     provider,
     executeSql,
     ensureConnected,
+    connection,
   }
 }
 
@@ -88,6 +104,8 @@ describe('QueryExecutionService', () => {
       [{ name: 'core', alias: 'core' }],
       undefined,
       undefined,
+      null,
+      null,
       null,
     )
     expect(executeSql).toHaveBeenCalledWith('select 1 as value', null)
@@ -161,6 +179,8 @@ describe('QueryExecutionService', () => {
       null,
       null,
       null,
+      null,
+      null,
     )
     expect(result).toBe('drilldown query')
   })
@@ -201,6 +221,155 @@ describe('QueryExecutionService', () => {
       null,
       null,
       null,
+      null,
+      null,
     )
+  })
+
+  describe('resolver file hints', () => {
+    // Position of the `files` arg in resolve_query's positional call signature.
+    // Pinned here so a refactor that reorders args fails loudly here instead
+    // of silently passing the wrong field through to the resolver.
+    const FILES_ARG_INDEX = 8
+
+    function makeResolver() {
+      return {
+        resolve_query: vi.fn(async () => ({
+          data: {
+            generated_sql: 'select 1 as value',
+            columns: [{ name: 'value', purpose: 'metric' }],
+            generated_output: null,
+            select_count: 1,
+          },
+        })),
+      } as any
+    }
+
+    it('uses the provider override when set, ignoring the connection list', async () => {
+      const resolver = makeResolver()
+      // Connection reports its own list; the override should win.
+      const { provider } = makeProvider({
+        connected: true,
+        registeredFiles: ['engine-side.csv'],
+        registeredFilesOverride: ['movies.csv', 'ratings.csv'],
+      })
+      const service = new QueryExecutionService(resolver, provider, false)
+
+      const { resultPromise } = await service.executeQuery('worker-duckdb', {
+        text: 'select value',
+        editorType: 'trilogy',
+        imports: [],
+      })
+      await resultPromise
+
+      const filesArg = resolver.resolve_query.mock.calls[0][FILES_ARG_INDEX]
+      expect(filesArg).toEqual(['movies.csv', 'ratings.csv'])
+    })
+
+    it('falls back to the connection list when the provider returns null', async () => {
+      const resolver = makeResolver()
+      const { provider } = makeProvider({
+        connected: true,
+        registeredFiles: ['movies.csv'],
+        registeredFilesOverride: null,
+      })
+      const service = new QueryExecutionService(resolver, provider, false)
+
+      const { resultPromise } = await service.executeQuery('worker-duckdb', {
+        text: 'select value',
+        editorType: 'trilogy',
+        imports: [],
+      })
+      await resultPromise
+
+      const filesArg = resolver.resolve_query.mock.calls[0][FILES_ARG_INDEX]
+      expect(filesArg).toEqual(['movies.csv'])
+    })
+
+    it('falls back to the connection list when the provider has no override hook', async () => {
+      const resolver = makeResolver()
+      // No `registeredFilesOverride` key → the provider doesn't define
+      // getConnectionRegisteredFiles at all (the studio's default shape).
+      const { provider } = makeProvider({
+        connected: true,
+        registeredFiles: ['legacy.csv'],
+      })
+      const service = new QueryExecutionService(resolver, provider, false)
+
+      const { resultPromise } = await service.executeQuery('worker-duckdb', {
+        text: 'select value',
+        editorType: 'trilogy',
+        imports: [],
+      })
+      await resultPromise
+
+      const filesArg = resolver.resolve_query.mock.calls[0][FILES_ARG_INDEX]
+      expect(filesArg).toEqual(['legacy.csv'])
+    })
+
+    it('passes null to the resolver when the override is an empty list', async () => {
+      const resolver = makeResolver()
+      // Empty array from the override means "the host knows there are no
+      // files" — that's still authoritative; we shouldn't fall through to
+      // the connection's list in that case.
+      const { provider } = makeProvider({
+        connected: true,
+        registeredFiles: ['should-not-leak.csv'],
+        registeredFilesOverride: [],
+      })
+      const service = new QueryExecutionService(resolver, provider, false)
+
+      const { resultPromise } = await service.executeQuery('worker-duckdb', {
+        text: 'select value',
+        editorType: 'trilogy',
+        imports: [],
+      })
+      await resultPromise
+
+      const filesArg = resolver.resolve_query.mock.calls[0][FILES_ARG_INDEX]
+      expect(filesArg).toBeNull()
+    })
+  })
+
+  describe('ConnectionStoreExecutionConnectionProvider', () => {
+    function fakeConnectionStore(connections: Record<string, any>) {
+      return {
+        connections,
+        getConnectionSources: vi.fn(() => []),
+        resetConnection: vi.fn(),
+      } as any
+    }
+
+    it('routes file hints through the filesResolver when provided', () => {
+      const store = fakeConnectionStore({
+        'worker-duckdb': {
+          name: 'worker-duckdb',
+          query_type: 'duckdb',
+          connected: true,
+          query: vi.fn(),
+          listRegisteredFiles: () => ['from-engine.csv'],
+        },
+      })
+      const filesResolver = vi.fn(() => ['movies.csv', 'ratings.csv'])
+      const provider = new ConnectionStoreExecutionConnectionProvider(
+        store,
+        undefined,
+        undefined,
+        filesResolver,
+      )
+
+      expect(provider.getConnectionRegisteredFiles('worker-duckdb')).toEqual([
+        'movies.csv',
+        'ratings.csv',
+      ])
+      expect(filesResolver).toHaveBeenCalledWith('worker-duckdb')
+    })
+
+    it('returns null when no filesResolver is provided so QES falls through to the connection', () => {
+      const store = fakeConnectionStore({})
+      const provider = new ConnectionStoreExecutionConnectionProvider(store)
+
+      expect(provider.getConnectionRegisteredFiles('any-id')).toBeNull()
+    })
   })
 })

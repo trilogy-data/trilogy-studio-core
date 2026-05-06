@@ -7,6 +7,7 @@ import {
   MotherDuckConnection,
   SnowflakeJwtConnection,
   SQLiteConnection,
+  RemoteWorkerConnection,
 } from '../connections'
 import {
   LLMProvider,
@@ -160,6 +161,18 @@ export default class LocalStorage extends AbstractStorage {
 
     // Process each connection sequentially
     for (const connection of raw) {
+      // Remote-worker connections persist their driver in the `type` field as
+      // `remote-worker:<driver>` so we dispatch by prefix rather than enumerating
+      // every driver. The driver itself is also stored under `connection.driver`
+      // for use by RemoteWorkerConnection.fromJSON.
+      if (
+        typeof connection.type === 'string' &&
+        connection.type.startsWith('remote-worker:')
+      ) {
+        // @ts-ignore
+        connections[connection.name] = reactive(RemoteWorkerConnection.fromJSON(connection))
+        continue
+      }
       switch (connection.type) {
         case 'bigquery-oauth':
           // @ts-ignore

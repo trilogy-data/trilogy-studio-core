@@ -110,10 +110,17 @@ class MultiQueryInSchema(BaseModel):
     queries: List[MultiQueryComponent]
     extra_filters: Optional[list[str]] = None
     parameters: Optional[dict[str, str | int | float]] = None
-    # Names (or paths) of files the client has registered locally. Used to
-    # bypass the server's filesystem-existence check on `file '...'` datasource
-    # addresses and rewrite the location to a basename the client can resolve.
+    # Names (or paths) of files the client has registered locally. Lifted
+    # into DictImportResolver.data_files so the parser treats matching
+    # `file '…'` datasources as live even when the trilogy compiler runs
+    # remotely and can't see the user's files on disk.
     files: Optional[list[str]] = None
+    # Optional absolute path to the user's project root (Tauri shell only).
+    # Becomes Environment.working_path; file addresses resolve against it
+    # so the rendered SQL points at the actual OS path the local DuckDB
+    # worker can open. Studio leaves this null — the browser shell has no
+    # filesystem to anchor against.
+    working_path: Optional[str] = None
 
 
 class QueryInSchema(BaseModel):
@@ -126,6 +133,8 @@ class QueryInSchema(BaseModel):
     parameters: Optional[dict[str, str | int | float]] = None
     # See MultiQueryInSchema.files
     files: Optional[list[str]] = None
+    # See MultiQueryInSchema.working_path
+    working_path: Optional[str] = None
     # chart_type: ChartType | None = None
 
 
@@ -144,6 +153,8 @@ class ValidateQueryInSchema(BaseModel):
     parameters: Optional[dict[str, str | int | float]] = None
     # See MultiQueryInSchema.files
     files: Optional[list[str]] = None
+    # See MultiQueryInSchema.working_path
+    working_path: Optional[str] = None
 
 
 class QueryOutColumn(BaseModel):

@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import useEditorStore from '@lib/stores/editorStore'
 import LibEditor from '@lib/components/editor/Editor.vue'
 import LibResults from '@lib/components/editor/Results.vue'
+import LoadingView from '@lib/components/LoadingView.vue'
 
 /**
  * Center-pane editor view for a project file. For Trilogy / SQL we mount
@@ -66,8 +67,14 @@ const charCount = computed(() => draft.value.length)
       <div class="editor-region">
         <LibEditor :key="editor.id" context="explorer" :editor-id="editor.id" />
       </div>
-      <div v-if="editor.results || editor.error" class="results-region">
+      <div v-if="editor.loading || editor.results || editor.error" class="results-region">
+        <LoadingView
+          v-if="editor.loading"
+          :startTime="editor.startTime"
+          :cancel="editor.cancelCallback"
+        />
         <LibResults
+          v-else
           :type="editor.type"
           :results="editor.results"
           :chartConfig="editor.chartConfig"

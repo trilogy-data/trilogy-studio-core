@@ -18,7 +18,6 @@ from trilogy.render import get_dialect_generator
 
 from diagnostics import get_diagnostics
 from env_helpers import (
-    mark_known_files,
     model_to_response,
     normalize_relative_imports,
     parse_env_from_full_model,
@@ -92,7 +91,11 @@ def _run_inline_task(task_name: str, task, *args):
 
 def _format_query_task(query_data: dict) -> dict:
     query = QueryInSchema.model_validate(query_data)
-    env = parse_env_from_full_model(query.full_model.sources)
+    env = parse_env_from_full_model(
+        query.full_model.sources,
+        files=query.files,
+        working_path=query.working_path,
+    )
     try:
         base_imp_string = ""
         for imp in query.imports:
@@ -109,7 +112,6 @@ def _format_query_task(query_data: dict) -> dict:
             env,
             parse_config=PARSE_CONFIG,
         )
-        mark_known_files(env, query.files)
     except HTTPException as exc:
         return _http_error_payload(exc)
     except Exception as exc:
@@ -122,7 +124,11 @@ def _format_query_task(query_data: dict) -> dict:
 
 def _drilldown_query_task(query_data: dict) -> dict:
     query = DrilldownQueryInSchema.model_validate(query_data)
-    env = parse_env_from_full_model(query.full_model.sources)
+    env = parse_env_from_full_model(
+        query.full_model.sources,
+        files=query.files,
+        working_path=query.working_path,
+    )
     try:
         base_imp_string = ""
         for imp in query.imports:
@@ -144,7 +150,6 @@ def _drilldown_query_task(query_data: dict) -> dict:
             env,
             parse_config=PARSE_CONFIG,
         )
-        mark_known_files(env, query.files)
         _, where_parsed = parse_text(
             f"WHERE {query.drilldown_filter} SELECT 1 as __ftest;",
             env,
@@ -206,6 +211,7 @@ def _validate_query_task(query_data: dict) -> dict:
                         query.sources,
                         current_filename=query.current_filename,
                         files=query.files,
+                        working_path=query.working_path,
                     )
                     if base.items:
                         filter_validation.append(
@@ -241,6 +247,7 @@ def _validate_query_task(query_data: dict) -> dict:
             query.sources,
             current_filename=query.current_filename,
             files=query.files,
+            working_path=query.working_path,
         )
         base.items += filter_validation
         return base.model_dump(mode="json")

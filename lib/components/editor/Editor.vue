@@ -378,14 +378,30 @@ export default defineComponent({
       }
 
       const editorText = this.editorData.contents
-      let annotations = await this.trilogyResolver.validate_query(
-        editorText,
-        sources,
-        null,
-        null,
-        null,
-        this.editorData.name,
+      // queryExecutionService pulls registered files + working_path from
+      // the connection / provider — we don't thread them here.
+      // Route through queryExecutionService.validateQuery so the
+      // ExecutionConnectionProvider can supply sources / working_path that
+      // a host (explorer) configured at boot — without it, connections with
+      // no attached model (e.g. explorer's seeded local-duckdb) would never
+      // see the project's other editors as importable. We only fall back to
+      // the provider when the caller didn't already build sources from the
+      // connection's model; studio's path stays unchanged.
+      const overrideSources = sources && sources.length > 0 ? sources : null
+      let annotations = await this.queryExecutionService.validateQuery(
+        conn.id,
+        {
+          text: editorText,
+          editorType: this.editorData.type,
+          imports: [],
+          currentFilename: this.editorData.name,
+        },
+        log,
+        overrideSources,
       )
+      if (!annotations) {
+        return null
+      }
 
       // Get editor instance from CodeEditor
       const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
@@ -422,6 +438,7 @@ export default defineComponent({
       if (!text) return
 
       const queryInput = await this.buildQueryArgs(text)
+      const formatFiles = this.editorConnection?.listRegisteredFiles?.() || []
       try {
         const formatted = await this.trilogyResolver.format_query(
           text,
@@ -432,6 +449,7 @@ export default defineComponent({
           null,
           null,
           queryInput.currentFilename || null,
+          formatFiles.length > 0 ? formatFiles : null,
         )
         if (formatted.data && formatted.data.text) {
           codeEditorRef.setValue(formatted.data.text)
@@ -495,6 +513,7 @@ export default defineComponent({
       if (!text) return
 
       const queryInput = await this.buildQueryArgs(text)
+      const drilldownFiles = this.editorConnection?.listRegisteredFiles?.() || []
       try {
         const drilldown = await this.trilogyResolver.drilldown_query(
           text,
@@ -510,6 +529,7 @@ export default defineComponent({
           null,
           null,
           queryInput.currentFilename || null,
+          drilldownFiles.length > 0 ? drilldownFiles : null,
         )
         if (drilldown.data && drilldown.data.text) {
           codeEditorRef.setValue(drilldown.data.text)

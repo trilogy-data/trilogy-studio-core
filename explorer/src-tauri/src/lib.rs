@@ -13,7 +13,12 @@
 use std::fs;
 use std::path::PathBuf;
 use serde::Serialize;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, State};
+
+use query_bridge::{
+    ColumnDTO, ConnectArgs, ConnectResult, DatabaseDTO, ExecuteArgs, SchemaDTO, SessionManager,
+    TableDTO,
+};
 
 const KV_SUBDIR: &str = "kv";
 
@@ -127,11 +132,135 @@ fn fs_read_text(path: String) -> Result<String, String> {
 }
 
 // ---------------------------------------------------------------------------
+// Remote-worker query bridge (lib's RemoteWorkerHost interface).
+//
+// Each frontend RemoteWorkerConnection corresponds to one session in the
+// SessionManager state, which owns a long-lived driver connection. Execute
+// returns the full Arrow IPC stream as a raw byte buffer via
+// `tauri::ipc::Response::new` so it skips JSON serialization. Phase 5 will
+// swap this for a streamed channel.
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+fn remote_connect(
+    state: State<'_, SessionManager>,
+    connection_id: String,
+    driver: String,
+    config: serde_json::Value,
+) -> Result<ConnectResult, String> {
+    state
+        .connect(ConnectArgs {
+            connection_id,
+            driver,
+            config,
+        })
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn remote_execute(
+    state: State<'_, SessionManager>,
+    session_id: String,
+    sql: String,
+    parameters: Option<serde_json::Value>,
+    identifier: String,
+) -> Result<tauri::ipc::Response, String> {
+    let (bytes, _summary) = state
+        .execute(ExecuteArgs {
+            session_id,
+            sql,
+            parameters,
+            identifier,
+        })
+        .map_err(|e| e.to_string())?;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
+#[tauri::command]
+fn remote_cancel(
+    state: State<'_, SessionManager>,
+    session_id: String,
+    identifier: String,
+) -> Result<bool, String> {
+    state
+        .cancel(&session_id, &identifier)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn remote_disconnect(
+    state: State<'_, SessionManager>,
+    session_id: String,
+) -> Result<(), String> {
+    state.disconnect(&session_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn remote_describe_databases(
+    state: State<'_, SessionManager>,
+    session_id: String,
+) -> Result<Vec<DatabaseDTO>, String> {
+    state
+        .describe_databases(&session_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn remote_describe_schemas(
+    state: State<'_, SessionManager>,
+    session_id: String,
+    database: String,
+) -> Result<Vec<SchemaDTO>, String> {
+    state
+        .describe_schemas(&session_id, &database)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn remote_describe_tables(
+    state: State<'_, SessionManager>,
+    session_id: String,
+    database: String,
+    schema: Option<String>,
+) -> Result<Vec<TableDTO>, String> {
+    state
+        .describe_tables(&session_id, &database, schema.as_deref())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn remote_describe_columns(
+    state: State<'_, SessionManager>,
+    session_id: String,
+    database: String,
+    schema: String,
+    table: String,
+) -> Result<Vec<ColumnDTO>, String> {
+    state
+        .describe_columns(&session_id, &database, &schema, &table)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn remote_describe_table(
+    state: State<'_, SessionManager>,
+    session_id: String,
+    database: String,
+    schema: Option<String>,
+    table: String,
+) -> Result<TableDTO, String> {
+    state
+        .describe_table(&session_id, &database, schema.as_deref(), &table)
+        .map_err(|e| e.to_string())
+}
+
+// ---------------------------------------------------------------------------
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .manage(SessionManager::new())
         .invoke_handler(tauri::generate_handler![
             kv_get,
             kv_set,
@@ -139,6 +268,15 @@ pub fn run() {
             kv_keys,
             fs_read_dir,
             fs_read_text,
+            remote_connect,
+            remote_execute,
+            remote_cancel,
+            remote_disconnect,
+            remote_describe_databases,
+            remote_describe_schemas,
+            remote_describe_tables,
+            remote_describe_columns,
+            remote_describe_table,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

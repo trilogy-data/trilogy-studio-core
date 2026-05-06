@@ -3,6 +3,7 @@ import { DateTime } from 'luxon'
 import DuckDBConnection from './duckdb'
 import { Results, ColumnType } from '../editors/results'
 import { AssetType } from './base' // Ensure AssetType is imported correctly
+import { mapArrowTypeIdToColumnType } from './arrowResults'
 // Mock the duckdb module
 vi.mock('@duckdb/duckdb-wasm', () => {
   return {
@@ -328,22 +329,18 @@ describe('DuckDBConnection', () => {
     })
   })
 
-  describe('mapDuckDBTypeToColumnType', () => {
-    it('should map DuckDB types to column types correctly', () => {
-      // Directly test the private method by accessing it through "any" type casting
-      //@ts-ignore
-      const mapType = (connection as any).mapDuckDBTypeToColumnType.bind(connection)
-
-      expect(mapType({ typeId: 2 })).toBe(ColumnType.INTEGER)
-      expect(mapType({ typeId: 3 })).toBe(ColumnType.FLOAT)
-      expect(mapType({ typeId: 5 })).toBe(ColumnType.STRING)
-      expect(mapType({ typeId: 6 })).toBe(ColumnType.BOOLEAN)
-      expect(mapType({ typeId: 7 })).toBe(ColumnType.FLOAT)
-      expect(mapType({ typeId: 8 })).toBe(ColumnType.DATE)
-      expect(mapType({ typeId: 10 })).toBe(ColumnType.DATETIME)
-      expect(mapType({ typeId: 12 })).toBe(ColumnType.ARRAY)
-      expect(mapType({ typeId: 13 })).toBe(ColumnType.STRUCT)
-      expect(mapType({ typeId: 999 })).toBe(ColumnType.UNKNOWN)
+  describe('arrow type mapping', () => {
+    it('maps arrow type IDs (the duckdb-wasm schema shape) to column types', () => {
+      expect(mapArrowTypeIdToColumnType(2)).toBe(ColumnType.INTEGER)
+      expect(mapArrowTypeIdToColumnType(3)).toBe(ColumnType.FLOAT)
+      expect(mapArrowTypeIdToColumnType(5)).toBe(ColumnType.STRING)
+      expect(mapArrowTypeIdToColumnType(6)).toBe(ColumnType.BOOLEAN)
+      expect(mapArrowTypeIdToColumnType(7)).toBe(ColumnType.FLOAT)
+      expect(mapArrowTypeIdToColumnType(8)).toBe(ColumnType.DATE)
+      expect(mapArrowTypeIdToColumnType(10)).toBe(ColumnType.DATETIME)
+      expect(mapArrowTypeIdToColumnType(12)).toBe(ColumnType.ARRAY)
+      expect(mapArrowTypeIdToColumnType(13)).toBe(ColumnType.STRUCT)
+      expect(mapArrowTypeIdToColumnType(999)).toBe(ColumnType.UNKNOWN)
     })
   })
 

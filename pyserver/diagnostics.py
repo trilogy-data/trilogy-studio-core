@@ -25,7 +25,6 @@ from io_models import (
     TrilogyType,
 )
 from env_helpers import (
-    mark_known_files,
     parse_env_from_full_model,
     normalize_relative_imports,
 )
@@ -103,6 +102,7 @@ def get_diagnostics(
     sources: List[ModelSourceInSchema],
     current_filename: str | None = None,
     files: List[str] | None = None,
+    working_path: str | None = None,
 ) -> ValidateResponse:
     diagnostics: List[ValidateItem] = []
     completions: List[CompletionItem] = []
@@ -149,7 +149,7 @@ def get_diagnostics(
     if not document:
         return ValidateResponse(items=diagnostics, completion_items=completions)
     try:
-        env = parse_env_from_full_model(sources)
+        env = parse_env_from_full_model(sources, files=files, working_path=working_path)
         seen: set[str] = set()
         for k, v in env.concepts.items():
             if v.name.startswith("_") or v.namespace.startswith("_"):
@@ -168,7 +168,6 @@ def get_diagnostics(
                 logger.info(x)
                 if isinstance(x, ImportStatement):
                     imports.append(Import(name=str(x.path), alias=x.alias))
-            mark_known_files(env, files)
 
         except Exception:
             logging.exception("text parse error, may have partial results")
