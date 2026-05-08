@@ -85,6 +85,12 @@ impl SessionManager {
         guard.execute(&args.sql, args.parameters.as_ref(), &args.identifier)
     }
 
+    pub fn execute_script(&self, session_id: &str, sql: &str) -> Result<()> {
+        let w = self.worker(session_id)?;
+        let mut guard = w.lock();
+        guard.execute_script(sql)
+    }
+
     pub fn cancel(&self, session_id: &str, identifier: &str) -> Result<bool> {
         // Resolve through the per-session cancel handle so we don't block on
         // the worker mutex (which is held by execute() for the duration of

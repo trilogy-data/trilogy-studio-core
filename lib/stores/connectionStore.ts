@@ -25,7 +25,10 @@ async function runStartup(connection: Connection) {
   await Promise.all(
     startupEditors.map(async (editor) => {
       console.log(`running startup script ${editor.name}`)
-      await connection.query(editor.contents)
+      // runScript routes through the engine's batch path so multi-statement
+      // DDL works; query() goes through prepare() which is single-statement
+      // on the Tauri remote worker.
+      await connection.runScript(editor.contents)
     }),
   )
 }

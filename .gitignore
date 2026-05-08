@@ -47,3 +47,5 @@ rsa_key*
 .claude
 
 .playwright-mcp
+
+.preql_cache.json

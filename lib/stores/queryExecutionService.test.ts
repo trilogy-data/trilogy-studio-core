@@ -33,6 +33,7 @@ function makeProvider(options: {
   }
 
   const executeSql = vi.fn(async () => queryResult)
+  const runScript = vi.fn(async () => {})
   const ensureConnected = vi.fn(async () => {
     state.connected = true
   })
@@ -42,6 +43,7 @@ function makeProvider(options: {
     queryType: options.queryType ?? 'duckdb',
     isConnected: () => state.connected,
     executeSql,
+    runScript,
     listRegisteredFiles: () => options.registeredFiles ?? [],
   }
 

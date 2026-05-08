@@ -62,9 +62,10 @@ ORCHESTRATION RULES:
 
 DELEGATION GUIDELINES:
 - Architect subchats: use for "set up a model", "load these files", "define concepts for X", schema work.
+- Prefer to keep subchats scoped to a specific goal; only reuse a subchat when the new request overlaps with the existing work.
 - Analyst subchats: use for "show me revenue trend", "build a dashboard", "what does the data look like", any question that produces results or visuals.
 - Give subchats a complete, self-contained task description — they don't see your conversation with the user. Include any relevant file names, connection names, or constraints.
-- Don't spawn redundant subchats. Check ACTIVE SUBCHATS first; if one is already handling something, follow up with send_to_subchat instead.`
+`
 
 function describeSubchat(s: SubchatStatus): string {
   const last = s.lastMessage ? ` — "${truncate(s.lastMessage, 120)}"` : ''

@@ -31,19 +31,32 @@ export function useChatPersistence(
     ready.value = true
   })
 
+  // Debounce with a max-wait cap. A pure debounce gets starved during long
+  // streams: every token mutation re-triggers the deep watcher and resets
+  // the timer, so the idle window never opens and nothing reaches disk
+  // until streaming stops. The cap forces a flush at most MAX_WAIT_MS after
+  // the first dirty mutation, bounding crash data loss.
   let flushTimer: ReturnType<typeof setTimeout> | null = null
+  let firstDirtyAt: number | null = null
+  const IDLE_MS = 250
+  const MAX_WAIT_MS = 2000
   watch(
     () => store.chats,
     () => {
+      if (firstDirtyAt === null) firstDirtyAt = Date.now()
       if (flushTimer) clearTimeout(flushTimer)
+      const sinceFirst = Date.now() - firstDirtyAt
+      const wait = Math.max(0, Math.min(IDLE_MS, MAX_WAIT_MS - sinceFirst))
       flushTimer = setTimeout(() => {
+        flushTimer = null
+        firstDirtyAt = null
         const dirty = Object.values(store.chats).filter((c) => c.changed || c.deleted)
         if (dirty.length === 0) return
         storage.saveChats(dirty).catch((e) => console.error('saveChats failed', e))
         for (const c of dirty) {
           if (c.deleted) delete store.chats[c.id]
         }
-      }, 250)
+      }, wait)
     },
     { deep: true },
   )

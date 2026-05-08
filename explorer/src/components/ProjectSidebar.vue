@@ -32,6 +32,11 @@ const renameDraft = ref('')
 const busyProjectId = ref<string | null>(null)
 const ingestionStatus = ref<{ projectId: string; text: string } | null>(null)
 const ingestionError = ref<{ projectId: string; text: string } | null>(null)
+// Inline new-file affordance: when set, the project's file list renders an
+// input row instead of a button. Type is derived from the extension the user
+// types; nameless or unrecognized extensions default to .preql.
+const creatingInProjectId = ref<string | null>(null)
+const newFileDraft = ref('')
 
 const projects = computed(() => store.projectList)
 
@@ -155,6 +160,59 @@ async function openFolder(projectId: string) {
   }
 }
 
+function startNewFile(projectId: string) {
+  creatingInProjectId.value = projectId
+  newFileDraft.value = ''
+  ingestionError.value = null
+}
+
+function cancelNewFile() {
+  creatingInProjectId.value = null
+  newFileDraft.value = ''
+}
+
+async function commitNewFile(projectId: string) {
+  const raw = newFileDraft.value.trim()
+  if (!raw) {
+    cancelNewFile()
+    return
+  }
+  // Derive type from extension. If unrecognized / missing, default to .preql.
+  const detected = getEditorTypeForPath(raw)
+  const finalName = detected ? raw : `${raw}.preql`
+  const finalType = detected ?? 'preql'
+  // CSVs come in via the file picker — they need contents and DuckDB
+  // registration. Block creating an empty .csv editor here.
+  if (finalType === 'csv') {
+    ingestionError.value = {
+      projectId,
+      text: 'CSV files attach via the + button, not as empty placeholders.',
+    }
+    return
+  }
+  const project = store.projects[projectId]
+  if (!project) {
+    cancelNewFile()
+    return
+  }
+  const collision = project.editorIds
+    .map((id) => editorStore.editors[id])
+    .some((e) => e && !e.deleted && e.name === finalName)
+  if (collision) {
+    ingestionError.value = { projectId, text: `"${finalName}" already exists.` }
+    return
+  }
+  try {
+    await attachFile({ projectId, name: finalName, type: finalType, contents: '' })
+    cancelNewFile()
+  } catch (e) {
+    ingestionError.value = {
+      projectId,
+      text: e instanceof Error ? e.message : String(e),
+    }
+  }
+}
+
 function detachEditor(projectId: string, editorId: string) {
   store.removeEditorFromProject(projectId, editorId)
   const editor = editorStore.editors[editorId]
@@ -166,6 +224,14 @@ function detachEditor(projectId: string, editorId: string) {
 
 function statusOf(chatId: string): 'running' | 'idle' {
   return chatStore.isChatExecuting(chatId) ? 'running' : 'idle'
+}
+
+function clearSubchat(projectId: string, chatId: string) {
+  // Mirror the overseer's delete_subchat guard: live loops own resources and
+  // pending injections, so we wait for them to finish (user can Stop first).
+  if (chatStore.isChatExecuting(chatId)) return
+  chatStore.removeChat(chatId)
+  store.removeSubchatFromProject(projectId, chatId)
 }
 
 const tauri = isTauri()
@@ -234,6 +300,14 @@ const tauri = isTauri()
                 </button>
                 <button
                   class="mini-btn"
+                  :disabled="busyProjectId === p.id || creatingInProjectId === p.id"
+                  @click="startNewFile(p.id)"
+                  title="New file (type the name; extension determines type)"
+                >
+                  📝
+                </button>
+                <button
+                  class="mini-btn"
                   :disabled="busyProjectId === p.id"
                   @click="pickFiles(p.id)"
                   title="Attach files"
@@ -251,7 +325,26 @@ const tauri = isTauri()
               </span>
             </div>
 
-            <ul v-if="projectFiles(p.id).length > 0" class="nested-list">
+            <ul
+              v-if="projectFiles(p.id).length > 0 || creatingInProjectId === p.id"
+              class="nested-list"
+            >
+              <li v-if="creatingInProjectId === p.id" class="nested-row file-row creating">
+                <span class="type-tag type-new">new</span>
+                <input
+                  v-model="newFileDraft"
+                  class="rename-input"
+                  placeholder="filename.sql, .preql, .py, .md…"
+                  @keydown.enter="commitNewFile(p.id)"
+                  @keydown.escape="cancelNewFile"
+                  @blur="commitNewFile(p.id)"
+                  @click.stop
+                  autofocus
+                />
+                <button class="mini-x" @click.stop.prevent="cancelNewFile" title="Cancel">
+                  ×
+                </button>
+              </li>
               <li
                 v-for="ed in projectFiles(p.id)"
                 :key="ed.id"
@@ -265,7 +358,12 @@ const tauri = isTauri()
                 </button>
               </li>
             </ul>
-            <p v-else class="nested-empty">none yet</p>
+            <p
+              v-if="projectFiles(p.id).length === 0 && creatingInProjectId !== p.id"
+              class="nested-empty"
+            >
+              none yet
+            </p>
 
             <p v-if="ingestionStatus && ingestionStatus.projectId === p.id" class="ingest-status">
               {{ ingestionStatus.text }}
@@ -290,6 +388,18 @@ const tauri = isTauri()
                 <span class="type-tag" :class="`kind-${s.kind}`">{{ s.kind }}</span>
                 <span class="nested-name" :title="s.name">{{ s.name }}</span>
                 <span v-if="statusOf(s.id) === 'running'" class="dot running" />
+                <button
+                  class="mini-x"
+                  :disabled="statusOf(s.id) === 'running'"
+                  :title="
+                    statusOf(s.id) === 'running'
+                      ? 'Stop the subchat before clearing it'
+                      : 'Clear from list'
+                  "
+                  @click.stop="clearSubchat(p.id, s.id)"
+                >
+                  ×
+                </button>
               </li>
             </ul>
             <p v-else class="nested-empty">none yet</p>
@@ -575,6 +685,11 @@ const tauri = isTauri()
   color: #9333ea;
 }
 
+.type-tag.type-new {
+  background: rgba(100, 116, 139, 0.18);
+  color: #475569;
+}
+
 .type-tag.kind-architect {
   background: rgba(168, 85, 247, 0.18);
   color: #9333ea;
@@ -600,8 +715,13 @@ const tauri = isTauri()
   visibility: visible;
 }
 
-.mini-x:hover {
+.mini-x:hover:not(:disabled) {
   color: #ef4444;
+}
+
+.mini-x:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .dot {

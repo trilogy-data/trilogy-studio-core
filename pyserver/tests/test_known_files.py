@@ -2,17 +2,15 @@
 
 The explorer ships a Trilogy query that declares a file-backed datasource
 (``file 'ratings.csv'``) but the file lives on the *client's* disk, not on
-the (potentially hosted) pyserver. Without the passthrough, trilogy's parser
-marks the datasource UNPOPULATED and the build phase silently skips it,
-producing SQL that ignores the datasource. With ``files`` listing the
-basenames the client knows about, the server rewrites the address to the
-basename and resets state to PUBLISHED so the generated SQL references
-``read_csv('ratings.csv')`` — which the client's duckdb-wasm has registered.
+the (potentially hosted) pyserver. ``files`` lists the basenames the client
+knows about; we register them in ``DictImportResolver.data_files`` so the
+trilogy parser treats them as published (skipping its filesystem existence
+check) and preserves the literal address in the rendered SQL —
+``read_csv('ratings.csv')``, which the client's duckdb-wasm has registered.
 """
 
 from io_models import QueryInSchema
 from query_helpers import generate_query_core
-from trilogy.core.enums import DatasourceState
 from trilogy.dialect.duckdb import DuckDBDialect
 
 _INLINE_FILE_QUERY = """
@@ -81,20 +79,17 @@ def test_inline_file_datasource_without_known_files_drops_datasource():
         assert "ratings.csv" not in sql
 
 
-def test_known_files_resets_unpopulated_status():
-    """Direct check on the datasource state after parsing."""
-    from env_helpers import mark_known_files, parse_env_from_full_model
+def test_known_files_published_via_resolver():
+    """Direct check on the datasource state after parsing with files
+    registered in the resolver's ``data_files``."""
+    from env_helpers import parse_env_from_full_model
+    from trilogy.core.enums import DatasourceState
     from trilogy.parser import parse_text
     from query_helpers import PARSE_CONFIG
 
-    env = parse_env_from_full_model([])
+    env = parse_env_from_full_model([], files=["ratings.csv"])
     parse_text(_INLINE_FILE_QUERY, env, parse_config=PARSE_CONFIG)
     ds = next(iter(env.datasources.values()))
-    # Pre-patch: the file does not exist on the test runner, so the parser
-    # marks the datasource UNPOPULATED.
-    assert ds.status == DatasourceState.UNPOPULATED
-
-    mark_known_files(env, ["ratings.csv"])
     assert ds.status == DatasourceState.PUBLISHED
     assert ds.address.exists is True
     assert ds.address.location == "ratings.csv"

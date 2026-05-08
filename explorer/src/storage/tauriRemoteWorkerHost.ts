@@ -41,15 +41,24 @@ export const tauriRemoteWorkerHost: RemoteWorkerHost = {
       parameters: request.parameters ?? null,
       identifier: request.identifier,
     })
+    const afterInvoke = performance.now()
     if (buf && buf.byteLength > 0) {
       onBatch(new Uint8Array(buf))
     }
+    const end = performance.now()
+    console.debug(
+      `[remote_execute] id=${request.identifier} invoke=${(afterInvoke - start).toFixed(2)}ms onBatch=${(end - afterInvoke).toFixed(2)}ms total=${(end - start).toFixed(2)}ms bytes=${buf?.byteLength ?? 0}`,
+    )
     return {
       // The worker computes its own row count; we don't surface it through
       // the single-shot path yet. Caller can derive from Results.data.length.
       rowCount: 0,
-      durationMs: performance.now() - start,
+      durationMs: end - start,
     }
+  },
+
+  async executeScript(sessionId: string, sql: string): Promise<void> {
+    await invoke('remote_execute_script', { sessionId, sql })
   },
 
   async cancel(sessionId: string, identifier: string): Promise<boolean> {

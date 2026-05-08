@@ -24,7 +24,7 @@ import ArtifactsView from './components/ArtifactsView.vue'
 import FileEditor from './components/FileEditor.vue'
 import ResizeHandle from './components/ResizeHandle.vue'
 
-useProjectPersistence()
+const { ready: projectsReady } = useProjectPersistence()
 const { ready: chatsReady } = useChatPersistence()
 useEditorPersistence()
 useLLMPersistence()
@@ -97,6 +97,35 @@ watch([() => projectStore.activeProject?.id, selectedFileId], () => {
     selectedFileId.value = ''
   }
 })
+
+// Reconcile orphan subchat references once both stores are hydrated. The
+// project flush and chat flush are independent debouncers, so a tab close
+// during a streaming subchat can persist the project's subchatIds entry
+// before the chat itself ever reaches IndexedDB. On reload we'd surface
+// "missing" subchats to the overseer; prune those dangling refs here so
+// downstream tooling sees a consistent view.
+function reconcileOrphanSubchats() {
+  for (const project of Object.values(projectStore.projects)) {
+    if (project.deleted) continue
+    const orphans = project.subchatIds.filter((id) => {
+      const c = chatStore.chats[id]
+      return !c || c.deleted
+    })
+    if (orphans.length === 0) continue
+    for (const id of orphans) projectStore.removeSubchatFromProject(project.id, id)
+    console.warn(
+      `Pruned ${orphans.length} orphan subchat ref(s) from project ${project.id}:`,
+      orphans,
+    )
+  }
+}
+watch(
+  () => projectsReady.value && chatsReady.value,
+  (ready) => {
+    if (ready) reconcileOrphanSubchats()
+  },
+  { immediate: true },
+)
 
 // Boot the singleton overseer chat — only after chat persistence has
 // finished loading so the merge-on-load can't race-overwrite it.

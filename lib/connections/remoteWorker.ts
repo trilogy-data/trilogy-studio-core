@@ -101,6 +101,15 @@ export interface RemoteWorkerHost {
     onBatch: ArrowBatchHandler,
   ): Promise<RemoteWorkerExecuteSummary>
 
+  /**
+   * Run a SQL string for side effects only — no result rows. Used for
+   * connection startup scripts (multi-statement DDL like `CREATE TEMP TABLE
+   * …; CREATE TEMP TABLE …;`) where the worker's prepare/query_arrow path
+   * doesn't apply because duckdb-rs's `prepare()` is single-statement only.
+   * Optional on hosts that don't expose a batch path.
+   */
+  executeScript?(sessionId: string, sql: string): Promise<void>
+
   cancel(sessionId: string, identifier: string): Promise<boolean>
 
   describeDatabases(sessionId: string): Promise<RemoteDatabaseDTO[]>
@@ -378,6 +387,7 @@ export default class RemoteWorkerConnection extends BaseConnection {
     if (chunks.length === 0) {
       return new Results(new Map(), [])
     }
+    const decodeStart = performance.now()
     const total = chunks.reduce((acc, c) => acc + c.byteLength, 0)
     const all = new Uint8Array(total)
     let offset = 0
@@ -385,8 +395,35 @@ export default class RemoteWorkerConnection extends BaseConnection {
       all.set(c, offset)
       offset += c.byteLength
     }
+    const afterConcat = performance.now()
     const table = tableFromIPC(all)
-    return arrowBatchesToResults(table.batches as any)
+    const afterIpc = performance.now()
+    const results = arrowBatchesToResults(table.batches as any)
+    const end = performance.now()
+    console.debug(
+      `[remote_decode] id=${id} concat=${(afterConcat - decodeStart).toFixed(2)}ms tableFromIPC=${(afterIpc - afterConcat).toFixed(2)}ms toResults=${(end - afterIpc).toFixed(2)}ms total=${(end - decodeStart).toFixed(2)}ms bytes=${total}`,
+    )
+    return results
+  }
+
+  // Multi-statement DDL goes through the host's executeScript path, which on
+  // the rust worker hits `conn.execute_batch(sql)`. The default `query()`
+  // path goes through `prepare()` which is single-statement only in
+  // duckdb-rs 1.3.2, so a startup script with several `CREATE TEMP TABLE`
+  // statements would fail there.
+  override async runScript(sql: string): Promise<void> {
+    if (!this.sessionId) {
+      throw new Error('RemoteWorkerConnection.runScript called before connect.')
+    }
+    const host = this.resolveHost()
+    if (typeof host.executeScript !== 'function') {
+      // Host doesn't expose a batch path — fall back to the query path. The
+      // caller will see a multi-statement error if the script needs it.
+      await this.query(sql)
+      return
+    }
+    const sessionId = this.sessionId
+    await this.withSessionRecovery(() => host.executeScript!(sessionId, sql))
   }
 
   async cancelQuery(identifier: string): Promise<boolean> {

@@ -59,6 +59,14 @@ export interface ExecutionConnection {
   isConnected(): boolean
   executeSql(sql: string, parameters?: Record<string, any> | null): Promise<Results>
   /**
+   * Run a SQL string for side effects only — no result rows. Used by the
+   * SQL editor's multi-statement split: all-but-last statements run here
+   * (which on the Tauri remote worker hits `execute_batch`, sidestepping
+   * `prepare`'s single-statement limit) and the last runs through
+   * `executeSql` to capture its result set.
+   */
+  runScript(sql: string): Promise<void>
+  /**
    * Basenames of files registered locally on this connection (e.g.
    * duckdb-wasm CSVs/parquets). Returned as-is to the resolver so the
    * server can keep file-backed datasources alive even though the file
@@ -117,6 +125,10 @@ class ConnectionStoreExecutionConnection implements ExecutionConnection {
 
   executeSql(sql: string, parameters?: Record<string, any> | null): Promise<Results> {
     return this.connection.query(sql, parameters ?? null)
+  }
+
+  runScript(sql: string): Promise<void> {
+    return this.connection.runScript(sql)
   }
 
   listRegisteredFiles(): string[] {
@@ -183,6 +195,71 @@ export class ConnectionStoreExecutionConnectionProvider implements ExecutionConn
   getConnectionRegisteredFiles(connectionId: string): string[] | null {
     return this.filesResolver ? this.filesResolver(connectionId) : null
   }
+}
+
+/**
+ * Naive `;`-split for raw SQL editor input. Drops empty fragments so a
+ * trailing `;` doesn't yield a phantom last statement. Doesn't understand
+ * semicolons inside string literals or comments — that's the "hacky for
+ * now" baseline; a proper splitter waits on duckdb-rs extract_statements.
+ */
+function naiveSplitSqlStatements(sql: string): string[] {
+  return sql
+    .split(';')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+}
+
+/**
+ * Heuristic: does this SQL look like a no-result / side-effecting statement?
+ * Routing such statements through the rust worker's `prepare → query_arrow`
+ * path is a real bug, not just a paranoia guard: `CREATE OR REPLACE TABLE
+ * … AS SELECT … FROM read_csv(<file>, columns = {…})` against the real
+ * MovieLens fixture (~10k rows, 2k quoted titles) hangs the executor —
+ * reproduced in `cargo test --features duckdb worker_execute_movielens_*`,
+ * crashes with STATUS_STACK_BUFFER_OVERRUN under parallel test load.
+ * The batch path (`execute_batch`) handles them cleanly.
+ *
+ * Strips leading line / block comments and whitespace, then sniffs the
+ * first keyword. Conservative: only includes the clearly no-result verbs;
+ * leaves INSERT/UPDATE/DELETE on the result-bearing path so DuckDB's
+ * `RETURNING` clause keeps working when callers need it.
+ */
+function looksLikeNoResultStatement(sql: string): boolean {
+  let s = sql.trim()
+  // Peel off any number of leading comments.
+  while (s.length > 0) {
+    if (s.startsWith('--')) {
+      const nl = s.indexOf('\n')
+      s = nl === -1 ? '' : s.slice(nl + 1).trimStart()
+    } else if (s.startsWith('/*')) {
+      const end = s.indexOf('*/')
+      s = end === -1 ? '' : s.slice(end + 2).trimStart()
+    } else {
+      break
+    }
+  }
+  const first = s.match(/^([A-Za-z]+)/)?.[1]?.toUpperCase()
+  if (!first) return false
+  return [
+    'CREATE',
+    'DROP',
+    'ALTER',
+    'TRUNCATE',
+    'COPY',
+    'SET',
+    'ATTACH',
+    'DETACH',
+    'USE',
+    'BEGIN',
+    'COMMIT',
+    'ROLLBACK',
+    'VACUUM',
+    'ANALYZE',
+    'REINDEX',
+    'CHECKPOINT',
+    'PRAGMA',
+  ].includes(first)
 }
 
 function isExecutionConnectionProvider(
@@ -984,6 +1061,103 @@ export default class QueryExecutionService {
         }
       }
     }
+    // Raw SQL editors skip the Trilogy resolver entirely — the resolver is a
+    // Pest grammar that doesn't accept SQL syntax (a leading "--" comment
+    // immediately fails with "expected start"). Multi-statement SQL is
+    // handled with a naive split on `;`: all but the last statement run
+    // through the connection's batch path (which on the Tauri remote worker
+    // hits `execute_batch`, sidestepping duckdb-rs's single-statement
+    // `prepare`), and the last statement runs through the normal query
+    // path so its result set comes back. The split doesn't understand `;`
+    // inside quoted strings or comments — known hacky, fine for now until
+    // duckdb-rs exposes extract_statements upstream.
+    if (queryInput.editorType === 'sql') {
+      try {
+        const statements = naiveSplitSqlStatements(queryInput.text)
+        if (statements.length === 0) {
+          const rval: QueryResult = {
+            success: true,
+            generatedSql: queryInput.text,
+            results: new Results(new Map(), []),
+            executionTime: new Date().getTime() - startTime,
+            resultSize: 0,
+            columnCount: 0,
+          }
+          if (onSuccess) onSuccess(rval)
+          return rval
+        }
+        if (statements.length > 1) {
+          const setup = statements.slice(0, -1).join(';\n') + ';'
+          await Promise.race([
+            conn.runScript(setup),
+            new Promise<void>((_, reject) => {
+              controller.signal.addEventListener('abort', () =>
+                reject(new Error('Query cancelled by user')),
+              )
+            }),
+          ])
+        }
+        const last = statements[statements.length - 1]
+        let sqlResponse: Results
+        if (looksLikeNoResultStatement(last)) {
+          // DDL / side-effecting — route through the batch path; see
+          // looksLikeNoResultStatement for why the prepare path can hang.
+          await Promise.race([
+            conn.runScript(last),
+            new Promise<void>((_, reject) => {
+              controller.signal.addEventListener('abort', () =>
+                reject(new Error('Query cancelled by user')),
+              )
+            }),
+          ])
+          sqlResponse = new Results(new Map(), [])
+        } else {
+          sqlResponse = await Promise.race([
+            conn.executeSql(last, queryInput.parameters ?? null),
+            new Promise<Results>((_, reject) => {
+              controller.signal.addEventListener('abort', () =>
+                reject(new Error('Query cancelled by user')),
+              )
+            }),
+          ])
+        }
+        const rval: QueryResult = {
+          success: true,
+          generatedSql: queryInput.text,
+          results: sqlResponse,
+          executionTime: new Date().getTime() - startTime,
+          resultSize: sqlResponse.data.length,
+          columnCount: sqlResponse.headers.size,
+        }
+        if (this.storeHistory) {
+          useQueryHistoryService(connectionId).recordQuery({
+            query: queryInput.text,
+            generatedQuery: queryInput.text,
+            executionTime: rval.executionTime,
+            status: 'success',
+            resultSize: rval.resultSize,
+            resultColumns: rval.columnCount,
+            errorMessage: null,
+            extraFilters: queryInput.extraFilters,
+          })
+        }
+        if (onSuccess) onSuccess(rval)
+        return rval
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        if (onFailure) {
+          onFailure({ message, error: true, running: false })
+        }
+        return {
+          success: false,
+          error: message,
+          executionTime: new Date().getTime() - startTime,
+          resultSize: 0,
+          columnCount: 0,
+        }
+      }
+    }
+
     let sources: ContentInput[] = this.connectionProvider.getConnectionSources(connectionId)
 
     if (queryInput.extraContent) {

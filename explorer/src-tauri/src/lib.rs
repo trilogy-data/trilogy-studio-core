@@ -177,6 +177,17 @@ fn remote_execute(
 }
 
 #[tauri::command]
+fn remote_execute_script(
+    state: State<'_, SessionManager>,
+    session_id: String,
+    sql: String,
+) -> Result<(), String> {
+    state
+        .execute_script(&session_id, &sql)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn remote_cancel(
     state: State<'_, SessionManager>,
     session_id: String,
@@ -281,6 +292,7 @@ pub fn run() {
             fs_read_text,
             remote_connect,
             remote_execute,
+            remote_execute_script,
             remote_cancel,
             remote_disconnect,
             remote_describe_databases,

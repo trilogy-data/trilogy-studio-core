@@ -139,7 +139,25 @@ export class OverseerToolExecutor {
   private deleteSubchat(subchatId: string): ToolCallResult {
     if (!subchatId) return { success: false, error: 'subchat_id is required' }
     const subchat = this.chatStore.chats[subchatId]
-    if (!subchat) return { success: false, error: `Subchat ${subchatId} not found` }
+    if (!subchat) {
+      // Self-heal: stale id sitting in some project's subchatIds with no
+      // live chat (typically a reload-before-flush orphan). Just clean up
+      // the dangling reference instead of erroring — the agent's intent
+      // ("get rid of this entry") is satisfied either way.
+      let cleaned = 0
+      for (const project of Object.values(this.projectStore.projects)) {
+        if (project.subchatIds.includes(subchatId)) {
+          this.projectStore.removeSubchatFromProject(project.id, subchatId)
+          cleaned++
+        }
+      }
+      return cleaned > 0
+        ? {
+            success: true,
+            message: `Subchat ${subchatId} was already gone; removed the dangling reference.`,
+          }
+        : { success: false, error: `Subchat ${subchatId} not found` }
+    }
     if (subchat.parentChatId !== this.overseerChatId) {
       return { success: false, error: `Subchat ${subchatId} is not a child of this overseer` }
     }
@@ -200,14 +218,26 @@ export class OverseerToolExecutor {
     const project = this.projectStore.projects[projectId]
     if (!project) return { success: false, error: 'Project not found' }
 
-    const lines = project.subchatIds.map((id) => {
+    // Self-heal: drop subchatIds whose Chat objects vanished (typically a
+    // reload-before-flush orphan). Reporting "(missing)" entries to the
+    // overseer just baits it into delete attempts that 404.
+    const orphans = project.subchatIds.filter((id) => {
       const c = this.chatStore.chats[id]
-      if (!c) return `  - ${id} (missing)`
+      return !c || c.deleted
+    })
+    for (const id of orphans) {
+      this.projectStore.removeSubchatFromProject(projectId, id)
+    }
+
+    const lines: string[] = []
+    for (const id of project.subchatIds) {
+      const c = this.chatStore.chats[id]
+      if (!c) continue
       const status = this.chatStore.isChatExecuting(id) ? 'running' : 'idle'
       const last = c.messages[c.messages.length - 1]
       const preview = last ? truncate(last.content || '', 80) : ''
-      return `  - ${id} [${c.kind}] (${status}) "${c.name}" — last: ${preview}`
-    })
+      lines.push(`  - ${id} [${c.kind}] (${status}) "${c.name}" — last: ${preview}`)
+    }
 
     return {
       success: true,

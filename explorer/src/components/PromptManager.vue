@@ -58,6 +58,7 @@ function defaultFor(kind: PromptOverrideKind): string {
 const activeKind = ref<PromptOverrideKind>('overseer')
 const draft = ref('')
 const justSaved = ref(false)
+let savedFlashTimer: ReturnType<typeof setTimeout> | null = null
 
 const storedValue = computed(() => project.value?.promptOverrides[activeKind.value] ?? '')
 const defaultValue = computed(() => defaultFor(activeKind.value))
@@ -67,21 +68,24 @@ const isDirty = computed(() => {
   return draft.value !== baseline
 })
 
-function syncDraft() {
+function loadFromStore() {
   draft.value = storedValue.value || defaultValue.value
-  justSaved.value = false
 }
-syncDraft()
+loadFromStore()
 
-watch([activeKind, () => project.value?.id], syncDraft)
-watch(
-  () => storedValue.value,
-  () => {
-    // External writes (load, reset elsewhere) — only refresh if user has no
-    // unsaved edits to avoid clobbering their typing.
-    if (!isDirty.value) syncDraft()
-  },
-)
+// Re-load the draft when the active kind or project changes — but NOT when
+// storedValue alone changes, because storedValue updates as a direct result
+// of the user clicking Save and we want the local draft to remain in sync
+// with what was just saved without an extra round-trip clobbering the UI.
+watch([activeKind, () => project.value?.id], loadFromStore)
+
+function flashSaved() {
+  justSaved.value = true
+  if (savedFlashTimer) clearTimeout(savedFlashTimer)
+  savedFlashTimer = setTimeout(() => {
+    justSaved.value = false
+  }, 1800)
+}
 
 function pickKind(k: PromptOverrideKind) {
   if (isDirty.value) {
@@ -100,16 +104,21 @@ function save() {
   // override map small and means future default tweaks flow through.
   if (trimmed === defaultValue.value.trim()) {
     projectStore.setProjectPromptOverride(project.value.id, activeKind.value, undefined)
+    draft.value = defaultValue.value
   } else {
-    projectStore.setProjectPromptOverride(project.value.id, activeKind.value, draft.value)
+    projectStore.setProjectPromptOverride(project.value.id, activeKind.value, trimmed)
+    // Mirror what was actually stored (trimmed) so isDirty correctly reads
+    // false after save and the user can see the "saved" indicator.
+    draft.value = trimmed
   }
-  justSaved.value = true
+  flashSaved()
 }
 
 function resetToDefault() {
   if (!project.value) return
   projectStore.setProjectPromptOverride(project.value.id, activeKind.value, undefined)
   draft.value = defaultValue.value
+  if (savedFlashTimer) clearTimeout(savedFlashTimer)
   justSaved.value = false
 }
 </script>

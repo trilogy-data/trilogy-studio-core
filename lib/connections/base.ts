@@ -310,6 +310,18 @@ export default abstract class BaseConnection {
     return sql.replace(new RegExp(EscapePlaceholder, 'g'), "''")
   }
 
+  /**
+   * Run a SQL string for side effects only — used for connection startup
+   * scripts where the caller doesn't read result rows. Default routes
+   * through `query()`, which works for engines whose query path handles
+   * multi-statement input natively (e.g. wasm DuckDB). Connections backed
+   * by drivers that prepare-and-bind a single statement (the Tauri remote
+   * worker) override to use a batch path that accepts `;`-separated DDL.
+   */
+  async runScript(sql: string): Promise<void> {
+    await this.query(sql)
+  }
+
   async query(
     sql: string,
     parameters: Record<string, any> | null = null,

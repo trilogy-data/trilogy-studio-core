@@ -19,6 +19,14 @@ pub trait QueryWorker: Send {
         identifier: &str,
     ) -> Result<(Vec<u8>, ExecuteSummary)>;
 
+    /// Run a SQL string for side effects only — no result rows, no Arrow
+    /// encoding. Used for connection startup scripts (DDL like
+    /// `CREATE TEMP TABLE …`) where the caller doesn't need to read rows
+    /// back. Drivers that handle multi-statement input natively (DuckDB's
+    /// `execute_batch`, sqlite's `execute_batch`, etc.) route through their
+    /// batch path so the caller can pass `;`-separated scripts directly.
+    fn execute_script(&mut self, sql: &str) -> Result<()>;
+
     fn describe_databases(&self) -> Result<Vec<DatabaseDTO>>;
     fn describe_schemas(&self, database: &str) -> Result<Vec<SchemaDTO>>;
     fn describe_tables(&self, database: &str, schema: Option<&str>) -> Result<Vec<TableDTO>>;
