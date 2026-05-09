@@ -24,7 +24,10 @@ from io_models import (
     Import,
     TrilogyType,
 )
-from env_helpers import parse_env_from_full_model, normalize_relative_imports
+from env_helpers import (
+    parse_env_from_full_model,
+    normalize_relative_imports,
+)
 from logging import getLogger
 from common import concept_to_description, concept_to_derivation
 
@@ -98,6 +101,8 @@ def get_diagnostics(
     doctext: str,
     sources: List[ModelSourceInSchema],
     current_filename: str | None = None,
+    files: List[str] | None = None,
+    working_path: str | None = None,
 ) -> ValidateResponse:
     diagnostics: List[ValidateItem] = []
     completions: List[CompletionItem] = []
@@ -144,7 +149,7 @@ def get_diagnostics(
     if not document:
         return ValidateResponse(items=diagnostics, completion_items=completions)
     try:
-        env = parse_env_from_full_model(sources)
+        env = parse_env_from_full_model(sources, files=files, working_path=working_path)
         seen: set[str] = set()
         for k, v in env.concepts.items():
             if v.name.startswith("_") or v.namespace.startswith("_"):

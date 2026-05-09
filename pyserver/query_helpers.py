@@ -429,7 +429,11 @@ def generate_query_core(
         env_start = time.time()
 
     # Environment setup
-    env = parse_env_from_full_model(query.full_model.sources)
+    env = parse_env_from_full_model(
+        query.full_model.sources,
+        files=query.files,
+        working_path=query.working_path,
+    )
 
     if enable_performance_logging:
         env_time = time.time() - env_start
@@ -457,7 +461,11 @@ def generate_query_core(
 
     # Generate query
     target, columns, results, select_count = generate_single_query(
-        normalized_query, env, dialect, query.extra_filters, query.parameters
+        normalized_query,
+        env,
+        dialect,
+        query.extra_filters,
+        query.parameters,
     )
 
     if enable_performance_logging:
@@ -497,7 +505,11 @@ def generate_multi_query_core(
     variables = query.parameters or {}
 
     def build_env():
-        benv = parse_env_from_full_model(query.full_model.sources)
+        benv = parse_env_from_full_model(
+            query.full_model.sources,
+            files=query.files,
+            working_path=query.working_path,
+        )
         imports = []
         for imp in query.imports:
             if imp.alias:

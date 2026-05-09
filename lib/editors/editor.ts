@@ -2,7 +2,7 @@ import { Results } from './results'
 import type { ResultsInterface, ChartConfig } from './results'
 import { type CompletionItem } from '../stores/resolver'
 import type { ChatMessage, ChatArtifact } from '../chats/chat'
-import { type EditorType, normalizeRemoteEditorPath } from './fileTypes'
+import { type EditorType, normalizeRemoteEditorPath, getEditorTypeForPath } from './fileTypes'
 import { computeConnectionId } from '../connections/base'
 
 export { type EditorType, normalizeRemoteEditorPath } from './fileTypes'
@@ -83,6 +83,12 @@ export interface EditorInterface {
 export default class Editor implements EditorInterface {
   id: string
   name: string
+  // Source of truth = the filename extension whenever it's a recognized
+  // type (`.sql` → 'sql', `.preql` → 'preql', etc.). Constructor and
+  // `setName` keep this field in sync with the name, so a rename like
+  // `setup.preql` → `setup.sql` automatically reroutes the editor through
+  // the SQL execution path instead of the Trilogy resolver. Names without
+  // a recognized extension keep whatever type was passed in.
   type: EditorType
   syntax: string
   connection: string
@@ -149,8 +155,13 @@ export default class Editor implements EditorInterface {
   }) {
     this.id = id
     this.name = storage === 'remote' ? normalizeRemoteEditorPath(name, type) : name
-    this.type = type
-    this.syntax = type === 'python' ? 'python' : 'preql'
+    // Filename extension wins over the passed-in `type` when both
+    // disagree. Heals stale persisted state (e.g. a `setup.sql` that
+    // was somehow saved with type='preql' — see PR-as-of comment on the
+    // `type` field), and keeps `editor.type` and the on-disk extension
+    // consistent without a getter.
+    this.type = getEditorTypeForPath(this.name) ?? type
+    this.syntax = this.type === 'python' ? 'python' : 'preql'
     this.connection = connection
     this.connectionId = editorConnectionId({ connection, storage, remoteStoreId })
     this.results = new Results(new Map(), [])
@@ -210,6 +221,14 @@ export default class Editor implements EditorInterface {
       this.remotePath = nextName
     }
     this.name = nextName
+    // Renaming `setup.preql` → `setup.sql` should re-route execution
+    // through the SQL path. Re-derive the type from the new extension;
+    // keep the existing type when the new name has no recognized
+    // extension (so renaming `foo.sql` → `foo` doesn't reset to 'preql').
+    const inferredType = getEditorTypeForPath(this.name)
+    if (inferredType && this.type !== inferredType) {
+      this.type = inferredType
+    }
   }
 
   setConnection(connection: string): void {

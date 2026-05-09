@@ -1,5 +1,8 @@
 <template>
-  <div :class="[messageClass, { 'message-compact': compact }]" ref="messageContainer">
+  <div
+    :class="[messageClass, { 'message-compact': compact, 'message-flush-chrome': flushChrome }]"
+    ref="messageContainer"
+  >
     <div class="message-shell">
       <div class="message-header">
         <div class="message-header-main">
@@ -92,6 +95,10 @@ export default {
       default: () => [],
     },
     compact: {
+      type: Boolean,
+      default: false,
+    },
+    flushChrome: {
       type: Boolean,
       default: false,
     },
@@ -225,6 +232,13 @@ export default {
 
 .information-message {
   border-left: 3px solid var(--trilogy-embed-special-text, var(--special-text, #2563eb));
+}
+
+.message-flush-chrome {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
 }
 
 .message-shell {

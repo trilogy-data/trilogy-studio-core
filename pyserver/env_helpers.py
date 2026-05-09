@@ -1,5 +1,6 @@
 import copy
 from pathlib import PurePosixPath
+from typing import Iterable
 
 from trilogy import Environment
 from io_models import (
@@ -94,21 +95,31 @@ def normalize_relative_imports(text: str, current_filename: str | None) -> str:
     return "\n".join(lines)
 
 
-def parse_env_from_full_model(sources: list[ModelSourceInSchema]) -> Environment:
-    if not sources:
-        return Environment()
+def parse_env_from_full_model(
+    sources: list[ModelSourceInSchema],
+    files: Iterable[str] | None = None,
+    working_path: str | None = None,
+) -> Environment:
+    env_kwargs: dict = {}
+    if working_path:
+        env_kwargs["working_path"] = working_path
 
-    resolver = DictImportResolver(
-        content={
-            source.alias.replace("/", "."): normalize_relative_imports(
-                source.contents, source.alias
-            )
-            for _, source in enumerate(sources)
-        }
+    # Register client-known file basenames in the resolver so the trilogy parser
+    # treats `file '…'` datasources as published (skipping its filesystem
+    # existence check) and preserves the literal address — rendered SQL points
+    # at what the client registered (e.g. duckdb-wasm), not a server CWD path.
+    data_files = {f: b"" for f in files if f} if files else {}
+
+    content = {
+        source.alias.replace("/", "."): normalize_relative_imports(
+            source.contents, source.alias
+        )
+        for source in sources
+    }
+    resolver = DictImportResolver(content=content, data_files=data_files)
+    return Environment(
+        config=StudioEnvironmentConfig(import_resolver=resolver), **env_kwargs
     )
-    env = Environment(config=StudioEnvironmentConfig(import_resolver=resolver))
-
-    return env
 
 
 def concept_to_ui_concept(concept: Concept) -> UIConcept:

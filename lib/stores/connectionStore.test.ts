@@ -128,7 +128,7 @@ describe('connectionStore', () => {
       )
 
       const store = useConnectionStore()
-      const queryMock = vi.fn().mockResolvedValue(undefined)
+      const runScriptMock = vi.fn().mockResolvedValue(undefined)
       const remoteId = 'remote:store-a:shared-name'
       store.connections[remoteId] = {
         id: remoteId,
@@ -141,14 +141,14 @@ describe('connectionStore', () => {
         model: null,
         changed: false,
         reset: vi.fn().mockResolvedValue(undefined),
-        query: queryMock,
+        runScript: runScriptMock,
       } as any
 
       await store.connectConnection(remoteId)
 
       // Only the remote store's startup script should have been issued.
-      expect(queryMock).toHaveBeenCalledTimes(1)
-      expect(queryMock).toHaveBeenCalledWith('REMOTE_STARTUP')
+      expect(runScriptMock).toHaveBeenCalledTimes(1)
+      expect(runScriptMock).toHaveBeenCalledWith('REMOTE_STARTUP')
       expect(mockEditorStoreState.getConnectionEditors).toHaveBeenCalledWith(remoteId, [
         EditorTag.STARTUP_SCRIPT,
       ])

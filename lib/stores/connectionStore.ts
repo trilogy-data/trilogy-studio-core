@@ -6,6 +6,7 @@ import {
   MotherDuckConnection,
   SnowflakeJwtConnection,
   SQLiteConnection,
+  RemoteWorkerConnection,
 } from '../connections'
 import { EditorTag } from '../editors'
 import useEditorStore from './editorStore'
@@ -24,7 +25,10 @@ async function runStartup(connection: Connection) {
   await Promise.all(
     startupEditors.map(async (editor) => {
       console.log(`running startup script ${editor.name}`)
-      await connection.query(editor.contents)
+      // runScript routes through the engine's batch path so multi-statement
+      // DDL works; query() goes through prepare() which is single-statement
+      // on the Tauri remote worker.
+      await connection.runScript(editor.contents)
     }),
   )
 }
@@ -47,6 +51,10 @@ export const connectionTypes = [
   { label: 'Snowflake (Key Pair Auth)', value: 'snowflake' },
   { label: 'SQLite', value: 'sqlite' },
   { label: 'MotherDuck (Token)', value: 'motherduck' },
+  // Tauri-only — requires a registered RemoteWorkerHost (Trilogy Explorer
+  // installs one at boot). In a plain browser shell this connection
+  // surfaces a "no host registered" error on connect.
+  { label: 'DuckDB (Native)', value: 'remote-worker-duckdb' },
   // { label: 'SQL Server (Basic Auth)', value: 'sqlserver' },
 ]
 
@@ -243,6 +251,12 @@ const useConnectionStore = defineStore('connections', {
         })
       } else if (type === 'motherduck') {
         connection = new MotherDuckConnection(name, options.mdToken, options.saveCredential)
+      } else if (type === 'remote-worker-duckdb') {
+        connection = new RemoteWorkerConnection(name, {
+          driver: 'duckdb',
+          config: options.config ?? {},
+          queryType: 'duckdb',
+        })
       } else {
         throw new Error(`Connection type "${type}" not found.`)
       }

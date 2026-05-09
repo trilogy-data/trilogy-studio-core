@@ -177,6 +177,8 @@ export default class TrilogyResolver {
     extraFilters: string[] | null,
     parameters: Record<string, string | number | boolean> | null,
     currentFilename: string | null,
+    files: string[] | null = null,
+    workingPath: string | null = null,
   ): string {
     const normalizedParams = {
       query: query,
@@ -186,6 +188,9 @@ export default class TrilogyResolver {
       extra_filters: extraFilters || [],
       parameters: parameters || {},
       current_filename: currentFilename || null,
+      // Sort so the cache key is independent of file insertion order.
+      files: files && files.length > 0 ? [...files].sort() : [],
+      working_path: workingPath || null,
     }
     return this.createHash(normalizedParams)
   }
@@ -233,6 +238,8 @@ export default class TrilogyResolver {
     extraContent: Record<string, any> | null = null,
     currentFilename: string | null = null,
     parameters: Record<string, string | number> | null = null,
+    files: string[] | null = null,
+    workingPath: string | null = null,
   ): Promise<ValidateResponse> {
     const requestParams = {
       query: query,
@@ -242,6 +249,8 @@ export default class TrilogyResolver {
       extra_content: extraContent || {},
       current_filename: currentFilename || null,
       parameters: parameters || {},
+      files: files || null,
+      working_path: workingPath || null,
     }
 
     // Generate hash of request params
@@ -280,6 +289,8 @@ export default class TrilogyResolver {
     extraFilters: string[] | null = null,
     parameters: Record<string, string | number | boolean> | null = null,
     currentFilename: string | null = null,
+    files: string[] | null = null,
+    workingPath: string | null = null,
   ): Promise<FormatQueryResponse> {
     console.log('TrilogyResolver.drilldown_query called')
     console.log(drilldown_filter)
@@ -295,6 +306,8 @@ export default class TrilogyResolver {
       extra_filters: extraFilters || [],
       parameters: parameters || {},
       current_filename: currentFilename || null,
+      files: files || null,
+      working_path: workingPath || null,
     }
 
     // Not in cache, make the API call
@@ -318,6 +331,8 @@ export default class TrilogyResolver {
     extraFilters: string[] | null = null,
     parameters: Record<string, string> | null = null,
     currentFilename: string | null = null,
+    files: string[] | null = null,
+    workingPath: string | null = null,
   ): Promise<FormatQueryResponse> {
     if (type === 'sql') {
       // return it as is
@@ -332,6 +347,8 @@ export default class TrilogyResolver {
       extra_filters: extraFilters || [],
       parameters: parameters || {},
       current_filename: currentFilename || null,
+      files: files || null,
+      working_path: workingPath || null,
     }
 
     // Generate hash of request params
@@ -367,6 +384,8 @@ export default class TrilogyResolver {
     extraFilters: string[] | null = null,
     parameters: Record<string, string | number | boolean> | null = null,
     currentFilename: string | null = null,
+    files: string[] | null = null,
+    workingPath: string | null = null,
   ): Promise<QueryResponse> {
     if (type === 'sql') {
       // return it as is
@@ -382,6 +401,8 @@ export default class TrilogyResolver {
       extraFilters,
       parameters,
       currentFilename,
+      files,
+      workingPath,
     )
 
     // Check if result exists in cache
@@ -398,6 +419,8 @@ export default class TrilogyResolver {
       extra_filters: extraFilters || [],
       parameters: parameters || {},
       current_filename: currentFilename || null,
+      files: files || null,
+      working_path: workingPath || null,
     }
 
     // Not in cache, make the API call
@@ -421,8 +444,10 @@ export default class TrilogyResolver {
     imports: Import[] | null = null,
     extraFilters: string[] | null = null,
     parameters: Record<string, string | number | boolean> | null = null,
+    files: string[] | null = null,
+    workingPath: string | null = null,
   ): Promise<BatchQueryResponse> {
-    // Check batch cache first
+    // Check batch cache first — sort `files` so order doesn't fragment cache.
     const batchRequestParams = {
       queries: queries,
       dialect: dialect,
@@ -430,6 +455,8 @@ export default class TrilogyResolver {
       imports: imports || [],
       extra_filters: extraFilters || [],
       parameters: parameters || {},
+      files: files && files.length > 0 ? [...files].sort() : [],
+      working_path: workingPath || null,
     }
     const batchCacheKey = this.createHash(batchRequestParams)
     const cachedBatchResult = this.batchQueryCache.get(batchCacheKey)
@@ -457,6 +484,8 @@ export default class TrilogyResolver {
         mergedExtraFilters.length > 0 ? mergedExtraFilters : null,
         Object.keys(mergedParameters).length > 0 ? mergedParameters : null,
         null,
+        files,
+        workingPath,
       )
 
       const cachedResult = this.queryCache.get(cacheKey)
@@ -494,6 +523,8 @@ export default class TrilogyResolver {
       imports: imports || [],
       extra_filters: extraFilters || [],
       parameters: parameters || {},
+      files: files || null,
+      working_path: workingPath || null,
     }
 
     const apiResponse = await this.fetchWithErrorHandling(
@@ -527,6 +558,8 @@ export default class TrilogyResolver {
         mergedExtraFilters.length > 0 ? mergedExtraFilters : null,
         Object.keys(mergedParameters).length > 0 ? mergedParameters : null,
         null,
+        files,
+        workingPath,
       )
 
       this.queryCache.set(cacheKey, { data: queryAtom })

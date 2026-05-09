@@ -67,6 +67,62 @@ describe('TrilogyResolver', () => {
     )
   })
 
+  it('forwards files to generate_query and includes them in the cache key', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ generated_sql: 'select 1' }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const resolver = new TrilogyResolver({
+      settings: { trilogyResolver: 'http://localhost:5678' },
+    } as any)
+
+    // First call with files=['ratings.csv'] hits the network.
+    await resolver.resolve_query(
+      'select 1;',
+      'duckdb',
+      'preql',
+      [],
+      [],
+      [],
+      {},
+      null,
+      ['ratings.csv'],
+    )
+    // Same args repeated → cache hit, no extra network call.
+    await resolver.resolve_query(
+      'select 1;',
+      'duckdb',
+      'preql',
+      [],
+      [],
+      [],
+      {},
+      null,
+      ['ratings.csv'],
+    )
+    // Different files → cache miss, second network call.
+    await resolver.resolve_query(
+      'select 1;',
+      'duckdb',
+      'preql',
+      [],
+      [],
+      [],
+      {},
+      null,
+      ['movies.csv'],
+    )
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toMatchObject({
+      files: ['ratings.csv'],
+    })
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body as string)).toMatchObject({
+      files: ['movies.csv'],
+    })
+  })
+
   it('warms the resolver only once per normalized base URL', async () => {
     const fetchMock = vi
       .fn()

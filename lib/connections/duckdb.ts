@@ -12,18 +12,12 @@ import BaseConnection from './base'
 import { Database, Schema, Table, Column, AssetType } from './base'
 import { Results, ColumnType } from '../editors/results'
 import type { ResultColumn } from '../editors/results'
-import { DateTime } from 'luxon'
-import { ARRAY_IMPLICIT_COLUMN } from './constants'
 import { Type, type DataType } from 'apache-arrow'
+import { processArrowRow, processArrowSchema } from './arrowResults'
 
 // Select a bundle based on browser checks
 function isFirefox(): boolean {
   return typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('firefox')
-}
-
-interface DuckDBType {
-  typeId: number
-  precision?: number
 }
 
 export interface DuckDBAssetUrls {
@@ -161,6 +155,14 @@ export default class DuckDBConnection extends BaseConnection {
   // (e.g. GitHub Pages on Firefox) work out of the box; uncheck to opt into
   // the optimized HEAD+range path.
   useCompatibleHttpFetch: boolean = true
+  // Basenames of files registered via registerFileHandle. The Trilogy
+  // resolver consults this so `file '...'` datasource addresses don't get
+  // dropped server-side just because the hosted server can't see them.
+  private registeredFileNames: Set<string> = new Set()
+
+  override listRegisteredFiles(): string[] {
+    return Array.from(this.registeredFileNames)
+  }
 
   static fromJSON(fields: {
     name: string
@@ -331,6 +333,7 @@ export default class DuckDBConnection extends BaseConnection {
     await this.connection.query(`use memory; DETACH DATABASE IF EXISTS ${dbAlias}`)
     // Register the file in DuckDB's virtual file system
     await this.db.registerFileHandle(file.name, file, DuckDBDataProtocol.BROWSER_FILEREADER, true)
+    this.registeredFileNames.add(file.name)
 
     try {
       // Attach the database
@@ -366,6 +369,7 @@ export default class DuckDBConnection extends BaseConnection {
 
       // Register the file in DuckDB's virtual file system
       await this.db.registerFileHandle(file.name, file, DuckDBDataProtocol.BROWSER_FILEREADER, true)
+      this.registeredFileNames.add(file.name)
 
       if (fileType === 'csv') {
         await this.processCSV(file, tableName, onProgress)
@@ -382,106 +386,11 @@ export default class DuckDBConnection extends BaseConnection {
   // EXISTING METHODS
 
   processSchema(schema: any): Map<string, ResultColumn> {
-    const headers = new Map<string, ResultColumn>()
-    schema.forEach((field: any) => {
-      headers.set(field.name, {
-        name: field.name,
-        type: this.mapDuckDBTypeToColumnType(field.type),
-        description: '',
-        scale: field.type.scale,
-        precision: field.type.precision,
-        children: field.type.children ? this.processSchema(field.type.children) : undefined,
-      })
-    })
-    return headers
-  }
-
-  parseUint32ArrayToBigInt(arr: Uint32Array): bigint {
-    if (arr.length !== 4) {
-      throw new Error('Expected Uint32Array of length 4')
-    }
-
-    const chunk0 = BigInt(arr[0])
-    const chunk1 = BigInt(arr[1]) << 32n
-    const chunk2 = BigInt(arr[2]) << 64n
-    const chunk3 = BigInt(arr[3]) << 96n
-
-    return chunk0 + chunk1 + chunk2 + chunk3
-  }
-
-  handleNumber(value: any): number {
-    if (value instanceof Uint32Array && value.length === 4) {
-      const bigIntValue = this.parseUint32ArrayToBigInt(value)
-
-      if (
-        bigIntValue <= BigInt(Number.MAX_SAFE_INTEGER) &&
-        bigIntValue >= BigInt(Number.MIN_SAFE_INTEGER)
-      ) {
-        return Number(bigIntValue)
-      }
-
-      return Number(bigIntValue)
-    }
-
-    if (typeof value === 'number' || typeof value === 'bigint') {
-      return Number(value)
-    }
-
-    const numValue = Number(value)
-    if (Number.isFinite(numValue)) {
-      return numValue
-    }
-
-    throw new Error(`Cannot parse value: ${value}`)
+    return processArrowSchema({ fields: schema })
   }
 
   processRow(row: any, headers: Map<string, ResultColumn>): any {
-    let processedRow: Record<string, any> = {}
-    Object.keys(row).forEach((key) => {
-      const column = headers.get(key)
-
-      if (column) {
-        switch (column.type) {
-          case ColumnType.INTEGER:
-            processedRow[key] =
-              row[key] !== null && row[key] !== undefined ? this.handleNumber(row[key]) : null
-            break
-          case ColumnType.FLOAT:
-            const scale = column.scale || 0
-            if (row[key] !== null && row[key] !== undefined) {
-              const top = this.handleNumber(row[key])
-              processedRow[key] = top / Math.pow(10, scale)
-            }
-            break
-          case ColumnType.DATE:
-            processedRow[key] = row[key] ? DateTime.fromMillis(row[key], { zone: 'UTC' }) : null
-            break
-          case ColumnType.DATETIME:
-            processedRow[key] = row[key] ? DateTime.fromMillis(row[key], { zone: 'UTC' }) : null
-            break
-          case ColumnType.ARRAY:
-            const arrayData = row[key] ? Array.from(row[key].toArray()) : null
-            if (!arrayData) {
-              processedRow[key] = null
-              break
-            }
-            const newv = arrayData.map((item: any) => {
-              return this.processRow({ [ARRAY_IMPLICIT_COLUMN]: item }, column.children!)
-            })
-            processedRow[key] = newv
-            break
-          case ColumnType.STRUCT:
-            processedRow[key] = row[key] ? this.processRow(row[key], column.children!) : null
-            break
-          default:
-            processedRow[key] = row[key]
-            break
-        }
-      } else {
-        console.warn(`Column ${key} not found in headers`)
-      }
-    })
-    return processedRow
+    return processArrowRow(row, headers)
   }
 
   async query_core(
@@ -546,32 +455,6 @@ export default class DuckDBConnection extends BaseConnection {
       if (this.currentQueryIdentifier === identifier) {
         this.currentQueryIdentifier = null
       }
-    }
-  }
-
-  private mapDuckDBTypeToColumnType(duckDBType: DuckDBType): ColumnType {
-    switch (duckDBType.typeId) {
-      case 5:
-        return ColumnType.STRING
-      case 2:
-        return ColumnType.INTEGER
-      case 3:
-        return ColumnType.FLOAT
-      case 6:
-        return ColumnType.BOOLEAN
-      case 7:
-        return ColumnType.FLOAT
-      case 8:
-        return ColumnType.DATE
-      case 10:
-        return ColumnType.DATETIME
-      case 13:
-        return ColumnType.STRUCT
-      case 12:
-        return ColumnType.ARRAY
-      default:
-        console.log('Unknown DuckDB int type:', duckDBType)
-        return ColumnType.UNKNOWN
     }
   }
 

@@ -214,6 +214,17 @@ export default abstract class BaseConnection {
     return `trilogy-connection-${this.type}-${this.name}`
   }
 
+  /**
+   * Files (by basename) that this connection has registered locally and can
+   * resolve at query time — e.g. duckdb-wasm CSVs/parquets registered via
+   * `registerFileHandle`. The Trilogy resolver uses this list to bypass its
+   * server-side `Path.exists` check on `file '...'` datasource addresses.
+   * Default: empty. Subclasses with file-registration semantics override.
+   */
+  listRegisteredFiles(): string[] {
+    return []
+  }
+
   abstract query_core(
     sql: string,
     parameters: Record<string, any> | null,
@@ -297,6 +308,18 @@ export default abstract class BaseConnection {
   replaceEscapedStrings(sql: string): string {
     // Replace escaped single quote placeholder with the language appropriate escape path
     return sql.replace(new RegExp(EscapePlaceholder, 'g'), "''")
+  }
+
+  /**
+   * Run a SQL string for side effects only — used for connection startup
+   * scripts where the caller doesn't read result rows. Default routes
+   * through `query()`, which works for engines whose query path handles
+   * multi-statement input natively (e.g. wasm DuckDB). Connections backed
+   * by drivers that prepare-and-bind a single statement (the Tauri remote
+   * worker) override to use a batch path that accepts `;`-separated DDL.
+   */
+  async runScript(sql: string): Promise<void> {
+    await this.query(sql)
   }
 
   async query(

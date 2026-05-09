@@ -91,7 +91,11 @@ def _run_inline_task(task_name: str, task, *args):
 
 def _format_query_task(query_data: dict) -> dict:
     query = QueryInSchema.model_validate(query_data)
-    env = parse_env_from_full_model(query.full_model.sources)
+    env = parse_env_from_full_model(
+        query.full_model.sources,
+        files=query.files,
+        working_path=query.working_path,
+    )
     try:
         base_imp_string = ""
         for imp in query.imports:
@@ -120,7 +124,11 @@ def _format_query_task(query_data: dict) -> dict:
 
 def _drilldown_query_task(query_data: dict) -> dict:
     query = DrilldownQueryInSchema.model_validate(query_data)
-    env = parse_env_from_full_model(query.full_model.sources)
+    env = parse_env_from_full_model(
+        query.full_model.sources,
+        files=query.files,
+        working_path=query.working_path,
+    )
     try:
         base_imp_string = ""
         for imp in query.imports:
@@ -202,6 +210,8 @@ def _validate_query_task(query_data: dict) -> dict:
                         f"{param_declarations}\nWHERE {filter_string} SELECT 1 as __ftest_{idx};",
                         query.sources,
                         current_filename=query.current_filename,
+                        files=query.files,
+                        working_path=query.working_path,
                     )
                     if base.items:
                         filter_validation.append(
@@ -236,6 +246,8 @@ def _validate_query_task(query_data: dict) -> dict:
             base_imp_string + query.query,
             query.sources,
             current_filename=query.current_filename,
+            files=query.files,
+            working_path=query.working_path,
         )
         base.items += filter_validation
         return base.model_dump(mode="json")

@@ -2,7 +2,7 @@
 
 A focused, AI-native desktop app for exploring data with Trilogy. Built on the same primitives as Trilogy Studio, but stripped down to one product idea: **a Project is a bundle of files and chats that share context.**
 
-> Status: pre-alpha. Phase 1 skeleton. Not yet packaged as a desktop app — see [Plan](#plan) below.
+> Status: pre-alpha. Phases 1, 2, 2.5, 1.5, 3 (browser slice), 4 (tool execution), and 3.5 (native FS via swappable kv backend) done. End-to-end flow: create projects, attach `.preql` / `.sql` / `.md` files, chat with tools enabled — LLM compiles Trilogy → SQL via hosted resolver and executes against an in-browser DuckDB connection. In Tauri, all persisted data (projects, chats, editors) lives as JSON files under the app data dir; in browser dev, IndexedDB. Same lib code, host-chosen backend.
 
 ---
 
@@ -104,26 +104,21 @@ Tradeoff: WebView differences across platforms (Linux webkitgtk is the rough one
 
 ## The Project model
 
-A Project is a directory on disk:
+A Project's unique value is **multi-chat grouping** plus **a curated set of editor references**. It is *not* a parallel file abstraction — it doesn't own file content, file types, or Trilogy parse state. Those concerns already have homes in lib:
+
+- **Files** live in [`EditorStore`](../lib/stores/editorStore.ts). A Project just holds `editorIds: string[]`. The same editor can belong to multiple projects.
+- **Trilogy semantics** live in [`ModelConfig`](../lib/models/model.ts). When `.preql` editors in a project are parsed, a `ModelConfig` is created/updated as a side effect — Project never duplicates concept/datasource state.
+- **Chats** live in [`chatStore`](../lib/stores/chatStore.ts). Project holds `chatIds: string[]`; each chat retains its own imports/messages/artifacts.
 
 ```
-~/.trilogy-explorer/projects/<slug>/
-├── project.json          # name, description, default LLM/data connection
-├── files/                # user-attached files
-├── chats/<chat-id>.json  # reuses ChatSessionData verbatim
-└── artifacts/            # exported charts/queries (later)
+Project ──▶ editorIds[]  ──▶ EditorStore
+        ──▶ chatIds[]    ──▶ chatStore
+        ──▶ (parse side-effect) ──▶ ModelConfig
 ```
 
-How file types enter LLM context:
+When Tauri lands and a Project becomes a directory on disk, the directory holds editor *contents* (`.preql`, `.csv`, `.md` etc.) and the storage adapter rehydrates them as Editors at load time. Same model, different persistence.
 
-| Extension | Treatment |
-|---|---|
-| `.preql` `.trilogy` | imported via existing [ChatImport](../lib/chats/chat.ts) flow |
-| `.csv` `.parquet` | registered as duckdb-wasm tables, queryable via Trilogy |
-| `.md` `.txt` `.sql` | inlined into system prompt as named context blocks |
-| `.png` `.jpg` | multimodal blocks for vision-capable providers |
-
-This is the **only** non-trivial new abstraction. Everything else is reuse from lib.
+For the file types we care about (CSV / parquet / markdown / image), `EditorType` will need to grow beyond its current `'trilogy' | 'sql' | 'preql' | 'python'` set. That's a Phase 3 lib change — done in lib so studio inherits it.
 
 ---
 
@@ -132,28 +127,57 @@ This is the **only** non-trivial new abstraction. Everything else is reuse from 
 ### Phase 0 — Decisions (✓ done)
 Tauri 2, link-to-lib, hosted pyserver, principles agreed.
 
-### Phase 1 — Skeleton (in progress)
+### Phase 1 — Skeleton (✓ done)
 - explorer/ folder with Vue 3 + Vite
-- Workspace-link `@trilogy-data/trilogy-studio-components`
-- Mount existing [LLMView.vue](../lib/views/LLMView.vue) full-screen — proves reuse works end-to-end
-- Single LLM provider, single hardcoded DuckDB-wasm connection
+- `@lib/*` alias to lib source (no rebuild needed in dev)
+- Pinia + reactive boot in [main.ts](src/main.ts)
 
-### Phase 1.5 — Tauri shell
-- `pnpm tauri init` inside explorer/
-- App identifier, window config
-- Verify dev + build on at least one platform
+### Phase 2 — Project model + browser persistence (✓ done)
+- [`Project`](../lib/projects/project.ts) + `ProjectFileData` types **in lib/**
+- [`useProjectStore`](../lib/stores/projectStore.ts) Pinia store **in lib/**
+- Reused lib's existing [`AbstractStorage`](../lib/data/storage.ts) abstraction — added `saveProjects` / `loadProjects` / `deleteProject` / `clearProjects` with concrete no-op defaults so GitHub/Remote storages keep compiling
+- [`LocalStorage`](../lib/data/localStorage.ts) implements project persistence in a new IndexedDB bucket
+- [`ProjectSidebar.vue`](src/components/ProjectSidebar.vue) (explorer-only): list + create + rename + delete
+- [`useProjectPersistence`](src/composables/useProjectPersistence.ts) wires the host adapter — swap in a Tauri storage in Phase 1.5 without touching the store
 
-### Phase 2 — Project model
-- `Project` / `ProjectFile` types + `projectStore` **in lib/**
-- Tauri commands: `project_list`, `project_load`, `project_save`, `chat_save`, `chat_load`
-- Browser-fallback storage adapter so `projectStore` works in Studio too
-- `ProjectSidebar` in explorer; create / rename / delete
+### Phase 2.5 — Chat integration (✓ done)
+- [`useChatPersistence`](src/composables/useChatPersistence.ts) and [`useLLMPersistence`](src/composables/useLLMPersistence.ts) wire chats + LLM connections via lib's `LocalStorage`
+- [`ProviderSetup.vue`](src/components/ProviderSetup.vue) lets the user add an Anthropic / OpenAI / OpenRouter / Demo provider
+- [`ChatPanel.vue`](src/components/ChatPanel.vue) lists project chats, mounts lib's [`LLMChatSplitView`](../lib/components/llm/LLMChatSplitView.vue), and routes `onSendMessage` to the provider's `generateCompletion`
+- No tools yet — tool execution lands in Phase 3 once files arrive
 
-### Phase 3 — File attachment
-- Tauri file dialog + drag-drop
-- `.csv` / `.parquet` → duckdb-wasm `registerFile`
-- `.preql` → existing import flow
-- File preview reusing [DataTable.vue](../lib/components/DataTable.vue), [CodeBlock.vue](../lib/components/CodeBlock.vue), [MarkdownRenderer.vue](../lib/components/MarkdownRenderer.vue)
+### Phase 1.5 — Tauri shell (✓ scaffolded, dev unverified)
+- [src-tauri/](src-tauri/) Cargo + Rust entrypoint, [tauri.conf.json](src-tauri/tauri.conf.json), default capabilities
+- `pnpm tauri:dev` to verify; first compile on Windows is ~5–10 min
+- Bundle icons not yet generated (`bundle.active: false`); run `pnpm tauri icon` before `pnpm tauri:build`
+- Tauri-backed `AbstractStorage` subclass (Phase 3) plugs into `useProjectPersistence` without store changes
+
+### Phase 3 — File attachment (browser slice ✓ done)
+- `EditorType` extended in lib with `'markdown'` (lib change — studio inherits, fileTypes tests still green)
+- [`useEditorPersistence`](src/composables/useEditorPersistence.ts) wires editors via lib's `LocalStorage`
+- [`EditorAttachments.vue`](src/components/EditorAttachments.vue): drag-drop + file picker creates Editors and links them via `projectStore.addEditorToProject`
+- Supported now: `.preql`, `.sql`, `.py`, `.md`, `.markdown`, `.txt`
+- Deferred: `.csv` / `.parquet` (need a separate "data asset" abstraction — Editor's code-execution model doesn't fit), images, and content registration into duckdb-wasm
+
+### Phase 3.5 — Native FS via swappable kv backend (✓ done)
+- Lib refactor: [`idbKv`](../lib/data/idbKv.ts) gained a `setKvBackend(backend)` hook and exports a `KvBackend` interface. Default behaviour (IDB → memory fallback) unchanged for studio.
+- Rust commands `kv_get` / `kv_set` / `kv_del` / `kv_keys` in [src-tauri/src/lib.rs](src-tauri/src/lib.rs) read and write files under the app data dir.
+- [`tauriKvBackend`](src/storage/tauriKvBackend.ts) implements `KvBackend` by routing to those commands; [main.ts](src/main.ts) installs it at boot when `__TAURI_INTERNALS__` is present.
+- Net effect: lib's `LocalStorage` keeps working unchanged in both shells. Browser uses IDB; Tauri writes JSON files to disk. Studio inherited the hook for free; if it ever ships a native shell, the same plug-in pattern works.
+
+### Phase 3.6 — Project-as-directory + advanced files (next)
+- Project = a real directory under `~/.trilogy-explorer/projects/<slug>/` rather than a JSON entry — files visible to the OS, attachable from anywhere
+- Tauri's `dialog`/`fs` plugins replace the browser file input in `EditorAttachments.vue`
+- New "data asset" abstraction in lib for `.csv` / `.parquet` (separate from Editor)
+- Trilogy parsing pipeline: `.preql` editors → derived `ModelConfig` for query validation
+- File preview pane reusing [DataTable.vue](../lib/components/DataTable.vue), [CodeBlock.vue](../lib/components/CodeBlock.vue), [MarkdownRenderer.vue](../lib/components/MarkdownRenderer.vue)
+
+### Phase 4 — Tool execution (✓ done)
+- [`useExecutionContext`](src/composables/useExecutionContext.ts) bootstraps `userSettingsStore` (default resolver URL), persists/loads connections via `LocalStorage`, ensures a default in-browser `duckdb-local` connection, and instantiates [`TrilogyResolver`](../lib/stores/resolver.ts) + [`QueryExecutionService`](../lib/stores/queryExecutionService.ts)
+- [`ChatPanel.vue`](src/components/ChatPanel.vue) now routes `onSendMessage` through `chatStore.executeMessage`, which runs the full lib tool loop (`runToolLoop` + `ChatToolExecutor` + `CHAT_TOOLS`)
+- New chats default to the bootstrapped DuckDB connection; new editors get the project's connection so they show up as available imports in the system prompt
+- Tools enabled out of the box: `run_trilogy_query`, `chart_trilogy_query`, `add_import`, `remove_import`, `list_available_imports` — all from lib, no fork
+- Resolver defaults to the hosted [trilogy-service.fly.dev](https://trilogy-service.fly.dev); offline support is Phase 6 work
 
 ### Phase 4 — Files in LLM context
 - Extend [chatAgentPrompt.ts](../lib/llm/chatAgentPrompt.ts) `buildChatAgentSystemPrompt` with `attachedFiles: ProjectFile[]`
@@ -204,8 +228,18 @@ Tauri 2, link-to-lib, hosted pyserver, principles agreed.
 pnpm install ./lib -D       # link lib (same as studio)
 cd explorer
 pnpm install
-pnpm dev                    # browser-only for now (Phase 1)
 
-# Phase 1.5+
-pnpm tauri dev              # native shell
+# browser dev (fast feedback loop)
+pnpm dev                    # http://localhost:5174
+
+# native shell (Tauri 2 — first run compiles ~5–10 min on Windows)
+pnpm tauri:dev
 ```
+
+### Native build prerequisites
+- Rust toolchain (`cargo`, `rustc`)
+- Windows: WebView2 (preinstalled on Windows 10/11), MSVC build tools
+- macOS: Xcode CLT
+- Linux: webkit2gtk, build-essential
+
+For `pnpm tauri:build`, you also need bundle icons. Run `pnpm tauri icon path/to/source.png` once to generate the platform-specific assets, then flip `bundle.active` to `true` in [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json).

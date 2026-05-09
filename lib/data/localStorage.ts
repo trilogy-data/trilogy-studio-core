@@ -7,6 +7,7 @@ import {
   MotherDuckConnection,
   SnowflakeJwtConnection,
   SQLiteConnection,
+  RemoteWorkerConnection,
 } from '../connections'
 import {
   LLMProvider,
@@ -20,13 +21,14 @@ import { reactive } from 'vue'
 import AbstractStorage from './storage'
 import { DashboardModel } from '../dashboards/base'
 import { Chat } from '../chats/chat'
+import { Project } from '../projects/project'
 import { idbGet, idbSet, idbDel, idbKeys, idbSize } from './idbKv'
 
 // Buckets moved to IndexedDB because their serialized payloads can exceed the
 // ~5 MB localStorage quota (chats carry artifact data, editors/modelConfig can
 // grow). Small, high-write-frequency buckets (connections, llmConnections,
 // userSettings) stay in localStorage for sync read access.
-const IDB_BUCKETS = ['editors', 'modelConfig', 'dashboards', 'chats'] as const
+const IDB_BUCKETS = ['editors', 'modelConfig', 'dashboards', 'chats', 'projects'] as const
 type IdbBucket = (typeof IDB_BUCKETS)[number]
 
 export default class LocalStorage extends AbstractStorage {
@@ -37,6 +39,7 @@ export default class LocalStorage extends AbstractStorage {
   private userSettingsStorageKey: string
   private dashboardStorageKey: string
   private chatStorageKey: string
+  private projectStorageKey: string
   private migrated = new Set<string>()
   public type: string
 
@@ -49,6 +52,7 @@ export default class LocalStorage extends AbstractStorage {
     this.userSettingsStorageKey = prefix + 'userSettings'
     this.dashboardStorageKey = prefix + 'dashboards'
     this.chatStorageKey = prefix + 'chats'
+    this.projectStorageKey = prefix + 'projects'
     this.type = 'local'
   }
 
@@ -157,6 +161,18 @@ export default class LocalStorage extends AbstractStorage {
 
     // Process each connection sequentially
     for (const connection of raw) {
+      // Remote-worker connections persist their driver in the `type` field as
+      // `remote-worker:<driver>` so we dispatch by prefix rather than enumerating
+      // every driver. The driver itself is also stored under `connection.driver`
+      // for use by RemoteWorkerConnection.fromJSON.
+      if (
+        typeof connection.type === 'string' &&
+        connection.type.startsWith('remote-worker:')
+      ) {
+        // @ts-ignore
+        connections[connection.name] = reactive(RemoteWorkerConnection.fromJSON(connection))
+        continue
+      }
       switch (connection.type) {
         case 'bigquery-oauth':
           // @ts-ignore
@@ -444,6 +460,54 @@ export default class LocalStorage extends AbstractStorage {
     return id in chats
   }
 
+  // Project methods implementation
+  async saveProjects(projectsList: Project[]): Promise<void> {
+    const projects = await this.loadProjects()
+
+    projectsList.forEach((project) => {
+      if (project.changed) {
+        projects[project.id] = project
+        project.changed = false
+      }
+      if (project.deleted) {
+        delete projects[project.id]
+      }
+    })
+
+    await this.writeIdb(
+      this.projectStorageKey,
+      JSON.stringify(Object.values(projects).map((project) => project.serialize())),
+    )
+  }
+
+  async loadProjects(): Promise<Record<string, Project>> {
+    const storedData = await this.readIdb(this.projectStorageKey)
+    let raw = storedData ? JSON.parse(storedData) : []
+
+    return raw.reduce((acc: Record<string, Project>, projectData: any) => {
+      const project = Project.fromSerialized(projectData)
+      acc[project.id] = reactive(project) as Project
+      acc[project.id].storage = 'local'
+      return acc
+    }, {})
+  }
+
+  async deleteProject(id: string): Promise<void> {
+    const projects = await this.loadProjects()
+    if (projects[id]) {
+      delete projects[id]
+      await this.writeIdb(
+        this.projectStorageKey,
+        JSON.stringify(Object.values(projects).map((p) => p.serialize())),
+      )
+    }
+  }
+
+  async clearProjects(): Promise<void> {
+    await idbDel(this.projectStorageKey)
+    this.migrated.add(this.projectStorageKey)
+  }
+
   /**
    * Delete chats whose updatedAt is older than `cutoff`. Returns the number
    * of chats removed. Used by the Storage settings panel.
@@ -523,6 +587,8 @@ export default class LocalStorage extends AbstractStorage {
         return this.dashboardStorageKey
       case 'chats':
         return this.chatStorageKey
+      case 'projects':
+        return this.projectStorageKey
     }
   }
 }

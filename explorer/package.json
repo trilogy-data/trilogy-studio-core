@@ -7,19 +7,37 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
+    "@duckdb/duckdb-wasm": "1.32.0",
+    "@google/genai": "^0.12.0",
+    "@mdi/js": "^7.4.47",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2",
     "@trilogy-data/trilogy-studio-components": "link:../lib",
+    "apache-arrow": "^21.1.0",
     "dompurify": "^3.3.0",
+    "luxon": "^3.5.0",
+    "monaco-editor": "^0.52.2",
     "pinia": "^2.3.1",
+    "prismjs": "^1.29.0",
+    "tabulator-tables": "^6.3.1",
+    "vega": "^6.2.0",
+    "vega-embed": "^7.1.0",
+    "vega-lite": "^6.4.1",
     "vue": "3.5.22"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/tsconfig": "^0.7.0",
     "typescript": "~5.6.3",
     "vite": "^7.2.2",
+    "vite-plugin-node-polyfills": "^0.24.0",
     "vue-tsc": "^2.2.12"
   }
 }

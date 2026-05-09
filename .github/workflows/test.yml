@@ -39,6 +39,31 @@ jobs:
           OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
         run: pnpm test
 
+  explorer-rust-tests:
+    name: Explorer Rust Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        # First build pulls in duckdb (bundled feature compiles ~50MB of C++);
+        # cache the cargo registry, target dir, and lockfile-derived index so
+        # subsequent runs reuse the compiled artifacts.
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: explorer/src-tauri/crates/query-bridge
+
+      - name: Run cargo test on query-bridge
+        # No --locked: explorer/.gitignore excludes Cargo.lock, so we let
+        # cargo resolve fresh. Duckdb-rs is pinned to =1.3.2 in its Cargo.toml
+        # so the resolution is effectively deterministic anyway.
+        working-directory: ./explorer/src-tauri/crates/query-bridge
+        run: cargo test --features duckdb
+
   integration-tests-local:
     name: Integration Tests (Local)
     runs-on: ubuntu-latest

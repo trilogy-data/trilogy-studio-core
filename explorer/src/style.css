@@ -1,21 +1,55 @@
 :root {
-  color-scheme: light dark;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: light;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   --bg: #ffffff;
   --fg: #1a1a1a;
   --muted: #6b6b6b;
   --accent: #3b82f6;
   --border: #e5e5e5;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f0f0f;
-    --fg: #e8e8e8;
-    --muted: #9a9a9a;
-    --accent: #60a5fa;
-    --border: #2a2a2a;
-  }
+  --query-window-bg: var(--bg);
+  --query-window-font: var(--fg);
+  --text-color: var(--fg);
+  --text-faint: var(--muted);
+  --sidebar-font: var(--fg);
+  --border-light: var(--border);
+  --panel-header-bg: var(--bg);
+  /* Lib component variables — EditorHeader uses --special-text for the
+     Run button background, --button-mouseover for action hover, etc.
+     Without these the Run button renders with no background and barely
+     visible white text. Pulled from lib/embedTheme.css :where(...theme-light). */
+  --bg-color: var(--bg);
+  --special-text: #2563eb;
+  --special-text-rgb: 37, 99, 235;
+  --error-color: #dc2626;
+  --delete-color: #dc2626;
+  --button-bg: transparent;
+  --button-mouseover: #f2f5f9;
+  --font-size: 14px;
+  --small-font-size: 12px;
+  --button-font-size: 12px;
+  --explorer-header-height: 54px;
+  --explorer-header-padding-inline: 1rem;
+  --explorer-header-gap: 0.6rem;
+  --explorer-header-title-font-size: 0.78rem;
+  --explorer-header-title-font-weight: 600;
+  --explorer-header-title-letter-spacing: 0.04em;
+  --explorer-header-title-line-height: 1;
+  --explorer-header-title-text-transform: uppercase;
+  --explorer-header-title-color: var(--muted);
+  --panel-header-height: var(--explorer-header-height);
+  --panel-header-padding-inline: var(--explorer-header-padding-inline);
+  --panel-header-gap: var(--explorer-header-gap);
+  --panel-header-title-font-size: var(--explorer-header-title-font-size);
+  --panel-header-title-font-weight: var(--explorer-header-title-font-weight);
+  --panel-header-title-letter-spacing: var(--explorer-header-title-letter-spacing);
+  --panel-header-title-line-height: var(--explorer-header-title-line-height);
+  --panel-header-title-text-transform: var(--explorer-header-title-text-transform);
+  --panel-header-title-color: var(--explorer-header-title-color);
 }
 
 html,

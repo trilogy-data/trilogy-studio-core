@@ -1,16 +1,20 @@
-export type EditorType = 'trilogy' | 'sql' | 'preql' | 'python'
+export type EditorType = 'trilogy' | 'sql' | 'preql' | 'python' | 'markdown' | 'csv'
 
 export const getFileExtension = (path: string): string => {
   const dotIndex = path.lastIndexOf('.')
   return dotIndex === -1 ? '' : path.slice(dotIndex).toLowerCase()
 }
 
-const defaultRemoteExtension = (type: EditorType): '.preql' | '.sql' | '.py' => {
+const defaultRemoteExtension = (type: EditorType): '.preql' | '.sql' | '.py' | '.md' | '.csv' => {
   switch (type) {
     case 'sql':
       return '.sql'
     case 'python':
       return '.py'
+    case 'markdown':
+      return '.md'
+    case 'csv':
+      return '.csv'
     default:
       return '.preql'
   }
@@ -22,7 +26,7 @@ export const normalizeRemoteEditorPath = (name: string, type: EditorType): strin
     return trimmed
   }
 
-  if (/\.(preql|sql|csv|py)$/i.test(trimmed)) {
+  if (/\.(preql|sql|csv|py|md|markdown|txt)$/i.test(trimmed)) {
     return trimmed
   }
 
@@ -37,6 +41,12 @@ export const getEditorTypeForPath = (path: string): EditorType | null => {
       return 'sql'
     case '.py':
       return 'python'
+    case '.md':
+    case '.markdown':
+    case '.txt':
+      return 'markdown'
+    case '.csv':
+      return 'csv'
     default:
       return null
   }
@@ -44,12 +54,15 @@ export const getEditorTypeForPath = (path: string): EditorType | null => {
 
 export const getMonacoLanguageForEditorType = (
   type: EditorType | string,
-): 'trilogy' | 'sql' | 'python' => {
+): 'trilogy' | 'sql' | 'python' | 'markdown' => {
   switch (type) {
     case 'sql':
+    case 'csv':
       return 'sql'
     case 'python':
       return 'python'
+    case 'markdown':
+      return 'markdown'
     default:
       return 'trilogy'
   }
@@ -68,7 +81,9 @@ export const supportsEditorAssistant = (type: EditorType | string): boolean =>
   isTrilogyType(type) || type === 'sql'
 
 export const supportsEditorLocalExecution = (type: EditorType | string): boolean =>
-  type !== 'python'
+  type !== 'python' && type !== 'markdown' && type !== 'csv'
 
-export const supportsDirectJobsTarget = (target: string): boolean =>
-  getFileExtension(target) !== '.py'
+export const supportsDirectJobsTarget = (target: string): boolean => {
+  const ext = getFileExtension(target)
+  return ext !== '.py' && ext !== '.md' && ext !== '.csv'
+}

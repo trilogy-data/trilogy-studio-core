@@ -79,6 +79,7 @@
       </div>
       <error-message
         v-else-if="error"
+        :flushChrome="true"
         :type="
           error === 'Connection is not active... Attempting to automatically reconnect.'
             ? 'information'
@@ -295,7 +296,6 @@ export default {
   background: var(--query-window-bg);
   min-height: 24px;
   height: 24px;
-  z-index: 99;
 }
 
 .tabs-left {
