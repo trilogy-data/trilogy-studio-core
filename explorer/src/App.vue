@@ -9,11 +9,13 @@ import useModelConfigStore from '@lib/stores/modelStore'
 import useUserSettingsStore from '@lib/stores/userSettingsStore'
 import useScreenNavigation from '@lib/stores/useScreenNavigation'
 import { useAnalyticsStore } from '@lib/stores/analyticsStore'
+import { useDashboardStore } from '@lib/stores/dashboardStore'
 import { Chat } from '@lib/chats/chat'
 import { useProjectPersistence } from './composables/useProjectPersistence'
 import { useChatPersistence } from './composables/useChatPersistence'
 import { useLLMPersistence } from './composables/useLLMPersistence'
 import { useEditorPersistence } from './composables/useEditorPersistence'
+import { useDashboardPersistence } from './composables/useDashboardPersistence'
 import { useExecutionContext } from './composables/useExecutionContext'
 import ProjectSidebar from './components/ProjectSidebar.vue'
 import OverseerPanel from './components/OverseerPanel.vue'
@@ -22,12 +24,14 @@ import PromptManager from './components/PromptManager.vue'
 import SubchatViewer from './components/SubchatViewer.vue'
 import ArtifactsView from './components/ArtifactsView.vue'
 import FileEditor from './components/FileEditor.vue'
+import ReportView from './components/ReportView.vue'
 import ResizeHandle from './components/ResizeHandle.vue'
 
 const { ready: projectsReady } = useProjectPersistence()
 const { ready: chatsReady } = useChatPersistence()
 useEditorPersistence()
 useLLMPersistence()
+useDashboardPersistence()
 const { queryExecutionService, trilogyResolver } = useExecutionContext()
 
 const projectStore = useProjectStore()
@@ -37,6 +41,7 @@ const llmStore = useLLMConnectionStore()
 const connectionStore = useConnectionStore()
 const modelStore = useModelConfigStore()
 const userSettingsStore = useUserSettingsStore()
+const dashboardStore = useDashboardStore()
 // Lib's userSettingsStore defaults theme to 'dark' — force it to 'light'
 // so lib's CodeEditor selects the `trilogyStudiolight` Monaco theme that
 // matches the rest of the explorer chrome.
@@ -55,6 +60,7 @@ provide('userSettingsStore', userSettingsStore)
 provide('analyticsStore', analyticsStore)
 provide('navigationStore', navigationStore)
 provide('chatStore', chatStore)
+provide('dashboardStore', dashboardStore)
 provide('setActiveEditor', (id: string) => {
   editorStore.activeEditorId = id
 })
@@ -79,15 +85,26 @@ const rightWidth = ref(loadWidth('explorer:rightWidth', 420))
 watch(leftWidth, (v) => localStorage.setItem('explorer:leftWidth', String(v)))
 watch(rightWidth, (v) => localStorage.setItem('explorer:rightWidth', String(v)))
 
-// ----- selected file (center pane) -----
+// ----- selected asset (center pane) -----
+// Files and dashboards/reports are mutually-exclusive selections — selecting
+// one clears the other so the middle pane only ever shows one asset.
 const selectedFileId = ref<string>('')
+const selectedDashboardId = ref<string>('')
 function onSelectFile(id: string) {
   selectedFileId.value = id
+  selectedDashboardId.value = ''
+}
+function onSelectDashboard(id: string) {
+  selectedDashboardId.value = id
+  selectedFileId.value = ''
 }
 function closeFile() {
   selectedFileId.value = ''
 }
-// Auto-clear selection if the file gets detached / project switched away
+function closeDashboard() {
+  selectedDashboardId.value = ''
+}
+// Auto-clear selection if the asset gets detached / project switched away
 watch([() => projectStore.activeProject?.id, selectedFileId], () => {
   const id = selectedFileId.value
   if (!id) return
@@ -95,6 +112,15 @@ watch([() => projectStore.activeProject?.id, selectedFileId], () => {
   const project = projectStore.activeProject
   if (!ed || ed.deleted || !project || !project.editorIds.includes(id)) {
     selectedFileId.value = ''
+  }
+})
+watch([() => projectStore.activeProject?.id, selectedDashboardId], () => {
+  const id = selectedDashboardId.value
+  if (!id) return
+  const dash = dashboardStore.dashboards[id]
+  const project = projectStore.activeProject
+  if (!dash || dash.deleted || !project || !project.dashboardIds.includes(id)) {
+    selectedDashboardId.value = ''
   }
 })
 
@@ -175,7 +201,12 @@ function onProviderAdded() {
 <template>
   <div class="app-root">
     <div class="left-column" :style="{ width: leftWidth + 'px' }">
-      <ProjectSidebar @select-subchat="onSelectSubchat" @select-file="onSelectFile" />
+      <ProjectSidebar
+        :activeDashboardId="selectedDashboardId"
+        @select-subchat="onSelectSubchat"
+        @select-file="onSelectFile"
+        @select-dashboard="onSelectDashboard"
+      />
     </div>
     <ResizeHandle v-model="leftWidth" side="left" :min="200" :max="500" />
 
@@ -183,6 +214,11 @@ function onProviderAdded() {
       <ProviderSetup v-if="!hasProvider" @added="onProviderAdded" />
       <template v-else>
         <FileEditor v-if="selectedFileId" :editorId="selectedFileId" @close="closeFile" />
+        <ReportView
+          v-else-if="selectedDashboardId"
+          :dashboardId="selectedDashboardId"
+          @close="closeDashboard"
+        />
         <ArtifactsView v-else />
 
         <ResizeHandle v-model="rightWidth" side="right" :min="320" :max="640" />
@@ -214,10 +250,7 @@ function onProviderAdded() {
             >
               Connection
             </button>
-            <button
-              :class="{ active: settingsTab === 'prompts' }"
-              @click="settingsTab = 'prompts'"
-            >
+            <button :class="{ active: settingsTab === 'prompts' }" @click="settingsTab = 'prompts'">
               Prompts
             </button>
           </nav>

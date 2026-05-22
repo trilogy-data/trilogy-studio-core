@@ -6,6 +6,7 @@ import useLLMConnectionStore from '@lib/stores/llmStore'
 import useConnectionStore from '@lib/stores/connectionStore'
 import useEditorStore from '@lib/stores/editorStore'
 import useProjectStore from '@lib/stores/projectStore'
+import { useDashboardStore } from '@lib/stores/dashboardStore'
 import type QueryExecutionService from '@lib/stores/queryExecutionService'
 import LLMChat from '@lib/components/llm/LLMChat.vue'
 
@@ -29,6 +30,7 @@ const llmStore = useLLMConnectionStore()
 const connectionStore = useConnectionStore()
 const editorStore = useEditorStore()
 const projectStore = useProjectStore()
+const dashboardStore = useDashboardStore()
 
 const isLoading = computed(() => chatStore.isChatExecuting(props.overseer.id))
 const activeTool = computed(() => chatStore.getChatActiveToolName(props.overseer.id))
@@ -63,6 +65,7 @@ async function handleSend(message: string, _msgs: ChatMessage[]): Promise<void> 
     queryExecutionService: props.queryExecutionService,
     editorStore,
     projectStore,
+    dashboardStore,
   })
 }
 
@@ -138,11 +141,7 @@ const placeholder = computed(() =>
         >
           <i class="mdi mdi-delete-outline" />
         </button>
-        <button
-          class="hdr-btn"
-          @click="emit('open-settings')"
-          title="LLM provider settings"
-        >
+        <button class="hdr-btn" @click="emit('open-settings')" title="LLM provider settings">
           <i class="mdi mdi-cog-outline" />
         </button>
       </template>

@@ -198,7 +198,7 @@ export const ARCHITECT_TOOLS = [
   {
     name: 'run_trilogy_query',
     description:
-      'Run a Trilogy query against the project\'s data connection (cross-references all attached editors). Use for smoke tests like `select count(*) as n from sales_total;`.',
+      "Run a Trilogy query against the project's data connection (cross-references all attached editors). Use for smoke tests like `select count(*) as n from sales_total;`.",
     input_schema: {
       type: 'object',
       properties: {

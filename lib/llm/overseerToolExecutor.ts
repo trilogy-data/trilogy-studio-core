@@ -1,5 +1,6 @@
 import type { ChatStoreType, ChatExecutionDependencies } from '../stores/chatStore'
 import type { ProjectStoreType } from '../stores/projectStore'
+import type { DashboardStoreType } from '../stores/dashboardStore'
 import type { ToolCallResult } from './sharedToolHelpers'
 import type { SubchatKind } from './overseerAgentPrompt'
 import { SUBCHAT_KINDS } from './overseerAgentPrompt'
@@ -20,6 +21,7 @@ export class OverseerToolExecutor {
     private projectStore: ProjectStoreType,
     private overseerChatId: string,
     private deps: ChatExecutionDependencies,
+    private dashboardStore?: DashboardStoreType,
   ) {}
 
   /** Read active project at tool-call time — the overseer can be talked to
@@ -29,10 +31,7 @@ export class OverseerToolExecutor {
     return this.projectStore.activeProjectId
   }
 
-  async executeToolCall(
-    toolName: string,
-    toolInput: Record<string, any>,
-  ): Promise<ToolCallResult> {
+  async executeToolCall(toolName: string, toolInput: Record<string, any>): Promise<ToolCallResult> {
     switch (toolName) {
       case 'spawn_subchat':
         return this.spawnSubchat(toolInput.kind, toolInput.task, toolInput.name)
@@ -44,6 +43,8 @@ export class OverseerToolExecutor {
         return this.peekSubchat(toolInput.subchat_id)
       case 'delete_subchat':
         return this.deleteSubchat(toolInput.subchat_id)
+      case 'create_report':
+        return this.createReport(toolInput.title, toolInput.prompt)
       case 'return_to_user':
         return {
           success: true,
@@ -209,6 +210,61 @@ export class OverseerToolExecutor {
       }
     } catch (e) {
       return { success: false, error: `Peek failed: ${e instanceof Error ? e.message : String(e)}` }
+    }
+  }
+
+  /**
+   * Spawn a new report-mode dashboard in the active project and queue an
+   * initial prompt for its dedicated dashboard chat agent. Returns immediately
+   * — the user opens the report from the sidebar; the chat panel auto-fires
+   * the queued prompt against the report-mode agent.
+   */
+  private createReport(rawTitle: any, rawPrompt: any): ToolCallResult {
+    if (!this.dashboardStore) {
+      return {
+        success: false,
+        error:
+          'Dashboard store not available in this overseer session. Ask the user to create the report from the sidebar.',
+      }
+    }
+    const title = typeof rawTitle === 'string' ? rawTitle.trim() : ''
+    if (!title) return { success: false, error: 'title is required' }
+    const prompt = typeof rawPrompt === 'string' ? rawPrompt.trim() : ''
+    if (!prompt) return { success: false, error: 'prompt is required' }
+
+    const projectId = this.activeProjectId
+    if (!projectId) {
+      return {
+        success: false,
+        error: 'No active project. Ask the user to create or open a project first.',
+      }
+    }
+    const project = this.projectStore.projects[projectId]
+    if (!project) return { success: false, error: 'Active project not found' }
+
+    if (this.dashboardStore.dashboards[title]) {
+      return {
+        success: false,
+        error: `A dashboard named "${title}" already exists. Pick a different title.`,
+      }
+    }
+
+    let dashboard
+    try {
+      dashboard = this.dashboardStore.newReport(title, project.dataConnectionId || '')
+    } catch (e) {
+      return {
+        success: false,
+        error: `Failed to create report: ${e instanceof Error ? e.message : String(e)}`,
+      }
+    }
+    this.projectStore.addDashboardToProject(projectId, dashboard.id)
+    // Queue the brief so the dashboard chat panel sends it on first open.
+    this.dashboardStore.setPendingChatPrompt(dashboard.id, prompt)
+
+    return {
+      success: true,
+      message: `Created report "${title}" (id ${dashboard.id}) in project "${project.name}". The user can open it from the Reports section in the sidebar; the report agent will receive the brief and start authoring.`,
     }
   }
 

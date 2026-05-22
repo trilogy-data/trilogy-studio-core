@@ -21,7 +21,7 @@ import type { LLMProvider } from './base'
 export type SummarizeContext = 'completion' | 'peek'
 
 const COMPLETION_SYSTEM_PROMPT =
-  "You are summarizing a subchat that has just finished. Read the transcript below " +
+  'You are summarizing a subchat that has just finished. Read the transcript below ' +
   '(messages and tool calls) and produce a 2–4 sentence summary of what was accomplished, ' +
   'what (if anything) failed or remains, and any concrete artifacts (file names, queries, ' +
   'errors). Be specific. The overseer will use this report to update the user — there is ' +

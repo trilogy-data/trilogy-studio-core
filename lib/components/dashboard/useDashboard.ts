@@ -16,6 +16,8 @@ import {
   CELL_TYPES,
   type DimensionClick,
   type MarkdownData,
+  type MemoData,
+  type ClaimData,
 } from '../../dashboards/base'
 import type { CompletionItem } from '../../stores/resolver'
 import type { DashboardImport, DashboardState } from '../../dashboards/base'
@@ -460,33 +462,54 @@ export function useDashboard(
         typeof obj.query === 'string'
       )
     }
+    function isMemoLike(obj: any): obj is MemoData {
+      return obj && typeof obj === 'object' && 'headline' in obj && 'verdict' in obj
+    }
+    function isClaimLike(obj: any): obj is ClaimData {
+      return obj && typeof obj === 'object' && 'claim' in obj && !('headline' in obj)
+    }
     let hasDrilldown = false
     let content = isMarkdownData(item.content)
       ? item.content
-      : {
-          markdown: item.type === 'markdown' ? item.content : '',
-          query: item.type !== 'markdown' ? item.content : '',
-        }
+      : isMemoLike(item.content) || isClaimLike(item.content)
+        ? // Structured-payload cells expose their query under `query` so the
+          // dashboard query executor can wire `data` for templating.
+          { markdown: '', query: (item.content as MemoData | ClaimData).query || '' }
+        : {
+            markdown: item.type === 'markdown' ? (item.content as string) : '',
+            query: item.type !== 'markdown' ? (item.content as string) : '',
+          }
     if (item.drilldown) {
       hasDrilldown = true
       content = isMarkdownData(item.drilldown)
         ? item.drilldown
         : {
-            markdown: item.type === 'markdown' ? item.drilldown : '',
-            query: item.type !== 'markdown' ? item.drilldown : '',
+            markdown: item.type === 'markdown' ? (item.drilldown as string) : '',
+            query: item.type !== 'markdown' ? (item.drilldown as string) : '',
           }
     }
     let config = item.chartConfig
     if (hasDrilldown) {
       config = item.drilldownChartConfig || undefined
     }
+
+    // Flat string `content` is preserved for cells that key off it (chart/
+    // table use the raw query; markdown uses the markdown body). Memo/claim
+    // cells leave it empty here — their dedicated payloads carry the data.
+    let flatContent = ''
+    if (typeof item.content === 'string') {
+      flatContent = item.content
+    } else if (isMarkdownData(item.content)) {
+      flatContent = item.content.markdown
+    }
+
     return {
       type: item.type,
-      // check if it's MarkdownData, and if so, extract markdown
-      //
-      content: isMarkdownData(item.content) ? item.content.markdown : item.content || '',
+      content: flatContent,
       // display the drilldown of set
       structured_content: content,
+      memoData: isMemoLike(item.content) ? (item.content as MemoData) : undefined,
+      claimData: isClaimLike(item.content) ? (item.content as ClaimData) : undefined,
       name: item.name,
       allowCrossFilter: item.allowCrossFilter !== false, // Default to true if not explicitly false
       width: item.width || 0,

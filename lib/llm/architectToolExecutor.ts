@@ -59,10 +59,7 @@ export class ArchitectToolExecutor {
 
   // ---------- dispatch ----------
 
-  async executeToolCall(
-    toolName: string,
-    toolInput: Record<string, any>,
-  ): Promise<ToolCallResult> {
+  async executeToolCall(toolName: string, toolInput: Record<string, any>): Promise<ToolCallResult> {
     switch (toolName) {
       case 'list_project_files':
         return this.listProjectFiles()
@@ -127,11 +124,7 @@ export class ArchitectToolExecutor {
     }
   }
 
-  private async createFile(
-    name: string,
-    type: string,
-    content: string,
-  ): Promise<ToolCallResult> {
+  private async createFile(name: string, type: string, content: string): Promise<ToolCallResult> {
     if (!name) return { success: false, error: 'name is required' }
     if (typeof content !== 'string') {
       return { success: false, error: 'content is required' }
@@ -387,9 +380,7 @@ export class ArchitectToolExecutor {
       const errors = items.filter((i) => i.severity <= 2)
       const others = items.filter((i) => i.severity > 2)
       const concepts = validation.data?.completion_items ?? []
-      const conceptNames = concepts
-        .filter((c) => c.trilogyType === 'concept')
-        .map((c) => c.label)
+      const conceptNames = concepts.filter((c) => c.trilogyType === 'concept').map((c) => c.label)
 
       const lines: string[] = []
       if (errors.length === 0) {
@@ -409,7 +400,9 @@ export class ArchitectToolExecutor {
       if (conceptNames.length > 0 && conceptNames.length <= 30) {
         lines.push(`Concepts: ${conceptNames.join(', ')}`)
       } else if (conceptNames.length > 30) {
-        lines.push(`Concepts (first 30 of ${conceptNames.length}): ${conceptNames.slice(0, 30).join(', ')}`)
+        lines.push(
+          `Concepts (first 30 of ${conceptNames.length}): ${conceptNames.slice(0, 30).join(', ')}`,
+        )
       }
       return lines.join('\n')
     } catch (e) {

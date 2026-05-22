@@ -4,6 +4,9 @@ import DashboardChart from './DashboardChart.vue'
 import DashboardMarkdown from './DashboardMarkdown.vue'
 import DashboardTable from './DashboardTable.vue'
 import DashboardFilter from './DashboardFilter.vue'
+import DashboardMemo from './DashboardMemo.vue'
+import DashboardClaim from './DashboardClaim.vue'
+import DashboardAppendixHeader from './DashboardAppendixHeader.vue'
 import Tooltip from '../Tooltip.vue'
 import { useClickOutside } from '../../composables/useClickOutside'
 import {
@@ -170,6 +173,12 @@ const cellComponent = computed(() => {
       return DashboardFilter
     case CELL_TYPES.SECTION_HEADER:
       return null
+    case CELL_TYPES.MEMO:
+      return DashboardMemo
+    case CELL_TYPES.CLAIM:
+      return DashboardClaim
+    case CELL_TYPES.APPENDIX_HEADER:
+      return DashboardAppendixHeader
     case CELL_TYPES.MARKDOWN:
     default:
       return DashboardMarkdown
@@ -186,6 +195,12 @@ const getPlaceholderText = computed(() => {
       return 'Filter Name'
     case CELL_TYPES.SECTION_HEADER:
       return 'Section Header'
+    case CELL_TYPES.MEMO:
+      return 'Executive Memo'
+    case CELL_TYPES.CLAIM:
+      return 'Claim'
+    case CELL_TYPES.APPENDIX_HEADER:
+      return 'Appendix'
     case CELL_TYPES.MARKDOWN:
     default:
       return 'Note Name'

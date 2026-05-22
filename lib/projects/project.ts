@@ -39,6 +39,10 @@ export interface ProjectData {
    *  project. The overseer chat itself is global to the host app, not per
    *  project — see explorer's main.ts for the singleton it boots. */
   subchatIds: string[]
+  /** Ids of dashboards (lib/dashboards/base.ts) belonging to this project.
+   *  Includes both grid-mode dashboards and report-mode reports — the same
+   *  Dashboard model backs both, distinguished by `layoutType`. */
+  dashboardIds: string[]
   /** Optional absolute path to a directory the project is anchored at.
    *  When set, the host can re-scan it on demand to import new files
    *  without manual re-attachment. Only meaningful in the Tauri shell. */
@@ -65,6 +69,7 @@ export class Project implements ProjectData {
   llmConnectionName: string
   editorIds: string[]
   subchatIds: string[]
+  dashboardIds: string[]
   directoryPath: string
   promptOverrides: ProjectPromptOverrides
   createdAt: Date
@@ -81,6 +86,7 @@ export class Project implements ProjectData {
     this.llmConnectionName = data.llmConnectionName || ''
     this.editorIds = data.editorIds || []
     this.subchatIds = data.subchatIds || []
+    this.dashboardIds = data.dashboardIds || []
     this.directoryPath = data.directoryPath || ''
     this.promptOverrides = data.promptOverrides ? { ...data.promptOverrides } : {}
     this.createdAt = data.createdAt || new Date()
@@ -153,6 +159,21 @@ export class Project implements ProjectData {
     return true
   }
 
+  addDashboard(dashboardId: string): boolean {
+    if (this.dashboardIds.includes(dashboardId)) return false
+    this.dashboardIds.push(dashboardId)
+    this.touch()
+    return true
+  }
+
+  removeDashboard(dashboardId: string): boolean {
+    const idx = this.dashboardIds.indexOf(dashboardId)
+    if (idx === -1) return false
+    this.dashboardIds.splice(idx, 1)
+    this.touch()
+    return true
+  }
+
   private touch(): void {
     this.updatedAt = new Date()
     this.changed = true
@@ -167,6 +188,7 @@ export class Project implements ProjectData {
       llmConnectionName: this.llmConnectionName,
       editorIds: this.editorIds,
       subchatIds: this.subchatIds,
+      dashboardIds: this.dashboardIds,
       directoryPath: this.directoryPath,
       promptOverrides: { ...this.promptOverrides },
       createdAt: this.createdAt.toISOString(),

@@ -137,9 +137,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     const elementExists = await page.isVisible('[data-testid="dashboard-d-faa-test"]')
     if (!elementExists) {
       await page.getByTestId('dashboard-s-local').click()
-      await page
-        .getByTestId(`dashboard-c-local-${localConnectionId('faa-connection')}`)
-        .click()
+      await page.getByTestId(`dashboard-c-local-${localConnectionId('faa-connection')}`).click()
     }
 
     await page.getByTestId('dashboard-d-faa-test').click()
@@ -188,16 +186,16 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
   }
 
-  await page.keyboard.type('where flight_date = \'2025-01-01\'::date \nselect\n    origin.state,\n    count,\norder by count desc;')
+  await page.keyboard.type(
+    "where flight_date = '2025-01-01'::date \nselect\n    origin.state,\n    count,\norder by count desc;",
+  )
   await page.getByTestId('editor-run-button').click()
   // Wait for the editor preview query to complete before saving so the chart's
   // query doesn't race the editor's against the same DuckDB WASM worker. On
   // Firefox the FAA query runs slowly enough that two concurrent renders blow
   // through the chart waitFor timeout below (the editor's render aborts the
   // chart's first render and the second has to start over).
-  await page
-    .getByTestId('simple-editor-results')
-    .waitFor({ state: 'visible', timeout: 90000 })
+  await page.getByTestId('simple-editor-results').waitFor({ state: 'visible', timeout: 90000 })
 
   // save it
   await page.getByTestId('save-dashboard-chart').click()
@@ -411,7 +409,9 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
     await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
   }
 
-  await page.keyboard.type('where flight_date = \'2025-01-01\'::date  select\n    origin.state,\n    count,\norder by count desc;')
+  await page.keyboard.type(
+    "where flight_date = '2025-01-01'::date  select\n    origin.state,\n    count,\norder by count desc;",
+  )
   await page.getByTestId('editor-run-button').click()
   await page.getByTestId('simple-editor-results')
 
@@ -571,9 +571,7 @@ test('test-custom-editor-dashboard', async ({ page, isMobile }) => {
   await page.getByTestId('editor-creator-submit').click()
 
   // Switch to test_one editor and add content
-  await page
-    .getByTestId(`editor-e-local-${localConnectionId('duckdb-test2')}-test_one`)
-    .click()
+  await page.getByTestId(`editor-e-local-${localConnectionId('duckdb-test2')}-test_one`).click()
   const editor = page.getByTestId('editor')
   await editor.click({ clickCount: 3 })
   // await page.keyboard.press('Control+A')
@@ -605,13 +603,9 @@ select rows;
     )
     if (!elementExists) {
       await page.getByTestId('dashboard-s-local').click()
-      await page
-        .getByTestId(`dashboard-c-local-${localConnectionId(connectionName)}`)
-        .click()
+      await page.getByTestId(`dashboard-c-local-${localConnectionId(connectionName)}`).click()
     }
-    await page
-      .getByTestId(`dashboard-c-local-${localConnectionId('duckdb-test2')}`)
-      .click()
+    await page.getByTestId(`dashboard-c-local-${localConnectionId('duckdb-test2')}`).click()
   }
 
   // Verify dashboard is using custom editor as source
@@ -684,9 +678,7 @@ test('test-drilldown', async ({ page, isMobile, browser }) => {
   await page.getByTestId('editor-creator-submit').click()
 
   // Switch to test_one editor and add content
-  await page
-    .getByTestId(`editor-e-local-${localConnectionId('duckdb-test2')}-test_one`)
-    .click()
+  await page.getByTestId(`editor-e-local-${localConnectionId('duckdb-test2')}-test_one`).click()
   const editor = page.getByTestId('editor')
   await editor.click({ clickCount: 3 })
   // await page.keyboard.press('Control+A')
@@ -720,13 +712,9 @@ select rows;
     )
     if (!elementExists) {
       await page.getByTestId('dashboard-s-local').click()
-      await page
-        .getByTestId(`dashboard-c-local-${localConnectionId(connectionName)}`)
-        .click()
+      await page.getByTestId(`dashboard-c-local-${localConnectionId(connectionName)}`).click()
     }
-    await page
-      .getByTestId(`dashboard-c-local-${localConnectionId('duckdb-test2')}`)
-      .click()
+    await page.getByTestId(`dashboard-c-local-${localConnectionId('duckdb-test2')}`).click()
   }
 
   // Verify dashboard is using custom editor as source
