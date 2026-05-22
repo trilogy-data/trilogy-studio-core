@@ -1,12 +1,58 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useProjectStore } from '@lib/stores/projectStore'
 import useEditorStore from '@lib/stores/editorStore'
 import useChatStore from '@lib/stores/chatStore'
+import { useDashboardStore } from '@lib/stores/dashboardStore'
 import { getEditorTypeForPath } from '@lib/editors/fileTypes'
 import { useFileIngestion } from '../composables/useFileIngestion'
 import { isTauri } from '../storage/tauriKvBackend'
 import ProjectEngineSection from './ProjectEngineSection.vue'
+
+type SidebarSection = 'reports' | 'files' | 'subchats'
+
+const COLLAPSE_KEY = 'explorer:sidebarCollapsed'
+
+function loadCollapsed(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(COLLAPSE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+const collapsedMap = ref<Record<string, boolean>>(loadCollapsed())
+watch(
+  collapsedMap,
+  (v) => {
+    try {
+      localStorage.setItem(COLLAPSE_KEY, JSON.stringify(v))
+    } catch {
+      // localStorage may be unavailable (private mode, quota); collapse state
+      // is non-essential — silently drop the persistence attempt.
+    }
+  },
+  { deep: true },
+)
+
+function collapseKey(projectId: string, section: SidebarSection): string {
+  return `${projectId}:${section}`
+}
+function isCollapsed(projectId: string, section: SidebarSection): boolean {
+  return !!collapsedMap.value[collapseKey(projectId, section)]
+}
+function toggleCollapsed(projectId: string, section: SidebarSection): void {
+  const k = collapseKey(projectId, section)
+  if (collapsedMap.value[k]) delete collapsedMap.value[k]
+  else collapsedMap.value[k] = true
+}
+function expandSection(projectId: string, section: SidebarSection): void {
+  const k = collapseKey(projectId, section)
+  if (collapsedMap.value[k]) delete collapsedMap.value[k]
+}
 
 /**
  * Workspace navigator. Each project expands inline to show its files and
@@ -17,14 +63,22 @@ import ProjectEngineSection from './ProjectEngineSection.vue'
  * Emits 'select-subchat' when a subchat row is clicked so the host can open
  * a read-only viewer.
  */
+const props = defineProps<{
+  activeDashboardId?: string
+}>()
+
 const emit = defineEmits<{
   'select-subchat': [chatId: string]
   'select-file': [editorId: string]
+  'select-dashboard': [dashboardId: string]
 }>()
+
+const activeDashboardId = computed(() => props.activeDashboardId || '')
 
 const store = useProjectStore()
 const editorStore = useEditorStore()
 const chatStore = useChatStore()
+const dashboardStore = useDashboardStore()
 const { attachFile, importDirectory } = useFileIngestion()
 
 const renameTargetId = ref<string | null>(null)
@@ -50,6 +104,71 @@ function projectSubchats(projectId: string) {
   const project = store.projects[projectId]
   if (!project) return []
   return project.subchatIds.map((id) => chatStore.chats[id]).filter((c) => c && !c.deleted)
+}
+
+function projectReports(projectId: string) {
+  const project = store.projects[projectId]
+  if (!project) return []
+  return project.dashboardIds
+    .map((id) => dashboardStore.dashboards[id])
+    .filter((d) => d && !d.deleted)
+}
+
+const creatingReportInProjectId = ref<string | null>(null)
+const newReportDraft = ref('')
+const reportError = ref<{ projectId: string; text: string } | null>(null)
+
+function startNewReport(projectId: string) {
+  creatingReportInProjectId.value = projectId
+  newReportDraft.value = ''
+  reportError.value = null
+  expandSection(projectId, 'reports')
+}
+
+function cancelNewReport() {
+  creatingReportInProjectId.value = null
+  newReportDraft.value = ''
+}
+
+function commitNewReport(projectId: string) {
+  const name = newReportDraft.value.trim()
+  if (!name) {
+    cancelNewReport()
+    return
+  }
+  const project = store.projects[projectId]
+  if (!project) {
+    cancelNewReport()
+    return
+  }
+  // Dashboard ids are derived from name, so collisions across the whole store
+  // (not just this project) need to be caught.
+  if (dashboardStore.dashboards[name]) {
+    reportError.value = { projectId, text: `A dashboard named "${name}" already exists.` }
+    return
+  }
+  try {
+    const dashboard = dashboardStore.newReport(name, project.dataConnectionId || '')
+    store.addDashboardToProject(projectId, dashboard.id)
+    cancelNewReport()
+    emit('select-dashboard', dashboard.id)
+  } catch (e) {
+    reportError.value = {
+      projectId,
+      text: e instanceof Error ? e.message : String(e),
+    }
+  }
+}
+
+function removeReport(projectId: string, dashboardId: string) {
+  const dashboard = dashboardStore.dashboards[dashboardId]
+  if (!dashboard) {
+    store.removeDashboardFromProject(projectId, dashboardId)
+    return
+  }
+  if (!confirm(`Delete report "${dashboard.name}"?`)) return
+  dashboard.delete()
+  store.removeDashboardFromProject(projectId, dashboardId)
 }
 
 function handleNew() {
@@ -90,6 +209,7 @@ function fileInputId(projectId: string): string {
 }
 
 function pickFiles(projectId: string) {
+  expandSection(projectId, 'files')
   const el = document.getElementById(fileInputId(projectId)) as HTMLInputElement | null
   el?.click()
 }
@@ -133,6 +253,7 @@ async function onFilesPicked(projectId: string, files: FileList | null) {
 }
 
 async function openFolder(projectId: string) {
+  expandSection(projectId, 'files')
   busyProjectId.value = projectId
   ingestionError.value = null
   ingestionStatus.value = null
@@ -164,6 +285,7 @@ function startNewFile(projectId: string) {
   creatingInProjectId.value = projectId
   newFileDraft.value = ''
   ingestionError.value = null
+  expandSection(projectId, 'files')
 }
 
 function cancelNewFile() {
@@ -286,9 +408,103 @@ const tauri = isTauri()
           </div>
 
           <div class="section">
-            <div class="section-head">
+            <div
+              class="section-head section-head-clickable"
+              @click="toggleCollapsed(p.id, 'reports')"
+              role="button"
+              :aria-expanded="!isCollapsed(p.id, 'reports')"
+            >
+              <i
+                class="mdi section-chevron"
+                :class="isCollapsed(p.id, 'reports') ? 'mdi-chevron-right' : 'mdi-chevron-down'"
+              ></i>
+              <span class="section-label">Reports</span>
+              <span class="section-count" v-if="projectReports(p.id).length > 0">
+                {{ projectReports(p.id).length }}
+              </span>
+              <span class="section-actions" @click.stop>
+                <button
+                  class="mini-btn"
+                  :disabled="creatingReportInProjectId === p.id"
+                  @click="startNewReport(p.id)"
+                  title="New report (agent-authored analytical memo)"
+                >
+                  +
+                </button>
+              </span>
+            </div>
+
+            <div v-show="!isCollapsed(p.id, 'reports')" class="section-body">
+              <ul
+                v-if="projectReports(p.id).length > 0 || creatingReportInProjectId === p.id"
+                class="nested-list"
+              >
+                <li v-if="creatingReportInProjectId === p.id" class="nested-row file-row creating">
+                  <span class="type-tag kind-report">rpt</span>
+                  <input
+                    v-model="newReportDraft"
+                    class="rename-input"
+                    placeholder="report title…"
+                    @keydown.enter="commitNewReport(p.id)"
+                    @keydown.escape="cancelNewReport"
+                    @blur="commitNewReport(p.id)"
+                    @click.stop
+                    autofocus
+                  />
+                  <button class="mini-x" @click.stop.prevent="cancelNewReport" title="Cancel">
+                    ×
+                  </button>
+                </li>
+                <li
+                  v-for="d in projectReports(p.id)"
+                  :key="d.id"
+                  class="nested-row file-row"
+                  :class="{ active: d.id === activeDashboardId }"
+                  @click.stop="emit('select-dashboard', d.id)"
+                >
+                  <span
+                    class="type-tag"
+                    :class="d.layoutType === 'report' ? 'kind-report' : 'kind-grid'"
+                    >{{ d.layoutType === 'report' ? 'rpt' : 'dash' }}</span
+                  >
+                  <span class="nested-name" :title="d.name">{{ d.name }}</span>
+                  <button
+                    class="mini-x"
+                    @click.stop="removeReport(p.id, d.id)"
+                    title="Delete report"
+                  >
+                    ×
+                  </button>
+                </li>
+              </ul>
+              <p
+                v-if="projectReports(p.id).length === 0 && creatingReportInProjectId !== p.id"
+                class="nested-empty"
+              >
+                none yet
+              </p>
+              <p v-if="reportError && reportError.projectId === p.id" class="ingest-error">
+                {{ reportError.text }}
+              </p>
+            </div>
+          </div>
+
+          <div class="section">
+            <div
+              class="section-head section-head-clickable"
+              @click="toggleCollapsed(p.id, 'files')"
+              role="button"
+              :aria-expanded="!isCollapsed(p.id, 'files')"
+            >
+              <i
+                class="mdi section-chevron"
+                :class="isCollapsed(p.id, 'files') ? 'mdi-chevron-right' : 'mdi-chevron-down'"
+              ></i>
               <span class="section-label">Files</span>
-              <span class="section-actions">
+              <span class="section-count" v-if="projectFiles(p.id).length > 0">
+                {{ projectFiles(p.id).length }}
+              </span>
+              <span class="section-actions" @click.stop>
                 <button
                   v-if="tauri"
                   class="mini-btn"
@@ -325,84 +541,100 @@ const tauri = isTauri()
               </span>
             </div>
 
-            <ul
-              v-if="projectFiles(p.id).length > 0 || creatingInProjectId === p.id"
-              class="nested-list"
-            >
-              <li v-if="creatingInProjectId === p.id" class="nested-row file-row creating">
-                <span class="type-tag type-new">new</span>
-                <input
-                  v-model="newFileDraft"
-                  class="rename-input"
-                  placeholder="filename.sql, .preql, .py, .md…"
-                  @keydown.enter="commitNewFile(p.id)"
-                  @keydown.escape="cancelNewFile"
-                  @blur="commitNewFile(p.id)"
-                  @click.stop
-                  autofocus
-                />
-                <button class="mini-x" @click.stop.prevent="cancelNewFile" title="Cancel">
-                  ×
-                </button>
-              </li>
-              <li
-                v-for="ed in projectFiles(p.id)"
-                :key="ed.id"
-                class="nested-row file-row"
-                @click.stop="emit('select-file', ed.id)"
+            <div v-show="!isCollapsed(p.id, 'files')" class="section-body">
+              <ul
+                v-if="projectFiles(p.id).length > 0 || creatingInProjectId === p.id"
+                class="nested-list"
               >
-                <span class="type-tag" :class="`type-${ed.type}`">{{ ed.type }}</span>
-                <span class="nested-name" :title="ed.name">{{ ed.name }}</span>
-                <button class="mini-x" @click.stop="detachEditor(p.id, ed.id)" title="Detach">
-                  ×
-                </button>
-              </li>
-            </ul>
-            <p
-              v-if="projectFiles(p.id).length === 0 && creatingInProjectId !== p.id"
-              class="nested-empty"
-            >
-              none yet
-            </p>
+                <li v-if="creatingInProjectId === p.id" class="nested-row file-row creating">
+                  <span class="type-tag type-new">new</span>
+                  <input
+                    v-model="newFileDraft"
+                    class="rename-input"
+                    placeholder="filename.sql, .preql, .py, .md…"
+                    @keydown.enter="commitNewFile(p.id)"
+                    @keydown.escape="cancelNewFile"
+                    @blur="commitNewFile(p.id)"
+                    @click.stop
+                    autofocus
+                  />
+                  <button class="mini-x" @click.stop.prevent="cancelNewFile" title="Cancel">
+                    ×
+                  </button>
+                </li>
+                <li
+                  v-for="ed in projectFiles(p.id)"
+                  :key="ed.id"
+                  class="nested-row file-row"
+                  @click.stop="emit('select-file', ed.id)"
+                >
+                  <span class="type-tag" :class="`type-${ed.type}`">{{ ed.type }}</span>
+                  <span class="nested-name" :title="ed.name">{{ ed.name }}</span>
+                  <button class="mini-x" @click.stop="detachEditor(p.id, ed.id)" title="Detach">
+                    ×
+                  </button>
+                </li>
+              </ul>
+              <p
+                v-if="projectFiles(p.id).length === 0 && creatingInProjectId !== p.id"
+                class="nested-empty"
+              >
+                none yet
+              </p>
 
-            <p v-if="ingestionStatus && ingestionStatus.projectId === p.id" class="ingest-status">
-              {{ ingestionStatus.text }}
-            </p>
-            <p v-if="ingestionError && ingestionError.projectId === p.id" class="ingest-error">
-              {{ ingestionError.text }}
-            </p>
+              <p v-if="ingestionStatus && ingestionStatus.projectId === p.id" class="ingest-status">
+                {{ ingestionStatus.text }}
+              </p>
+              <p v-if="ingestionError && ingestionError.projectId === p.id" class="ingest-error">
+                {{ ingestionError.text }}
+              </p>
+            </div>
           </div>
 
           <div class="section">
-            <div class="section-head">
+            <div
+              class="section-head section-head-clickable"
+              @click="toggleCollapsed(p.id, 'subchats')"
+              role="button"
+              :aria-expanded="!isCollapsed(p.id, 'subchats')"
+            >
+              <i
+                class="mdi section-chevron"
+                :class="isCollapsed(p.id, 'subchats') ? 'mdi-chevron-right' : 'mdi-chevron-down'"
+              ></i>
               <span class="section-label">Subchats</span>
+              <span class="section-count" v-if="projectSubchats(p.id).length > 0">
+                {{ projectSubchats(p.id).length }}
+              </span>
             </div>
-            <ul v-if="projectSubchats(p.id).length > 0" class="nested-list">
-              <li
-                v-for="s in projectSubchats(p.id)"
-                :key="s.id"
-                class="nested-row subchat-row"
-                :class="`status-${statusOf(s.id)}`"
-                @click.stop="emit('select-subchat', s.id)"
-              >
-                <span class="type-tag" :class="`kind-${s.kind}`">{{ s.kind }}</span>
-                <span class="nested-name" :title="s.name">{{ s.name }}</span>
-                <span v-if="statusOf(s.id) === 'running'" class="dot running" />
-                <button
-                  class="mini-x"
-                  :disabled="statusOf(s.id) === 'running'"
-                  :title="
-                    statusOf(s.id) === 'running'
-                      ? 'Stop the subchat before clearing it'
-                      : 'Clear from list'
-                  "
-                  @click.stop="clearSubchat(p.id, s.id)"
+            <div v-show="!isCollapsed(p.id, 'subchats')" class="section-body">
+              <ul v-if="projectSubchats(p.id).length > 0" class="nested-list">
+                <li
+                  v-for="s in projectSubchats(p.id)"
+                  :key="s.id"
+                  class="nested-row subchat-row"
+                  :class="`status-${statusOf(s.id)}`"
+                  @click.stop="emit('select-subchat', s.id)"
                 >
-                  ×
-                </button>
-              </li>
-            </ul>
-            <p v-else class="nested-empty">none yet</p>
+                  <span class="type-tag" :class="`kind-${s.kind}`">{{ s.kind }}</span>
+                  <span class="nested-name" :title="s.name">{{ s.name }}</span>
+                  <span v-if="statusOf(s.id) === 'running'" class="dot running" />
+                  <button
+                    class="mini-x"
+                    :disabled="statusOf(s.id) === 'running'"
+                    :title="
+                      statusOf(s.id) === 'running'
+                        ? 'Stop the subchat before clearing it'
+                        : 'Clear from list'
+                    "
+                    @click.stop="clearSubchat(p.id, s.id)"
+                  >
+                    ×
+                  </button>
+                </li>
+              </ul>
+              <p v-else class="nested-empty">none yet</p>
+            </div>
           </div>
         </div>
       </li>
@@ -568,8 +800,45 @@ const tauri = isTauri()
 .section-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 4px;
   margin-bottom: 0.2rem;
+}
+
+.section-head-clickable {
+  cursor: pointer;
+  user-select: none;
+  border-radius: 3px;
+  padding: 1px 2px;
+}
+
+.section-head-clickable:hover {
+  background: rgba(127, 127, 127, 0.06);
+}
+
+.section-chevron {
+  font-size: 14px;
+  color: var(--muted);
+  width: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.12s ease;
+}
+
+.section-count {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(127, 127, 127, 0.12);
+  letter-spacing: 0.04em;
+}
+
+.section-body {
+  /* Mounted-but-hidden sections use v-show, so they stay in the DOM and keep
+   * scroll/text input state across collapse cycles. */
 }
 
 .section-label {
@@ -583,6 +852,7 @@ const tauri = isTauri()
 .section-actions {
   display: flex;
   gap: 0.2rem;
+  margin-left: auto;
 }
 
 .mini-btn {
@@ -698,6 +968,21 @@ const tauri = isTauri()
 .type-tag.kind-analyst {
   background: rgba(16, 185, 129, 0.18);
   color: #059669;
+}
+
+.type-tag.kind-report {
+  background: rgba(37, 99, 235, 0.18);
+  color: #1d4ed8;
+}
+
+.type-tag.kind-grid {
+  background: rgba(99, 102, 241, 0.18);
+  color: #4f46e5;
+}
+
+.file-row.active {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--accent);
 }
 
 .mini-x {

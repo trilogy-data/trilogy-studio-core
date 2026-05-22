@@ -201,7 +201,10 @@ export default {
     // effect. setUseCompatibleHttpFetch invalidates the AsyncDuckDB cache,
     // making the upcoming reset() rebuild the underlying instance.
     const toggleDuckdbCompatibleFetch = async (connection: any) => {
-      if (connection?.type !== 'duckdb' || typeof connection.setUseCompatibleHttpFetch !== 'function') {
+      if (
+        connection?.type !== 'duckdb' ||
+        typeof connection.setUseCompatibleHttpFetch !== 'function'
+      ) {
         return
       }
       connection.setUseCompatibleHttpFetch(!connection.useCompatibleHttpFetch)

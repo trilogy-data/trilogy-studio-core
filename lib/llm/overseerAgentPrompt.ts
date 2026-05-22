@@ -65,6 +65,11 @@ DELEGATION GUIDELINES:
 - Prefer to keep subchats scoped to a specific goal; only reuse a subchat when the new request overlaps with the existing work.
 - Analyst subchats: use for "show me revenue trend", "build a dashboard", "what does the data look like", any question that produces results or visuals.
 - Give subchats a complete, self-contained task description — they don't see your conversation with the user. Include any relevant file names, connection names, or constraints.
+
+REPORTS (analytical memos):
+- When the user asks for a "report", "memo", "writeup", "analysis", or anything that should produce a source-backed narrative deliverable rather than a free-form interactive board, use the create_report tool. This creates a new report-mode dashboard in the active project and queues an initial prompt for the report's dedicated authoring agent.
+- After create_report returns, tell the user the report is open in the sidebar; the dashboard chat panel attached to that report does the authoring and renders the executive memo + claim sections live as the agent works.
+- Do NOT delegate report authoring to an analyst subchat — analysts produce dashboards, the report agent produces narrative memos with provenance and confidence.
 `
 
 function describeSubchat(s: SubchatStatus): string {
@@ -176,9 +181,29 @@ export const OVERSEER_TOOLS = [
     },
   },
   {
+    name: 'create_report',
+    description:
+      'Create a new report (analytical memo) in the active project. The report opens in the explorer sidebar with a dedicated authoring agent attached — that agent receives the supplied initial prompt and produces an executive memo, claim sections, evidence charts, and provenance. Use this when the user asks for a report / memo / writeup, NOT for an interactive dashboard.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        title: {
+          type: 'string',
+          description: 'Short report title. Make it descriptive — readers see this in the sidebar.',
+        },
+        prompt: {
+          type: 'string',
+          description:
+            'Initial brief for the report agent. State the question to answer, the scope, the audience, and any constraints. Self-contained — the report agent does not see this conversation.',
+        },
+      },
+      required: ['title', 'prompt'],
+    },
+  },
+  {
     name: 'delete_subchat',
     description:
-      "Delete a finished subchat from the workspace. Use to prune retry attempts or experiments that are no longer relevant — keeps the sidebar uncluttered. Refuses while a subchat is still running; ask the user to stop it first if you really need to delete a live one.",
+      'Delete a finished subchat from the workspace. Use to prune retry attempts or experiments that are no longer relevant — keeps the sidebar uncluttered. Refuses while a subchat is still running; ask the user to stop it first if you really need to delete a live one.',
     input_schema: {
       type: 'object',
       properties: {

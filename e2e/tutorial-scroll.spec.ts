@@ -19,11 +19,9 @@ test('tutorial article container scrolls', async ({ page }) => {
 
   // Wait for content to render so scrollHeight stabilises above the viewport.
   await expect
-    .poll(
-      async () =>
-        await container.evaluate((el) => el.scrollHeight - el.clientHeight),
-      { timeout: 15000 },
-    )
+    .poll(async () => await container.evaluate((el) => el.scrollHeight - el.clientHeight), {
+      timeout: 15000,
+    })
     .toBeGreaterThan(50)
 
   const { scrollHeight, clientHeight } = await container.evaluate((el) => ({

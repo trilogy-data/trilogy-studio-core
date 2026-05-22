@@ -38,10 +38,30 @@ export interface LayoutItem {
 }
 
 export interface DashboardTypes {
-  CellType: 'chart' | 'markdown' | 'table' | 'filter' | 'section-header'
+  CellType:
+    | 'chart'
+    | 'markdown'
+    | 'table'
+    | 'filter'
+    | 'section-header'
+    | 'memo'
+    | 'claim'
+    | 'appendix-header'
 }
 // export types for 'fullscreen' | 'editing' | 'published' | 'locked'
 export type DashboardState = 'fullscreen' | 'editing' | 'published' | 'locked'
+
+/** How a dashboard renders. 'grid' is the historical free-form layout; 'report'
+ *  flows blocks top-to-bottom in a single narrative column with stronger
+ *  semantics (executive memo on top, claim sections, appendix at the bottom). */
+export type DashboardLayoutType = 'grid' | 'report'
+
+/** Authored confidence level on a memo or claim. Surfaced in the rendered
+ *  block and consumed by the report agent prompt to enforce uncertainty. */
+export type ConfidenceLevel = 'high' | 'medium' | 'low'
+
+/** Verdict line on the executive memo. Maps to a colored chip in the renderer. */
+export type MemoVerdict = 'good' | 'bad' | 'mixed' | 'inconclusive'
 
 export interface Filter {
   source: string
@@ -57,9 +77,45 @@ export interface MarkdownData {
   markdown: string
   query: string
 }
+
+/** Executive memo block. One per report, pinned at the top. The six fields map
+ *  1:1 to the headline/verdict/magnitude/cause/action/confidence rubric the
+ *  report agent prompt enforces. `query` lets the agent reference live values
+ *  the same way `MarkdownData` does — fields render via the templating engine. */
+export interface MemoData {
+  headline: string
+  verdict: MemoVerdict
+  magnitude: string
+  cause: string
+  action: string
+  confidence: ConfidenceLevel
+  /** Why the chosen confidence — surfaced under provenance. */
+  confidenceRationale?: string
+  /** Optional Trilogy query whose first row provides values for `{field}`
+   *  templates inside any of the prose fields. */
+  query?: string
+}
+
+/** A narrative claim section. Renders as a heading + claim sentence + caveat +
+ *  optional drilldown pointer, paired in layout with the immediately-following
+ *  evidence block (chart/table). The claim/caveat strings support markdown +
+ *  the same templating engine as MarkdownData when `query` is set. */
+export interface ClaimData {
+  /** Optional short heading; falls back to `name` on the grid item. */
+  heading?: string
+  /** The single-sentence claim — what we're asserting. */
+  claim: string
+  /** Honest caveats / bounds on the claim. */
+  caveat?: string
+  /** Optional pointer to the next drilldown to investigate. Free-form prose. */
+  drilldown?: string
+  /** Optional Trilogy query for templated values inside claim/caveat/drilldown. */
+  query?: string
+}
+
 export interface GridItemData {
   type: DashboardTypes['CellType']
-  content: string | MarkdownData
+  content: string | MarkdownData | MemoData | ClaimData
   drilldown?: string | MarkdownData | null | undefined
   name: string
   allowCrossFilter: boolean
@@ -81,6 +137,10 @@ export interface GridItemDataResponse {
   type: DashboardTypes['CellType']
   content: string
   structured_content: MarkdownData
+  /** Structured payload for memo cells. Set only when `type === 'memo'`. */
+  memoData?: MemoData
+  /** Structured payload for claim cells. Set only when `type === 'claim'`. */
+  claimData?: ClaimData
   rootContent: ContentInput[]
   name: string
   allowCrossFilter: boolean
@@ -122,6 +182,10 @@ export interface Dashboard {
   version: number
   description: string
   state: DashboardState
+  /** Layout mode: 'grid' is the historical free-form board; 'report' renders
+   *  blocks in a single narrative column with executive memo + claim sections.
+   *  Defaults to 'grid' for back-compat with all existing serialized data. */
+  layoutType?: DashboardLayoutType
   // Investigation tracking
   parentDashboardId?: string | null
   investigationName?: string
@@ -135,7 +199,7 @@ export interface Dashboard {
 // Interface for batch updates to item properties
 export interface ItemPropertyUpdates {
   name?: string
-  content?: string | MarkdownData
+  content?: string | MarkdownData | MemoData | ClaimData
   type?: DashboardTypes['CellType']
   allowCrossFilter?: boolean
   width?: number
@@ -165,9 +229,51 @@ export const CELL_TYPES = {
   TABLE: 'table',
   FILTER: 'filter',
   SECTION_HEADER: 'section-header',
+  MEMO: 'memo',
+  CLAIM: 'claim',
+  APPENDIX_HEADER: 'appendix-header',
 } as const
 
 export type CellType = (typeof CELL_TYPES)[keyof typeof CELL_TYPES]
+
+/** Type guards for the structured `content` shapes. The agent and renderer
+ *  both need to discriminate without a type field on `content` itself; cell
+ *  `type` is the canonical discriminator but these helpers are convenient
+ *  in component code where we already know the shape. */
+export function isMarkdownData(c: unknown): c is MarkdownData {
+  return !!c && typeof c === 'object' && 'markdown' in (c as object)
+}
+
+export function isMemoData(c: unknown): c is MemoData {
+  return (
+    !!c &&
+    typeof c === 'object' &&
+    'headline' in (c as object) &&
+    'verdict' in (c as object) &&
+    'confidence' in (c as object)
+  )
+}
+
+export function isClaimData(c: unknown): c is ClaimData {
+  return !!c && typeof c === 'object' && 'claim' in (c as object) && !('headline' in (c as object))
+}
+
+/** Pull a Trilogy query out of any item shape that may carry one. Memo, claim,
+ *  and markdown all optionally embed a query for live data binding. Returns
+ *  the raw query string for charts/tables (which store it in `content`). */
+export function extractItemQuery(item: GridItemData): string | undefined {
+  const c = item.content
+  if (typeof c === 'string') {
+    if (item.type === CELL_TYPES.CHART || item.type === CELL_TYPES.TABLE) {
+      return c
+    }
+    return undefined
+  }
+  if (isMemoData(c) || isClaimData(c) || isMarkdownData(c)) {
+    return c.query || undefined
+  }
+  return undefined
+}
 
 // Dashboard class implementation
 export class DashboardModel implements Dashboard {
@@ -188,6 +294,7 @@ export class DashboardModel implements Dashboard {
   description: string = ''
   changed: boolean = false
   deleted: boolean = false
+  layoutType: DashboardLayoutType = 'grid'
   // Investigation fields
   parentDashboardId?: string | null
   investigationName?: string
@@ -211,6 +318,7 @@ export class DashboardModel implements Dashboard {
     version = 1,
     state = 'editing',
     description = '',
+    layoutType = 'grid',
     parentDashboardId = null,
     investigationName,
     investigationCreatedFrom,
@@ -233,6 +341,7 @@ export class DashboardModel implements Dashboard {
     this.state = state
     this.description = description
     this.changed = false
+    this.layoutType = layoutType
     this.parentDashboardId = parentDashboardId
     this.investigationName = investigationName
     this.investigationCreatedFrom = investigationCreatedFrom
@@ -293,24 +402,31 @@ export class DashboardModel implements Dashboard {
     y = 0,
     w = 4,
     h: number | null = null,
-    content: string | null = null,
+    content: string | MarkdownData | MemoData | ClaimData | null = null,
     name: string | null,
   ): string {
     const itemId = this.nextId.toString()
 
     // Create grid item layout with height based on type
     let defaultHeight = 10 // Default height for CHART and TABLE
+    let defaultWidth = w
     if (type === CELL_TYPES.MARKDOWN) {
       defaultHeight = 3 // Smaller height for markdown
-    } else if (type === CELL_TYPES.SECTION_HEADER) {
+    } else if (type === CELL_TYPES.SECTION_HEADER || type === CELL_TYPES.APPENDIX_HEADER) {
       defaultHeight = 1
+    } else if (type === CELL_TYPES.MEMO) {
+      defaultHeight = 8
+      defaultWidth = 20 // Memos always span the full grid in grid mode
+    } else if (type === CELL_TYPES.CLAIM) {
+      defaultHeight = 4
+      defaultWidth = 20 // Claims read better at full width even in grid mode
     }
     let yFinal = y
     yFinal = this.layout.reduce((maxY, item) => Math.max(maxY, item.y + item.h), 0)
     this.layout.push({
       x,
       y: yFinal,
-      w: w,
+      w: defaultWidth,
       h: h || defaultHeight,
       i: itemId,
       static: false,
@@ -324,21 +440,41 @@ export class DashboardModel implements Dashboard {
       defaultName = `Table ${itemId}`
     } else if (type === CELL_TYPES.SECTION_HEADER) {
       defaultName = '### Section Header'
+    } else if (type === CELL_TYPES.MEMO) {
+      defaultName = 'Executive Memo'
+    } else if (type === CELL_TYPES.CLAIM) {
+      defaultName = `Claim ${itemId}`
+    } else if (type === CELL_TYPES.APPENDIX_HEADER) {
+      defaultName = '### Appendix'
     }
 
     let finalName = name || defaultName
 
-    // Default content based on type
-    let defaultContent = '# Markdown Cell\nEnter your markdown content here.'
+    // Default content based on type. The structured types (memo/claim) seed
+    // empty placeholder objects so the agent's update_dashboard_item can patch
+    // individual fields without first having to construct the whole shape.
+    let defaultContent: string | MarkdownData | MemoData | ClaimData =
+      '# Markdown Cell\nEnter your markdown content here.'
     if (type === CELL_TYPES.CHART) {
       defaultContent = "SELECT unnest([1,2,3,4]) as value, 'example' as dim"
     } else if (type === CELL_TYPES.TABLE) {
       defaultContent = "SELECT [1,2,3,4] as value, 'example' as dim"
-    } else if (type === CELL_TYPES.SECTION_HEADER) {
+    } else if (type === CELL_TYPES.SECTION_HEADER || type === CELL_TYPES.APPENDIX_HEADER) {
       defaultContent = ''
+    } else if (type === CELL_TYPES.MEMO) {
+      defaultContent = {
+        headline: '',
+        verdict: 'inconclusive',
+        magnitude: '',
+        cause: '',
+        action: '',
+        confidence: 'medium',
+      }
+    } else if (type === CELL_TYPES.CLAIM) {
+      defaultContent = { claim: '' }
     }
 
-    let finalContent = content || defaultContent
+    let finalContent = content !== null && content !== undefined ? content : defaultContent
 
     // Initialize with default content
     this.gridItems[itemId] = {
@@ -347,13 +483,27 @@ export class DashboardModel implements Dashboard {
       name: finalName,
       width: 0,
       height: 0,
-      allowCrossFilter: type === CELL_TYPES.SECTION_HEADER ? false : true,
+      allowCrossFilter:
+        type === CELL_TYPES.SECTION_HEADER ||
+        type === CELL_TYPES.APPENDIX_HEADER ||
+        type === CELL_TYPES.MEMO
+          ? false
+          : true,
     }
 
     this.nextId++
     this.updatedAt = new Date()
     this.changed = true
     return itemId
+  }
+
+  /** Switch the dashboard between grid and report rendering. The persisted
+   *  blocks are unchanged — only the renderer differs. */
+  setLayoutType(layoutType: DashboardLayoutType): void {
+    if (this.layoutType === layoutType) return
+    this.layoutType = layoutType
+    this.updatedAt = new Date()
+    this.changed = true
   }
 
   copyItem(itemId: string): string {
@@ -374,7 +524,7 @@ export class DashboardModel implements Dashboard {
   }
 
   // Update an item's content
-  updateItemContent(itemId: string, content: string): void {
+  updateItemContent(itemId: string, content: string | MarkdownData | MemoData | ClaimData): void {
     if (this.gridItems[itemId]) {
       this.gridItems[itemId] = {
         ...this.gridItems[itemId],
@@ -853,6 +1003,7 @@ export class DashboardModel implements Dashboard {
       version: this.version,
       state: this.state,
       description: this.description,
+      layoutType: this.layoutType,
       parentDashboardId: this.parentDashboardId,
       investigationName: this.investigationName,
       investigationCreatedFrom: this.investigationCreatedFrom,
@@ -883,6 +1034,7 @@ export class DashboardModel implements Dashboard {
       createdAt: new Date(data.createdAt),
       updatedAt: new Date(data.updatedAt),
       gridItems,
+      layoutType: data.layoutType || 'grid',
       parentDashboardId: data.parentDashboardId || null,
       investigationName: data.investigationName,
       investigationCreatedFrom: data.investigationCreatedFrom

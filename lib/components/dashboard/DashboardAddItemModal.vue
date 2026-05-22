@@ -58,6 +58,28 @@ const itemOptions: Array<{
     icon: 'mdi-format-title',
     testId: 'dashboard-add-item-type-section-header',
   },
+  {
+    value: CELL_TYPES.MEMO,
+    label: 'Executive Memo',
+    description:
+      'Headline, verdict, magnitude, cause, action, confidence — at the top of a report.',
+    icon: 'mdi-file-document-edit-outline',
+    testId: 'dashboard-add-item-type-memo',
+  },
+  {
+    value: CELL_TYPES.CLAIM,
+    label: 'Claim Section',
+    description: 'A single claim with caveat and drilldown — pair with a chart for evidence.',
+    icon: 'mdi-comment-quote-outline',
+    testId: 'dashboard-add-item-type-claim',
+  },
+  {
+    value: CELL_TYPES.APPENDIX_HEADER,
+    label: 'Appendix Header',
+    description: 'Divider that introduces the auditability section at the bottom of a report.',
+    icon: 'mdi-bookshelf',
+    testId: 'dashboard-add-item-type-appendix',
+  },
 ]
 
 function addItem(): void {

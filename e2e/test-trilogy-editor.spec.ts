@@ -35,9 +35,7 @@ test('test', async ({ page, isMobile, browser }) => {
   await page.getByTestId('editor-creator-submit').click()
 
   // Switch to test-one editor and add content
-  await page
-    .getByTestId(`editor-e-local-${localConnectionId(connectionName)}-test-one`)
-    .click()
+  await page.getByTestId(`editor-e-local-${localConnectionId(connectionName)}-test-one`).click()
   const editor = page.getByTestId('editor')
   await editor.click()
   if (browser.browserType().name() === 'webkit') {

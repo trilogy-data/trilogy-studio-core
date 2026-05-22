@@ -259,3 +259,144 @@ export const DASHBOARD_TOOLS = [
   connectDataConnectionTool,
   RETURN_TO_USER_TOOL,
 ]
+
+/**
+ * Report-mode tool surface. These tools sit alongside DASHBOARD_TOOLS and are
+ * used when the dashboard's layoutType is 'report'. They exist as a separate
+ * surface (rather than overloading add_dashboard_item) so the agent's choices
+ * are obvious in the schema and the prompt guidance stays tight: a memo is a
+ * memo, not a markdown cell with a magic shape.
+ */
+export const REPORT_TOOLS = [
+  {
+    name: 'set_executive_memo',
+    description:
+      'Create or update the executive memo at the top of the report. Exactly one memo per report. The six fields ARE the memo — they map to the headline / verdict / magnitude / cause / action / confidence rubric. Pass `query` to bind live values into the prose via {field} templating. Calling this when a memo already exists updates it in place.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        headline: {
+          type: 'string',
+          description:
+            'One-sentence answer to "what happened?" — the lede readers should walk away with.',
+        },
+        verdict: {
+          type: 'string',
+          enum: ['good', 'bad', 'mixed', 'inconclusive'],
+          description:
+            'Authored verdict. Pick "inconclusive" only when the data genuinely cannot decide.',
+        },
+        magnitude: {
+          type: 'string',
+          description: 'How big is the effect? Concrete numbers, ranges, or percent changes.',
+        },
+        cause: {
+          type: 'string',
+          description:
+            'Likely cause. Be specific — name segments / channels / timeframes when known.',
+        },
+        action: {
+          type: 'string',
+          description: 'What should the reader do? One concrete action or decision.',
+        },
+        confidence: {
+          type: 'string',
+          enum: ['high', 'medium', 'low'],
+          description: 'How confident are you in the verdict? Be honest.',
+        },
+        confidence_rationale: {
+          type: 'string',
+          description:
+            'Why that confidence level — e.g. "single comparison period, no causal isolation".',
+        },
+        query: {
+          type: 'string',
+          description:
+            'Optional Trilogy query whose first row binds template values for {field} expansions inside any of the prose fields.',
+        },
+      },
+      required: ['headline', 'verdict', 'magnitude', 'cause', 'action', 'confidence'],
+    },
+  },
+  {
+    name: 'add_claim_section',
+    description:
+      "Add a narrative claim section to the report. Each claim is a single point you're asserting with optional caveat and drilldown pointer. Pair it with an evidence chart or table by adding that chart RIGHT AFTER the claim (use add_dashboard_item with type='chart'); the report renderer treats them as a coupled unit. Multiple claims = multiple sections; do NOT bundle several points into one claim.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        heading: {
+          type: 'string',
+          description:
+            'Optional short heading (e.g. "1. Growth slowed because acquisition weakened"). Numbering helps readers walk the narrative.',
+        },
+        claim: {
+          type: 'string',
+          description:
+            "The single-sentence claim. Make a claim — don't write 'Revenue chart' or 'Conversion analysis'.",
+        },
+        caveat: {
+          type: 'string',
+          description:
+            'Honest caveat / bound on the claim — what it does NOT prove, segments it ignores, etc.',
+        },
+        drilldown: {
+          type: 'string',
+          description: 'Pointer to the next thing to investigate if the reader wants to dig.',
+        },
+        query: {
+          type: 'string',
+          description:
+            'Optional Trilogy query so the claim/caveat/drilldown prose can reference live values via {field} templating.',
+        },
+      },
+      required: ['claim'],
+    },
+  },
+  {
+    name: 'add_appendix_header',
+    description:
+      'Add an appendix divider. Everything you add to the dashboard AFTER this divider is rendered as appendix content (detail tables, methodology, etc.). Use exactly one per report when there is appendix content; skip when there is none.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        label: {
+          type: 'string',
+          description: 'Label shown next to the divider (e.g. "Appendix", "Methodology").',
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'set_report_layout',
+    description:
+      "Toggle the dashboard's layout between 'grid' (free-form board) and 'report' (single-column narrative flow). Use 'report' when authoring a memo-led analytical document and 'grid' when authoring an interactive dashboard.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        layout: {
+          type: 'string',
+          enum: ['grid', 'report'],
+          description: 'Target layout type.',
+        },
+      },
+      required: ['layout'],
+    },
+  },
+  {
+    name: 'get_provenance',
+    description:
+      "Return the computed provenance record for a report block: query, filters, freshness, confidence, caveat, drilldown, and row count. Use to audit a claim's evidence chain before handing off, or when the user asks how a number was derived.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        item_id: {
+          type: 'string',
+          description: 'Block id to audit. Use list_dashboard_items to discover.',
+        },
+      },
+      required: ['item_id'],
+    },
+  },
+]
