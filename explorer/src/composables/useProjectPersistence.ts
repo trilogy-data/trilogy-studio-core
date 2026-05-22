@@ -15,9 +15,10 @@ import { useProjectStore } from '@lib/stores/projectStore'
  * projects being hydrated (e.g. orphan-subchat reconciliation needs both
  * project and chat stores loaded before it can decide what to prune).
  */
-export function useProjectPersistence(
-  prefix = 'explorer:',
-): { storage: LocalStorage; ready: Ref<boolean> } {
+export function useProjectPersistence(prefix = 'explorer:'): {
+  storage: LocalStorage
+  ready: Ref<boolean>
+} {
   const store = useProjectStore()
   const storage = new LocalStorage(prefix)
   const ready = ref(false)

@@ -165,10 +165,7 @@ export default class LocalStorage extends AbstractStorage {
       // `remote-worker:<driver>` so we dispatch by prefix rather than enumerating
       // every driver. The driver itself is also stored under `connection.driver`
       // for use by RemoteWorkerConnection.fromJSON.
-      if (
-        typeof connection.type === 'string' &&
-        connection.type.startsWith('remote-worker:')
-      ) {
+      if (typeof connection.type === 'string' && connection.type.startsWith('remote-worker:')) {
         // @ts-ignore
         connections[connection.name] = reactive(RemoteWorkerConnection.fromJSON(connection))
         continue

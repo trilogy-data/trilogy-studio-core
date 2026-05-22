@@ -7,8 +7,16 @@ import {
   listAvailableImports as sharedListAvailableImports,
   executeTrilogyQueryCore,
 } from './sharedToolHelpers'
-import type { DashboardModel } from '../dashboards/base'
+import type {
+  DashboardModel,
+  MemoData,
+  ClaimData,
+  MemoVerdict,
+  ConfidenceLevel,
+  DashboardLayoutType,
+} from '../dashboards/base'
 import { CELL_TYPES, type CellType, type MarkdownData } from '../dashboards/base'
+import { getProvenance, formatProvenance } from '../dashboards/provenance'
 import type { DashboardStoreType } from '../stores/dashboardStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { EditorStoreType } from '../stores/editorStore'
@@ -136,6 +144,16 @@ export class DashboardToolExecutor {
         return this.listAvailableImports()
       case 'connect_data_connection':
         return this.connectDataConnection(toolInput.connection)
+      case 'set_executive_memo':
+        return this.setExecutiveMemo(toolInput)
+      case 'add_claim_section':
+        return this.addClaimSection(toolInput)
+      case 'add_appendix_header':
+        return this.addAppendixHeader(toolInput)
+      case 'set_report_layout':
+        return this.setReportLayout(toolInput.layout)
+      case 'get_provenance':
+        return this.getProvenanceForItem(toolInput.item_id)
       case 'return_to_user':
         return {
           success: true,
@@ -808,5 +826,197 @@ export class DashboardToolExecutor {
 
   private async connectDataConnection(connectionName: string): Promise<ToolCallResult> {
     return sharedConnectDataConnection(this.deps.connectionStore, connectionName)
+  }
+
+  // ---- Report-mode tools ----
+
+  /** Find the existing memo cell on the dashboard (there can be at most one). */
+  private findMemoItemId(): string | null {
+    const dashboard = this.dashboard
+    if (!dashboard) return null
+    for (const [id, item] of Object.entries(dashboard.gridItems)) {
+      if (item.type === CELL_TYPES.MEMO) return id
+    }
+    return null
+  }
+
+  private async setExecutiveMemo(input: Record<string, any>): Promise<ToolCallResult> {
+    const dashboard = this.dashboard
+    if (!dashboard) return { success: false, error: 'Dashboard not found.' }
+
+    const required = ['headline', 'verdict', 'magnitude', 'cause', 'action', 'confidence']
+    for (const f of required) {
+      if (typeof input[f] !== 'string' || !input[f].trim()) {
+        return { success: false, error: `Missing required memo field: ${f}` }
+      }
+    }
+    const verdict = input.verdict as MemoVerdict
+    if (!['good', 'bad', 'mixed', 'inconclusive'].includes(verdict)) {
+      return { success: false, error: `Invalid verdict "${verdict}"` }
+    }
+    const confidence = input.confidence as ConfidenceLevel
+    if (!['high', 'medium', 'low'].includes(confidence)) {
+      return { success: false, error: `Invalid confidence "${confidence}"` }
+    }
+
+    const memo: MemoData = {
+      headline: input.headline,
+      verdict,
+      magnitude: input.magnitude,
+      cause: input.cause,
+      action: input.action,
+      confidence,
+      confidenceRationale:
+        typeof input.confidence_rationale === 'string' ? input.confidence_rationale : undefined,
+      query: typeof input.query === 'string' && input.query.trim() ? input.query : undefined,
+    }
+
+    const existingId = this.findMemoItemId()
+    let itemId: string
+    if (existingId) {
+      this.deps.dashboardStore.updateMultipleItemProperties(this.deps.dashboardId, existingId, {
+        content: memo,
+        name: memo.headline.slice(0, 80) || 'Executive Memo',
+      })
+      itemId = existingId
+    } else {
+      // Memos always pin to the top — y=0 visually; the report renderer also
+      // promotes any memo cell to the top regardless of y, but setting y=0
+      // keeps grid-mode rendering sensible too.
+      itemId = this.deps.dashboardStore.addItemToDashboard(
+        this.deps.dashboardId,
+        CELL_TYPES.MEMO,
+        0,
+        0,
+        20,
+        8,
+        // addItemToDashboard takes a string content arg (legacy). We patch
+        // the structured memo immediately below.
+        '',
+        memo.headline.slice(0, 80) || 'Executive Memo',
+      )
+      this.deps.dashboardStore.updateMultipleItemProperties(this.deps.dashboardId, itemId, {
+        content: memo,
+      })
+    }
+
+    if (memo.query) {
+      this.deps.refreshItem(itemId)
+    }
+
+    return {
+      success: true,
+      message: existingId
+        ? `Updated executive memo (id ${itemId}). Verdict: ${verdict} · confidence: ${confidence}.`
+        : `Added executive memo (id ${itemId}). Verdict: ${verdict} · confidence: ${confidence}.`,
+    }
+  }
+
+  private async addClaimSection(input: Record<string, any>): Promise<ToolCallResult> {
+    const dashboard = this.dashboard
+    if (!dashboard) return { success: false, error: 'Dashboard not found.' }
+
+    const claimText = typeof input.claim === 'string' ? input.claim.trim() : ''
+    if (!claimText) {
+      return { success: false, error: '`claim` is required.' }
+    }
+    const claimData: ClaimData = {
+      heading: typeof input.heading === 'string' ? input.heading : undefined,
+      claim: claimText,
+      caveat: typeof input.caveat === 'string' ? input.caveat : undefined,
+      drilldown: typeof input.drilldown === 'string' ? input.drilldown : undefined,
+      query: typeof input.query === 'string' && input.query.trim() ? input.query : undefined,
+    }
+
+    const name = claimData.heading || claimText.slice(0, 80)
+    // Claims sit between the memo and any appendix divider. addItem auto-stacks
+    // by max y, so newer claims naturally fall after older ones.
+    const itemId = this.deps.dashboardStore.addItemToDashboard(
+      this.deps.dashboardId,
+      CELL_TYPES.CLAIM,
+      0,
+      0,
+      20,
+      4,
+      '',
+      name,
+    )
+    this.deps.dashboardStore.updateMultipleItemProperties(this.deps.dashboardId, itemId, {
+      content: claimData,
+    })
+    if (claimData.query) {
+      this.deps.refreshItem(itemId)
+    }
+
+    return {
+      success: true,
+      message: `Added claim section (id ${itemId}). Pair this claim with an evidence chart by calling add_dashboard_item next; the report renderer keeps adjacent blocks visually together.`,
+    }
+  }
+
+  private async addAppendixHeader(input: Record<string, any>): Promise<ToolCallResult> {
+    const dashboard = this.dashboard
+    if (!dashboard) return { success: false, error: 'Dashboard not found.' }
+
+    // Only allow one appendix divider per report.
+    for (const [id, item] of Object.entries(dashboard.gridItems)) {
+      if (item.type === CELL_TYPES.APPENDIX_HEADER) {
+        return {
+          success: false,
+          error: `Appendix header already exists (id ${id}). A report should have at most one.`,
+        }
+      }
+    }
+
+    const label =
+      typeof input.label === 'string' && input.label.trim() ? input.label.trim() : 'Appendix'
+    const itemId = this.deps.dashboardStore.addItemToDashboard(
+      this.deps.dashboardId,
+      CELL_TYPES.APPENDIX_HEADER,
+      0,
+      0,
+      20,
+      1,
+      '',
+      label,
+    )
+    return {
+      success: true,
+      message: `Added appendix divider (id ${itemId}, label "${label}"). Subsequent items added to the report are rendered as appendix content.`,
+    }
+  }
+
+  private setReportLayout(layout: any): ToolCallResult {
+    if (layout !== 'grid' && layout !== 'report') {
+      return { success: false, error: `Invalid layout "${layout}". Must be 'grid' or 'report'.` }
+    }
+    const dashboard = this.dashboard
+    if (!dashboard) return { success: false, error: 'Dashboard not found.' }
+    this.deps.dashboardStore.setDashboardLayoutType(
+      this.deps.dashboardId,
+      layout as DashboardLayoutType,
+    )
+    return {
+      success: true,
+      message: `Dashboard layout switched to '${layout}'. ${
+        layout === 'report'
+          ? 'Use set_executive_memo, add_claim_section, and add_appendix_header to author the narrative.'
+          : 'The dashboard now renders as a free-form grid.'
+      }`,
+    }
+  }
+
+  private getProvenanceForItem(itemId: string): ToolCallResult {
+    const dashboard = this.dashboard
+    if (!dashboard) return { success: false, error: 'Dashboard not found.' }
+    const item = dashboard.gridItems[itemId]
+    if (!item) {
+      return {
+        success: false,
+        error: `Item "${itemId}" not found. Use list_dashboard_items to see available items.`,
+      }
+    }
+    const provenance = getProvenance(itemId, item, dashboard)
+    return { success: true, message: formatProvenance(provenance) }
   }
 }

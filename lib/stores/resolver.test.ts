@@ -78,41 +78,17 @@ describe('TrilogyResolver', () => {
     } as any)
 
     // First call with files=['ratings.csv'] hits the network.
-    await resolver.resolve_query(
-      'select 1;',
-      'duckdb',
-      'preql',
-      [],
-      [],
-      [],
-      {},
-      null,
-      ['ratings.csv'],
-    )
+    await resolver.resolve_query('select 1;', 'duckdb', 'preql', [], [], [], {}, null, [
+      'ratings.csv',
+    ])
     // Same args repeated → cache hit, no extra network call.
-    await resolver.resolve_query(
-      'select 1;',
-      'duckdb',
-      'preql',
-      [],
-      [],
-      [],
-      {},
-      null,
-      ['ratings.csv'],
-    )
+    await resolver.resolve_query('select 1;', 'duckdb', 'preql', [], [], [], {}, null, [
+      'ratings.csv',
+    ])
     // Different files → cache miss, second network call.
-    await resolver.resolve_query(
-      'select 1;',
-      'duckdb',
-      'preql',
-      [],
-      [],
-      [],
-      {},
-      null,
-      ['movies.csv'],
-    )
+    await resolver.resolve_query('select 1;', 'duckdb', 'preql', [], [], [], {}, null, [
+      'movies.csv',
+    ])
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toMatchObject({

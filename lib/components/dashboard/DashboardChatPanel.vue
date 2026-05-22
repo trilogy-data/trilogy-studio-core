@@ -2,7 +2,7 @@
 import { ref, computed, inject, nextTick, onMounted, watch } from 'vue'
 import LLMChat from '../llm/LLMChat.vue'
 import { Chat } from '../../chats/chat'
-import { DASHBOARD_TOOLS } from '../../llm/dashboardAgentTools'
+import { DASHBOARD_TOOLS, REPORT_TOOLS } from '../../llm/dashboardAgentTools'
 import { buildDashboardAgentSystemPrompt } from '../../llm/dashboardAgentPrompt'
 import { DashboardToolExecutor } from '../../llm/dashboardToolExecutor'
 import type { DashboardModel } from '../../dashboards/base'
@@ -63,7 +63,18 @@ const MUTATING_TOOLS = new Set([
   'move_dashboard_item',
   'update_dashboard_info',
   'set_dashboard_title',
+  'set_executive_memo',
+  'add_claim_section',
+  'add_appendix_header',
+  'set_report_layout',
 ])
+
+/** Tools the agent receives. Reports get the report-mode tools layered onto
+ *  the standard dashboard tool surface — the prompt steers them to use the
+ *  report tools first when authoring narrative. */
+const dashboardAgentTools = computed(() =>
+  props.dashboard.layoutType === 'report' ? [...DASHBOARD_TOOLS, ...REPORT_TOOLS] : DASHBOARD_TOOLS,
+)
 
 // Chat ids that have committed to mutating their current dashboard in place.
 // Populated the first time we decide to skip a fork, so subsequent mutations
@@ -292,7 +303,7 @@ async function handleSend(message: string, _messages: ChatMessage[]) {
     },
     {
       overrides: {
-        tools: DASHBOARD_TOOLS,
+        tools: dashboardAgentTools.value,
         executeToolCall: async (toolName, toolInput) => {
           if (MUTATING_TOOLS.has(toolName)) {
             await ensureChatFork()

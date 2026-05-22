@@ -18,8 +18,7 @@ export const useProjectStore = defineStore('projects', {
   }),
 
   getters: {
-    projectList: (state): Project[] =>
-      Object.values(state.projects).filter((p) => !p.deleted),
+    projectList: (state): Project[] => Object.values(state.projects).filter((p) => !p.deleted),
 
     unsavedProjects: (state): number =>
       Object.values(state.projects).filter((p) => p.changed && !p.deleted).length,
@@ -112,6 +111,14 @@ export const useProjectStore = defineStore('projects', {
 
     removeEditorFromProject(id: string, editorId: string): boolean {
       return this.projects[id]?.removeEditor(editorId) ?? false
+    },
+
+    addDashboardToProject(id: string, dashboardId: string): boolean {
+      return this.projects[id]?.addDashboard(dashboardId) ?? false
+    },
+
+    removeDashboardFromProject(id: string, dashboardId: string): boolean {
+      return this.projects[id]?.removeDashboard(dashboardId) ?? false
     },
 
     /** Set the per-project instructions override for an agent kind. Pass

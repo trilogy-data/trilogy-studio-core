@@ -53,9 +53,7 @@ async function ensureConnectionsSidebarVisible(page, connectionName) {
   if ((await mobileMenuToggle.count()) > 0) {
     await mobileMenuToggle.first().click()
     await page.getByTestId(`sidebar-icon-connections`).click()
-    await expect(
-      page.getByTestId(connectionTestId).filter({ visible: true }).first(),
-    ).toBeVisible()
+    await expect(page.getByTestId(connectionTestId).filter({ visible: true }).first()).toBeVisible()
   }
 }
 
@@ -221,9 +219,7 @@ export async function createEditorFromConnection(
   await expect(connectionRow).toBeVisible()
   await connectionRow.hover()
   const actionId = type === 'sql' ? 'new-sql' : 'new-trilogy'
-  await connectionRow
-    .getByTestId(`editor-actions-c-${storage}-${editorConnId}-trigger`)
-    .click()
+  await connectionRow.getByTestId(`editor-actions-c-${storage}-${editorConnId}-trigger`).click()
   await page.getByTestId(`editor-actions-c-${storage}-${editorConnId}-${actionId}`).click()
 }
 

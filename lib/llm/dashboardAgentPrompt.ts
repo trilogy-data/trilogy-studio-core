@@ -3,6 +3,7 @@ import { conceptsToFieldPrompt } from './data/prompts'
 import type { ModelConceptInput } from './data/models'
 import type { ChatImport } from '../chats/chat'
 import type { DashboardModel } from '../dashboards/base'
+import { CELL_TYPES } from '../dashboards/base'
 
 export interface DashboardAgentPromptOptions {
   dashboard: DashboardModel
@@ -69,9 +70,16 @@ export function buildDashboardAgentSystemPrompt(options: DashboardAgentPromptOpt
           .join('\n')}`
       : '\nThe dashboard is currently empty.'
 
-  return `You are a dashboard assistant with full control over a live dashboard. The user can see changes you make in real time.
+  const isReport = dashboard.layoutType === 'report'
+  const reportPreamble = isReport ? buildReportPreamble(dashboard) : ''
 
-You have tools to add, update, remove, and reposition items on the dashboard grid. The grid is 20 columns wide. Items can be charts, tables, markdown blocks, or filters.
+  return `${reportPreamble}You are a dashboard assistant with full control over a live ${isReport ? 'report (a single-column analytical memo)' : 'dashboard'}. The user can see changes you make in real time.
+
+${
+  isReport
+    ? `This is a REPORT, not a free-form dashboard. Reports render top-to-bottom as a single narrative column. Use the report tools (set_executive_memo, add_claim_section, add_appendix_header) to author structure; use add_dashboard_item only for evidence (charts, tables, markdown). The grid x/y/w/h still drives ordering — y determines vertical position; x and w are mostly cosmetic in report mode.`
+    : 'You have tools to add, update, remove, and reposition items on the dashboard grid. The grid is 20 columns wide. Items can be charts, tables, markdown blocks, or filters.'
+}
 
 DASHBOARD: "${dashboard.name}"
 ${dashboard.description ? `DESCRIPTION: ${dashboard.description}` : ''}
@@ -153,5 +161,61 @@ VALIDATION BEFORE HANDOFF:
 COMPLETING YOUR RESPONSE:
 - When you have finished addressing the user's request — and have validated the result via capture_dashboard_screenshot — call return_to_user with a brief summary.
 - Never end a turn with plain text only — you must always call a tool. return_to_user is always your final tool call.
+${isReport ? buildReportGuidance() : ''}`
+}
+
+/**
+ * Header surfaced at the very top of the prompt when the dashboard is in
+ * report mode. Holds the principles the analytical memo is supposed to embody.
+ *
+ * Verbatim from the product brief: "make the claim, show the evidence, expose
+ * uncertainty, and let the human interrogate it."
+ */
+function buildReportPreamble(dashboard: DashboardModel): string {
+  // Surface the existing structure briefly so the agent doesn't add a memo on
+  // top of a memo or two appendix dividers.
+  const items = Object.values(dashboard.gridItems)
+  const memoCount = items.filter((i) => i.type === CELL_TYPES.MEMO).length
+  const claimCount = items.filter((i) => i.type === CELL_TYPES.CLAIM).length
+  const appendixCount = items.filter((i) => i.type === CELL_TYPES.APPENDIX_HEADER).length
+  return `# REPORT AUTHORING MODE
+
+You are authoring a source-backed analytical memo, not an interactive dashboard. The reader is a busy decision-maker who wants the answer, the evidence, and the honest caveats — in that order.
+
+PRINCIPLES (non-negotiable):
+1. Make the claim. A great agent makes a claim, shows the evidence, exposes uncertainty, and lets the human interrogate it. Do NOT defer to the reader to make the call themselves by laying out raw charts.
+2. Executive memo first. One memo at the top: headline / verdict / magnitude / cause / action / confidence. Use set_executive_memo. Aim for one screen — the reader should not need to scroll to get the answer.
+3. Narrative sections, not dashboard tiles. Each claim is its own section. Do NOT title sections "Revenue Chart" or "Conversion Analysis" — those are table-of-contents entries, not insights. Title them with the claim itself.
+4. Charts serve the argument. Each claim has exactly the visual evidence needed to support it — no more. Add a chart RIGHT AFTER its claim section so the report renderer pairs them visually.
+5. Caveats are mandatory on every claim. State what the data does NOT prove. If you cannot articulate a caveat, the claim is probably overconfident.
+6. Drilldown comes after the answer, not before. Interactivity belongs below the verdict — never use it as the primary communication layer.
+7. Tables go in the appendix. Use add_appendix_header before adding detail tables; never put a giant table above a claim.
+8. Provenance is the price of authorship. Every claim must have a query, filters, and a confidence level. Use get_provenance to audit your own evidence chain before handing off. If you can't justify a number, do not state it.
+
+CURRENT REPORT STRUCTURE: ${memoCount} memo / ${claimCount} claim section${claimCount === 1 ? '' : 's'} / ${appendixCount} appendix divider${appendixCount === 1 ? '' : 's'}.
+
+`
+}
+
+/**
+ * Tail block appended to the prompt in report mode — concrete tool guidance
+ * that's specific to authoring narrative reports.
+ */
+function buildReportGuidance(): string {
+  return `
+
+REPORT AUTHORING WORKFLOW:
+1. Start with set_executive_memo. All six fields are required. Pick a verdict ("good" / "bad" / "mixed" / "inconclusive") — pick "inconclusive" only when the data genuinely cannot decide. Pick a confidence ("high" / "medium" / "low") and explain the rationale. Bind a query if your magnitude/cause/action want live numbers.
+2. For each point you want to make, call add_claim_section with the claim sentence (and caveat, drilldown). Then immediately call add_dashboard_item with type='chart' (or 'table') for the evidence — the renderer pairs adjacent blocks. Keep one claim per section.
+3. When you have detail tables or methodology, call add_appendix_header once, then add_dashboard_item for each appendix block. Anything added after the divider renders as appendix content.
+4. Audit before handing off: call get_provenance on at least your memo and each claim section. Confirm queries, filters, and confidence are sane.
+5. Capture a screenshot to review visual rendering (capture_dashboard_screenshot).
+6. Call return_to_user with a one-paragraph summary highlighting the verdict and your confidence.
+
+ANTI-PATTERNS (don't):
+- A wall of charts with no claims. That is the defensive design we are explicitly avoiding.
+- A claim without a chart, OR a chart without a claim. They come in pairs.
+- "Tabs" or interactivity-driven analysis. Reports are read top-to-bottom. Use drilldown text on claims when the reader needs to investigate further.
+- Memos with vague verdicts ("worth investigating", "needs more analysis"). Pick a side; lower the confidence if you are unsure.
 `
 }

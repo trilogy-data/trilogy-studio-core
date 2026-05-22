@@ -6,6 +6,7 @@ import type { ConnectionStoreType } from './connectionStore'
 import type QueryExecutionService from './queryExecutionService'
 import type { EditorStoreType } from './editorStore'
 import type { ProjectStoreType } from './projectStore'
+import type { DashboardStoreType } from './dashboardStore'
 import { ChatToolExecutor } from '../llm/chatToolExecutor'
 import { OverseerToolExecutor } from '../llm/overseerToolExecutor'
 import { ArchitectToolExecutor } from '../llm/architectToolExecutor'
@@ -73,6 +74,9 @@ export interface ChatExecutionDependencies {
    *  what to put in the system prompt. Studio chats (kind=user) don't
    *  need this. */
   projectStore?: ProjectStoreType
+  /** Optional dashboard store — used by the overseer's create_report tool to
+   *  spin up a new report-mode dashboard and queue its initial prompt. */
+  dashboardStore?: DashboardStoreType
 }
 
 export const useChatStore = defineStore('chats', {
@@ -465,7 +469,13 @@ export const useChatStore = defineStore('chats', {
                 if (!deps.projectStore) {
                   throw new Error('Overseer chats require deps.projectStore')
                 }
-                const exec = new OverseerToolExecutor(this, deps.projectStore, chatId, deps)
+                const exec = new OverseerToolExecutor(
+                  this,
+                  deps.projectStore,
+                  chatId,
+                  deps,
+                  deps.dashboardStore,
+                )
                 return { getToolExecutor: () => exec }
               })()
             : chat.kind === 'architect'
@@ -585,10 +595,7 @@ export const useChatStore = defineStore('chats', {
      * useful even when the LLM hit max iterations or returned text without
      * calling return_to_user.
      */
-    async handleSubchatCompletion(
-      chatId: string,
-      deps: ChatExecutionDependencies,
-    ): Promise<void> {
+    async handleSubchatCompletion(chatId: string, deps: ChatExecutionDependencies): Promise<void> {
       const chat = this.chats[chatId]
       if (!chat || chat.kind === 'user' || !chat.parentChatId) return
       const parent = this.chats[chat.parentChatId]
@@ -633,10 +640,7 @@ export const useChatStore = defineStore('chats', {
      * After a chat finishes, if it accumulated subchat injections while
      * busy, fire them as a follow-up turn.
      */
-    async drainPendingInjections(
-      chatId: string,
-      deps: ChatExecutionDependencies,
-    ): Promise<void> {
+    async drainPendingInjections(chatId: string, deps: ChatExecutionDependencies): Promise<void> {
       const chat = this.chats[chatId]
       if (!chat) return
       if (chat.pendingInjections.length === 0) return
@@ -731,8 +735,7 @@ export const useChatStore = defineStore('chats', {
         : []
 
       const conn =
-        (project?.dataConnectionId &&
-          deps.connectionStore.connections[project.dataConnectionId]) ||
+        (project?.dataConnectionId && deps.connectionStore.connections[project.dataConnectionId]) ||
         null
 
       return buildArchitectSystemPrompt({

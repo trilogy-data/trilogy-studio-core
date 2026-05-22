@@ -464,7 +464,11 @@ order by
   }
   await expect(customerDataLabel).toBeVisible({ timeout: 10000 })
 
-  await deleteEditor(page, 'editor-e-local-local:duckdb-test-analysis/reports/sales-report', isMobile)
+  await deleteEditor(
+    page,
+    'editor-e-local-local:duckdb-test-analysis/reports/sales-report',
+    isMobile,
+  )
 
   // if (isMobile) {
   //   await page.getByTestId('editor-list-id-e-local-duckdb-test-analysis/reports/sales-report').click()
@@ -501,7 +505,9 @@ order by
   expect(customerDataCount).toBe(0)
 
   // Verify folders are also cleaned up when empty
-  const analysisFolderCount = await page.getByTestId('editor-f-local-local:duckdb-test-analysis').count()
+  const analysisFolderCount = await page
+    .getByTestId('editor-f-local-local:duckdb-test-analysis')
+    .count()
   expect(analysisFolderCount).toBe(0)
 
   // now let's look at the connection history

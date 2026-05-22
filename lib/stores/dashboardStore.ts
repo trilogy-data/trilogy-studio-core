@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 import type { CrossFilterValueMap, CrossFilterChartMap } from '../dashboards/crossFilters'
-import type { LayoutItem, CellType, DashboardImport, DashboardState } from '../dashboards/base'
+import type {
+  LayoutItem,
+  CellType,
+  DashboardImport,
+  DashboardState,
+  DashboardLayoutType,
+} from '../dashboards/base'
 import {
   CELL_TYPES,
   DashboardModel,
@@ -164,6 +170,16 @@ export const useDashboardStore = defineStore('dashboards', {
       })
 
       this.dashboards[id] = dashboard
+      return dashboard
+    },
+
+    /** Create a report-mode dashboard. Reports are stored as Dashboards with
+     *  layoutType='report'; the rendering layer branches off that flag. The
+     *  helper exists mainly so explorer's sidebar / overseer don't need to
+     *  remember to flip the bit after creation. */
+    newReport(name: string, connectionId: string) {
+      const dashboard = this.newDashboard(name, connectionId)
+      dashboard.setLayoutType('report')
       return dashboard
     },
 
@@ -440,6 +456,16 @@ export const useDashboardStore = defineStore('dashboards', {
       if (this.dashboards[dashboardId]) {
         this.dashboards[dashboardId].state = state
       }
+    },
+
+    /** Switch a dashboard's layout between grid and report. Persists via the
+     *  model's `changed` flag so the next flush picks it up. */
+    setDashboardLayoutType(dashboardId: string, layoutType: DashboardLayoutType) {
+      const dashboard = this.dashboards[dashboardId]
+      if (!dashboard) {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+      dashboard.setLayoutType(layoutType)
     },
 
     // Add item to dashboard

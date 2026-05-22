@@ -15,13 +15,7 @@
 //   5. delete()    → host.disconnect(sessionId)
 
 import { tableFromIPC } from 'apache-arrow'
-import BaseConnection, {
-  Database,
-  Schema,
-  Table,
-  Column,
-  AssetType,
-} from './base'
+import BaseConnection, { Database, Schema, Table, Column, AssetType } from './base'
 import { Results, ColumnType } from '../editors/results'
 import { arrowBatchesToResults } from './arrowResults'
 
@@ -254,9 +248,7 @@ export default class RemoteWorkerConnection extends BaseConnection {
       await host.setWorkingDirectory(this.sessionId, directory)
       console.log(`[setWorkingDirectory] pushed OK to host`)
     } catch (err) {
-      console.warn(
-        `RemoteWorkerConnection "${this.name}" failed to set working directory: ${err}`,
-      )
+      console.warn(`RemoteWorkerConnection "${this.name}" failed to set working directory: ${err}`)
     }
   }
 
@@ -454,9 +446,7 @@ export default class RemoteWorkerConnection extends BaseConnection {
     const host = this.resolveHost()
     if (!this.sessionId) throw new Error('Not connected.')
     const sessionId = this.sessionId
-    const dtos = await this.withSessionRecovery(() =>
-      host.describeSchemas(sessionId, database),
-    )
+    const dtos = await this.withSessionRecovery(() => host.describeSchemas(sessionId, database))
     return dtos.map(fromSchemaDTO)
   }
 
