@@ -113,4 +113,4 @@ def test_rendered_appended_query_keeps_city_filter_visible():
     rendered = render_appended_filter_query()
 
     assert "city = 'USBOS'" in rendered
-    assert "count(tree_id) -> tree_count" in rendered
+    assert "count(tree_id) as tree_count" in rendered
