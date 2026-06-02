@@ -1,7 +1,9 @@
 import copy
+import os
 from pathlib import PurePosixPath
 from typing import Iterable
 
+import trilogy
 from trilogy import Environment
 from io_models import (
     ModelInSchema,
@@ -13,7 +15,11 @@ from io_models import (
 )
 from common import concept_to_description
 from trilogy.parsing.exceptions import ParseError
-from trilogy.core.models.environment import DictImportResolver, EnvironmentConfig
+from trilogy.core.models.environment import (
+    DictImportResolver,
+    EnvironmentConfig,
+    FileSystemImportResolver,
+)
 from trilogy.authoring import (
     Concept,
 )
@@ -24,10 +30,44 @@ from common import flatten_lineage
 
 PARSE_DEPENDENCY_RESOLUTION_ATTEMPTS = 10
 
+# Absolute path to trilogy's bundled standard library (``trilogy/std``),
+# normalized with forward slashes for cross-platform prefix comparison.
+_STDLIB_DIR = (
+    os.path.join(os.path.dirname(trilogy.__file__), "std")
+    .replace("\\", "/")
+    .rstrip("/")
+)
+
+
+def _is_stdlib_root(root: str | None) -> bool:
+    """True when ``root`` points inside trilogy's bundled std library.
+
+    When a stdlib file (e.g. ``std/money.preql``) imports a sibling stdlib
+    file with a bare relative name (``import currency;``), the parser does
+    not flag that nested import as stdlib, so it falls through to whatever
+    import resolver the environment config carries. Studio configs carry a
+    ``DictImportResolver`` (which only knows client-provided sources), so
+    the nested stdlib import fails. Detecting the stdlib root lets us hand
+    those child parses a filesystem resolver instead.
+    """
+    if not root:
+        return False
+    normalized = os.path.normpath(str(root)).replace("\\", "/")
+    return normalized == _STDLIB_DIR or normalized.startswith(_STDLIB_DIR + "/")
+
 
 class StudioEnvironmentConfig(EnvironmentConfig):
     def copy_for_root(self, root: str | None) -> "StudioEnvironmentConfig":
-        return copy.deepcopy(self)
+        new = copy.deepcopy(self)
+        # Nested imports inside trilogy's standard library resolve from disk,
+        # not from the client-provided DictImportResolver. Swap in a
+        # filesystem resolver for std child parses so relative stdlib imports
+        # (e.g. money.preql's `import currency;`) resolve correctly.
+        if _is_stdlib_root(root) and isinstance(
+            new.import_resolver, DictImportResolver
+        ):
+            new.import_resolver = FileSystemImportResolver()
+        return new
 
 
 def _normalize_source_path(path: str | None) -> str | None:

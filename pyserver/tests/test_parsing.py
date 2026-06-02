@@ -5,6 +5,7 @@ from env_helpers import parse_env_from_full_model
 from trilogy.render import get_dialect_generator
 from query_helpers import generate_query_core
 from io_models import MultiQueryInSchema
+from io_models import ModelSourceInSchema
 from query_helpers import generate_multi_query_core
 from trilogy.authoring import ArrayType, StructType
 from trilogy.core.models.core import MapType
@@ -912,3 +913,25 @@ order by count desc;
 
     # Check case statement query
     assert "shot_type" in [col.name for col in results[2][2]]
+
+
+def test_stdlib_nested_import_resolves():
+    """Regression: a source importing `std.money` must parse.
+
+    `std/money.preql` itself does `import currency;` (a bare relative import
+    of a sibling stdlib file). Studio environments use a DictImportResolver
+    that only knows client-provided sources, so the nested stdlib import used
+    to fail with "Unable to import file currency, not resolvable from provided
+    source files." StudioEnvironmentConfig.copy_for_root now hands stdlib child
+    parses a filesystem resolver. See env_helpers._is_stdlib_root.
+    """
+    sources = [
+        ModelSourceInSchema(
+            alias="lineitem",
+            contents="import std.money;\n\nkey id int;\nproperty id.amount float::usd;\n",
+        )
+    ]
+    env = parse_env_from_full_model(sources)
+    parse_text("import lineitem;", env)
+    # the usd currency type from std/currency.preql must be available
+    assert "usd" in env.data_types
