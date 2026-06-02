@@ -132,9 +132,9 @@ select 3 as id, 'alice' as name , 'williams' as last_name
     assert response.status_code == 200
     assert response.json()["text"] == """import test;
 
-WHERE
+where
     name = 'bob'
-SELECT
+select
     last_name,
     customer_count,
 ;""", response.json()["text"]

@@ -217,3 +217,42 @@ address regions;
     assert name_col.keys is not None
     assert len(name_col.keys) == 1
     assert "id" in name_col.keys[0]
+
+
+def test_query_ending_in_comment_returns_last_statement_results():
+    """A query ending in a comment should return results from the last
+    non-comment statement rather than a blank result for the comment."""
+    query = QueryInSchema.model_validate(
+        {
+            "imports": [{"name": "region", "alias": None}],
+            "query": "SELECT id, name;\n# trailing comment with no statement",
+            "dialect": "duckdb",
+            "full_model": {
+                "name": "",
+                "sources": [
+                    {
+                        "alias": "region",
+                        "contents": """
+key id int;
+property id.name string;
+
+datasource regions (
+    region_id:id,
+    region_name:name,
+)
+grain (id)
+address regions;
+""",
+                    }
+                ],
+            },
+        }
+    )
+
+    target, columns, _, _ = generate_query_core(query, DuckDBDialect())
+
+    # We should resolve the SELECT, not the trailing comment.
+    assert target is not None
+    assert [c.name for c in columns] == ["id", "name"]
+    sql = DuckDBDialect().compile_statement(target)
+    assert "select" in sql.lower()
