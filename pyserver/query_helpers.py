@@ -21,6 +21,7 @@ from trilogy.authoring import (
     DataType,
     ValidateStatement,
     ShowStatement,
+    Comment,
 )
 from trilogy.core.statements.execute import (
     ProcessedRawSQLStatement,
@@ -259,14 +260,18 @@ def generate_single_query(
         for s in parsed
         if isinstance(s, (SelectStatement, MultiSelectStatement, PersistStatement))
     )
-    if not parsed:
+    # Comments are parsed as statements; a query ending in (or consisting only
+    # of) comments should return results from the last real statement rather
+    # than a blank result for the trailing comment.
+    meaningful = [s for s in parsed if not isinstance(s, Comment)]
+    if not meaningful:
         if enable_performance_logging:
             perf_logger.debug(
                 f"No parsed statements (empty query) - Parse time: {parse_time:.4f}s"
             )
         return None, default_return, default_values, 0
 
-    final = parsed[-1]
+    final = meaningful[-1]
     variables = parameters or {}
 
     # Handle different statement types
