@@ -1,64 +1,73 @@
-# Use multi-stage build for better optimization
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
+# syntax=docker/dockerfile:1
+# Multi-stage build optimized for build speed and a lean production image.
 
-# Set working directory
+ARG UV_IMAGE=ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+
+# ---------------------------------------------------------------------------
+# base: shared settings for every stage
+# ---------------------------------------------------------------------------
+FROM ${UV_IMAGE} AS base
 WORKDIR /app
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
 
-# Set UV environment variables
-ENV UV_COMPILE_BYTECODE=1
-ENV UV_LINK_MODE=copy
-ENV UV_CACHE_DIR=/tmp/uv-cache
+# ---------------------------------------------------------------------------
+# deps: install ONLY production dependencies, exactly once.
+# This stage is the source of truth for the production site-packages, so it
+# is never polluted by test/lint tooling.
+# ---------------------------------------------------------------------------
+FROM base AS deps
+COPY requirements.txt ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install -r requirements.txt --system
 
-# Copy requirements files first for better layer caching
-COPY requirements.txt requirements-test.txt ./
-
-# Install production dependencies first (ensures pins apply), then test dependencies
-RUN uv pip install -r requirements.txt --no-cache-dir --system
-RUN uv pip install -r requirements-test.txt --no-cache-dir --system
-
-# Copy source code and tests
+# ---------------------------------------------------------------------------
+# tester: add test dependencies and run the suite. Throwaway stage - nothing
+# from here lands in the production image except a "tests passed" marker,
+# which forces the production stage to depend on a green test run.
+# ---------------------------------------------------------------------------
+FROM deps AS tester
+COPY requirements-test.txt ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install -r requirements-test.txt --system
 COPY . .
+RUN pytest tests && touch /tmp/tests-passed
 
-# Run tests
-RUN pytest tests
+# ---------------------------------------------------------------------------
+# production: lean runtime image with prod-only dependencies.
+# ---------------------------------------------------------------------------
+FROM base AS production
 
-# Remove test dependencies and install only production dependencies
-RUN uv pip uninstall $(uv pip freeze | grep -v -f requirements.txt | cut -d'=' -f1) --system || true
-RUN uv pip install -r requirements.txt --no-cache-dir --system
+# Non-root user. -m creates /home/appuser so gunicorn's control server has a
+# writable HOME (without it, startup logs "Permission denied: '/home/appuser'").
+RUN groupadd -r appuser \
+    && useradd -r -g appuser -m -d /home/appuser appuser
 
-# Production stage
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS production
+ENV IN_DOCKER_IMAGE=1 \
+    PYTHONPATH=. \
+    PYTHONUNBUFFERED=1 \
+    PORT=8080 \
+    HOST=0.0.0.0
 
-# Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# Production dependencies from the clean `deps` stage.
+COPY --from=deps /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=deps /usr/local/bin /usr/local/bin
 
-# Set working directory
-WORKDIR /app
+# Build barrier: this fails the build unless `tester` ran pytest successfully.
+COPY --from=tester /tmp/tests-passed /tmp/tests-passed
 
-# Set environment variables
-ENV UV_COMPILE_BYTECODE=1
-ENV UV_LINK_MODE=copy
-ENV IN_DOCKER_IMAGE=1
-ENV PYTHONPATH=.
-ENV PORT=8080
-ENV HOST=0.0.0.0
-
-# Copy only production dependencies and app code from builder
-COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
-COPY --from=builder /app/*.py /app/
-COPY --from=builder /app/requirements.txt /app/
-
-# Change ownership to non-root user
+# Application code (only the root *.py modules are needed at runtime).
+COPY *.py ./
 RUN chown -R appuser:appuser /app
-USER appuser
 
-# Expose port
+USER appuser
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+# curl is not present in the slim base image, so probe with the bundled
+# Python interpreter instead. urlopen() raises on any non-2xx response.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()" || exit 1
 
-# Use exec form for better signal handling
+# exec form for correct signal handling; --preload imports the app once in the
+# master process so the heavy trilogy import is not repeated per worker.
 CMD ["gunicorn", "main:app", "-k", "uvicorn.workers.UvicornWorker", "-w", "4", "-b", "0.0.0.0:8080", "--preload"]

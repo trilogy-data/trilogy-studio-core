@@ -555,7 +555,7 @@ export default defineComponent({
       const id = this.editorId
       const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
 
-      if (this.loading || !codeEditorRef) {
+      if (this.loading) {
         return
       }
 
@@ -572,7 +572,9 @@ export default defineComponent({
       this.editorData.loading = true
 
       // Get selected text or full content from CodeEditor
-      const text = codeEditorRef.getEditorText(this.editorData.contents)
+      const text = codeEditorRef
+        ? codeEditorRef.getEditorText(this.editorData.contents)
+        : this.editorData.contents
       if (!text) {
         this.editorStore.setEditorResults(id, new Results(new Map(), []))
         this.editorData.loading = false
