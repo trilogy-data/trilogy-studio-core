@@ -4,7 +4,7 @@ ruff
 types-click-default-group
 types-requests
 mcp[cli]
-pytrilogy>=0.3.217
+pytrilogy>=0.3.278
 fastapi
 click-default-group
 uvicorn
