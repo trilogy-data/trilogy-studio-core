@@ -1,0 +1,36 @@
+# Virtual environments (the local .venv alone is ~295 MB of build context)
+.venv/
+venv/
+env/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local env / secrets - must never be baked into the image
+.env
+.env.*
+
+# Dev-only assets not needed to build, test, or run the image
+scripts/
+tests_mcp/
+*.md
+
+# Deploy config not used inside the image
+fly.toml
+
+# Docker files themselves
+Dockerfile*
+.dockerignore
+
+# VCS / editor
+.git/
+.gitignore
+.vscode/
+.idea/
