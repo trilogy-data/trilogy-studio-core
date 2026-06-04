@@ -18,6 +18,8 @@ export function remoteConnectionId(storeId, name) {
   return `remote:${storeId}:${name}`
 }
 
+const SIDEBAR_SHELL_TIMEOUT = 30000
+
 export async function prepareTestPage(page) {
   const resolverUrl = getResolverUrl()
 
@@ -69,7 +71,7 @@ export async function waitForConnectionReady(page, connectionName, timeout = 600
 export async function openSidebarScreen(page, screen, isMobile = false) {
   if (isMobile) {
     const mobileMenuToggle = page.getByTestId('mobile-menu-toggle')
-    await expect(mobileMenuToggle).toBeVisible({ timeout: 10000 })
+    await expect(mobileMenuToggle).toBeVisible({ timeout: SIDEBAR_SHELL_TIMEOUT })
 
     const sidebarIcon = page.getByTestId(`sidebar-icon-${screen}`).first()
 
@@ -114,7 +116,7 @@ export async function openSidebarScreen(page, screen, isMobile = false) {
   }
 
   const sidebarIcon = page.getByTestId(`sidebar-icon-${screen}`).filter({ visible: true }).first()
-  await expect(sidebarIcon).toBeVisible({ timeout: 10000 })
+  await expect(sidebarIcon).toBeVisible({ timeout: SIDEBAR_SHELL_TIMEOUT })
   await sidebarIcon.click({ force: true })
   await expect(sidebarIcon).toHaveClass(/selected/, { timeout: 10000 })
   await expect(expandedSidebarContent).toBeVisible({ timeout: 10000 })

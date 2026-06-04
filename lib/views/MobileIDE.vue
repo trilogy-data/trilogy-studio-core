@@ -126,6 +126,7 @@ aside {
 
 <script lang="ts">
 import MobileSidebarLayout from '../components/layout/MobileSidebarLayout.vue'
+import Sidebar from '../components/sidebar/Sidebar.vue'
 import CommunityModels from '../components/community/CommunityModels.vue'
 import JobsView from '../components/jobs/JobsView.vue'
 import ConnectionView from './ConnectionView.vue'
@@ -158,7 +159,6 @@ const asyncPage = (loader: () => Promise<any>) =>
   })
 
 const TutorialPage = asyncPage(() => import('./TutorialPage.vue'))
-const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar.vue'))
 const Editor = asyncPage(() => import('../components/editor/Editor.vue'))
 const DataTable = defineAsyncComponent(() => import('../components/DataTable.vue'))
 const WelcomePage = asyncPage(() => import('./WelcomePage.vue'))
@@ -173,7 +173,9 @@ export interface MobileIDEProps {}
 
 const MobileIDEComponent: Component = defineComponent({
   name: 'MobileIDEComponent',
-  data() {},
+  data() {
+    return {}
+  },
   components: {
     Sidebar,
     Editor,
