@@ -18,7 +18,7 @@ export function remoteConnectionId(storeId, name) {
   return `remote:${storeId}:${name}`
 }
 
-const SIDEBAR_SHELL_TIMEOUT = 30000
+const SIDEBAR_SHELL_TIMEOUT = 10000
 
 export async function prepareTestPage(page) {
   const resolverUrl = getResolverUrl()
