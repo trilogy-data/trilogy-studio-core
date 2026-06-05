@@ -212,6 +212,7 @@ import TabbedBrowser from '../components/layout/TabbedBrowser.vue'
 import VerticalSplitLayout from '../components/layout/VerticalSplitLayout.vue'
 import CredentialBackgroundPage from './CredentialBackgroundPage.vue'
 import PopupModal from '../components/PopupModal.vue'
+import Sidebar from '../components/sidebar/Sidebar.vue'
 
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
@@ -239,7 +240,6 @@ const asyncPage = (loader: () => Promise<any>) =>
 
 // Lazy load all page components
 const TutorialPage = asyncPage(() => import('./TutorialPage.vue'))
-const Sidebar = defineAsyncComponent(() => import('../components/sidebar/Sidebar.vue'))
 const Editor = asyncPage(() => import('../components/editor/Editor.vue'))
 const WelcomePage = asyncPage(() => import('./WelcomePage.vue'))
 const Dashboard = asyncPage(() => import('../components/dashboard/Dashboard.vue'))

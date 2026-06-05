@@ -1,18 +1,17 @@
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue'
-import { LocalStorage, RemoteStoreStorage } from '../data'
-import {
-  useEditorStore,
-  useConnectionStore,
-  useModelConfigStore,
-  useUserSettingsStore,
-  TrilogyResolver,
-  useLLMConnectionStore,
-  useDashboardStore,
-  useCommunityApiStore,
-  useJobsApiStore,
-  useChatStore,
-} from '../stores'
+import LocalStorage from '../data/localStorage'
+import RemoteStoreStorage from '../data/remoteStoreStorage'
+import Manager from '../stores/Manager.vue'
+import useEditorStore from '../stores/editorStore'
+import useConnectionStore from '../stores/connectionStore'
+import useModelConfigStore from '../stores/modelStore'
+import useUserSettingsStore from '../stores/userSettingsStore'
+import TrilogyResolver from '../stores/resolver'
+import useLLMConnectionStore from '../stores/llmStore'
+import useDashboardStore from '../stores/dashboardStore'
+import useCommunityApiStore from '../stores/communityApiStore'
+import useJobsApiStore from '../stores/jobsApiStore'
+import useChatStore from '../stores/chatStore'
 
 function shouldWarmResolver(url: string): boolean {
   return !/^https?:\/\/(localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/i.test(url)
@@ -21,9 +20,6 @@ function shouldWarmResolver(url: string): boolean {
 let defaultResolver = 'https://trilogy-service.fly.dev'
 let userSettingsStore = useUserSettingsStore()
 userSettingsStore.loadSettings()
-const Manager = defineAsyncComponent(() => {
-  return import('../stores/Manager.vue')
-})
 
 if (import.meta.env.DEV) {
   console.log(

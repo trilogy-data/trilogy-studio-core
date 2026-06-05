@@ -54,7 +54,7 @@ import { useAnalyticsStore } from '../stores/analyticsStore.ts'
 import QueryResolver from './resolver'
 import { provide, computed, ref, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import type { PropType } from 'vue'
-import { Storage } from '../data'
+import type Storage from '../data/storage'
 
 import IDEPlaceholder from '../views/IDEPlaceholder.vue'
 import MobileIDEPlaceholder from '../views/MobileIDEPlaceholder.vue'
