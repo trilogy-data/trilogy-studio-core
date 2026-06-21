@@ -198,5 +198,37 @@ export const documentation: DocumentationNode[] = [
       ),
     ]),
   ]),
+  new DocumentationNode('Community', [
+    new Article('Discord', [
+      new Paragraph(
+        'Join the Community',
+        "Have a question, want to share what you're building, or just want to chat with other Trilogy users? Join us on Discord: <a href='https://discord.gg/Z4QSSuqGEd' target='_blank'>Trilogy Discord Server</a>.",
+      ),
+      new Paragraph(
+        'Getting Help',
+        'The Discord is the fastest way to get help, share feedback, and follow along with development. Come say hi!',
+        'tip',
+      ),
+    ]),
+    new Article('GitHub', [
+      new Paragraph(
+        'Open Source',
+        `Trilogy is open-source under the MIT license. Stars are appreciated and contributions are welcome - if you find a bug or have a feature request, please file an issue on the relevant repository:
+        <ul>
+          <li><a href='https://github.com/trilogy-data/trilogy-studio-core' target='_blank'>trilogy-studio-core</a> - the core code for the studio (this app), including the language server and query editor.</li>
+          <li><a href='https://github.com/trilogy-data/pytrilogy' target='_blank'>pytrilogy</a> - reference implementation of Trilogy language parsing/execution.</li>
+          <li><a href='https://github.com/trilogy-data/pytrilogyt' target='_blank'>pytrilogyt</a> - Trilogy + transformations to make ETL easy (native, dbt, and more).</li>
+          <li><a href='https://github.com/trilogy-data/trilogy-public-models' target='_blank'>trilogy-public-models</a> - Trilogy data models for public datasets.</li>
+          <li><a href='https://github.com/trilogy-data/trilogy-vscode' target='_blank'>trilogy-vscode</a> - IDE tooling and language support for Trilogy in VS Code.</li>
+          <li><a href='https://github.com/trilogy-data/pytrilogy-nlp' target='_blank'>pytrilogy-nlp</a> - natural language to Trilogy experiments.</li>
+          <li><a href='https://github.com/trilogy-data/trilogy-viz' target='_blank'>trilogy-viz</a> - easy visualizations with Trilogy.</li>
+        </ul>`,
+      ),
+      new Paragraph(
+        'Organization',
+        "You can browse all Trilogy projects on the <a href='https://github.com/trilogy-data' target='_blank'>trilogy-data GitHub organization</a>.",
+      ),
+    ]),
+  ]),
   TOS,
 ]
