@@ -26,6 +26,16 @@ jobs:
           with:
             node-version: 23
             cache: 'pnpm'
+
+        - name: Set up Python
+          uses: actions/setup-python@v5
+          with:
+            python-version: '3.13'
+            cache: 'pip'
+            cache-dependency-path: pyserver/requirements.txt
+
+        - name: Install backend dependencies for AI guidance
+          run: python -m pip install -r pyserver/requirements.txt
         
         - name: Install dependencies
           run: pnpm install --frozen-lockfile
