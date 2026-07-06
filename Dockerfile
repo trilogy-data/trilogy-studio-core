@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for Trilogy Studio
 # Stage 1: Build Backend and generate the frontend Trilogy AI guidance
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS backend-builder
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS backend-builder
 
 WORKDIR /app/backend
 
@@ -55,7 +55,7 @@ COPY tsconfig.app.json tsconfig.app.json
 RUN pnpm run build:frontend
 
 # Stage 3: Production - Nginx + Python
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim  AS production
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS production
 
 # Install Python, curl, nginx, and supervisor for process management
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -72,7 +72,7 @@ RUN groupadd -g 1001 appuser && \
 WORKDIR /app
 
 # Copy Python dependencies from backend builder
-COPY --from=backend-builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=backend-builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=backend-builder /usr/local/bin /usr/local/bin
 
 # Copy backend application
