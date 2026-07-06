@@ -5,3 +5,6 @@ dist
 **/*.html
 
 test_results
+
+# Generated from the installed pytrilogy package.
+lib/llm/data/trilogySyntax.generated.ts

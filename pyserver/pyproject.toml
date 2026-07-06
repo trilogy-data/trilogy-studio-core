@@ -7,7 +7,7 @@ requires-python = ">=3.10"
 authors = [{ name = "efromvt" }]
 license = { text = "MIT" }
 dependencies = [
-    "pytrilogy>=0.3.198",
+    "pytrilogy>=0.3.289",
     "anyio>=4.5",
     "click>=8.1.0",
     "httpx>=0.27",

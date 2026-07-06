@@ -1,4 +1,4 @@
-import { rulesInput, aggFunctions, functions, datatypes } from './data/constants'
+import { trilogySyntaxReference } from './data/constants'
 import { conceptsToFieldPrompt } from './data/prompts'
 import type { ModelConceptInput } from './data/models'
 import type { ChartConfig } from '../editors/results'
@@ -395,14 +395,8 @@ AVAILABLE TOOLS:
 - request_close: Request to close the session (user can reply with follow-ups)
 - close_session: Immediately close (only after user confirms or says "done")
 ${symbolsSection}
-TRILOGY SYNTAX RULES:
-${rulesInput}
-
-AGGREGATE FUNCTIONS: ${aggFunctions.join(', ')}
-
-COMMON FUNCTIONS: ${functions.slice(0, 35).join(', ')}
-
-VALID DATA TYPES: ${datatypes.join(', ')}
+TRILOGY LANGUAGE REFERENCE:
+${trilogySyntaxReference}
 
 WORKFLOW:
 1. Understand what the user wants to change

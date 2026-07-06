@@ -12,14 +12,16 @@
   "scripts": {
     "dev": "pnpm install ./lib -D && vite",
     "local": "node scripts/run_local.js",
-    "build": "vue-tsc -b && prettier --write \"./**/*.{js,ts,vue}\" && vite build",
+    "build": "pnpm sync:trilogy-ai && vue-tsc -b && pnpm format && vite build",
     "build:lib": "pnpm -C lib build",
+    "sync:trilogy-ai": "node scripts/generate-trilogy-ai-guidance.mjs",
+    "check:trilogy-ai": "node scripts/generate-trilogy-ai-guidance.mjs --check",
     "preview": "vite preview",
     "test": "vitest",
     "typecheck": "vue-tsc --noEmit",
     "test-playwright": "playwright test",
     "test-playwright:ui": "playwright test --ui",
-    "format": "prettier --write \"./**/*.{js,ts,vue}\"",
+    "format": "prettier --write \"{lib,src,e2e,explorer/src,scripts,docker}/**/*.{js,mjs,ts,vue}\" \"*.{js,mjs,ts}\" \"explorer/*.{js,mjs,ts,vue}\"",
     "benchmark-llm": "npx ts-node scripts/benchmark-llm.ts"
   },
   "devDependencies": {
