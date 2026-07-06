@@ -7,7 +7,7 @@
  * full task description, do the work, and call return_to_user with a
  * summary that bubbles back up via the subchat-completion injection.
  */
-import { rulesInput, functions, aggFunctions, datatypes } from './data/constants'
+import { trilogySyntaxReference } from './data/constants'
 import { RETURN_TO_USER_TOOL } from './chatAgentPrompt'
 
 export interface ArchitectPromptOptions {
@@ -46,12 +46,8 @@ TYPICAL WORKFLOW:
 5. run_trilogy_query for a quick smoke test (e.g. \`select count(*) as n from <some_concept>;\`).
 6. return_to_user with a list of the files created and any caveats.
 
-TRILOGY SYNTAX RULES:
-${rulesInput}
-
-AGGREGATE FUNCTIONS: ${aggFunctions.join(', ')}
-COMMON FUNCTIONS: ${functions.slice(0, 35).join(', ')}
-VALID DATA TYPES: ${datatypes.join(', ')}
+TRILOGY LANGUAGE REFERENCE:
+${trilogySyntaxReference}
 
 OPERATIONAL GUIDELINES:
 - One .preql file per logical entity (one per CSV is a good default).
@@ -198,7 +194,7 @@ export const ARCHITECT_TOOLS = [
   {
     name: 'run_trilogy_query',
     description:
-      'Run a Trilogy query against the project\'s data connection (cross-references all attached editors). Use for smoke tests like `select count(*) as n from sales_total;`.',
+      "Run a Trilogy query against the project's data connection (cross-references all attached editors). Use for smoke tests like `select count(*) as n from sales_total;`.",
     input_schema: {
       type: 'object',
       properties: {

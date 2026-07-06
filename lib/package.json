@@ -52,7 +52,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "vite build",
+    "build": "pnpm sync:trilogy-ai && vite build",
+    "sync:trilogy-ai": "node ../scripts/generate-trilogy-ai-guidance.mjs",
+    "check:trilogy-ai": "node ../scripts/generate-trilogy-ai-guidance.mjs --check",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest"
   },

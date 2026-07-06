@@ -1,4 +1,4 @@
-import { rulesInput, functions, aggFunctions, datatypes } from './data/constants'
+import { trilogySyntaxReference } from './data/constants'
 import { conceptsToFieldPrompt } from './data/prompts'
 import type { ModelConceptInput } from './data/models'
 import type { ChatImport } from '../chats/chat'
@@ -81,14 +81,8 @@ ${connectionInfo}
 AVAILABLE DATA CONNECTIONS: ${availableConnections.length > 0 ? availableConnections.join(', ') : 'None configured'}
 ${activeImportsSection}${availableImportsSection}
 
-TRILOGY SYNTAX RULES:
-${rulesInput}
-
-AGGREGATE FUNCTIONS: ${aggFunctions.join(', ')}
-
-COMMON FUNCTIONS: ${functions.join(', ')}
-
-VALID DATA TYPES: ${datatypes.join(', ')}
+TRILOGY LANGUAGE REFERENCE:
+${trilogySyntaxReference}
 ${conceptsSection}
 
 IMPORTANT GUIDELINES:

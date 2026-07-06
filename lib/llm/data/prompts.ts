@@ -1,4 +1,4 @@
-import { rulesInput, functions, aggFunctions, datatypes } from './constants'
+import { trilogySyntaxReference } from './constants'
 import type { ModelConceptInput } from './models'
 import { generateDashboardPrompt } from '../../dashboards/prompts'
 import { filterAutoDerivedConcepts } from './conceptFilters'
@@ -9,17 +9,7 @@ export function filterDatePartConcepts(concepts: ModelConceptInput[]): ModelConc
 
 export const leadIn = `You are a world-class assistant for generating queries in Trilogy, a SQL inspired language with similar syntax, Use the the syntax description below and field information to answer the user request. Return your answer with a short reasoning and a valid Trilogy query in triple double quotes.
 
-Key Trilogy Syntax Rules:
-${rulesInput}
-
-Aggregate Functions:
-\`${aggFunctions}\`
-
-Functions:  
-\`${functions}\`
-
-Valid types:  
-\`${datatypes}\`
+${trilogySyntaxReference}
 
 For any response to the user, use this format -> put your actual response within triple double quotes with thinking and justification before it, in this format (replace placeholders with relevant content): Reasoning: {{reasoning}} """{{ response }}"""
 `

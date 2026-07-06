@@ -1,4 +1,10 @@
-import { rulesInput, functions, aggFunctions, datatypes } from './data/constants'
+import {
+  trilogySyntaxReference,
+  rulesInput,
+  functions,
+  aggFunctions,
+  datatypes,
+} from './data/constants'
 import { conceptsToFieldPrompt } from './data/prompts'
 import type { ModelConceptInput } from './data/models'
 import type { ChatImport } from '../chats/chat'
@@ -10,6 +16,8 @@ import {
 
 // Context object passed to custom prompt builders
 export interface TrilogyPromptContext {
+  /** Complete syntax reference generated from pytrilogy's AI prompt. */
+  trilogySyntaxReference: string
   /** Trilogy SELECT rules and syntax reference */
   rulesInput: string
   /** Available aggregate functions (e.g. sum, count, avg) */
@@ -31,15 +39,11 @@ export interface TrilogyPromptContext {
  * @example
  * ```ts
  * const SYSTEM_PROMPT = buildCustomTrilogyPrompt(
- *   ({ rulesInput, aggFunctions, functions, datatypes }) => `
+ *   ({ trilogySyntaxReference }) => `
  * You are an assistant for the SF Trees map application.
  *
- * TRILOGY SYNTAX RULES:
- * ${rulesInput}
- *
- * AGGREGATE FUNCTIONS: ${aggFunctions.join(', ')}
- * COMMON FUNCTIONS: ${functions.join(', ')}
- * VALID DATA TYPES: ${datatypes.join(', ')}
+ * TRILOGY LANGUAGE REFERENCE:
+ * ${trilogySyntaxReference}
  * `
  * )
  * ```
@@ -47,7 +51,13 @@ export interface TrilogyPromptContext {
 export function buildCustomTrilogyPrompt(
   templateFn: (ctx: TrilogyPromptContext) => string,
 ): string {
-  return templateFn({ rulesInput, aggFunctions, functions, datatypes })
+  return templateFn({
+    trilogySyntaxReference,
+    rulesInput,
+    aggFunctions,
+    functions,
+    datatypes,
+  })
 }
 
 // Flow-control tool — exported standalone so embedding apps can include it in their own tool lists
@@ -355,14 +365,8 @@ ${connectionInfo}
 AVAILABLE DATA CONNECTIONS: ${availableConnections.length > 0 ? availableConnections.join(', ') : 'None configured - user needs to set up a data connection first'}
 ${activeImportsSection}${availableImportsSection}
 
-TRILOGY SYNTAX RULES:
-${rulesInput}
-
-AGGREGATE FUNCTIONS: ${aggFunctions.join(', ')}
-
-COMMON FUNCTIONS: ${functions.join(', ')}
-
-VALID DATA TYPES: ${datatypes.join(', ')}
+TRILOGY LANGUAGE REFERENCE:
+${trilogySyntaxReference}
 ${conceptsSection}
 
 IMPORTANT GUIDELINES:
