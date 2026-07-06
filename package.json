@@ -13,6 +13,7 @@
     "dev": "pnpm install ./lib -D && vite",
     "local": "node scripts/run_local.js",
     "build": "pnpm sync:trilogy-ai && vue-tsc -b && pnpm format && vite build",
+    "build:frontend": "vue-tsc -b && vite build",
     "build:lib": "pnpm -C lib build",
     "sync:trilogy-ai": "node scripts/generate-trilogy-ai-guidance.mjs",
     "check:trilogy-ai": "node scripts/generate-trilogy-ai-guidance.mjs --check",

@@ -1,31 +1,5 @@
 # Multi-stage Dockerfile for Trilogy Studio
-# Stage 1: Build Frontend
-FROM node:24-alpine AS frontend-builder
-WORKDIR /app/frontend
-# Enable pnpm via Corepack
-RUN corepack enable pnpm && corepack prepare pnpm@10 --activate
-# Copy only dependency manifests first (better cache)
-
-COPY package.json pnpm-lock.yaml ./
-COPY lib/package.json ./lib/package.json
-
-RUN pnpm install --frozen-lockfile --prod=false
-
-# Copy the rest of the source code
-COPY ./src ./src
-COPY ./lib ./lib
-COPY ./public ./public
-COPY ./docker/index.html index.html
-COPY tsconfig.json tsconfig.json
-COPY tsconfig.node.json tsconfig.node.json
-
-# Use Docker-specific vite.config.ts for DuckDB WASM bundling
-COPY ./docker/vite.config.ts vite.config.ts
-COPY tsconfig.app.json tsconfig.app.json
-# Build the frontend (runs vue-tsc, prettier, and vite)
-RUN pnpm run build
-
-# Stage 2: Build Backend
+# Stage 1: Build Backend and generate the frontend Trilogy AI guidance
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS backend-builder
 
 WORKDIR /app/backend
@@ -44,11 +18,41 @@ RUN uv pip install -r requirements-test.txt --no-cache-dir --system
 # Copy backend source
 COPY pyserver/ ./
 
+# Generate the frontend syntax reference from the installed pytrilogy version.
+RUN python scripts/generate_ai_guidance.py --output /tmp/trilogySyntax.generated.ts
+
 # Run backend tests
 RUN pytest tests || echo "No tests found, continuing..."
 
 # Install production dependencies
 RUN uv pip install -r requirements.txt --no-cache-dir --system
+
+# Stage 2: Build Frontend
+FROM node:24-alpine AS frontend-builder
+WORKDIR /app/frontend
+# Enable pnpm via Corepack
+RUN corepack enable pnpm && corepack prepare pnpm@10 --activate
+# Copy only dependency manifests first (better cache)
+
+COPY package.json pnpm-lock.yaml ./
+COPY lib/package.json ./lib/package.json
+
+RUN pnpm install --frozen-lockfile --prod=false
+
+# Copy the rest of the source code
+COPY ./src ./src
+COPY ./lib ./lib
+COPY --from=backend-builder /tmp/trilogySyntax.generated.ts ./lib/llm/data/trilogySyntax.generated.ts
+COPY ./public ./public
+COPY ./docker/index.html index.html
+COPY tsconfig.json tsconfig.json
+COPY tsconfig.node.json tsconfig.node.json
+
+# Use Docker-specific vite.config.ts for DuckDB WASM bundling
+COPY ./docker/vite.config.ts vite.config.ts
+COPY tsconfig.app.json tsconfig.app.json
+# Guidance was generated in backend-builder; compile without regenerating it.
+RUN pnpm run build:frontend
 
 # Stage 3: Production - Nginx + Python
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim  AS production
