@@ -217,7 +217,8 @@ import Sidebar from '../components/sidebar/Sidebar.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
-import { inject, ref, defineAsyncComponent, provide, onBeforeUnmount } from 'vue'
+import { inject, ref, defineAsyncComponent, provide, onBeforeUnmount, onMounted } from 'vue'
+import { preloadAllScreensWhenIdle } from '../utility/screenPreloader'
 import useScreenNavigation from '../stores/useScreenNavigation.ts'
 
 import setupDemo from '../data/tutorial/demoSetup'
@@ -381,6 +382,12 @@ const IDEComponent: Component = defineComponent({
 
     onInitialLoad()
     addBackListeners()
+
+    // Warm the remaining screen chunks once the initial screen has settled,
+    // so navigation doesn't flash a blank pane while a chunk downloads.
+    onMounted(() => {
+      preloadAllScreensWhenIdle()
+    })
 
     // on unmount, remove back listeners
     onBeforeUnmount(() => {

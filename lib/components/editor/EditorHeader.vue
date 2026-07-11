@@ -27,29 +27,29 @@
         <button
           v-if="editorType === 'sql'"
           class="toggle-button action-item action-item-scope"
-          :class="{ tag: tags.includes(EditorTag.STARTUP_SCRIPT) }"
+          :class="{ 'toggle-on': tags.includes(EditorTag.STARTUP_SCRIPT) }"
+          :aria-pressed="tags.includes(EditorTag.STARTUP_SCRIPT)"
           @click="$emit('toggle-tag', EditorTag.STARTUP_SCRIPT)"
           data-testid="editor-set-startup-script"
-          title="Mark as startup script"
-          aria-label="Mark as startup script"
+          title="Run this script on connection startup"
+          aria-label="Toggle startup script"
         >
-          <span class="action-label">{{
-            tags.includes(EditorTag.STARTUP_SCRIPT) ? 'Is Startup' : 'Startup'
-          }}</span>
+          <span class="toggle-indicator"></span>
+          <span class="action-label">Startup</span>
         </button>
         <loading-button
           v-if="supportsEditorSourceTag(editorType) && connectionHasModel"
           :useDefaultStyle="false"
           class="toggle-button action-item action-item-scope"
-          :class="{ tag: tags.includes(EditorTag.SOURCE) }"
+          :class="{ 'toggle-on': tags.includes(EditorTag.SOURCE) }"
+          :aria-pressed="tags.includes(EditorTag.SOURCE)"
           :action="() => $emit('toggle-tag', EditorTag.SOURCE)"
-          data-testid="editor-set-source"
-          title="Toggle source model"
+          testId="editor-set-source"
+          title="Include this editor as a source model"
           aria-label="Toggle source model"
         >
-          <span class="action-label">{{
-            tags.includes(EditorTag.SOURCE) ? 'Is Source' : 'Source'
-          }}</span>
+          <span class="toggle-indicator"></span>
+          <span class="action-label">Source</span>
         </loading-button>
       </div>
 
@@ -101,7 +101,7 @@
           :useDefaultStyle="false"
           class="action-item action-item-ai action-item-compact"
           :action="() => $emit('generate')"
-          data-testid="editor-generate-button"
+          testId="editor-generate-button"
           title="Open AI assistant"
           aria-label="Open AI assistant"
         >
@@ -309,14 +309,20 @@ export default defineComponent({
   flex-shrink: 0;
 }
 
-.action-item {
+/* Buttons are targeted via `.menu-actions :deep(...)`: LoadingButton is a
+   multi-root component, so its root <button> never receives this component's
+   scope attribute and plain scoped selectors miss it — heights drift apart. */
+.menu-actions :deep(.action-item) {
   min-height: 24px;
   height: 24px;
   width: auto;
   min-width: 0;
   padding: 0 9px;
+  margin: 0;
   font-weight: 500;
   font-size: 12px;
+  line-height: 1;
+  box-sizing: border-box;
   cursor: pointer;
   transition:
     background-color 0.18s ease,
@@ -333,23 +339,52 @@ export default defineComponent({
   white-space: nowrap;
 }
 
+/* LoadingButton wraps slot content in a span, so the button's flex gap
+   doesn't reach the icon/label — restore the same layout inside it */
+.menu-actions :deep(.contents) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 .action-label {
   display: inline;
 }
 
-.action-item:hover {
+.menu-actions :deep(.action-item:hover) {
   background: var(--button-mouseover);
 }
 
-.action-item-scope {
-  min-height: 22px;
-  height: 22px;
-  padding: 0 8px;
+.menu-actions :deep(.action-item-scope) {
+  padding: 0 10px;
   font-size: 11px;
   color: var(--text-faint);
 }
 
-.action-item-ai {
+.menu-actions :deep(.action-item.toggle-button) {
+  border-radius: 999px;
+}
+
+.toggle-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+  transition: background-color 0.18s ease;
+}
+
+.menu-actions :deep(.toggle-on) {
+  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.08);
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.26);
+  color: var(--special-text);
+}
+
+.toggle-on .toggle-indicator {
+  background: var(--special-text);
+}
+
+.menu-actions :deep(.action-item-ai) {
   color: var(--special-text);
   border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.16);
   background: rgba(var(--special-text-rgb, 37, 99, 235), 0.025);
@@ -359,32 +394,26 @@ export default defineComponent({
   font-size: 14px;
 }
 
-.button-cancel {
+.menu-actions :deep(.button-cancel) {
   background-color: var(--error-color);
   color: white;
   border: 1px solid var(--error-color);
 }
 
-.button-run {
+.menu-actions :deep(.button-run) {
   background-color: var(--special-text);
   color: white;
   border: 1px solid var(--special-text);
 }
 
-.button-run:hover {
+.menu-actions :deep(.button-run:hover) {
   background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.92);
   border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.92);
   box-shadow: 0 0 0 3px rgba(var(--special-text-rgb, 37, 99, 235), 0.12);
 }
 
-.button-cancel:hover {
+.menu-actions :deep(.button-cancel:hover) {
   filter: brightness(0.96);
-}
-
-.tag {
-  background-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.08);
-  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.26);
-  color: var(--special-text);
 }
 
 @media screen and (max-width: 768px) {
@@ -413,25 +442,29 @@ export default defineComponent({
     gap: 6px;
   }
 
-  .action-item {
+  .menu-actions :deep(.action-item) {
     min-height: 36px;
     height: 36px;
     padding: 0 10px;
     border-radius: 10px;
   }
 
-  .action-item-compact {
+  .menu-actions :deep(.action-item.toggle-button) {
+    border-radius: 999px;
+  }
+
+  .menu-actions :deep(.action-item-compact) {
     width: 36px;
     min-width: 36px;
     padding: 0;
     gap: 0;
   }
 
-  .action-item-compact .action-label {
+  .menu-actions :deep(.action-item-compact .action-label) {
     display: none;
   }
 
-  .action-item-scope {
+  .menu-actions :deep(.action-item-scope) {
     width: auto;
     min-width: 0;
     padding: 0 10px;
@@ -441,12 +474,12 @@ export default defineComponent({
     margin-left: auto;
   }
 
-  .action-group-execute .action-item {
+  .menu-actions :deep(.action-group-execute .action-item) {
     min-width: 72px;
     padding: 0 14px;
   }
 
-  .action-group-execute .action-label {
+  .menu-actions :deep(.action-group-execute .action-label) {
     display: inline;
   }
 
@@ -468,17 +501,17 @@ export default defineComponent({
     flex-wrap: wrap;
   }
 
-  .action-item {
+  .menu-actions :deep(.action-item) {
     min-height: 34px;
     height: 34px;
   }
 
-  .action-item-compact {
+  .menu-actions :deep(.action-item-compact) {
     width: 34px;
     min-width: 34px;
   }
 
-  .action-group-execute .action-item {
+  .menu-actions :deep(.action-group-execute .action-item) {
     min-width: 68px;
   }
 }
