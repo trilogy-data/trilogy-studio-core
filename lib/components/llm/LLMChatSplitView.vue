@@ -340,6 +340,7 @@ export default defineComponent({
         messages.value.push({
           role: 'assistant',
           content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: true,
         })
         emit('update:messages', messages.value)
       } finally {

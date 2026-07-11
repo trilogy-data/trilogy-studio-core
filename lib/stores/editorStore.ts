@@ -341,6 +341,7 @@ const useEditorStore = defineStore('editors', {
         this.addRefinementMessage(editorId, {
           role: 'assistant',
           content: 'Error: No LLM connection configured. Please set up an LLM provider.',
+          error: true,
         })
         return { terminated: false, finalMessage: 'No LLM connection available' }
       }
@@ -478,6 +479,7 @@ const useEditorStore = defineStore('editors', {
         this.addRefinementMessage(editorId, {
           role: 'assistant',
           content: `Error: ${errorMessage}`,
+          error: true,
         })
         this.completeRefinementExecution(editorId, errorMessage)
         return { terminated: false, finalMessage: `Error: ${errorMessage}` }

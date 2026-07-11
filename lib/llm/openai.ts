@@ -66,7 +66,7 @@ export function compareOpenAIModels(a: string, b: string): number {
 }
 
 export class OpenAIProvider extends LLMProvider {
-  private baseCompletionUrl: string = 'https://api.openai.com/v1/chat/completions'
+  private baseCompletionUrl: string = 'https://api.openai.com/v1/responses'
   private baseModelUrl: string = 'https://api.openai.com/v1/models'
   public models: string[]
   public type: string = 'openai'
@@ -146,34 +146,33 @@ export class OpenAIProvider extends LLMProvider {
   ): Promise<LLMResponse> {
     this.validateRequestOptions(options)
 
-    // Build OpenAI-formatted messages from history
-    // OpenAI expects tool_calls in assistant messages and role: 'tool' for tool results
-    const cleanHistory: Array<Record<string, any>> = []
+    // Build Responses API input items from history.
+    // Tool calls become standalone function_call items and tool results become
+    // function_call_output items. Item ids are deliberately omitted so the API
+    // treats replayed history as stateless (no paired reasoning items required).
+    const input: Array<Record<string, any>> = []
     for (const msg of history || []) {
       if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
-        // Assistant message with tool calls
-        cleanHistory.push({
-          role: 'assistant',
-          content: msg.content || null,
-          tool_calls: msg.toolCalls.map((tc) => ({
-            id: tc.id,
-            type: 'function',
-            function: {
-              name: tc.name,
-              arguments: JSON.stringify(tc.input),
-            },
-          })),
-        })
+        if (msg.content) {
+          input.push({ role: 'assistant', content: msg.content })
+        }
+        for (const tc of msg.toolCalls) {
+          input.push({
+            type: 'function_call',
+            call_id: tc.id,
+            name: tc.name,
+            arguments: JSON.stringify(tc.input),
+          })
+        }
       } else if (msg.role === 'user' && msg.toolResults && msg.toolResults.length > 0) {
-        // Tool results - OpenAI uses role: 'tool' for each result
-        // The tool role only accepts string content, so images are sent as a
-        // follow-up user message with an image_url content block.
+        // function_call_output only accepts string output, so images are sent as a
+        // follow-up user message with an input_image content block.
         let hasImage = false
         for (const tr of msg.toolResults) {
-          cleanHistory.push({
-            role: 'tool',
-            tool_call_id: tr.toolCallId,
-            content: tr.result,
+          input.push({
+            type: 'function_call_output',
+            call_id: tr.toolCallId,
+            output: tr.result,
           })
           if (tr.imageData) {
             hasImage = true
@@ -184,57 +183,51 @@ export class OpenAIProvider extends LLMProvider {
           for (const tr of msg.toolResults) {
             if (tr.imageData) {
               imageParts.push({
-                type: 'image_url',
-                image_url: {
-                  url: `data:${tr.imageData.mediaType};base64,${tr.imageData.data}`,
-                },
+                type: 'input_image',
+                image_url: `data:${tr.imageData.mediaType};base64,${tr.imageData.data}`,
               })
             }
           }
           imageParts.push({
-            type: 'text',
+            type: 'input_text',
             text: 'Above is the rendered screenshot referenced by the preceding tool result. Review it visually.',
           })
-          cleanHistory.push({ role: 'user', content: imageParts })
+          input.push({ role: 'user', content: imageParts })
         }
       } else {
         // Regular text message
-        cleanHistory.push({ role: msg.role, content: msg.content })
+        input.push({ role: msg.role, content: msg.content })
       }
-    }
-
-    let messages: Record<string, any>[] = []
-
-    // Add system prompt if provided
-    if (options.systemPrompt) {
-      messages.push({ role: 'system', content: options.systemPrompt })
     }
 
     // history contains previous messages, options.prompt is the current user message
     // Skip adding user message if prompt is empty (e.g., after tool calls, tool results are the implicit prompt)
-    messages = [...messages, ...cleanHistory]
     if (options.prompt) {
-      messages.push({ role: 'user', content: options.prompt })
+      input.push({ role: 'user', content: options.prompt })
     }
 
-    // Build request body
+    // Build request body — history is managed client-side, so don't persist server-side
     const requestBody: Record<string, any> = {
       model: this.model,
-      messages: messages,
-      // max_tokens: options.maxTokens || DEFAULT_MAX_TOKENS,
-      // temperature: options.temperature || DEFAULT_TEMPERATURE,
-      // top_p: options.topP || 1.0,
+      input: input,
+      store: false,
     }
 
-    // Add tools if provided (OpenAI format)
+    // System prompt maps to top-level instructions in the Responses API
+    if (options.systemPrompt) {
+      requestBody.instructions = options.systemPrompt
+    }
+
+    // Add tools if provided (Responses API uses a flat function format).
+    // strict defaults to true in the Responses API, which rejects schemas that
+    // aren't strict-mode compliant, so disable it explicitly.
     if (options.tools && options.tools.length > 0) {
       requestBody.tools = options.tools.map((tool) => ({
         type: 'function',
-        function: {
-          name: tool.name,
-          description: tool.description,
-          parameters: tool.input_schema,
-        },
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.input_schema,
+        strict: false,
       }))
     }
 
@@ -267,22 +260,24 @@ export class OpenAIProvider extends LLMProvider {
 
       const data = await response.json()
 
-      // Handle tool calls in the response
-      let responseText = data.choices[0].message.content || ''
-      const rawToolCalls = data.choices[0].message.tool_calls
+      // Responses API returns a list of output items: message items hold text,
+      // function_call items are tool calls (call_id links to function_call_output)
+      let responseText = ''
       const structuredToolCalls: LLMToolCall[] = []
 
-      if (rawToolCalls && rawToolCalls.length > 0) {
-        for (const toolCall of rawToolCalls) {
-          if (toolCall.type === 'function') {
-            const input = JSON.parse(toolCall.function.arguments)
-            // Add to structured tool calls array
-            structuredToolCalls.push({
-              id: toolCall.id,
-              name: toolCall.function.name,
-              input,
-            })
+      for (const item of data.output || []) {
+        if (item.type === 'message') {
+          for (const part of item.content || []) {
+            if (part.type === 'output_text') {
+              responseText += part.text
+            }
           }
+        } else if (item.type === 'function_call') {
+          structuredToolCalls.push({
+            id: item.call_id,
+            name: item.name,
+            input: JSON.parse(item.arguments),
+          })
         }
       }
 
@@ -290,8 +285,8 @@ export class OpenAIProvider extends LLMProvider {
         text: responseText,
         toolCalls: structuredToolCalls.length > 0 ? structuredToolCalls : undefined,
         usage: {
-          promptTokens: data.usage.prompt_tokens,
-          completionTokens: data.usage.completion_tokens,
+          promptTokens: data.usage.input_tokens,
+          completionTokens: data.usage.output_tokens,
           totalTokens: data.usage.total_tokens,
         },
       }

@@ -70,6 +70,7 @@ export interface LLMMessage {
     totalTokens: number
   }
   hidden?: boolean // Used to hide messages in the UI
+  error?: boolean // Marks a harness/provider failure surfaced as a chat message (warning styling in UI)
   // Tool calls made by the assistant (for assistant messages)
   toolCalls?: LLMToolCall[]
   // Tool results from execution (for user messages responding to tool calls)
