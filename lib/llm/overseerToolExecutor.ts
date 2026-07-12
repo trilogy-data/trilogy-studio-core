@@ -5,6 +5,7 @@ import type { ToolCallResult } from './sharedToolHelpers'
 import type { SubchatKind } from './overseerAgentPrompt'
 import { SUBCHAT_KINDS } from './overseerAgentPrompt'
 import { summarizeSubchat } from './subchatSummarize'
+import { startDashboardAgentRun } from './dashboardAgentRuntime'
 
 /**
  * Tool executor for the (singleton) overseer chat. Spawns and follows up
@@ -216,10 +217,11 @@ export class OverseerToolExecutor {
   }
 
   /**
-   * Spawn a new report-mode dashboard in the active project and queue an
-   * initial prompt for its dedicated dashboard chat agent. Returns immediately
-   * — the user opens the report from the sidebar; the chat panel auto-fires
-   * the queued prompt against the report-mode agent.
+   * Spawn a new report-mode dashboard in the active project and fire the
+   * brief at its agent immediately — headless, like spawnSubchat. The run
+   * continues in the background via chatStore; opening the report just
+   * renders progress. Falls back to queueing the brief (consumed on report
+   * open) if the headless kickoff fails.
    */
   private createReport(rawTitle: any, rawPrompt: any): ToolCallResult {
     if (!this.dashboardStore) {
@@ -261,12 +263,37 @@ export class OverseerToolExecutor {
       }
     }
     this.projectStore.addDashboardToProject(projectId, dashboard.id)
-    // Queue the brief so the dashboard chat panel sends it on first open.
-    this.dashboardStore.setPendingChatPrompt(dashboard.id, prompt)
+
+    // Fire the brief immediately, headless. Do NOT also queue it as a
+    // pending prompt — the mounted panel would auto-send it a second time.
+    try {
+      startDashboardAgentRun({
+        dashboardId: dashboard.id,
+        prompt,
+        stores: {
+          dashboardStore: this.dashboardStore,
+          chatStore: this.chatStore,
+          connectionStore: this.deps.connectionStore,
+          editorStore: this.deps.editorStore,
+          llmConnectionStore: this.deps.llmConnectionStore,
+          queryExecutionService: this.deps.queryExecutionService,
+        },
+        deps: this.deps,
+      }).catch((err) => {
+        console.error(`Report agent kickoff for ${dashboard.id} failed`, err)
+      })
+    } catch (e) {
+      // Degrade to the open-to-start flow rather than losing the brief.
+      this.dashboardStore.setPendingChatPrompt(dashboard.id, prompt)
+      return {
+        success: true,
+        message: `Created report "${title}" (id ${dashboard.id}) in project "${project.name}", but could not start the agent in the background (${e instanceof Error ? e.message : String(e)}). The brief will fire when the user opens the report.`,
+      }
+    }
 
     return {
       success: true,
-      message: `Created report "${title}" (id ${dashboard.id}) in project "${project.name}". The user can open it from the Reports section in the sidebar; the report agent will receive the brief and start authoring.`,
+      message: `Created report "${title}" (id ${dashboard.id}) in project "${project.name}". The report agent is authoring it now, asynchronously — progress is visible in the report (sidebar → Reports) and its chat.`,
     }
   }
 

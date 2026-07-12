@@ -1,10 +1,14 @@
 <script lang="ts" setup>
 import { ref, computed, inject, nextTick, onMounted, watch } from 'vue'
 import LLMChat from '../llm/LLMChat.vue'
-import { Chat } from '../../chats/chat'
-import { DASHBOARD_TOOLS, REPORT_TOOLS } from '../../llm/dashboardAgentTools'
-import { buildDashboardAgentSystemPrompt } from '../../llm/dashboardAgentPrompt'
 import { DashboardToolExecutor } from '../../llm/dashboardToolExecutor'
+import {
+  ensureDashboardChat as ensureDashboardChatShared,
+  dashboardAgentToolset,
+  dashboardChatImports as buildDashboardChatImports,
+  buildAgentSystemPrompt,
+  seedInitialImportContext,
+} from '../../llm/dashboardAgentRuntime'
 import type { DashboardModel } from '../../dashboards/base'
 import type { DashboardStoreType } from '../../stores/dashboardStore'
 import type { ChatStoreType } from '../../stores/chatStore'
@@ -13,10 +17,7 @@ import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { EditorStoreType } from '../../stores/editorStore'
 import type QueryExecutionService from '../../stores/queryExecutionService'
 import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
-import type { ChatImport, ChatMessage, ChatToolCall } from '../../chats/chat'
-import type { LLMToolCall, LLMToolResult } from '../../llm/base'
-import { formatToolResultText } from '../../llm/toolLoopCore'
-import { isTrilogyType } from '../../editors/fileTypes'
+import type { ChatImport, ChatMessage } from '../../chats/chat'
 
 const props = defineProps<{
   dashboard: DashboardModel
@@ -77,9 +78,7 @@ const MUTATING_TOOLS = new Set([
 /** Tools the agent receives. Reports get the report-mode tools layered onto
  *  the standard dashboard tool surface — the prompt steers them to use the
  *  report tools first when authoring narrative. */
-const dashboardAgentTools = computed(() =>
-  props.dashboard.layoutType === 'report' ? [...DASHBOARD_TOOLS, ...REPORT_TOOLS] : DASHBOARD_TOOLS,
-)
+const dashboardAgentTools = computed(() => dashboardAgentToolset(props.dashboard))
 
 // Chat ids that have committed to mutating their current dashboard in place.
 // Populated the first time we decide to skip a fork, so subsequent mutations
@@ -89,25 +88,10 @@ const dashboardAgentTools = computed(() =>
 const inPlaceChatIds = new Set<string>()
 
 // Ensure this dashboard has a backing chat record, creating one lazily.
-// Returns the chat id.
+// Returns the chat id. Shared with the headless runtime, so a chat started
+// by the overseer's create_report is picked up here seamlessly.
 function ensureDashboardChat(): string {
-  const existingId = props.dashboard.chatId
-  if (existingId) {
-    const existing = chatStore.chats[existingId]
-    if (existing && !existing.deleted) {
-      return existingId
-    }
-  }
-  const chat = new Chat({
-    name: `Dashboard: ${props.dashboard.name}`,
-    llmConnectionName: llmConnectionStore.activeConnection || '',
-    dataConnectionName: props.dashboard.connection || '',
-    source: 'dashboard',
-    sourceRefId: props.dashboard.id,
-  })
-  chatStore.addChat(chat)
-  props.dashboard.setChatId(chat.id)
-  return chat.id
+  return ensureDashboardChatShared(props.dashboard, chatStore, llmConnectionStore)
 }
 
 const currentChatId = ref<string>('')
@@ -145,11 +129,7 @@ const activeToolName = computed(() =>
 // and dashboard.imports out of sync and confuse the agent about which import
 // is live.
 const dashboardChatImports = computed<ChatImport[]>(() =>
-  (props.dashboard.imports || []).map((imp) => ({
-    id: imp.id,
-    name: imp.name,
-    alias: imp.alias || '',
-  })),
+  buildDashboardChatImports(props.dashboard),
 )
 
 async function ensureChatFork(): Promise<void> {
@@ -236,42 +216,9 @@ const toolExecutor = computed(() => {
   })
 })
 
-const systemPrompt = computed(() => {
-  const availableConnections = connectionStore
-    ? Object.values(connectionStore.connections).map((c) => c.name)
-    : []
-  const dashboardConnection =
-    (props.dashboard.connectionId && connectionStore?.connections[props.dashboard.connectionId]) ||
-    (props.dashboard.connection
-      ? connectionStore?.connectionByName(props.dashboard.connection)
-      : undefined)
-  const isDataConnectionActive = dashboardConnection?.connected ?? false
-  const availableImports: ChatImport[] =
-    editorStore && dashboardConnection
-      ? Object.values(editorStore.editors)
-          .filter(
-            (editor) =>
-              !editor.deleted &&
-              isTrilogyType(editor.type) &&
-              editor.connectionId === dashboardConnection.id,
-          )
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .map((editor) => ({
-            id: editor.id,
-            name: editor.name.replace(/\//g, '.'),
-            alias: '',
-          }))
-      : []
-
-  return buildDashboardAgentSystemPrompt({
-    dashboard: props.dashboard,
-    dataConnectionName: props.dashboard.connection,
-    availableConnections,
-    activeImports: dashboardChatImports.value,
-    availableImportsForConnection: availableImports,
-    isDataConnectionActive,
-  })
-})
+const systemPrompt = computed(() =>
+  buildAgentSystemPrompt(props.dashboard, connectionStore, editorStore),
+)
 
 function handleClear() {
   const chatId = currentChatId.value
@@ -329,66 +276,6 @@ async function handleSend(message: string, _messages: ChatMessage[]) {
 // re-firing if the parent re-passes the same value or the prop is reactive.
 const consumedInitialPrompts = new Set<string>()
 
-// Seed a brand-new dashboard chat with a synthetic select_active_import tool
-// call + result so the agent starts with the chosen import's field list in
-// context. Without this, the agent guesses field names (e.g. `tree.city`)
-// before it gets around to calling select_active_import itself.
-async function seedInitialImportContext(): Promise<void> {
-  const chatId = currentChatId.value
-  if (!chatId) return
-  const chat = chatStore.chats[chatId]
-  if (!chat) return
-  // Only seed on a fresh conversation — otherwise we'd stack duplicates on
-  // every dashboard reopen.
-  if (chat.messages.length > 0) return
-
-  const activeImports = dashboardChatImports.value
-  if (activeImports.length === 0) return
-  const imp = activeImports[0]
-
-  let result
-  try {
-    result = await toolExecutor.value.executeToolCall('select_active_import', {
-      import_name: imp.name,
-    })
-  } catch (err) {
-    console.error('Failed to seed initial import context:', err)
-    return
-  }
-  if (!result.success) return
-
-  const toolCallId = `seed-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-  const toolCall: LLMToolCall = {
-    id: toolCallId,
-    name: 'select_active_import',
-    input: { import_name: imp.name },
-  }
-  const executedToolCall: ChatToolCall = {
-    id: toolCallId,
-    name: 'select_active_import',
-    input: { import_name: imp.name },
-    result: { success: true, message: result.message },
-  }
-  const toolResult: LLMToolResult = {
-    toolCallId,
-    toolName: 'select_active_import',
-    result: formatToolResultText(result),
-  }
-
-  chatStore.addMessageToChat(chatId, {
-    role: 'assistant',
-    content: `Inspecting the selected data source "${imp.name}" so I know what fields are available.`,
-    toolCalls: [toolCall],
-    executedToolCalls: [executedToolCall],
-  })
-  chatStore.addMessageToChat(chatId, {
-    role: 'user',
-    content: '',
-    toolResults: [toolResult],
-    hidden: true,
-  })
-}
-
 async function maybeAutoSendInitialPrompt(value: string | null | undefined) {
   if (!value) return
   if (consumedInitialPrompts.has(value)) return
@@ -396,7 +283,14 @@ async function maybeAutoSendInitialPrompt(value: string | null | undefined) {
   // Wait a tick so the chat panel is fully mounted and LLMChat has registered
   // its system prompt before we kick off the conversation.
   await nextTick()
-  await seedInitialImportContext()
+  // Seed a fresh chat with the selected import's field list (shared with the
+  // headless runtime) so the agent doesn't guess field names.
+  await seedInitialImportContext({
+    chatStore,
+    chatId: currentChatId.value,
+    toolExecutor: toolExecutor.value,
+    imports: dashboardChatImports.value,
+  })
   await handleSend(value, activeChatMessages.value)
 }
 
