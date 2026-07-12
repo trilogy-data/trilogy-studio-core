@@ -108,6 +108,7 @@ export class OverseerToolExecutor {
     return {
       success: true,
       message: `Spawned ${kind} subchat ${subchat.id} in project "${project?.name ?? projectId}". It is running asynchronously; you'll be notified when it completes.`,
+      subchatId: subchat.id,
     }
   }
 
@@ -134,6 +135,7 @@ export class OverseerToolExecutor {
     return {
       success: true,
       message: `Sent follow-up to subchat ${subchatId}. It will resume asynchronously.`,
+      subchatId,
     }
   }
 

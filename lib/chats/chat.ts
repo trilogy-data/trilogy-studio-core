@@ -33,6 +33,8 @@ export interface ChatToolCall {
     success: boolean
     message?: string
     error?: string
+    /** Chat id of a subchat this call spawned or messaged (overseer dispatch). */
+    subchatId?: string
   }
 }
 

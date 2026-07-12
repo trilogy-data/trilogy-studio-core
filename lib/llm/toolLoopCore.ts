@@ -358,6 +358,7 @@ export async function runToolLoop(
           success: result.success,
           message: result.message,
           error: result.error,
+          subchatId: result.subchatId,
         },
       }
       executedToolCalls.push(chatToolCall)

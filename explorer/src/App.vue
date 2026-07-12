@@ -85,42 +85,96 @@ const rightWidth = ref(loadWidth('explorer:rightWidth', 420))
 watch(leftWidth, (v) => localStorage.setItem('explorer:leftWidth', String(v)))
 watch(rightWidth, (v) => localStorage.setItem('explorer:rightWidth', String(v)))
 
-// ----- selected asset (center pane) -----
-// Files and dashboards/reports are mutually-exclusive selections — selecting
-// one clears the other so the middle pane only ever shows one asset.
-const selectedFileId = ref<string>('')
-const selectedDashboardId = ref<string>('')
+// ----- center pane view (workspace | file | analysis | dashboard) -----
+// Driven entirely from the left-hand nav — the sidebar is the single
+// navigation surface for the center column. 'workspace' is the aggregated
+// artifacts view; 'analysis' narrows it to one subchat's artifacts;
+// 'dashboard' shows a report-mode dashboard in ReportView.
+type CenterView =
+  | { type: 'workspace' }
+  | { type: 'file'; id: string }
+  | { type: 'analysis'; id: string }
+  | { type: 'dashboard'; id: string }
+const centerView = ref<CenterView>({ type: 'workspace' })
+const centerFileId = computed(() => (centerView.value.type === 'file' ? centerView.value.id : ''))
+const centerAnalysisId = computed(() =>
+  centerView.value.type === 'analysis' ? centerView.value.id : '',
+)
+const centerDashboardId = computed(() =>
+  centerView.value.type === 'dashboard' ? centerView.value.id : '',
+)
+
+// Recently-viewed files/analyses/reports (most recent first), persisted per
+// project so quick-nav survives a reload. The sidebar renders these as a
+// "Recent" section; dead ids are filtered out at render time there.
+interface RecentItem {
+  type: 'file' | 'analysis' | 'dashboard'
+  id: string
+}
+const recents = ref<RecentItem[]>([])
+function recentsKey(projectId: string): string {
+  return `explorer:recents:${projectId}`
+}
+function loadRecents() {
+  const pid = projectStore.activeProjectId
+  if (!pid) {
+    recents.value = []
+    return
+  }
+  try {
+    const raw = localStorage.getItem(recentsKey(pid))
+    recents.value = raw ? JSON.parse(raw) : []
+  } catch {
+    recents.value = []
+  }
+}
+watch(() => projectStore.activeProjectId, loadRecents, { immediate: true })
+
+function pushRecent(item: RecentItem) {
+  const pid = projectStore.activeProjectId
+  if (!pid) return
+  recents.value = [
+    item,
+    ...recents.value.filter((r) => !(r.type === item.type && r.id === item.id)),
+  ].slice(0, 8)
+  localStorage.setItem(recentsKey(pid), JSON.stringify(recents.value))
+}
+
 function onSelectFile(id: string) {
-  selectedFileId.value = id
-  selectedDashboardId.value = ''
+  centerView.value = { type: 'file', id }
+  pushRecent({ type: 'file', id })
+}
+function onSelectAnalysis(id: string) {
+  centerView.value = { type: 'analysis', id }
+  pushRecent({ type: 'analysis', id })
 }
 function onSelectDashboard(id: string) {
-  selectedDashboardId.value = id
-  selectedFileId.value = ''
+  centerView.value = { type: 'dashboard', id }
+  pushRecent({ type: 'dashboard', id })
 }
-function closeFile() {
-  selectedFileId.value = ''
+function onSelectWorkspace() {
+  centerView.value = { type: 'workspace' }
 }
-function closeDashboard() {
-  selectedDashboardId.value = ''
-}
-// Auto-clear selection if the asset gets detached / project switched away
-watch([() => projectStore.activeProject?.id, selectedFileId], () => {
-  const id = selectedFileId.value
-  if (!id) return
-  const ed = editorStore.editors[id]
+// Fall back to the workspace if the viewed file/analysis/report is detached,
+// deleted, or the project switches away.
+watch([() => projectStore.activeProject?.id, centerView], () => {
+  const view = centerView.value
   const project = projectStore.activeProject
-  if (!ed || ed.deleted || !project || !project.editorIds.includes(id)) {
-    selectedFileId.value = ''
-  }
-})
-watch([() => projectStore.activeProject?.id, selectedDashboardId], () => {
-  const id = selectedDashboardId.value
-  if (!id) return
-  const dash = dashboardStore.dashboards[id]
-  const project = projectStore.activeProject
-  if (!dash || dash.deleted || !project || !project.dashboardIds.includes(id)) {
-    selectedDashboardId.value = ''
+  if (view.type === 'file') {
+    const ed = editorStore.editors[view.id]
+    if (!ed || ed.deleted || !project || !project.editorIds.includes(view.id)) {
+      centerView.value = { type: 'workspace' }
+    }
+  } else if (view.type === 'analysis') {
+    const chat = chatStore.chats[view.id]
+    if (!chat || chat.deleted || !project || !project.subchatIds.includes(view.id)) {
+      centerView.value = { type: 'workspace' }
+    }
+  } else if (view.type === 'dashboard') {
+    const dash = dashboardStore.dashboards[view.id]
+    if (!dash || dash.deleted || !project || !project.dashboardIds.includes(view.id)) {
+      centerView.value = { type: 'workspace' }
+    }
   }
 })
 
@@ -202,9 +256,12 @@ function onProviderAdded() {
   <div class="app-root">
     <div class="left-column" :style="{ width: leftWidth + 'px' }">
       <ProjectSidebar
-        :activeDashboardId="selectedDashboardId"
+        :activeView="centerView"
+        :recents="recents"
         @select-subchat="onSelectSubchat"
         @select-file="onSelectFile"
+        @select-analysis="onSelectAnalysis"
+        @select-workspace="onSelectWorkspace"
         @select-dashboard="onSelectDashboard"
       />
     </div>
@@ -213,13 +270,13 @@ function onProviderAdded() {
     <main class="main-pane">
       <ProviderSetup v-if="!hasProvider" @added="onProviderAdded" />
       <template v-else>
-        <FileEditor v-if="selectedFileId" :editorId="selectedFileId" @close="closeFile" />
+        <FileEditor v-if="centerFileId" :editorId="centerFileId" @close="onSelectWorkspace" />
         <ReportView
-          v-else-if="selectedDashboardId"
-          :dashboardId="selectedDashboardId"
-          @close="closeDashboard"
+          v-else-if="centerDashboardId"
+          :dashboardId="centerDashboardId"
+          @close="onSelectWorkspace"
         />
-        <ArtifactsView v-else />
+        <ArtifactsView v-else :subchatId="centerAnalysisId" />
 
         <ResizeHandle v-model="rightWidth" side="right" :min="320" :max="640" />
 

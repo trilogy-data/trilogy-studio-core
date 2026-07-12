@@ -9,7 +9,7 @@ import { useFileIngestion } from '../composables/useFileIngestion'
 import { isTauri } from '../storage/tauriKvBackend'
 import ProjectEngineSection from './ProjectEngineSection.vue'
 
-type SidebarSection = 'reports' | 'files' | 'subchats'
+type SidebarSection = 'analyses' | 'reports' | 'files' | 'subchats'
 
 const COLLAPSE_KEY = 'explorer:sidebarCollapsed'
 
@@ -55,25 +55,29 @@ function expandSection(projectId: string, section: SidebarSection): void {
 }
 
 /**
- * Workspace navigator. Each project expands inline to show its files and
- * subchats — no separate file/subchat panels elsewhere in the app.
+ * Workspace navigator — the single navigation surface for the center pane.
+ * Each project expands inline to show its analyses (workspace + per-subchat
+ * artifact views), recently viewed items, files, and subchat transcripts.
  *
  * The overseer chat is global (not per project), so it does not appear here.
  *
- * Emits 'select-subchat' when a subchat row is clicked so the host can open
- * a read-only viewer.
+ * Emits:
+ *  - 'select-workspace' / 'select-analysis' / 'select-file' drive the host's
+ *    center pane (activeView highlights the current one).
+ *  - 'select-subchat' opens the read-only transcript popup.
  */
 const props = defineProps<{
-  activeDashboardId?: string
+  activeView?: { type: string; id?: string }
+  recents?: { type: 'file' | 'analysis' | 'dashboard'; id: string }[]
 }>()
 
 const emit = defineEmits<{
   'select-subchat': [chatId: string]
   'select-file': [editorId: string]
   'select-dashboard': [dashboardId: string]
+  'select-analysis': [chatId: string]
+  'select-workspace': []
 }>()
-
-const activeDashboardId = computed(() => props.activeDashboardId || '')
 
 const store = useProjectStore()
 const editorStore = useEditorStore()
@@ -170,6 +174,51 @@ function removeReport(projectId: string, dashboardId: string) {
   dashboard.delete()
   store.removeDashboardFromProject(projectId, dashboardId)
 }
+
+function artifactCount(chatId: string): number {
+  const c = chatStore.chats[chatId]
+  if (!c) return 0
+  return c.artifacts.filter((a) => !a.hidden).length
+}
+
+/** "Analyses" = subchats that produced artifacts — the units of output worth
+ *  browsing in the center pane. Transcript-only subchats stay in Subchats. */
+function projectAnalyses(projectId: string) {
+  return projectSubchats(projectId).filter((c) => artifactCount(c.id) > 0)
+}
+
+function isActiveView(type: string, id?: string): boolean {
+  const v = props.activeView
+  if (!v) return false
+  return v.type === type && (type === 'workspace' || v.id === id)
+}
+
+/** Recents resolved against live stores; dead ids are skipped, not shown. */
+const resolvedRecents = computed(() => {
+  const out: {
+    type: 'file' | 'analysis' | 'dashboard'
+    id: string
+    label: string
+    tag: string
+  }[] = []
+  for (const r of props.recents || []) {
+    if (r.type === 'file') {
+      const ed = editorStore.editors[r.id]
+      if (!ed || ed.deleted) continue
+      out.push({ ...r, label: ed.name, tag: ed.type })
+    } else if (r.type === 'dashboard') {
+      const d = dashboardStore.dashboards[r.id]
+      if (!d || d.deleted) continue
+      out.push({ ...r, label: d.name, tag: 'report' })
+    } else {
+      const c = chatStore.chats[r.id]
+      if (!c || c.deleted) continue
+      out.push({ ...r, label: c.name, tag: c.kind })
+    }
+    if (out.length >= 5) break
+  }
+  return out
+})
 
 function handleNew() {
   store.newProject()
@@ -410,6 +459,86 @@ const tauri = isTauri()
           <div class="section">
             <div
               class="section-head section-head-clickable"
+              @click="toggleCollapsed(p.id, 'analyses')"
+              role="button"
+              :aria-expanded="!isCollapsed(p.id, 'analyses')"
+            >
+              <i
+                class="mdi section-chevron"
+                :class="isCollapsed(p.id, 'analyses') ? 'mdi-chevron-right' : 'mdi-chevron-down'"
+              ></i>
+              <span class="section-label">Analyses</span>
+              <span class="section-count" v-if="projectAnalyses(p.id).length > 0">
+                {{ projectAnalyses(p.id).length }}
+              </span>
+            </div>
+            <div v-show="!isCollapsed(p.id, 'analyses')" class="section-body">
+              <ul class="nested-list">
+                <li
+                  class="nested-row nav-row"
+                  :class="{ 'view-active': isActiveView('workspace') }"
+                  @click.stop="emit('select-workspace')"
+                >
+                  <span class="type-tag type-all">all</span>
+                  <span class="nested-name">Workspace</span>
+                </li>
+                <li
+                  v-for="a in projectAnalyses(p.id)"
+                  :key="a.id"
+                  class="nested-row nav-row"
+                  :class="[
+                    `status-${statusOf(a.id)}`,
+                    { 'view-active': isActiveView('analysis', a.id) },
+                  ]"
+                  @click.stop="emit('select-analysis', a.id)"
+                >
+                  <span class="type-tag" :class="`kind-${a.kind}`">{{ a.kind }}</span>
+                  <span class="nested-name" :title="a.name">{{ a.name }}</span>
+                  <span class="count-tag">{{ artifactCount(a.id) }}</span>
+                  <span v-if="statusOf(a.id) === 'running'" class="dot running" />
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div v-if="resolvedRecents.length > 0" class="section">
+            <div class="section-head">
+              <span class="section-label">Recent</span>
+            </div>
+            <ul class="nested-list">
+              <li
+                v-for="r in resolvedRecents"
+                :key="`${r.type}-${r.id}`"
+                class="nested-row nav-row"
+                :class="{ 'view-active': isActiveView(r.type, r.id) }"
+                @click.stop="
+                  r.type === 'file'
+                    ? emit('select-file', r.id)
+                    : r.type === 'dashboard'
+                      ? emit('select-dashboard', r.id)
+                      : emit('select-analysis', r.id)
+                "
+              >
+                <span
+                  class="type-tag"
+                  :class="
+                    r.type === 'file'
+                      ? `type-${r.tag}`
+                      : r.type === 'dashboard'
+                        ? 'kind-report'
+                        : `kind-${r.tag}`
+                  "
+                >
+                  {{ r.tag }}
+                </span>
+                <span class="nested-name" :title="r.label">{{ r.label }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="section">
+            <div
+              class="section-head section-head-clickable"
               @click="toggleCollapsed(p.id, 'reports')"
               role="button"
               :aria-expanded="!isCollapsed(p.id, 'reports')"
@@ -459,7 +588,7 @@ const tauri = isTauri()
                   v-for="d in projectReports(p.id)"
                   :key="d.id"
                   class="nested-row file-row"
-                  :class="{ active: d.id === activeDashboardId }"
+                  :class="{ 'view-active': isActiveView('dashboard', d.id) }"
                   @click.stop="emit('select-dashboard', d.id)"
                 >
                   <span
@@ -566,6 +695,7 @@ const tauri = isTauri()
                   v-for="ed in projectFiles(p.id)"
                   :key="ed.id"
                   class="nested-row file-row"
+                  :class="{ 'view-active': isActiveView('file', ed.id) }"
                   @click.stop="emit('select-file', ed.id)"
                 >
                   <span class="type-tag" :class="`type-${ed.type}`">{{ ed.type }}</span>
@@ -895,13 +1025,31 @@ const tauri = isTauri()
 }
 
 .nested-row.subchat-row,
-.nested-row.file-row {
+.nested-row.file-row,
+.nested-row.nav-row {
   cursor: pointer;
 }
 
 .subchat-row:hover,
-.file-row:hover {
+.file-row:hover,
+.nav-row:hover {
   background: rgba(127, 127, 127, 0.08);
+}
+
+.nested-row.view-active,
+.nested-row.view-active:hover {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--accent);
+}
+
+.count-tag {
+  font-size: 0.62rem;
+  color: var(--muted);
+  background: rgba(127, 127, 127, 0.12);
+  border-radius: 999px;
+  padding: 0 0.35rem;
+  line-height: 1.3;
+  flex-shrink: 0;
 }
 
 .nested-name {
@@ -958,6 +1106,11 @@ const tauri = isTauri()
 .type-tag.type-new {
   background: rgba(100, 116, 139, 0.18);
   color: #475569;
+}
+
+.type-tag.type-all {
+  background: rgba(59, 130, 246, 0.18);
+  color: var(--accent);
 }
 
 .type-tag.kind-architect {
