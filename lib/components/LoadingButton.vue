@@ -4,7 +4,7 @@
     v-bind="$attrs"
     :disabled="disabled || isLoading"
     @click.stop="handleClick"
-    :data-testid="`${testId}`"
+    :data-testid="effectiveTestId"
   >
     <span :class="{ 'hidden-text': isLoading, contents: true }">
       <slot></slot>
@@ -13,7 +13,7 @@
     <span
       v-else-if="status === 'error'"
       class="error status_overlay"
-      :data-testid="`${testId}-error`"
+      :data-testid="`${effectiveTestId}-error`"
       >✖</span
     >
     <span v-else-if="isLoading" class="loading status_overlay">
@@ -25,12 +25,12 @@
     :show="showErrorModal"
     title="Action failed"
     max-width="560px"
-    :test-id="testId ? `${testId}-error-modal` : 'loading-button-error-modal'"
+    :test-id="effectiveTestId ? `${effectiveTestId}-error-modal` : 'loading-button-error-modal'"
     @close="dismissError"
   >
     <p
       class="error-message"
-      :data-testid="testId ? `${testId}-error-message` : 'loading-button-error-message'"
+      :data-testid="effectiveTestId ? `${effectiveTestId}-error-message` : 'loading-button-error-message'"
     >
       {{ errorMessage }}
     </p>
@@ -38,7 +38,7 @@
       <button
         type="button"
         class="okay-button"
-        :data-testid="testId ? `${testId}-error-okay` : 'loading-button-error-okay'"
+        :data-testid="effectiveTestId ? `${effectiveTestId}-error-okay` : 'loading-button-error-okay'"
         @click="dismissError"
       >
         Okay
@@ -46,7 +46,7 @@
       <button
         type="button"
         class="retry-button"
-        :data-testid="testId ? `${testId}-error-retry` : 'loading-button-error-retry'"
+        :data-testid="effectiveTestId ? `${effectiveTestId}-error-retry` : 'loading-button-error-retry'"
         @click="retryAction"
       >
         Retry
@@ -56,7 +56,7 @@
 </template>
 
 <script lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, useAttrs, onMounted, onUnmounted } from 'vue'
 import ModalDialog from './ModalDialog.vue'
 
 export default {
@@ -86,6 +86,14 @@ export default {
     ModalDialog,
   },
   setup(props) {
+    // The template is multi-root (button + error modal), so callers' data-testid
+    // no longer falls through automatically — resolve it from the prop or $attrs
+    const attrs = useAttrs()
+    const effectiveTestId = computed(
+      () =>
+        props.testId ||
+        (typeof attrs['data-testid'] === 'string' ? (attrs['data-testid'] as string) : ''),
+    )
     const isLoading = ref(false)
     const errorMessage = ref<string | null>(null)
     const status = ref<'success' | 'error' | null>(null)
@@ -175,6 +183,7 @@ export default {
     })
 
     return {
+      effectiveTestId,
       errorMessage,
       isLoading,
       status,

@@ -50,6 +50,30 @@ describe('LoadingButton', () => {
     wrapper.unmount()
   })
 
+  it('applies a data-testid passed as an attribute to the button and modal', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(LoadingButton, {
+      props: {
+        action: vi.fn().mockRejectedValue(new Error('Submit failed')),
+      },
+      attrs: {
+        'data-testid': 'creator-submit',
+      },
+      slots: {
+        default: 'Submit',
+      },
+      attachTo: document.body,
+    })
+
+    const button = wrapper.get('button[data-testid="creator-submit"]')
+    await button.trigger('click')
+    await vi.advanceTimersByTimeAsync(500)
+    await flushPromises()
+
+    expect(document.body.querySelector('[data-testid="creator-submit-error-modal"]')).not.toBeNull()
+    wrapper.unmount()
+  })
+
   it('dismisses the error modal when the overlay is clicked', async () => {
     vi.useFakeTimers()
     const wrapper = mount(LoadingButton, {
