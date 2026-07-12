@@ -175,6 +175,7 @@ export function useToolLoop(): UseToolLoopReturn {
       addMessage({
         role: 'assistant',
         content: `Error: ${errorMessage}`,
+        error: true,
       })
       return { terminated: false, finalMessage: `Error: ${errorMessage}` }
     } finally {

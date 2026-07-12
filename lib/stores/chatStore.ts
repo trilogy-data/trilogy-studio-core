@@ -556,6 +556,7 @@ export const useChatStore = defineStore('chats', {
         this.addMessageToChat(chatId, {
           role: 'assistant',
           content: `Error: ${errorMessage}`,
+          error: true,
         })
         this.completeExecution(chatId, errorMessage)
       } finally {

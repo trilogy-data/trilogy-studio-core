@@ -548,7 +548,7 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
       // Add error as assistant message so it's visible in the chat UI
       activeChatMessages.value = [
         ...activeChatMessages.value,
-        { role: 'assistant', content: `Error: ${errorMessage}` },
+        { role: 'assistant', content: `Error: ${errorMessage}`, error: true },
       ]
       return undefined
     } finally {

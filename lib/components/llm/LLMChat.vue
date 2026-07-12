@@ -24,7 +24,11 @@
         class="message"
         :class="[
           message.role,
-          { 'has-artifact': message.artifact, 'tool-only': isToolOnlyAssistantMessage(message) },
+          {
+            'has-artifact': message.artifact,
+            'tool-only': isToolOnlyAssistantMessage(message),
+            'harness-error': message.error,
+          },
         ]"
         :data-testid="`message-${message.role}-${index}`"
       >
@@ -32,7 +36,7 @@
           v-if="message.role === 'assistant' && !isToolOnlyAssistantMessage(message)"
           class="message-avatar assistant-avatar"
         >
-          <i class="mdi mdi-robot-outline"></i>
+          <i :class="message.error ? 'mdi mdi-alert' : 'mdi mdi-robot-outline'"></i>
         </span>
         <div class="message-content">
           <!-- Render artifacts inline if renderArtifacts is enabled -->
@@ -707,6 +711,17 @@ export default defineComponent({
   display: none;
 }
 
+/* Harness/provider failures surfaced as chat messages get a warning treatment */
+.message.assistant.harness-error {
+  background-color: rgba(255, 152, 0, 0.1);
+  border: 1px solid rgba(255, 152, 0, 0.35);
+  padding: 8px 12px;
+}
+
+.message.harness-error .message-avatar {
+  color: #f59e0b;
+}
+
 /* Messages with artifacts should be centered and wider */
 .message.has-artifact {
   align-self: center;
@@ -717,7 +732,9 @@ export default defineComponent({
 }
 
 .message.tool-only {
-  max-width: 100%;
+  /* Subtract the assistant avatar gutter (margin-left) so wide pills stop at
+     the same right boundary user messages respect */
+  max-width: calc(100% - 26px);
   width: fit-content;
 }
 
@@ -898,12 +915,15 @@ export default defineComponent({
 }
 
 .tool-call {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
   border-radius: 3px;
   font-size: 11px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .tool-call.success {
@@ -931,6 +951,10 @@ export default defineComponent({
 
 .tool-name {
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .tool-count {
@@ -940,8 +964,10 @@ export default defineComponent({
 .tool-error {
   color: #dc3545;
   font-size: var(--small-font-size);
-  margin-left: auto;
-  max-width: 200px;
+  /* Sit on its own line under the label (order keeps the inspect button on the label row) */
+  order: 5;
+  flex-basis: 100%;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

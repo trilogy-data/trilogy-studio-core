@@ -42,6 +42,7 @@
         :key="item.name"
         class="sidebar-icon"
         @click="selectItem(item.screen)"
+        @mouseenter="preloadScreen(item.screen)"
         :class="{ selected: active == item.screen, 'sidebar-icon-margin': !isMobile }"
         :data-testid="`sidebar-icon-${item.screen}`"
       >
@@ -68,6 +69,7 @@
         :key="item.name"
         class="sidebar-icon"
         @click="selectItem(item.screen)"
+        @mouseenter="preloadScreen(item.screen)"
         :class="{ selected: active == item.screen, 'sidebar-icon-margin': !isMobile }"
         :data-testid="`sidebar-icon-${item.screen}`"
       >
@@ -183,6 +185,7 @@ import DashboardList from './DashboardList.vue'
 import CommunityModelList from './CommunityModelList.vue'
 import trilogyIcon from '../../static/trilogy.png'
 import Tooltip from '../Tooltip.vue'
+import { preloadScreen } from '../../utility/screenPreloader'
 
 export interface SidebarProps {
   active?: string
@@ -326,6 +329,7 @@ export default defineComponent({
   },
 
   methods: {
+    preloadScreen,
     triggerSaveAnimation() {
       this.isSaving = true
       // Ensure minimum 500ms spin duration

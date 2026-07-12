@@ -4,29 +4,60 @@
     v-bind="$attrs"
     :disabled="disabled || isLoading"
     @click.stop="handleClick"
-    :data-testid="`${testId}`"
+    :data-testid="effectiveTestId"
   >
     <span :class="{ 'hidden-text': isLoading, contents: true }">
       <slot></slot>
     </span>
     <span v-if="status === 'success'" class="success status_overlay">✔</span>
-    <tooltip
+    <span
       v-else-if="status === 'error'"
-      :content="errorMessage || ''"
-      :inline="false"
-      position="left"
       class="error status_overlay"
-      ><span class="error status_overlay" :data-testid="`${testId}-error`">✖</span>
-    </tooltip>
+      :data-testid="`${effectiveTestId}-error`"
+      >✖</span
+    >
     <span v-else-if="isLoading" class="loading status_overlay">
       <span class="spinner"></span>
     </span>
   </button>
+
+  <ModalDialog
+    :show="showErrorModal"
+    title="Action failed"
+    max-width="560px"
+    :test-id="effectiveTestId ? `${effectiveTestId}-error-modal` : 'loading-button-error-modal'"
+    @close="dismissError"
+  >
+    <p
+      class="error-message"
+      :data-testid="effectiveTestId ? `${effectiveTestId}-error-message` : 'loading-button-error-message'"
+    >
+      {{ errorMessage }}
+    </p>
+    <template #footer>
+      <button
+        type="button"
+        class="okay-button"
+        :data-testid="effectiveTestId ? `${effectiveTestId}-error-okay` : 'loading-button-error-okay'"
+        @click="dismissError"
+      >
+        Okay
+      </button>
+      <button
+        type="button"
+        class="retry-button"
+        :data-testid="effectiveTestId ? `${effectiveTestId}-error-retry` : 'loading-button-error-retry'"
+        @click="retryAction"
+      >
+        Retry
+      </button>
+    </template>
+  </ModalDialog>
 </template>
 
 <script lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import Tooltip from './Tooltip.vue'
+import { ref, computed, useAttrs, onMounted, onUnmounted } from 'vue'
+import ModalDialog from './ModalDialog.vue'
 
 export default {
   props: {
@@ -52,13 +83,23 @@ export default {
     },
   },
   components: {
-    Tooltip,
+    ModalDialog,
   },
   setup(props) {
+    // The template is multi-root (button + error modal), so callers' data-testid
+    // no longer falls through automatically — resolve it from the prop or $attrs
+    const attrs = useAttrs()
+    const effectiveTestId = computed(
+      () =>
+        props.testId ||
+        (typeof attrs['data-testid'] === 'string' ? (attrs['data-testid'] as string) : ''),
+    )
     const isLoading = ref(false)
     const errorMessage = ref<string | null>(null)
     const status = ref<'success' | 'error' | null>(null)
+    const showErrorModal = ref(false)
     const keysPressed = new Set<string>()
+    let statusTimeout: ReturnType<typeof setTimeout> | null = null
 
     const handleKeydown = (event: KeyboardEvent) => {
       if (!props.keyCombination) return
@@ -76,12 +117,25 @@ export default {
       if (!event.key) return
       keysPressed.delete(event.key.toLowerCase())
     }
+
+    const dismissError = () => {
+      showErrorModal.value = false
+      status.value = null
+      errorMessage.value = null
+    }
+
     const handleClick = async () => {
+      if (isLoading.value || showErrorModal.value) return
+
+      if (statusTimeout) {
+        clearTimeout(statusTimeout)
+        statusTimeout = null
+      }
       isLoading.value = true
-      status.value = null // Reset status before running action
+      status.value = null
+      errorMessage.value = null
       const startTime = Date.now()
       let localStatus: 'success' | 'error' | null = null
-      let resetTimeout = 1500
       try {
         await props.action()
         localStatus = 'success'
@@ -89,23 +143,34 @@ export default {
         localStatus = 'error'
         if (error instanceof Error) {
           errorMessage.value = error.message
+        } else if (typeof error === 'string') {
+          errorMessage.value = error
         } else {
           errorMessage.value = 'An unknown error occurred'
         }
-        resetTimeout = 10000
       } finally {
         const elapsedTime = Date.now() - startTime
         const remainingTime = Math.max(500 - elapsedTime, 0)
         await new Promise((resolve) => setTimeout(resolve, remainingTime))
         status.value = localStatus
-        // Clear status after a brief delay
-        setTimeout(() => {
-          status.value = null
-          isLoading.value = false
-          errorMessage.value = null
-        }, resetTimeout)
+        isLoading.value = false
+
+        if (localStatus === 'error') {
+          showErrorModal.value = true
+        } else {
+          statusTimeout = setTimeout(() => {
+            status.value = null
+            statusTimeout = null
+          }, 1500)
+        }
       }
     }
+
+    const retryAction = () => {
+      dismissError()
+      void handleClick()
+    }
+
     onMounted(() => {
       window.addEventListener('keydown', handleKeydown)
       window.addEventListener('keyup', handleKeyup)
@@ -114,14 +179,19 @@ export default {
     onUnmounted(() => {
       window.removeEventListener('keydown', handleKeydown)
       window.removeEventListener('keyup', handleKeyup)
+      if (statusTimeout) clearTimeout(statusTimeout)
     })
 
     return {
+      effectiveTestId,
       errorMessage,
       isLoading,
       status,
+      showErrorModal,
       handleClick,
       handleKeydown,
+      dismissError,
+      retryAction,
     }
   },
 }
@@ -149,6 +219,28 @@ export default {
 
 .error {
   color: red;
+}
+
+.error-message {
+  max-height: min(50vh, 360px);
+  margin: 0;
+  overflow: auto;
+  color: var(--text-color);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.okay-button {
+  background-color: var(--button-bg-color);
+  color: var(--text-color);
+  border: 1px solid var(--border);
+}
+
+.retry-button {
+  background-color: var(--special-text);
+  color: white;
+  border: 1px solid var(--special-text);
 }
 
 .btn {

@@ -55,8 +55,8 @@ export async function setupOpenAIMocks(page: Page, options: OpenAIMockOptions = 
     })
   })
 
-  // Mock the completions endpoint
-  await page.route('https://api.openai.com/v1/chat/completions', async (route) => {
+  // Mock the completions endpoint (Responses API)
+  await page.route('https://api.openai.com/v1/responses', async (route) => {
     const requestBody = JSON.parse(route.request().postData() || '{}')
     const response = await completionHandler(requestBody)
 
@@ -69,6 +69,61 @@ export async function setupOpenAIMocks(page: Page, options: OpenAIMockOptions = 
 }
 
 /**
+ * Extracts the text of the last input item from a Responses API request body.
+ * Items may be role messages (string or part-array content) or
+ * function_call_output items (string output).
+ */
+function extractLastInputText(requestBody: any): string {
+  const input = requestBody.input || []
+  const last = input[input.length - 1] || {}
+  if (typeof last.output === 'string') return last.output
+  if (typeof last.content === 'string') return last.content
+  if (Array.isArray(last.content)) {
+    return last.content.map((part: any) => part.text || '').join(' ')
+  }
+  return ''
+}
+
+/**
+ * Builds a Responses API-shaped response body from text and optional tool calls.
+ */
+function buildResponsesBody(
+  text: string,
+  toolCalls: { name: string; input: Record<string, any> }[] | undefined,
+  promptLength: number,
+): any {
+  const output: any[] = []
+  if (text) {
+    output.push({
+      type: 'message',
+      role: 'assistant',
+      content: [{ type: 'output_text', text }],
+    })
+  }
+  if (toolCalls && toolCalls.length > 0) {
+    toolCalls.forEach((tc, index) => {
+      output.push({
+        type: 'function_call',
+        call_id: `call_mock_${index}`,
+        name: tc.name,
+        arguments: JSON.stringify(tc.input),
+      })
+    })
+  }
+
+  const inputTokens = Math.floor(promptLength / 4)
+  const outputTokens = Math.floor(text.length / 4)
+  return {
+    output,
+    usage: {
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      total_tokens: inputTokens + outputTokens,
+    },
+  }
+}
+
+/**
  * Default handler for completion requests
  * @param requestBody - The request body sent to the OpenAI API
  * @returns Mocked response object
@@ -77,20 +132,7 @@ async function defaultCompletionHandler(requestBody: any): Promise<any> {
   console.log('Mock received request:', requestBody)
 
   // Default response
-  return {
-    choices: [
-      {
-        message: {
-          content: 'This is a mocked response from OpenAI API',
-        },
-      },
-    ],
-    usage: {
-      prompt_tokens: 10,
-      completion_tokens: 20,
-      total_tokens: 30,
-    },
-  }
+  return buildResponsesBody('This is a mocked response from OpenAI API', undefined, 40)
 }
 
 /**
@@ -102,9 +144,7 @@ export function createCompletionHandler(
   responseMap: ResponseMap,
 ): (requestBody: any) => Promise<any> {
   return async (requestBody: any): Promise<any> => {
-    const messages = requestBody.messages || []
-    const lastMessage = messages[messages.length - 1] || {}
-    const prompt = lastMessage.content || ''
+    const prompt = extractLastInputText(requestBody)
 
     // Find matching response based on prompt content
     let response: string | ToolCallResponse = 'Default mocked response'
@@ -119,54 +159,11 @@ export function createCompletionHandler(
     // Handle ToolCallResponse (with tool calls)
     if (typeof response === 'object' && 'text' in response) {
       const toolCallResponse = response as ToolCallResponse
-      const contentText = toolCallResponse.text
-
-      // Format tool calls in OpenAI native format
-      const openaiToolCalls =
-        toolCallResponse.toolCalls && toolCallResponse.toolCalls.length > 0
-          ? toolCallResponse.toolCalls.map((tc, index) => ({
-              id: `call_mock_${index}`,
-              type: 'function' as const,
-              function: {
-                name: tc.name,
-                arguments: JSON.stringify(tc.input),
-              },
-            }))
-          : undefined
-
-      return {
-        choices: [
-          {
-            message: {
-              content: contentText,
-              tool_calls: openaiToolCalls,
-            },
-          },
-        ],
-        usage: {
-          prompt_tokens: Math.floor(prompt.length / 4),
-          completion_tokens: Math.floor(contentText.length / 4),
-          total_tokens: Math.floor((prompt.length + contentText.length) / 4),
-        },
-      }
+      return buildResponsesBody(toolCallResponse.text, toolCallResponse.toolCalls, prompt.length)
     }
 
     // Handle simple string response
-    const responseContent = response as string
-    return {
-      choices: [
-        {
-          message: {
-            content: responseContent,
-          },
-        },
-      ],
-      usage: {
-        prompt_tokens: Math.floor(prompt.length / 4),
-        completion_tokens: Math.floor(responseContent.length / 4),
-        total_tokens: Math.floor((prompt.length + responseContent.length) / 4),
-      },
-    }
+    return buildResponsesBody(response as string, undefined, prompt.length)
   }
 }
 

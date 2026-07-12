@@ -76,14 +76,20 @@ describe('OpenAI Provider - Tool Call Preservation', () => {
       },
     ]
 
-    // Mock the API response
+    // Mock the API response (Responses API format)
     mockFetch.mockImplementation(async (_url, options) => {
       capturedRequestBody = JSON.parse(options.body)
       return {
         ok: true,
         json: async () => ({
-          choices: [{ message: { content: 'Query completed successfully!' } }],
-          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+          output: [
+            {
+              type: 'message',
+              role: 'assistant',
+              content: [{ type: 'output_text', text: 'Query completed successfully!' }],
+            },
+          ],
+          usage: { input_tokens: 10, output_tokens: 5, total_tokens: 15 },
         }),
       }
     })
@@ -94,25 +100,32 @@ describe('OpenAI Provider - Tool Call Preservation', () => {
       history,
     )
 
-    // Assert: Verify the request body contains tool_calls in the assistant message
+    // Assert: Verify the request body contains function_call items in the input
     expect(capturedRequestBody).toBeDefined()
-    expect(capturedRequestBody.messages).toBeDefined()
+    expect(capturedRequestBody.input).toBeDefined()
 
-    // Find the assistant message with tool_calls
-    const assistantWithToolCalls = capturedRequestBody.messages.find(
-      (m: any) => m.role === 'assistant' && m.tool_calls,
+    // Find the function_call item
+    const functionCallItem = capturedRequestBody.input.find(
+      (item: any) => item.type === 'function_call',
     )
-    expect(assistantWithToolCalls).toBeDefined()
-    expect(assistantWithToolCalls.tool_calls).toHaveLength(1)
-    expect(assistantWithToolCalls.tool_calls[0].id).toBe('call_123')
-    expect(assistantWithToolCalls.tool_calls[0].type).toBe('function')
-    expect(assistantWithToolCalls.tool_calls[0].function.name).toBe('run_query')
+    expect(functionCallItem).toBeDefined()
+    expect(functionCallItem.call_id).toBe('call_123')
+    expect(functionCallItem.name).toBe('run_query')
+    expect(functionCallItem.arguments).toBe(JSON.stringify({ query: 'SELECT * FROM users' }))
 
-    // Find the tool result message
-    const toolResultMessage = capturedRequestBody.messages.find((m: any) => m.role === 'tool')
-    expect(toolResultMessage).toBeDefined()
-    expect(toolResultMessage.tool_call_id).toBe('call_123')
-    expect(toolResultMessage.content).toBe('Success. 10 rows returned.')
+    // Find the function_call_output item
+    const toolResultItem = capturedRequestBody.input.find(
+      (item: any) => item.type === 'function_call_output',
+    )
+    expect(toolResultItem).toBeDefined()
+    expect(toolResultItem.call_id).toBe('call_123')
+    expect(toolResultItem.output).toBe('Success. 10 rows returned.')
+
+    // Tools should be in flat Responses API format
+    expect(capturedRequestBody.tools).toHaveLength(1)
+    expect(capturedRequestBody.tools[0].type).toBe('function')
+    expect(capturedRequestBody.tools[0].name).toBe('run_query')
+    expect(capturedRequestBody.tools[0].parameters).toEqual(testTool.input_schema)
   })
 
   it('should not drop tool_calls when adding subsequent user messages', async () => {
@@ -145,8 +158,14 @@ describe('OpenAI Provider - Tool Call Preservation', () => {
       return {
         ok: true,
         json: async () => ({
-          choices: [{ message: { content: 'Sure, let me run another query.' } }],
-          usage: { prompt_tokens: 20, completion_tokens: 10, total_tokens: 30 },
+          output: [
+            {
+              type: 'message',
+              role: 'assistant',
+              content: [{ type: 'output_text', text: 'Sure, let me run another query.' }],
+            },
+          ],
+          usage: { input_tokens: 20, output_tokens: 10, total_tokens: 30 },
         }),
       }
     })
@@ -158,36 +177,29 @@ describe('OpenAI Provider - Tool Call Preservation', () => {
     )
 
     // Assert: Tool calls should still be present in the history
-    const assistantWithToolCalls = capturedRequestBody.messages.find(
-      (m: any) => m.role === 'assistant' && m.tool_calls,
+    const functionCallItem = capturedRequestBody.input.find(
+      (item: any) => item.type === 'function_call',
     )
-    expect(assistantWithToolCalls).toBeDefined()
-    expect(assistantWithToolCalls.tool_calls[0].function.name).toBe('run_query')
+    expect(functionCallItem).toBeDefined()
+    expect(functionCallItem.name).toBe('run_query')
+    expect(functionCallItem.call_id).toBe('call_456')
   })
 
   it('should correctly parse structured tool_calls from response', async () => {
-    // Mock response with tool_calls
+    // Mock response with a function_call output item (Responses API format)
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({
-        choices: [
+        output: [
           {
-            message: {
-              content: null,
-              tool_calls: [
-                {
-                  id: 'call_789',
-                  type: 'function',
-                  function: {
-                    name: 'run_query',
-                    arguments: '{"query": "SELECT * FROM products"}',
-                  },
-                },
-              ],
-            },
+            type: 'function_call',
+            id: 'fc_abc',
+            call_id: 'call_789',
+            name: 'run_query',
+            arguments: '{"query": "SELECT * FROM products"}',
           },
         ],
-        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        usage: { input_tokens: 10, output_tokens: 20, total_tokens: 30 },
       }),
     })
 
@@ -198,9 +210,39 @@ describe('OpenAI Provider - Tool Call Preservation', () => {
 
     expect(response.toolCalls).toBeDefined()
     expect(response.toolCalls).toHaveLength(1)
+    // call_id (not the item id) is what tool results must reference
     expect(response.toolCalls![0].id).toBe('call_789')
     expect(response.toolCalls![0].name).toBe('run_query')
     expect(response.toolCalls![0].input).toEqual({ query: 'SELECT * FROM products' })
+  })
+
+  it('should pass system prompt as instructions', async () => {
+    mockFetch.mockImplementation(async (_url, options) => {
+      capturedRequestBody = JSON.parse(options.body)
+      return {
+        ok: true,
+        json: async () => ({
+          output: [
+            {
+              type: 'message',
+              role: 'assistant',
+              content: [{ type: 'output_text', text: 'Hello!' }],
+            },
+          ],
+          usage: { input_tokens: 5, output_tokens: 2, total_tokens: 7 },
+        }),
+      }
+    })
+
+    await provider.generateCompletion({
+      prompt: 'Hi',
+      systemPrompt: 'You are a helpful assistant.',
+    })
+
+    expect(capturedRequestBody.instructions).toBe('You are a helpful assistant.')
+    // System prompt should not appear as a message in the input
+    const systemMessage = capturedRequestBody.input.find((item: any) => item.role === 'system')
+    expect(systemMessage).toBeUndefined()
   })
 })
 
@@ -624,8 +666,14 @@ describe('Cross-Provider - Multi-Turn Tool Conversation', () => {
       return {
         ok: true,
         json: async () => ({
-          choices: [{ message: { content: 'Based on my previous query...' } }],
-          usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 },
+          output: [
+            {
+              type: 'message',
+              role: 'assistant',
+              content: [{ type: 'output_text', text: 'Based on my previous query...' }],
+            },
+          ],
+          usage: { input_tokens: 100, output_tokens: 50, total_tokens: 150 },
         }),
       }
     })
@@ -636,16 +684,16 @@ describe('Cross-Provider - Multi-Turn Tool Conversation', () => {
       conversation,
     )
 
-    // Verify ALL tool_calls are preserved in the request
-    const assistantMessages = capturedBody.messages.filter((m: any) => m.role === 'assistant')
-    const messagesWithToolCalls = assistantMessages.filter((m: any) => m.tool_calls)
+    // Verify ALL tool calls are preserved in the request as function_call items
+    const functionCalls = capturedBody.input.filter((item: any) => item.type === 'function_call')
+    expect(functionCalls).toHaveLength(2)
+    expect(functionCalls[0].call_id).toBe('call_1')
+    expect(functionCalls[1].call_id).toBe('call_2')
 
-    expect(messagesWithToolCalls).toHaveLength(2)
-    expect(messagesWithToolCalls[0].tool_calls[0].id).toBe('call_1')
-    expect(messagesWithToolCalls[1].tool_calls[0].id).toBe('call_2')
-
-    // Verify tool results are present
-    const toolMessages = capturedBody.messages.filter((m: any) => m.role === 'tool')
-    expect(toolMessages).toHaveLength(2)
+    // Verify tool results are present as function_call_output items
+    const toolOutputs = capturedBody.input.filter(
+      (item: any) => item.type === 'function_call_output',
+    )
+    expect(toolOutputs).toHaveLength(2)
   })
 })

@@ -264,6 +264,7 @@ export function useEditorRefinement(
       toolLoop.addMessage({
         role: 'assistant',
         content: 'Error: No LLM connection configured. Please set up an LLM provider.',
+        error: true,
       })
       return
     }
