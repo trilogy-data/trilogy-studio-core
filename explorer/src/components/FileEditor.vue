@@ -4,12 +4,14 @@ import useEditorStore from '@lib/stores/editorStore'
 import LibEditor from '@lib/components/editor/Editor.vue'
 import LibResults from '@lib/components/editor/Results.vue'
 import LoadingView from '@lib/components/LoadingView.vue'
+import MarkdownRenderer from '@lib/components/MarkdownRenderer.vue'
 
 /**
  * Center-pane editor view for a project file. For Trilogy / SQL we mount
- * lib's full Editor.vue (Monaco + run/validate/format/results pane). For
- * other types (markdown, csv, python) we fall back to a plain textarea —
- * those don't have execution semantics in lib yet.
+ * lib's full Editor.vue (Monaco + run/validate/format/results pane).
+ * Markdown renders through lib's MarkdownRenderer with an edit toggle.
+ * Other types (csv, python) fall back to a plain textarea — those don't
+ * have execution semantics in lib yet.
  *
  * App.vue must `provide()` the stores Editor.vue injects.
  */
@@ -24,12 +26,18 @@ const useLibEditor = computed(() => {
   return t === 'preql' || t === 'trilogy' || t === 'sql'
 })
 
+const isMarkdown = computed(() => editor.value?.type === 'markdown')
+
+// Markdown opens rendered; the pencil toggles into the raw-text editor.
+const mdMode = ref<'preview' | 'edit'>('preview')
+
 // Plain-textarea draft for the fallback path. Re-syncs when the file changes.
 const draft = ref(editor.value?.contents ?? '')
 watch(
   () => props.editorId,
   () => {
     draft.value = editor.value?.contents ?? ''
+    mdMode.value = 'preview'
   },
 )
 
@@ -61,6 +69,14 @@ const charCount = computed(() => draft.value.length)
       <span class="type-badge" :class="`type-${editor.type}`">{{ editor.type }}</span>
       <span class="filename" :title="editor.name">{{ editor.name }}</span>
       <span v-if="!useLibEditor" class="meta">{{ lineCount }} lines · {{ charCount }} chars</span>
+      <button
+        v-if="isMarkdown"
+        class="back"
+        @click="mdMode = mdMode === 'preview' ? 'edit' : 'preview'"
+        :title="mdMode === 'preview' ? 'Edit markdown source' : 'Preview rendered markdown'"
+      >
+        <i :class="mdMode === 'preview' ? 'mdi mdi-pencil-outline' : 'mdi mdi-eye-outline'" />
+      </button>
     </header>
 
     <div v-if="useLibEditor" class="lib-editor-stack">
@@ -84,6 +100,9 @@ const charCount = computed(() => draft.value.length)
           :trilogySource="editor.executed_contents || undefined"
         />
       </div>
+    </div>
+    <div v-else-if="isMarkdown && mdMode === 'preview'" class="markdown-preview">
+      <MarkdownRenderer :markdown="draft" />
     </div>
     <textarea
       v-else
@@ -241,6 +260,16 @@ const charCount = computed(() => draft.value.length)
   color: var(--fg);
   outline: none;
   tab-size: 2;
+}
+
+.markdown-preview {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem 2rem;
+}
+
+.markdown-preview > :deep(*) {
+  max-width: 760px;
 }
 
 .missing {

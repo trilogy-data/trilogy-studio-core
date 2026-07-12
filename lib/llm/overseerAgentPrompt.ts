@@ -47,7 +47,12 @@ export interface OverseerPromptOptions {
  *  overridable portion for analyst subchats — the rest of the analyst prompt
  *  (Trilogy syntax, tool guidance, etc.) is shared with the standalone chat
  *  agent and stays in lockstep with it. */
-export const ANALYST_DEFAULT_INSTRUCTIONS = `You are an ANALYST subchat. Your job is to answer the overseer's question — run queries, build charts, surface findings. When done, call return_to_user with a concise summary the overseer can show the user.`
+export const ANALYST_DEFAULT_INSTRUCTIONS = `You are an ANALYST subchat. Your job is to answer the overseer's question — run queries, build charts, surface findings.
+
+When done, call return_to_user with a summary written for the person reading the analysis, not for another engineer. Unless your task gives contradicting instructions:
+- Lead with the story in the data: the key insights, what they mean, and any caveats that change how they should be read (data gaps, small samples, definitional quirks).
+- Keep technical details — queries run, tables used, methodology, tool mechanics — out of the top summary. Put anything worth keeping in a short "Technical notes" section at the bottom.
+- Focus on the data and the narrative, not the how.`
 
 /** Static instructions block — overridable per-project. */
 export const OVERSEER_DEFAULT_INSTRUCTIONS = `You are the OVERSEER of a Trilogy Explorer workspace. Your job is to coordinate work — never to query data directly.

@@ -54,6 +54,23 @@ const subchatOptions = computed(() => {
     }))
 })
 
+// Report agent conversations — the same chatStore records the (headless)
+// DashboardChatPanel engine drives while a report is open. Read-only here,
+// like subchats: sends require the report's mounted runtime.
+const reportChatOptions = computed(() => {
+  const project = projectStore.activeProject
+  if (!project) return []
+  const out: { id: string; name: string; running: boolean }[] = []
+  for (const dashId of project.dashboardIds) {
+    const dash = dashboardStore.dashboards[dashId]
+    if (!dash || dash.deleted || !dash.chatId) continue
+    const chat = chatStore.chats[dash.chatId]
+    if (!chat || chat.deleted) continue
+    out.push({ id: chat.id, name: dash.name, running: chatStore.isChatExecuting(chat.id) })
+  }
+  return out
+})
+
 const viewedChat = computed(() => {
   if (viewedChatId.value === props.overseer.id) return props.overseer
   return chatStore.chats[viewedChatId.value] || props.overseer
@@ -61,11 +78,14 @@ const viewedChat = computed(() => {
 
 const isViewingSubchat = computed(() => viewedChat.value.id !== props.overseer.id)
 
-// Snap back to the overseer when the viewed subchat is deleted or the
-// active project switches away from it.
-watch([viewedChatId, subchatOptions], () => {
+// Snap back to the overseer when the viewed chat is deleted or the active
+// project switches away from it.
+watch([viewedChatId, subchatOptions, reportChatOptions], () => {
   if (viewedChatId.value === props.overseer.id) return
-  if (!subchatOptions.value.some((o) => o.id === viewedChatId.value)) {
+  const valid =
+    subchatOptions.value.some((o) => o.id === viewedChatId.value) ||
+    reportChatOptions.value.some((o) => o.id === viewedChatId.value)
+  if (!valid) {
     viewedChatId.value = props.overseer.id
   }
 })
@@ -176,6 +196,9 @@ const placeholder = computed(() => {
           <option :value="overseer.id">Overseer</option>
           <option v-for="o in subchatOptions" :key="o.id" :value="o.id">
             {{ o.running ? '● ' : '' }}{{ o.kind }} · {{ o.name }}
+          </option>
+          <option v-for="o in reportChatOptions" :key="o.id" :value="o.id">
+            {{ o.running ? '● ' : '' }}report · {{ o.name }}
           </option>
         </select>
         <template v-if="isViewingSubchat">

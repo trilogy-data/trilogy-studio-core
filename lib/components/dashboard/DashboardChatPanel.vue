@@ -36,6 +36,11 @@ const props = defineProps<{
     }>
   }>
   initialPrompt?: string | null
+  /** Renderless mode: run the agent engine (chat record, tool executor,
+   *  initial-prompt auto-send, fork logic) without any UI. Hosts that surface
+   *  the conversation elsewhere (e.g. the explorer's chat panel reading the
+   *  same chatStore record) mount this headless instead of the sidebar. */
+  headless?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -408,7 +413,7 @@ watch(
 </script>
 
 <template>
-  <div class="dashboard-chat-panel">
+  <div v-if="!headless" class="dashboard-chat-panel">
     <div class="chat-panel-header">
       <span class="chat-panel-title">
         <i class="mdi mdi-creation-outline"></i>

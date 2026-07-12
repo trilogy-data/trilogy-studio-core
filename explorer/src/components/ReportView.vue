@@ -29,7 +29,12 @@ const isReport = computed(() => dashboard.value?.layoutType === 'report')
       </p>
       <button class="dismiss" @click="emit('close')">Dismiss</button>
     </div>
-    <ReportLayout v-else-if="isReport" :name="dashboardId" :connectionId="dashboard.connectionId" />
+    <ReportLayout
+      v-else-if="isReport"
+      :name="dashboardId"
+      :connectionId="dashboard.connectionId"
+      externalChat
+    />
     <Dashboard v-else :name="dashboardId" :connectionId="dashboard.connectionId" />
   </section>
 </template>

@@ -25,6 +25,7 @@
           <span>{{ editable ? 'Editing' : 'Edit' }}</span>
         </button>
         <button
+          v-if="!externalChat"
           class="report-btn"
           @click="toggleChat"
           :title="chatOpen ? 'Hide agent' : 'Show agent'"
@@ -35,7 +36,7 @@
       </div>
     </header>
 
-    <div class="report-body" :class="{ 'with-chat': chatOpen }">
+    <div class="report-body" :class="{ 'with-chat': chatOpen && !externalChat }">
       <article class="report-flow">
         <div v-if="!hasContent" class="report-empty-state">
           <h2 class="empty-headline">Brief the agent</h2>
@@ -143,7 +144,7 @@
         </div>
       </article>
 
-      <aside v-if="chatOpen" class="report-chat">
+      <aside v-if="chatOpen && !externalChat" class="report-chat">
         <DashboardChatPanel
           v-if="dashboard"
           :dashboard="dashboard"
@@ -153,6 +154,17 @@
           @close="chatOpen = false"
         />
       </aside>
+
+      <!-- External-chat mode: the same engine, renderless. Queued briefs and
+           CTA submissions flow through initial-prompt exactly as embedded. -->
+      <DashboardChatPanel
+        v-if="externalChat && dashboard"
+        headless
+        :dashboard="dashboard"
+        :get-dashboard-query-executor="getDashboardQueryExecutor"
+        :refresh-item="handleRefreshItem"
+        :initial-prompt="chatInitialPrompt"
+      />
     </div>
 
     <DashboardAddItemModal :show="showAddItemModal" @add="onAddItem" @close="closeAddModal" />
@@ -206,6 +218,11 @@ interface ReportLayoutProps {
   name: string
   connectionId?: string
   viewMode?: boolean
+  /** The host app surfaces the report's agent conversation in its own chat
+   *  UI (reading the shared chatStore record). Suppresses the embedded chat
+   *  sidebar and toggle; the agent engine still runs headless so queued
+   *  briefs and CTA submissions execute exactly as in embedded mode. */
+  externalChat?: boolean
 }
 
 const props = defineProps<ReportLayoutProps>()

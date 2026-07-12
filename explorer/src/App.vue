@@ -155,6 +155,20 @@ function onSelectDashboard(id: string) {
 function onSelectWorkspace() {
   centerView.value = { type: 'workspace' }
 }
+// When the overseer creates a report it queues a brief; the report's agent
+// engine only runs while the report is mounted. Auto-open freshly briefed
+// reports so authoring starts immediately instead of waiting for a click.
+watch(
+  () => Object.keys(dashboardStore.pendingChatPrompts),
+  (ids) => {
+    const project = projectStore.activeProject
+    if (!project) return
+    const id = ids.find((d) => project.dashboardIds.includes(d))
+    if (!id) return
+    if (centerView.value.type === 'dashboard' && centerView.value.id === id) return
+    onSelectDashboard(id)
+  },
+)
 // Fall back to the workspace if the viewed file/analysis/report is detached,
 // deleted, or the project switches away.
 watch([() => projectStore.activeProject?.id, centerView], () => {

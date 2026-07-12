@@ -9,7 +9,12 @@ import { useFileIngestion } from '../composables/useFileIngestion'
 import { isTauri } from '../storage/tauriKvBackend'
 import ProjectEngineSection from './ProjectEngineSection.vue'
 
-type SidebarSection = 'analyses' | 'reports' | 'files' | 'subchats'
+type SidebarSection = 'analyses' | 'recent' | 'reports' | 'files' | 'subchats'
+
+/** Sections that start collapsed until the user opens them. Recent is quick-nav
+ *  chrome, not primary content — expanded by default it visibly reshuffles on
+ *  every click, which is distracting. */
+const DEFAULT_COLLAPSED: Partial<Record<SidebarSection, boolean>> = { recent: true }
 
 const COLLAPSE_KEY = 'explorer:sidebarCollapsed'
 
@@ -42,16 +47,14 @@ function collapseKey(projectId: string, section: SidebarSection): string {
   return `${projectId}:${section}`
 }
 function isCollapsed(projectId: string, section: SidebarSection): boolean {
-  return !!collapsedMap.value[collapseKey(projectId, section)]
+  const stored = collapsedMap.value[collapseKey(projectId, section)]
+  return stored === undefined ? !!DEFAULT_COLLAPSED[section] : stored
 }
 function toggleCollapsed(projectId: string, section: SidebarSection): void {
-  const k = collapseKey(projectId, section)
-  if (collapsedMap.value[k]) delete collapsedMap.value[k]
-  else collapsedMap.value[k] = true
+  collapsedMap.value[collapseKey(projectId, section)] = !isCollapsed(projectId, section)
 }
 function expandSection(projectId: string, section: SidebarSection): void {
-  const k = collapseKey(projectId, section)
-  if (collapsedMap.value[k]) delete collapsedMap.value[k]
+  collapsedMap.value[collapseKey(projectId, section)] = false
 }
 
 /**
@@ -384,6 +387,57 @@ async function commitNewFile(projectId: string) {
   }
 }
 
+// ---------- Inline file rename ----------
+
+const renamingFileId = ref<string | null>(null)
+const renameFileDraft = ref('')
+
+function startFileRename(editorId: string, currentName: string) {
+  renamingFileId.value = editorId
+  renameFileDraft.value = currentName
+  ingestionError.value = null
+}
+
+function cancelFileRename() {
+  renamingFileId.value = null
+  renameFileDraft.value = ''
+}
+
+function commitFileRename(projectId: string) {
+  const id = renamingFileId.value
+  if (!id) return
+  const ed = editorStore.editors[id]
+  const name = renameFileDraft.value.trim()
+  if (!ed || !name || name === ed.name) {
+    cancelFileRename()
+    return
+  }
+  // CSVs are registered in DuckDB under their name — changing the extension
+  // would orphan the registration, so hold the .csv suffix fixed.
+  if (ed.type === 'csv' && getEditorTypeForPath(name) !== 'csv') {
+    ingestionError.value = { projectId, text: 'CSV files must keep the .csv extension.' }
+    return
+  }
+  const project = store.projects[projectId]
+  const collision = project?.editorIds.some((eid) => {
+    const other = editorStore.editors[eid]
+    return !!other && !other.deleted && eid !== id && other.name === name
+  })
+  if (collision) {
+    ingestionError.value = { projectId, text: `"${name}" already exists.` }
+    return
+  }
+  editorStore.updateEditorName(id, name)
+  // Editor type follows the extension (same rule as file creation); an
+  // unrecognized extension keeps the current type.
+  const derived = getEditorTypeForPath(name)
+  if (derived && derived !== ed.type) {
+    ed.type = derived
+    ed.changed = true
+  }
+  cancelFileRename()
+}
+
 function detachEditor(projectId: string, editorId: string) {
   store.removeEditorFromProject(projectId, editorId)
   const editor = editorStore.editors[editorId]
@@ -436,6 +490,14 @@ const tauri = isTauri()
             autofocus
           />
           <span v-else class="project-name" :title="p.name">{{ p.name }}</span>
+          <button
+            v-if="renameTargetId !== p.id"
+            class="rename-btn"
+            @click.stop="startRename(p.id, p.name)"
+            title="Rename project"
+          >
+            <i class="mdi mdi-pencil-outline" />
+          </button>
           <button
             v-if="renameTargetId !== p.id"
             class="delete-btn"
@@ -502,10 +564,20 @@ const tauri = isTauri()
           </div>
 
           <div v-if="resolvedRecents.length > 0" class="section">
-            <div class="section-head">
+            <div
+              class="section-head section-head-clickable"
+              @click="toggleCollapsed(p.id, 'recent')"
+              role="button"
+              :aria-expanded="!isCollapsed(p.id, 'recent')"
+            >
+              <i
+                class="mdi section-chevron"
+                :class="isCollapsed(p.id, 'recent') ? 'mdi-chevron-right' : 'mdi-chevron-down'"
+              ></i>
               <span class="section-label">Recent</span>
+              <span class="section-count">{{ resolvedRecents.length }}</span>
             </div>
-            <ul class="nested-list">
+            <ul v-show="!isCollapsed(p.id, 'recent')" class="nested-list">
               <li
                 v-for="r in resolvedRecents"
                 :key="`${r.type}-${r.id}`"
@@ -696,13 +768,33 @@ const tauri = isTauri()
                   :key="ed.id"
                   class="nested-row file-row"
                   :class="{ 'view-active': isActiveView('file', ed.id) }"
-                  @click.stop="emit('select-file', ed.id)"
+                  @click.stop="renamingFileId !== ed.id && emit('select-file', ed.id)"
                 >
                   <span class="type-tag" :class="`type-${ed.type}`">{{ ed.type }}</span>
-                  <span class="nested-name" :title="ed.name">{{ ed.name }}</span>
-                  <button class="mini-x" @click.stop="detachEditor(p.id, ed.id)" title="Detach">
-                    ×
-                  </button>
+                  <template v-if="renamingFileId === ed.id">
+                    <input
+                      v-model="renameFileDraft"
+                      class="rename-input"
+                      @keydown.enter="commitFileRename(p.id)"
+                      @keydown.escape="cancelFileRename"
+                      @blur="commitFileRename(p.id)"
+                      @click.stop
+                      autofocus
+                    />
+                  </template>
+                  <template v-else>
+                    <span class="nested-name" :title="ed.name">{{ ed.name }}</span>
+                    <button
+                      class="mini-pencil"
+                      @click.stop="startFileRename(ed.id, ed.name)"
+                      title="Rename file"
+                    >
+                      <i class="mdi mdi-pencil-outline" />
+                    </button>
+                    <button class="mini-x" @click.stop="detachEditor(p.id, ed.id)" title="Detach">
+                      ×
+                    </button>
+                  </template>
                 </li>
               </ul>
               <p
@@ -884,7 +976,8 @@ const tauri = isTauri()
   outline: none;
 }
 
-.delete-btn {
+.delete-btn,
+.rename-btn {
   border: none;
   background: transparent;
   color: var(--muted);
@@ -896,13 +989,23 @@ const tauri = isTauri()
   border-radius: 3px;
 }
 
-.project-row:hover .delete-btn {
+.rename-btn {
+  font-size: 0.85rem;
+}
+
+.project-row:hover .delete-btn,
+.project-row:hover .rename-btn {
   visibility: visible;
 }
 
 .delete-btn:hover {
   color: #ef4444;
   background: rgba(239, 68, 68, 0.1);
+}
+
+.rename-btn:hover {
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.1);
 }
 
 /* Inline expansion */
@@ -1138,7 +1241,8 @@ const tauri = isTauri()
   color: var(--accent);
 }
 
-.mini-x {
+.mini-x,
+.mini-pencil {
   border: none;
   background: transparent;
   color: var(--muted);
@@ -1149,8 +1253,17 @@ const tauri = isTauri()
   visibility: hidden;
 }
 
-.nested-row:hover .mini-x {
+.mini-pencil {
+  font-size: 0.8rem;
+}
+
+.nested-row:hover .mini-x,
+.nested-row:hover .mini-pencil {
   visibility: visible;
+}
+
+.mini-pencil:hover {
+  color: var(--accent);
 }
 
 .mini-x:hover:not(:disabled) {
