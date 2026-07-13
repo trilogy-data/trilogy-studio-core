@@ -48,7 +48,10 @@ const emit = defineEmits(['expand'])
   z-index: 900;
   width: 48px;
   height: 48px;
-  border-radius: 50%;
+  padding: 0;
+  /* !important: the global button:not(...):not(...) radius rule in style.css
+     has higher specificity than any scoped class selector */
+  border-radius: 50% !important;
   background-color: var(--special-text);
   color: white;
   border: none;
@@ -89,10 +92,12 @@ const emit = defineEmits(['expand'])
   animation: tips-flash 1.6s ease-in-out infinite;
 }
 
+/* Ring spawns just outside the button edge and expands outward, so it never
+   overlaps the button face */
 .pulsing::after {
   content: '';
   position: absolute;
-  inset: -3px;
+  inset: -4px;
   border-radius: 50%;
   border: 2px solid var(--special-text);
   animation: tips-pulse 1.6s ease-out infinite;
@@ -101,11 +106,11 @@ const emit = defineEmits(['expand'])
 
 @keyframes tips-pulse {
   0% {
-    transform: scale(0.9);
-    opacity: 0.9;
+    transform: scale(1.05);
+    opacity: 0.8;
   }
   100% {
-    transform: scale(1.6);
+    transform: scale(1.8);
     opacity: 0;
   }
 }
