@@ -26,6 +26,7 @@ export const URL_HASH_KEYS = {
   // Editor tab within a result panel
   ACTIVE_EDITOR_TAB: 'activeEditorTab',
   // Deep-link / bootstrap params
+  DEMO: 'demo',
   SKIP_TIPS: 'skipTips',
   INITIAL_SEARCH: 'initialSearch',
   IMPORT: 'import',

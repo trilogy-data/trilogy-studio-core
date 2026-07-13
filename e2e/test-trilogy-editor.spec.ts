@@ -55,6 +55,37 @@ select unnest(x) as rows;
   await runEditorQueryAndExpectCount(page, 5)
 })
 
+test('test_demo_deep_link', async ({ page }) => {
+  // #demo=true lands directly in a connected demo editor with no clicks
+  await page.goto('#skipTips=true&demo=true')
+  await page.getByTestId('editor-run-button').click()
+  await page.getByRole('gridcell', { name: 'R' }).click()
+})
+
+test('test_tips_cta', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'tips CTA is rendered by the desktop IDE only')
+  // Re-enable tips (prepareTestPage seeds skipAllTips=true)
+  await page.addInitScript(() => {
+    const settings = JSON.parse(window.localStorage.getItem('userSettings') || '{}')
+    settings.skipAllTips = false
+    settings.tipsRead = []
+    window.localStorage.setItem('userSettings', JSON.stringify(settings))
+  })
+  await page.goto('#demo=true')
+
+  // Unread tips surface as a pulsing CTA, not a blocking modal
+  const cta = page.getByTestId('tips-cta-button')
+  await expect(cta).toBeVisible()
+  await expect(page.getByTestId('tutorial-popup-dialog')).toHaveCount(0)
+
+  // Clicking expands the tips popup; skipping marks all read and dismisses the CTA
+  await cta.click()
+  await expect(page.getByTestId('tutorial-popup-dialog')).toBeVisible()
+  await page.getByTestId('skip-sequence').click()
+  await expect(page.getByTestId('tutorial-popup-dialog')).toHaveCount(0)
+  await expect(cta).toHaveCount(0)
+})
+
 test('test_demo_editor', async ({ page, isMobile, browser }) => {
   await page.goto('#skipTips=true&sidebarScreen=editors&screen=welcome&welcome=welcome')
 
