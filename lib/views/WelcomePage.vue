@@ -44,8 +44,11 @@ import { ref, inject, computed } from 'vue'
 import trilogyIcon from '../static/trilogy.png'
 import EditorCreatorInline from '../components/editor/EditorCreatorInline.vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
+import { getDefaultValueFromHash, URL_HASH_KEYS } from '../stores/urlStore'
 const connectionStore = inject<ConnectionStoreType>('connectionStore')
-const demoLoading = ref(false)
+// The #demo=true deep link auto-launches the demo from the IDE shell; show
+// the loading state right away so this page reads as a splash, not a stop.
+const demoLoading = ref(getDefaultValueFromHash(URL_HASH_KEYS.DEMO, '') === 'true')
 const showCreator = ref(false)
 const emit = defineEmits([
   'demo-started',

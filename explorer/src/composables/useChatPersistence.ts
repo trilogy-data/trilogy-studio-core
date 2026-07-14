@@ -11,9 +11,10 @@ import useChatStore from '@lib/stores/chatStore'
  * this to flip true before deciding whether to create a fresh overseer
  * (otherwise a load completion would wipe a just-created singleton).
  */
-export function useChatPersistence(
-  prefix = 'explorer:',
-): { storage: LocalStorage; ready: Ref<boolean> } {
+export function useChatPersistence(prefix = 'explorer:'): {
+  storage: LocalStorage
+  ready: Ref<boolean>
+} {
   const store = useChatStore()
   const storage = new LocalStorage(prefix)
   const ready = ref(false)

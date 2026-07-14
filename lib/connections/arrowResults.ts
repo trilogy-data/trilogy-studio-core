@@ -84,9 +84,7 @@ export function processArrowSchema(
       description: '',
       scale: effective.scale,
       precision: effective.precision,
-      children: effective.children
-        ? processArrowSchema({ fields: effective.children })
-        : undefined,
+      children: effective.children ? processArrowSchema({ fields: effective.children }) : undefined,
     })
   }
   return headers
@@ -97,10 +95,7 @@ function parseUint32ArrayToBigInt(arr: Uint32Array): bigint {
     throw new Error('Expected Uint32Array of length 4')
   }
   return (
-    BigInt(arr[0]) +
-    (BigInt(arr[1]) << 32n) +
-    (BigInt(arr[2]) << 64n) +
-    (BigInt(arr[3]) << 96n)
+    BigInt(arr[0]) + (BigInt(arr[1]) << 32n) + (BigInt(arr[2]) << 64n) + (BigInt(arr[3]) << 96n)
   )
 }
 
@@ -118,10 +113,7 @@ function handleNumber(value: any): number {
   throw new Error(`Cannot parse value: ${value}`)
 }
 
-export function processArrowRow(
-  row: any,
-  headers: Map<string, ResultColumn>,
-): Record<string, any> {
+export function processArrowRow(row: any, headers: Map<string, ResultColumn>): Record<string, any> {
   const out: Record<string, any> = {}
   Object.keys(row).forEach((key) => {
     const column = headers.get(key)
@@ -131,8 +123,7 @@ export function processArrowRow(
     }
     switch (column.type) {
       case ColumnType.INTEGER:
-        out[key] =
-          row[key] !== null && row[key] !== undefined ? handleNumber(row[key]) : null
+        out[key] = row[key] !== null && row[key] !== undefined ? handleNumber(row[key]) : null
         break
       case ColumnType.FLOAT: {
         const scale = column.scale || 0

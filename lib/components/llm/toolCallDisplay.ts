@@ -8,6 +8,9 @@ export interface CondensedToolCallDisplay {
   error?: string
   /** The underlying tool calls grouped into this pill (preserved for inspection UI). */
   calls: ChatToolCall[]
+  /** Distinct subchat ids spawned/messaged by calls in this pill — drives the
+   *  jump-to-subagent button. Empty for non-dispatch tools. */
+  subchatIds: string[]
 }
 
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
@@ -45,6 +48,11 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   get_dashboard_item: 'Got dashboard item',
   get_dashboard_info: 'Got dashboard info',
   update_dashboard_info: 'Updated dashboard info',
+  spawn_subchat: 'Spawned subagent',
+  send_to_subchat: 'Messaged subagent',
+  list_subchats: 'Listed subagents',
+  peek_subchat: 'Peeked at subagent',
+  delete_subchat: 'Deleted subagent',
 }
 
 export function getToolDisplayName(toolName: string): string {
@@ -102,6 +110,7 @@ export function condenseToolCalls(toolCalls: ChatToolCall[]): CondensedToolCallD
     const label = getToolDisplayName(toolCall.name)
     const success = !!toolCall.result?.success
     const error = toolCall.result?.error
+    const subchatId = toolCall.result?.subchatId
     const previous = condensed[condensed.length - 1]
 
     if (
@@ -112,6 +121,9 @@ export function condenseToolCalls(toolCalls: ChatToolCall[]): CondensedToolCallD
     ) {
       previous.count += 1
       previous.calls.push(toolCall)
+      if (subchatId && !previous.subchatIds.includes(subchatId)) {
+        previous.subchatIds.push(subchatId)
+      }
       continue
     }
 
@@ -122,6 +134,7 @@ export function condenseToolCalls(toolCalls: ChatToolCall[]): CondensedToolCallD
       success,
       error,
       calls: [toolCall],
+      subchatIds: subchatId ? [subchatId] : [],
     })
   }
 

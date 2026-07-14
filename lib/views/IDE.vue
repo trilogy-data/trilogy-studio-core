@@ -1,12 +1,18 @@
 <template>
   <div class="main">
     <PopupModal
-      v-if="showTipModal"
+      v-if="tipsExpanded && expandedTips.length > 0"
       title="Tips"
-      :showModal="showTipModal"
-      :activeItems="displayedTips"
+      :showModal="tipsExpanded"
+      :activeItems="expandedTips"
       @mark-item-read="handleTipRead"
       @close-modal="closeTipModal"
+    />
+    <TipsCTA
+      v-if="hasUnreadTips && !tipsExpanded"
+      :pulsing="showTipModal"
+      :count="unreadTipCount"
+      @expand="expandTips"
     />
     <ChatCreatorModal
       :visible="showChatCreatorModal"
@@ -212,14 +218,25 @@ import TabbedBrowser from '../components/layout/TabbedBrowser.vue'
 import VerticalSplitLayout from '../components/layout/VerticalSplitLayout.vue'
 import CredentialBackgroundPage from './CredentialBackgroundPage.vue'
 import PopupModal from '../components/PopupModal.vue'
+import TipsCTA from '../components/TipsCTA.vue'
 import Sidebar from '../components/sidebar/Sidebar.vue'
 
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
-import { inject, ref, defineAsyncComponent, provide, onBeforeUnmount, onMounted } from 'vue'
+import {
+  inject,
+  ref,
+  computed,
+  defineAsyncComponent,
+  provide,
+  onBeforeUnmount,
+  onMounted,
+} from 'vue'
 import { preloadAllScreensWhenIdle } from '../utility/screenPreloader'
 import useScreenNavigation from '../stores/useScreenNavigation.ts'
+import { getDefaultValueFromHash, removeHashFromUrl, URL_HASH_KEYS } from '../stores/urlStore.ts'
+import type { ModalItem } from '../data/tips.ts'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import { KeySeparator } from '../data/constants'
@@ -286,6 +303,7 @@ const IDEComponent: Component = defineComponent({
     VerticalSplitLayout,
     CredentialBackgroundPage,
     PopupModal,
+    TipsCTA,
 
     // Lazy loaded components (kebab-case for template usage)
     sidebar: Sidebar,
@@ -400,8 +418,29 @@ const IDEComponent: Component = defineComponent({
     const handleTipRead = (id: string) => {
       markTipRead(id)
     }
-    const closeTipModal = () => {
+
+    // Tips surface as a bottom-right CTA instead of an auto-opening modal.
+    // showTipModal (set by tab navigation when unread tips exist) now drives
+    // the CTA's pulse; the popup itself only opens on click.
+    const tipsExpanded = ref(false)
+    const expandedTips = ref<ModalItem[]>([])
+    const unreadDisplayedTips = computed(() => {
+      if (userSettingsStore.settings.skipAllTips) {
+        return []
+      }
+      const read = userSettingsStore.settings.tipsRead || []
+      return displayedTips.value.filter((tip) => !read.includes(tip.id))
+    })
+    const hasUnreadTips = computed(() => unreadDisplayedTips.value.length > 0)
+    const unreadTipCount = computed(() => unreadDisplayedTips.value.length)
+    const expandTips = () => {
+      // Snapshot so marking tips read mid-sequence doesn't reshuffle the popup
+      expandedTips.value = unreadDisplayedTips.value
+      tipsExpanded.value = true
       showTipModal.value = false
+    }
+    const closeTipModal = () => {
+      tipsExpanded.value = false
     }
 
     // LLM view tab management
@@ -485,6 +524,11 @@ const IDEComponent: Component = defineComponent({
       handleTipRead,
       closeTipModal,
       showTipModal,
+      tipsExpanded,
+      expandedTips,
+      hasUnreadTips,
+      unreadTipCount,
+      expandTips,
       toggleFullScreen,
       llmInitialTab,
       handleLLMOpenView,
@@ -493,6 +537,13 @@ const IDEComponent: Component = defineComponent({
       handleCreateNewChat,
       handleChatCreated,
       sidebarCollapsed: ref(false),
+    }
+  },
+  async mounted() {
+    // #demo=true deep link: land directly in the demo editor, connected.
+    if (getDefaultValueFromHash(URL_HASH_KEYS.DEMO, '') === 'true') {
+      await this.startDemo()
+      removeHashFromUrl(URL_HASH_KEYS.DEMO)
     }
   },
   methods: {

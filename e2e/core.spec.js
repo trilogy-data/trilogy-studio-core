@@ -48,19 +48,13 @@ test('user settings', async ({ page, isMobile }) => {
   await page.getByTestId('connection-creator-name').fill('test')
   await page.getByTestId('connection-creator-submit').click()
   await createEditorFromConnectionList(page, 'test', 'trilogy')
-  // since we reset settings, we need to dismiss modal again
-  if (!isMobile) {
-    await page.getByTestId('exit-modal').click()
-  }
+  // Settings reset re-enables tips, but they now surface as a non-blocking
+  // bottom-right CTA rather than an auto-opening modal, so no dismissal needed.
   if (isMobile) {
     await openSidebarScreen(page, 'editors', isMobile)
   }
 
   await page.locator('[data-testid^="editor-e-local-local:test-new-editor-"]').last().click()
-  const skipTipsButton = page.getByRole('button', { name: 'Skip' })
-  if (await skipTipsButton.count()) {
-    await skipTipsButton.first().click()
-  }
 
   await page.getByTestId('editor-run-button').click()
   const request = await requestPromise

@@ -39,6 +39,9 @@ export interface ToolCallResult {
   triggersSymbolRefresh?: boolean
   terminatesLoop?: boolean
   awaitsUserInput?: boolean
+  /** Chat id of a subchat this tool call spawned or messaged — lets the UI
+   *  offer a jump-to-subagent affordance on the tool-call pill. */
+  subchatId?: string
   availableSymbols?: CompletionItem[]
   imageData?: {
     data: string

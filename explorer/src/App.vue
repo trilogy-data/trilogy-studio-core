@@ -9,11 +9,13 @@ import useModelConfigStore from '@lib/stores/modelStore'
 import useUserSettingsStore from '@lib/stores/userSettingsStore'
 import useScreenNavigation from '@lib/stores/useScreenNavigation'
 import { useAnalyticsStore } from '@lib/stores/analyticsStore'
+import { useDashboardStore } from '@lib/stores/dashboardStore'
 import { Chat } from '@lib/chats/chat'
 import { useProjectPersistence } from './composables/useProjectPersistence'
 import { useChatPersistence } from './composables/useChatPersistence'
 import { useLLMPersistence } from './composables/useLLMPersistence'
 import { useEditorPersistence } from './composables/useEditorPersistence'
+import { useDashboardPersistence } from './composables/useDashboardPersistence'
 import { useExecutionContext } from './composables/useExecutionContext'
 import ProjectSidebar from './components/ProjectSidebar.vue'
 import OverseerPanel from './components/OverseerPanel.vue'
@@ -22,12 +24,14 @@ import PromptManager from './components/PromptManager.vue'
 import SubchatViewer from './components/SubchatViewer.vue'
 import ArtifactsView from './components/ArtifactsView.vue'
 import FileEditor from './components/FileEditor.vue'
+import ReportView from './components/ReportView.vue'
 import ResizeHandle from './components/ResizeHandle.vue'
 
 const { ready: projectsReady } = useProjectPersistence()
 const { ready: chatsReady } = useChatPersistence()
 useEditorPersistence()
 useLLMPersistence()
+useDashboardPersistence()
 const { queryExecutionService, trilogyResolver } = useExecutionContext()
 
 const projectStore = useProjectStore()
@@ -37,6 +41,7 @@ const llmStore = useLLMConnectionStore()
 const connectionStore = useConnectionStore()
 const modelStore = useModelConfigStore()
 const userSettingsStore = useUserSettingsStore()
+const dashboardStore = useDashboardStore()
 // Lib's userSettingsStore defaults theme to 'dark' — force it to 'light'
 // so lib's CodeEditor selects the `trilogyStudiolight` Monaco theme that
 // matches the rest of the explorer chrome.
@@ -55,6 +60,7 @@ provide('userSettingsStore', userSettingsStore)
 provide('analyticsStore', analyticsStore)
 provide('navigationStore', navigationStore)
 provide('chatStore', chatStore)
+provide('dashboardStore', dashboardStore)
 provide('setActiveEditor', (id: string) => {
   editorStore.activeEditorId = id
 })
@@ -79,22 +85,110 @@ const rightWidth = ref(loadWidth('explorer:rightWidth', 420))
 watch(leftWidth, (v) => localStorage.setItem('explorer:leftWidth', String(v)))
 watch(rightWidth, (v) => localStorage.setItem('explorer:rightWidth', String(v)))
 
-// ----- selected file (center pane) -----
-const selectedFileId = ref<string>('')
+// ----- center pane view (workspace | file | analysis | dashboard) -----
+// Driven entirely from the left-hand nav — the sidebar is the single
+// navigation surface for the center column. 'workspace' is the aggregated
+// artifacts view; 'analysis' narrows it to one subchat's artifacts;
+// 'dashboard' shows a report-mode dashboard in ReportView.
+type CenterView =
+  | { type: 'workspace' }
+  | { type: 'file'; id: string }
+  | { type: 'analysis'; id: string }
+  | { type: 'dashboard'; id: string }
+const centerView = ref<CenterView>({ type: 'workspace' })
+const centerFileId = computed(() => (centerView.value.type === 'file' ? centerView.value.id : ''))
+const centerAnalysisId = computed(() =>
+  centerView.value.type === 'analysis' ? centerView.value.id : '',
+)
+const centerDashboardId = computed(() =>
+  centerView.value.type === 'dashboard' ? centerView.value.id : '',
+)
+
+// Recently-viewed files/analyses/reports (most recent first), persisted per
+// project so quick-nav survives a reload. The sidebar renders these as a
+// "Recent" section; dead ids are filtered out at render time there.
+interface RecentItem {
+  type: 'file' | 'analysis' | 'dashboard'
+  id: string
+}
+const recents = ref<RecentItem[]>([])
+function recentsKey(projectId: string): string {
+  return `explorer:recents:${projectId}`
+}
+function loadRecents() {
+  const pid = projectStore.activeProjectId
+  if (!pid) {
+    recents.value = []
+    return
+  }
+  try {
+    const raw = localStorage.getItem(recentsKey(pid))
+    recents.value = raw ? JSON.parse(raw) : []
+  } catch {
+    recents.value = []
+  }
+}
+watch(() => projectStore.activeProjectId, loadRecents, { immediate: true })
+
+function pushRecent(item: RecentItem) {
+  const pid = projectStore.activeProjectId
+  if (!pid) return
+  recents.value = [
+    item,
+    ...recents.value.filter((r) => !(r.type === item.type && r.id === item.id)),
+  ].slice(0, 8)
+  localStorage.setItem(recentsKey(pid), JSON.stringify(recents.value))
+}
+
 function onSelectFile(id: string) {
-  selectedFileId.value = id
+  centerView.value = { type: 'file', id }
+  pushRecent({ type: 'file', id })
 }
-function closeFile() {
-  selectedFileId.value = ''
+function onSelectAnalysis(id: string) {
+  centerView.value = { type: 'analysis', id }
+  pushRecent({ type: 'analysis', id })
 }
-// Auto-clear selection if the file gets detached / project switched away
-watch([() => projectStore.activeProject?.id, selectedFileId], () => {
-  const id = selectedFileId.value
-  if (!id) return
-  const ed = editorStore.editors[id]
+function onSelectDashboard(id: string) {
+  centerView.value = { type: 'dashboard', id }
+  pushRecent({ type: 'dashboard', id })
+}
+function onSelectWorkspace() {
+  centerView.value = { type: 'workspace' }
+}
+// When the overseer creates a report it queues a brief; the report's agent
+// engine only runs while the report is mounted. Auto-open freshly briefed
+// reports so authoring starts immediately instead of waiting for a click.
+watch(
+  () => Object.keys(dashboardStore.pendingChatPrompts),
+  (ids) => {
+    const project = projectStore.activeProject
+    if (!project) return
+    const id = ids.find((d) => project.dashboardIds.includes(d))
+    if (!id) return
+    if (centerView.value.type === 'dashboard' && centerView.value.id === id) return
+    onSelectDashboard(id)
+  },
+)
+// Fall back to the workspace if the viewed file/analysis/report is detached,
+// deleted, or the project switches away.
+watch([() => projectStore.activeProject?.id, centerView], () => {
+  const view = centerView.value
   const project = projectStore.activeProject
-  if (!ed || ed.deleted || !project || !project.editorIds.includes(id)) {
-    selectedFileId.value = ''
+  if (view.type === 'file') {
+    const ed = editorStore.editors[view.id]
+    if (!ed || ed.deleted || !project || !project.editorIds.includes(view.id)) {
+      centerView.value = { type: 'workspace' }
+    }
+  } else if (view.type === 'analysis') {
+    const chat = chatStore.chats[view.id]
+    if (!chat || chat.deleted || !project || !project.subchatIds.includes(view.id)) {
+      centerView.value = { type: 'workspace' }
+    }
+  } else if (view.type === 'dashboard') {
+    const dash = dashboardStore.dashboards[view.id]
+    if (!dash || dash.deleted || !project || !project.dashboardIds.includes(view.id)) {
+      centerView.value = { type: 'workspace' }
+    }
   }
 })
 
@@ -175,15 +269,28 @@ function onProviderAdded() {
 <template>
   <div class="app-root">
     <div class="left-column" :style="{ width: leftWidth + 'px' }">
-      <ProjectSidebar @select-subchat="onSelectSubchat" @select-file="onSelectFile" />
+      <ProjectSidebar
+        :activeView="centerView"
+        :recents="recents"
+        @select-subchat="onSelectSubchat"
+        @select-file="onSelectFile"
+        @select-analysis="onSelectAnalysis"
+        @select-workspace="onSelectWorkspace"
+        @select-dashboard="onSelectDashboard"
+      />
     </div>
     <ResizeHandle v-model="leftWidth" side="left" :min="200" :max="500" />
 
     <main class="main-pane">
       <ProviderSetup v-if="!hasProvider" @added="onProviderAdded" />
       <template v-else>
-        <FileEditor v-if="selectedFileId" :editorId="selectedFileId" @close="closeFile" />
-        <ArtifactsView v-else />
+        <FileEditor v-if="centerFileId" :editorId="centerFileId" @close="onSelectWorkspace" />
+        <ReportView
+          v-else-if="centerDashboardId"
+          :dashboardId="centerDashboardId"
+          @close="onSelectWorkspace"
+        />
+        <ArtifactsView v-else :subchatId="centerAnalysisId" />
 
         <ResizeHandle v-model="rightWidth" side="right" :min="320" :max="640" />
 
@@ -214,10 +321,7 @@ function onProviderAdded() {
             >
               Connection
             </button>
-            <button
-              :class="{ active: settingsTab === 'prompts' }"
-              @click="settingsTab = 'prompts'"
-            >
+            <button :class="{ active: settingsTab === 'prompts' }" @click="settingsTab = 'prompts'">
               Prompts
             </button>
           </nav>

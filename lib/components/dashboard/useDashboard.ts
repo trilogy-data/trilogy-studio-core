@@ -15,7 +15,6 @@ import {
   type CellType,
   CELL_TYPES,
   type DimensionClick,
-  type MarkdownData,
 } from '../../dashboards/base'
 import type { CompletionItem } from '../../stores/resolver'
 import type { DashboardImport, DashboardState } from '../../dashboards/base'
@@ -29,6 +28,12 @@ import {
   extractEligibleCrossFilterFields,
   filterAllowedDimensionFilters,
 } from '../../dashboards/crossFilters'
+import {
+  buildItemDataResponse,
+  buildRootContent,
+  applyItemDataToStore,
+  emptyItemDataResponse,
+} from '../../dashboards/itemData'
 
 export interface UseDashboardOptions {
   connectionId?: string
@@ -104,12 +109,7 @@ export function useDashboard(
 
   const rootContent = computed(() => {
     if (!dashboard.value) return []
-    return dashboard.value.imports.map((imp) => ({
-      alias: imp.name,
-      // legacy handling
-      contents:
-        editorStore.editors[imp.id]?.contents || editorStore.editors[imp.name]?.contents || '',
-    }))
+    return buildRootContent(dashboard.value, editorStore)
   })
 
   // Centralized dashboard initialization function
@@ -389,123 +389,19 @@ export function useDashboard(
   // Data management
   function getItemData(itemId: string, dashboardId: string): GridItemDataResponse {
     if (dashboardId && dashboard.value && dashboard.value.id !== dashboardId) {
-      return {
-        type: CELL_TYPES.CHART,
-        content: '',
-        structured_content: { markdown: '', query: '' },
-        name: `Item ${itemId}`,
-        allowCrossFilter: true,
-        width: 0,
-        height: 0,
-        imports: [],
-        filters: [],
-        rootContent: [],
-        hasDrilldown: false,
-      }
+      return emptyItemDataResponse(itemId)
     }
 
     if (!dashboard.value) {
-      return {
-        type: CELL_TYPES.CHART,
-        content: '',
-        structured_content: { markdown: '', query: '' },
-        name: `Item ${itemId}`,
-        allowCrossFilter: true,
-        width: 0,
-        height: 0,
-        imports: [],
-        filters: [],
-        rootContent: [],
-        hasDrilldown: false,
-      }
+      return emptyItemDataResponse(itemId)
     }
 
-    const item = dashboard.value.gridItems[itemId]
-
-    if (!item) {
-      return {
-        type: CELL_TYPES.CHART,
-        content: '',
-        structured_content: { markdown: '', query: '' },
-        name: `Item ${itemId}`,
-        allowCrossFilter: true,
-        width: 0,
-        height: 0,
-        imports: dashboard.value.imports,
-        filters: [],
-        rootContent: [],
-        connectionName: dashboard.value.connection || '',
-        hasDrilldown: false,
-      }
-    }
-
-    const itemFilters = item.filters || []
-    let finalFilters = itemFilters
-
-    if (dashboard.value.filter) {
-      const hasGlobalFilter = itemFilters.some(
-        (f) => f.source === 'global' && f.value === dashboard.value?.filter,
-      )
-
-      if (!hasGlobalFilter) {
-        finalFilters = [{ value: dashboard.value.filter, source: 'global' }, ...itemFilters]
-      }
-    }
-
-    function isMarkdownData(obj: any): obj is MarkdownData {
-      return (
-        obj &&
-        typeof obj === 'object' &&
-        typeof obj.markdown === 'string' &&
-        typeof obj.query === 'string'
-      )
-    }
-    let hasDrilldown = false
-    let content = isMarkdownData(item.content)
-      ? item.content
-      : {
-          markdown: item.type === 'markdown' ? item.content : '',
-          query: item.type !== 'markdown' ? item.content : '',
-        }
-    if (item.drilldown) {
-      hasDrilldown = true
-      content = isMarkdownData(item.drilldown)
-        ? item.drilldown
-        : {
-            markdown: item.type === 'markdown' ? item.drilldown : '',
-            query: item.type !== 'markdown' ? item.drilldown : '',
-          }
-    }
-    let config = item.chartConfig
-    if (hasDrilldown) {
-      config = item.drilldownChartConfig || undefined
-    }
-    return {
-      type: item.type,
-      // check if it's MarkdownData, and if so, extract markdown
-      //
-      content: isMarkdownData(item.content) ? item.content.markdown : item.content || '',
-      // display the drilldown of set
-      structured_content: content,
-      name: item.name,
-      allowCrossFilter: item.allowCrossFilter !== false, // Default to true if not explicitly false
-      width: item.width || 0,
-      height: item.height || 0,
-      chartConfig: config,
-      filters: finalFilters,
-      chartFilters: item.chartFilters || [],
-      conceptFilters: item.conceptFilters || [],
-      parameters: item.parameters || {},
-      onRefresh: handleRefresh,
+    // Shared store-backed resolution (also used by the headless agent
+    // runtime); the mounted path contributes the refresh callback.
+    return buildItemDataResponse(dashboard.value, itemId, {
       rootContent: rootContent.value,
-      results: item.results || null,
-      connectionName: dashboard.value.connection || '',
-      imports: dashboard.value.imports,
-      error: item.error || '',
-      loading: item.loading || false,
-      loadStartTime: item.loadStartTime || null, // Include load start time if available
-      hasDrilldown,
-    }
+      onRefresh: handleRefresh,
+    })
   }
 
   function setItemData(itemId: string, dashboardId: string, data: any): void {
@@ -520,52 +416,9 @@ export function useDashboard(
       return
     }
 
-    // Aggregate all updates into a batch
-    const updates: Parameters<typeof dashboardStore.updateMultipleItemProperties>[2] = {}
-
-    // Collect all the updates
-    if (data.name) {
-      updates.name = data.name
-    }
-    if (data.chartConfig) {
-      updates.chartConfig = data.chartConfig
-    }
-    if (data.content) {
-      updates.content = data.content
-    }
-    if (data.dimensions) {
-      updates.layoutDimensions = {
-        w: data.dimensions.width,
-        h: data.dimensions.height,
-      }
-    }
-    if (data.width && data.height) {
-      updates.width = data.width
-      updates.height = data.height
-    }
-    if (data.loading !== undefined) {
-      updates.loading = data.loading
-    }
-    if (data.results !== undefined) {
-      updates.results = data.results
-    }
-    if (data.error !== undefined) {
-      updates.error = data.error
-    }
-    if (data.drilldown !== undefined) {
-      updates.drilldown = data.drilldown
-    }
-    if (data.drilldownChartConfig !== undefined) {
-      updates.drilldownChartConfig = data.drilldownChartConfig
-    }
-    if (data.allowCrossFilter !== undefined) {
-      updates.allowCrossFilter = data.allowCrossFilter
-    }
-
-    // Apply all updates in a single batch transaction
-    if (Object.keys(updates).length > 0) {
-      dashboardStore.updateMultipleItemProperties(dashboard.value.id, itemId, updates)
-    }
+    // Shared store-backed batch write (also used by the headless agent
+    // runtime).
+    applyItemDataToStore(dashboardStore, dashboard.value.id, itemId, data)
 
     // Handle side effects after the batch update
     if (data.content) {

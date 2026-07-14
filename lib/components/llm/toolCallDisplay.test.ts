@@ -66,6 +66,7 @@ describe('toolCallDisplay', () => {
         success: true,
         error: undefined,
         calls: [calls[0], calls[1], calls[2]],
+        subchatIds: [],
       },
       {
         key: '4',
@@ -74,7 +75,38 @@ describe('toolCallDisplay', () => {
         success: true,
         error: undefined,
         calls: [calls[3]],
+        subchatIds: [],
       },
     ])
+  })
+
+  it('collects distinct subchat ids across condensed dispatch calls', () => {
+    const calls: ChatToolCall[] = [
+      {
+        id: '1',
+        name: 'spawn_subchat',
+        input: { kind: 'architect' },
+        result: { success: true, subchatId: 'chat-a' },
+      },
+      {
+        id: '2',
+        name: 'spawn_subchat',
+        input: { kind: 'analyst' },
+        result: { success: true, subchatId: 'chat-b' },
+      },
+      {
+        id: '3',
+        name: 'send_to_subchat',
+        input: { subchat_id: 'chat-a' },
+        result: { success: true, subchatId: 'chat-a' },
+      },
+    ]
+    const condensed = condenseToolCalls(calls)
+
+    expect(condensed).toHaveLength(2)
+    expect(condensed[0].label).toBe('Spawned subagent')
+    expect(condensed[0].subchatIds).toEqual(['chat-a', 'chat-b'])
+    expect(condensed[1].label).toBe('Messaged subagent')
+    expect(condensed[1].subchatIds).toEqual(['chat-a'])
   })
 })

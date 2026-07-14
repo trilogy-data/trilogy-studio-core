@@ -1,9 +1,11 @@
 import type { ChatStoreType, ChatExecutionDependencies } from '../stores/chatStore'
 import type { ProjectStoreType } from '../stores/projectStore'
+import type { DashboardStoreType } from '../stores/dashboardStore'
 import type { ToolCallResult } from './sharedToolHelpers'
 import type { SubchatKind } from './overseerAgentPrompt'
 import { SUBCHAT_KINDS } from './overseerAgentPrompt'
 import { summarizeSubchat } from './subchatSummarize'
+import { startDashboardAgentRun } from './dashboardAgentRuntime'
 
 /**
  * Tool executor for the (singleton) overseer chat. Spawns and follows up
@@ -20,6 +22,7 @@ export class OverseerToolExecutor {
     private projectStore: ProjectStoreType,
     private overseerChatId: string,
     private deps: ChatExecutionDependencies,
+    private dashboardStore?: DashboardStoreType,
   ) {}
 
   /** Read active project at tool-call time — the overseer can be talked to
@@ -29,10 +32,7 @@ export class OverseerToolExecutor {
     return this.projectStore.activeProjectId
   }
 
-  async executeToolCall(
-    toolName: string,
-    toolInput: Record<string, any>,
-  ): Promise<ToolCallResult> {
+  async executeToolCall(toolName: string, toolInput: Record<string, any>): Promise<ToolCallResult> {
     switch (toolName) {
       case 'spawn_subchat':
         return this.spawnSubchat(toolInput.kind, toolInput.task, toolInput.name)
@@ -44,6 +44,8 @@ export class OverseerToolExecutor {
         return this.peekSubchat(toolInput.subchat_id)
       case 'delete_subchat':
         return this.deleteSubchat(toolInput.subchat_id)
+      case 'create_report':
+        return this.createReport(toolInput.title, toolInput.prompt)
       case 'return_to_user':
         return {
           success: true,
@@ -107,6 +109,7 @@ export class OverseerToolExecutor {
     return {
       success: true,
       message: `Spawned ${kind} subchat ${subchat.id} in project "${project?.name ?? projectId}". It is running asynchronously; you'll be notified when it completes.`,
+      subchatId: subchat.id,
     }
   }
 
@@ -133,6 +136,7 @@ export class OverseerToolExecutor {
     return {
       success: true,
       message: `Sent follow-up to subchat ${subchatId}. It will resume asynchronously.`,
+      subchatId,
     }
   }
 
@@ -209,6 +213,87 @@ export class OverseerToolExecutor {
       }
     } catch (e) {
       return { success: false, error: `Peek failed: ${e instanceof Error ? e.message : String(e)}` }
+    }
+  }
+
+  /**
+   * Spawn a new report-mode dashboard in the active project and fire the
+   * brief at its agent immediately — headless, like spawnSubchat. The run
+   * continues in the background via chatStore; opening the report just
+   * renders progress. Falls back to queueing the brief (consumed on report
+   * open) if the headless kickoff fails.
+   */
+  private createReport(rawTitle: any, rawPrompt: any): ToolCallResult {
+    if (!this.dashboardStore) {
+      return {
+        success: false,
+        error:
+          'Dashboard store not available in this overseer session. Ask the user to create the report from the sidebar.',
+      }
+    }
+    const title = typeof rawTitle === 'string' ? rawTitle.trim() : ''
+    if (!title) return { success: false, error: 'title is required' }
+    const prompt = typeof rawPrompt === 'string' ? rawPrompt.trim() : ''
+    if (!prompt) return { success: false, error: 'prompt is required' }
+
+    const projectId = this.activeProjectId
+    if (!projectId) {
+      return {
+        success: false,
+        error: 'No active project. Ask the user to create or open a project first.',
+      }
+    }
+    const project = this.projectStore.projects[projectId]
+    if (!project) return { success: false, error: 'Active project not found' }
+
+    if (this.dashboardStore.dashboards[title]) {
+      return {
+        success: false,
+        error: `A dashboard named "${title}" already exists. Pick a different title.`,
+      }
+    }
+
+    let dashboard
+    try {
+      dashboard = this.dashboardStore.newReport(title, project.dataConnectionId || '')
+    } catch (e) {
+      return {
+        success: false,
+        error: `Failed to create report: ${e instanceof Error ? e.message : String(e)}`,
+      }
+    }
+    this.projectStore.addDashboardToProject(projectId, dashboard.id)
+
+    // Fire the brief immediately, headless. Do NOT also queue it as a
+    // pending prompt — the mounted panel would auto-send it a second time.
+    try {
+      startDashboardAgentRun({
+        dashboardId: dashboard.id,
+        prompt,
+        stores: {
+          dashboardStore: this.dashboardStore,
+          chatStore: this.chatStore,
+          connectionStore: this.deps.connectionStore,
+          editorStore: this.deps.editorStore,
+          llmConnectionStore: this.deps.llmConnectionStore,
+          queryExecutionService: this.deps.queryExecutionService,
+        },
+        deps: this.deps,
+      }).catch((err) => {
+        console.error(`Report agent kickoff for ${dashboard.id} failed`, err)
+      })
+    } catch (e) {
+      // Degrade to the open-to-start flow rather than losing the brief.
+      this.dashboardStore.setPendingChatPrompt(dashboard.id, prompt)
+      return {
+        success: true,
+        message: `Created report "${title}" (id ${dashboard.id}) in project "${project.name}", but could not start the agent in the background (${e instanceof Error ? e.message : String(e)}). The brief will fire when the user opens the report.`,
+      }
+    }
+
+    return {
+      success: true,
+      message: `Created report "${title}" (id ${dashboard.id}) in project "${project.name}". The report agent is authoring it now, asynchronously — progress is visible in the report (sidebar → Reports) and its chat.`,
     }
   }
 

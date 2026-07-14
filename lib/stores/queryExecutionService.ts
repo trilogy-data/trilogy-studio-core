@@ -132,9 +132,7 @@ class ConnectionStoreExecutionConnection implements ExecutionConnection {
   }
 
   listRegisteredFiles(): string[] {
-    return this.connection.listRegisteredFiles
-      ? this.connection.listRegisteredFiles()
-      : []
+    return this.connection.listRegisteredFiles ? this.connection.listRegisteredFiles() : []
   }
 }
 
@@ -1296,7 +1294,14 @@ export default class QueryExecutionService {
       // Diagnostic: log the raw thrown value so non-Error, non-string
       // throws don't get hidden behind 'Unknown error occurred'. Remove
       // once the explorer's remote-worker error path is settled.
-      console.error('[query catch] raw error:', error, 'type:', typeof error, 'ctor:', error?.constructor?.name)
+      console.error(
+        '[query catch] raw error:',
+        error,
+        'type:',
+        typeof error,
+        'ctor:',
+        error?.constructor?.name,
+      )
       const errorMessage = controller.signal.aborted
         ? 'Query cancelled by user'
         : error instanceof Error

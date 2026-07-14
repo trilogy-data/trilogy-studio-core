@@ -92,6 +92,16 @@
                 </span>
                 <span v-if="toolCall.error" class="tool-error">{{ toolCall.error }}</span>
                 <button
+                  v-for="subchatId in toolCall.subchatIds"
+                  :key="subchatId"
+                  type="button"
+                  class="tool-call-subchat"
+                  title="View subagent chat"
+                  @click.stop="$emit('open-subchat', subchatId)"
+                >
+                  <i class="mdi mdi-forum-outline"></i>
+                </button>
+                <button
                   type="button"
                   class="tool-call-inspect"
                   title="View tool call details"
@@ -327,6 +337,7 @@ export default defineComponent({
     'artifact-created',
     'update:messages',
     'title-update',
+    'open-subchat',
   ],
 
   setup(props, { emit }) {
@@ -462,6 +473,10 @@ export default defineComponent({
         update_artifact: 'Updating artifact...',
         remove_artifact: 'Removing artifact...',
         reorder_artifacts: 'Reordering artifacts...',
+        spawn_subchat: 'Spawning subagent...',
+        send_to_subchat: 'Messaging subagent...',
+        peek_subchat: 'Peeking at subagent...',
+        list_subchats: 'Listing subagents...',
       }
       return toolLabels[toolName] || `Using ${toolName}...`
     }
@@ -493,8 +508,13 @@ export default defineComponent({
       if (!isToolOnlyAssistantMessage(message) || !message.executedToolCalls?.length) return false
 
       const condensed = getCondensedToolCalls(message.executedToolCalls)
+      // Pills that link to a subagent chat stay expanded — summarizing would
+      // hide the jump-to-subagent button.
       return (
-        condensed.length > 1 && condensed.every((toolCall) => toolCall.success && !toolCall.error)
+        condensed.length > 1 &&
+        condensed.every(
+          (toolCall) => toolCall.success && !toolCall.error && toolCall.subchatIds.length === 0,
+        )
       )
     }
 
@@ -987,7 +1007,8 @@ export default defineComponent({
   font-size: 12px;
 }
 
-.tool-call-inspect {
+.tool-call-inspect,
+.tool-call-subchat {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1008,6 +1029,16 @@ export default defineComponent({
   opacity: 1;
   background: rgba(148, 163, 184, 0.18);
   color: var(--text-color);
+}
+
+.tool-call-subchat {
+  color: var(--special-text, #3b82f6);
+  opacity: 0.75;
+}
+
+.tool-call-subchat:hover {
+  opacity: 1;
+  background: rgba(59, 130, 246, 0.15);
 }
 
 @media screen and (max-width: 768px) {

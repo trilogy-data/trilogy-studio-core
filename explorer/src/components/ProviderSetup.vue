@@ -135,8 +135,8 @@ async function add() {
   <div class="provider-setup">
     <h2>Connect an LLM provider</h2>
     <p class="hint">
-      Demo uses a free shared key (no setup). For real chats, paste an API key.
-      Keys live in your browser only — Phase 5 moves them to the OS keychain.
+      Demo uses a free shared key (no setup). For real chats, paste an API key. Keys live in your
+      browser only — Phase 5 moves them to the OS keychain.
     </p>
 
     <div class="kind-row">

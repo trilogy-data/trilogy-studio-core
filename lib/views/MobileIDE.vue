@@ -144,6 +144,7 @@ import TrilogyResolver from '../stores/resolver.ts'
 import { inject, defineAsyncComponent, provide, onBeforeUnmount, ref } from 'vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
+import { getDefaultValueFromHash, removeHashFromUrl, URL_HASH_KEYS } from '../stores/urlStore.ts'
 import { KeySeparator } from '../data/constants'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import useScreenNavigation, { type Tab } from '../stores/useScreenNavigation.ts'
@@ -376,6 +377,13 @@ const MobileIDEComponent: Component = defineComponent({
       chatCreatorPreselectedConnection,
       handleCreateNewChat,
       handleChatCreated,
+    }
+  },
+  async mounted() {
+    // #demo=true deep link: land directly in the demo editor, connected.
+    if (getDefaultValueFromHash(URL_HASH_KEYS.DEMO, '') === 'true') {
+      await this.startDemo()
+      removeHashFromUrl(URL_HASH_KEYS.DEMO)
     }
   },
   methods: {

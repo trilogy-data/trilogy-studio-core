@@ -140,9 +140,7 @@ describe('RemoteWorkerConnection', () => {
 
   it('throws on query if no host is registered', async () => {
     const conn = new RemoteWorkerConnection('cn', { driver: 'duckdb' })
-    await expect(
-      conn.query_core('select 1', null, null),
-    ).rejects.toThrow(/no host/i)
+    await expect(conn.query_core('select 1', null, null)).rejects.toThrow(/no host/i)
   })
 
   it('connect → query streams IPC bytes and returns Results', async () => {
@@ -190,9 +188,7 @@ describe('RemoteWorkerConnection', () => {
       host: makeHost(state),
     })
     await conn.connect()
-    await expect(conn.query_core('select 1', null, null)).rejects.toThrow(
-      'worker exploded',
-    )
+    await expect(conn.query_core('select 1', null, null)).rejects.toThrow('worker exploded')
   })
 
   it('cancel forwards to the host with the session and identifier', async () => {
@@ -307,15 +303,11 @@ describe('RemoteWorkerConnection', () => {
     await conn.connect()
     conn.connected = true // simulate post-connect state from BaseConnection
 
-    await expect(conn.query_core('select 1', null, 'q1')).rejects.toThrow(
-      /session not found/,
-    )
+    await expect(conn.query_core('select 1', null, 'q1')).rejects.toThrow(/session not found/)
     expect(conn.connected).toBe(false)
     // Internal sessionId is private but we can prove it's cleared by
     // observing that the next query without reconnect throws our pre-check.
-    await expect(conn.query_core('select 2', null, 'q2')).rejects.toThrow(
-      /before connect/,
-    )
+    await expect(conn.query_core('select 2', null, 'q2')).rejects.toThrow(/before connect/)
   })
 
   it('clears connected when describeDatabases reports session not found', async () => {
@@ -344,9 +336,7 @@ describe('RemoteWorkerConnection', () => {
     await conn.connect()
     conn.connected = true
 
-    await expect(conn.query_core('selct 1', null, 'q')).rejects.toThrow(
-      /SQL parse error/,
-    )
+    await expect(conn.query_core('selct 1', null, 'q')).rejects.toThrow(/SQL parse error/)
     // Connection is still live — the user should retry the query, not
     // reconnect the session.
     expect(conn.connected).toBe(true)
