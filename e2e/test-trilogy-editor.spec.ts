@@ -71,11 +71,13 @@ test('test_tips_cta', async ({ page, isMobile }) => {
     settings.tipsRead = []
     window.localStorage.setItem('userSettings', JSON.stringify(settings))
   })
-  await page.goto('#demo=true')
+  // Any opened tab triggers tip selection; the tutorial tab avoids the
+  // network-bound demo import so the CTA appears immediately
+  await page.goto('#screen=tutorial&sidebarScreen=tutorial&tutorial=article%2BStudio%2BWelcome')
 
   // Unread tips surface as a pulsing CTA, not a blocking modal
   const cta = page.getByTestId('tips-cta-button')
-  await expect(cta).toBeVisible()
+  await expect(cta).toBeVisible({ timeout: 15000 })
   await expect(page.getByTestId('tutorial-popup-dialog')).toHaveCount(0)
 
   // Clicking expands the tips popup; skipping marks all read and dismisses the CTA

@@ -62,6 +62,11 @@ const emit = defineEmits<{
 
 .modal-panel {
   width: 100%;
+  /* Cap to the overlay so tall content scrolls in the body instead of
+     pushing the footer off-screen (e.g. small viewports) */
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
   background-color: var(--bg-color);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -71,6 +76,7 @@ const emit = defineEmits<{
 
 .modal-header {
   padding: 18px 20px 0;
+  flex-shrink: 0;
 }
 
 .modal-title {
@@ -82,6 +88,9 @@ const emit = defineEmits<{
 
 .modal-body {
   padding: 16px 20px 20px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .modal-footer {
@@ -89,5 +98,6 @@ const emit = defineEmits<{
   justify-content: flex-end;
   gap: 10px;
   padding: 0 20px 20px;
+  flex-shrink: 0;
 }
 </style>
