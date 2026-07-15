@@ -137,14 +137,6 @@ export default defineComponent({
       required: false,
     },
   },
-  data() {
-    return {
-      last_passed_query_text: null as string | null,
-      prompt: '',
-      generatingPrompt: false,
-      info: 'Query processing...',
-    }
-  },
   components: {
     LoadingButton,
     ErrorMessage,
@@ -153,11 +145,6 @@ export default defineComponent({
     CodeEditor,
   },
   emits: ['save-editors', 'save-models', 'query-started', 'query-finished'],
-  watch: {
-    editorHeight(newHeight) {
-      console.log('Editor height changed in Editor:', newHeight)
-    },
-  },
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const editorStore = inject<EditorStoreType>('editorStore')
@@ -232,12 +219,6 @@ export default defineComponent({
     },
     result() {
       return this.editorData.results
-    },
-    passedQuery(): boolean {
-      return this.editorData.contents === this.last_passed_query_text
-    },
-    generateOverlayVisible(): boolean {
-      return this.prompt.length > 1 || this.generatingPrompt
     },
   },
   methods: {
@@ -690,148 +671,72 @@ export default defineComponent({
         return
       }
 
-      if (this.editorData.type === 'sql') {
-        await this.generateLLMQuerySQL()
-      } else {
-        await this.generateLLMQuery()
-      }
+      await this.openLLMRefinement()
     },
 
-    // Public method to open LLM refinement (called from parent component)
-    openLLMRefinement(): void {
-      this.handleLLMTrigger()
-    },
-
-    // Open LLM refinement session for SQL editor
-    async generateLLMQuerySQL(): Promise<void> {
+    // Open an LLM refinement session for the current editor.
+    // Public: also called from parent components (e.g. IDE.vue).
+    async openLLMRefinement(): Promise<void> {
       if (!this.llmStore || !this.editorData) {
         console.error('LLM store or editor data is not available')
         return
       }
 
-      if (!this.loading && this.llmStore) {
-        try {
-          const editorId = this.editorData.id
-          const targetEditor = this.editorStore.editors[editorId]
-          if (!targetEditor) {
-            throw new Error('Target editor not found.')
-          }
-
-          const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
-          if (!codeEditorRef) {
-            throw new Error('Code editor reference not found')
-          }
-
-          const text = codeEditorRef.getEditorText(this.editorData.contents)
-          const range: Range = codeEditorRef.getEditorRange()
-
-          // Set up refinement session
-          // Calculate selection range as character offsets
-          let selectionRange: { start: number; end: number } | undefined
-          let selectedText = ''
-          if (range && text) {
-            // Convert line/column to character offsets
-            const lines = targetEditor.contents.split('\n')
-            let startOffset = 0
-            for (let i = 0; i < range.startLineNumber - 1; i++) {
-              startOffset += lines[i].length + 1 // +1 for newline
-            }
-            startOffset += range.startColumn - 1
-
-            let endOffset = 0
-            for (let i = 0; i < range.endLineNumber - 1; i++) {
-              endOffset += lines[i].length + 1
-            }
-            endOffset += range.endColumn - 1
-
-            selectionRange = { start: startOffset, end: endOffset }
-            selectedText = text
-          }
-
-          // Reuse existing session if available, otherwise create new one
-          if (!this.editorData.hasActiveRefinement()) {
-            this.editorData.setRefinementSession({
-              messages: [],
-              artifacts: [],
-              originalContent: targetEditor.contents,
-              currentContent: targetEditor.contents,
-              selectedText,
-              selectionRange,
-            })
-          }
-          // If session exists, just show it (don't overwrite messages/artifacts)
-        } catch (error) {
-          if (error instanceof Error) {
-            console.error('Error generating LLM SQL query:', error)
-            this.editorData.setError(error.message)
-          } else {
-            this.editorData.setError('Unknown error occurred')
-          }
-        } finally {
-          this.editorData.loading = false
+      try {
+        const targetEditor = this.editorStore.editors[this.editorData.id]
+        if (!targetEditor) {
+          throw new Error('Target editor not found.')
         }
-      }
-    },
-    // Open LLM refinement session for Trilogy editor
-    async generateLLMQuery(): Promise<void> {
-      if (!this.loading && this.llmStore) {
-        try {
-          const editorId = this.editorData.id
-          const targetEditor = this.editorStore.editors[editorId]
 
-          // Get text and range from the CodeEditor
-          const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
-          if (!codeEditorRef) {
-            throw new Error('Code editor reference not found')
+        const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
+        if (!codeEditorRef) {
+          throw new Error('Code editor reference not found')
+        }
+
+        const text = codeEditorRef.getEditorText(this.editorData.contents)
+        const range: Range = codeEditorRef.getEditorRange()
+
+        // Set up refinement session.
+        // Calculate selection range as character offsets.
+        let selectionRange: { start: number; end: number } | undefined
+        let selectedText = ''
+        if (range && text) {
+          // Convert line/column to character offsets
+          const lines = targetEditor.contents.split('\n')
+          let startOffset = 0
+          for (let i = 0; i < range.startLineNumber - 1; i++) {
+            startOffset += lines[i].length + 1 // +1 for newline
           }
+          startOffset += range.startColumn - 1
 
-          const text = codeEditorRef.getEditorText(this.editorData.contents)
-          const range: Range = codeEditorRef.getEditorRange()
-
-          // Set up refinement session
-          // Calculate selection range as character offsets
-          let selectionRange: { start: number; end: number } | undefined
-          let selectedText = ''
-          if (range && text) {
-            // Convert line/column to character offsets
-            const lines = targetEditor.contents.split('\n')
-            let startOffset = 0
-            for (let i = 0; i < range.startLineNumber - 1; i++) {
-              startOffset += lines[i].length + 1 // +1 for newline
-            }
-            startOffset += range.startColumn - 1
-
-            let endOffset = 0
-            for (let i = 0; i < range.endLineNumber - 1; i++) {
-              endOffset += lines[i].length + 1
-            }
-            endOffset += range.endColumn - 1
-
-            selectionRange = { start: startOffset, end: endOffset }
-            selectedText = text
+          let endOffset = 0
+          for (let i = 0; i < range.endLineNumber - 1; i++) {
+            endOffset += lines[i].length + 1
           }
+          endOffset += range.endColumn - 1
 
-          // Reuse existing session if available, otherwise create new one
-          if (!this.editorData.hasActiveRefinement()) {
-            this.editorData.setRefinementSession({
-              messages: [],
-              artifacts: [],
-              originalContent: targetEditor.contents,
-              currentContent: targetEditor.contents,
-              selectedText,
-              selectionRange,
-            })
-          }
-          // If session exists, just show it (don't overwrite messages/artifacts)
-        } catch (error) {
-          if (error instanceof Error) {
-            console.error('Error generating LLM query:', error)
-            this.editorData.setError(error.message)
-          } else {
-            this.editorData.setError('Unknown error occured')
-          }
-        } finally {
-          this.editorData.loading = false
+          selectionRange = { start: startOffset, end: endOffset }
+          selectedText = text
+        }
+
+        // Reuse existing session if available, otherwise create new one.
+        // If a session exists, just show it (don't overwrite messages/artifacts).
+        if (!this.editorData.hasActiveRefinement()) {
+          this.editorData.setRefinementSession({
+            messages: [],
+            artifacts: [],
+            originalContent: targetEditor.contents,
+            currentContent: targetEditor.contents,
+            selectedText,
+            selectionRange,
+          })
+        }
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error('Error opening LLM refinement:', error)
+          this.editorData.setError(error.message)
+        } else {
+          this.editorData.setError('Unknown error occurred')
         }
       }
     },
