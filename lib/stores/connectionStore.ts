@@ -100,7 +100,7 @@ const useConnectionStore = defineStore('connections', {
       // Create a new operation with timeout
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(
-          () => reject(new Error('Connection timed out after 30 seconds')),
+          () => reject(new Error(`Connection timed out after ${connectionTimeout / 1000} seconds`)),
           connectionTimeout,
         )
       })
@@ -114,10 +114,18 @@ const useConnectionStore = defineStore('connections', {
       }
 
       // Use Promise.race to implement timeout
-      const operationPromise = Promise.race([resetPromise(), timeoutPromise]).finally(() => {
-        // Clean up when operation completes or fails (including timeout)
-        pendingOperations.delete(operationKey)
-      })
+      const operationPromise = Promise.race([resetPromise(), timeoutPromise])
+        .catch((error) => {
+          // Stamp the failure on the connection so status icons and the
+          // global connection-error popup surface it — startup-script and
+          // timeout failures otherwise die silently on background connects.
+          this.connections[id]?.setError?.(error instanceof Error ? error.message : String(error))
+          throw error
+        })
+        .finally(() => {
+          // Clean up when operation completes or fails (including timeout)
+          pendingOperations.delete(operationKey)
+        })
 
       // Store the operation promise
       pendingOperations.set(operationKey, operationPromise)
@@ -152,19 +160,20 @@ const useConnectionStore = defineStore('connections', {
       const resetStart = rehydrate
         ? rehydrate.then(() => this.connections[id].reset())
         : this.connections[id].reset()
-      const resetPromise = resetStart.then(async () => {
-        try {
-          await runStartup(this.connections[id])
-        } catch (error) {
-          this.connections[id].setError((error as Error).message)
-          throw error
-        }
-      })
+      const resetPromise = resetStart.then(() => runStartup(this.connections[id]))
       // Use Promise.race to implement timeout
-      const operationPromise = Promise.race([resetPromise, timeoutPromise]).finally(() => {
-        // Clean up when operation completes, fails, OR times out
-        pendingOperations.delete(operationKey)
-      })
+      const operationPromise = Promise.race([resetPromise, timeoutPromise])
+        .catch((error) => {
+          // Stamp the failure (startup script, rehydrate, or timeout) on the
+          // connection so status icons and the global connection-error popup
+          // surface it.
+          this.connections[id]?.setError?.(error instanceof Error ? error.message : String(error))
+          throw error
+        })
+        .finally(() => {
+          // Clean up when operation completes, fails, OR times out
+          pendingOperations.delete(operationKey)
+        })
 
       // Store the operation promise
       pendingOperations.set(operationKey, operationPromise)

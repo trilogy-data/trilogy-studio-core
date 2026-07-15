@@ -174,6 +174,40 @@ describe('connectionStore', () => {
       // The promise races between reset and timeout, so it should reject with the reset error
       await expect(store.connectConnection('test-connection')).rejects.toThrow('Connection failed')
     }, 10000) // Increase timeout since we're racing with a 60s timeout
+
+    it('stamps the connection error when a startup script fails', async () => {
+      // Regression: background connects (demo setup, model imports) used to
+      // swallow startup-script failures — the connection just died silently
+      // with no error recorded for the UI to surface.
+      const startupEditor = {
+        id: 'startup',
+        name: 'startup',
+        connectionId: 'test-connection',
+        contents: 'SELECT * FROM broken',
+        tags: [EditorTag.STARTUP_SCRIPT],
+      }
+      mockEditorStoreState.getConnectionEditors = vi.fn(() => [startupEditor])
+
+      const store = useConnectionStore()
+      const setErrorMock = vi.fn()
+      store.connections['test-connection'] = {
+        id: 'test-connection',
+        name: 'test-connection',
+        connected: false,
+        running: false,
+        error: null,
+        model: null,
+        changed: false,
+        reset: vi.fn().mockResolvedValue(undefined),
+        runScript: vi.fn().mockRejectedValue(new Error('CORS blocked the parquet fetch')),
+        setError: setErrorMock,
+      } as any
+
+      await expect(store.connectConnection('test-connection')).rejects.toThrow(
+        'CORS blocked the parquet fetch',
+      )
+      expect(setErrorMock).toHaveBeenCalledWith('CORS blocked the parquet fetch')
+    })
   })
 
   describe('deleteConnection / purgeDeletedConnections', () => {

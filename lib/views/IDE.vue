@@ -21,6 +21,7 @@
       @close="showChatCreatorModal = false"
       @chat-created="handleChatCreated"
     />
+    <connection-error-popup />
     <!-- Full screen mode - no sidebar -->
     <div v-if="fullScreen" class="full-screen-container">
       <template v-if="activeScreen === 'dashboard'">
@@ -273,6 +274,9 @@ const AssetAutoImporter = defineAsyncComponent(() => import('../components/Asset
 const ChatCreatorModal = defineAsyncComponent(
   () => import('../components/llm/ChatCreatorModal.vue'),
 )
+const ConnectionErrorPopup = defineAsyncComponent(
+  () => import('../components/ConnectionErrorPopup.vue'),
+)
 
 // Lazy load utility components
 const ErrorMessage = defineAsyncComponent(() => import('../components/ErrorMessage.vue'))
@@ -322,6 +326,7 @@ const IDEComponent: Component = defineComponent({
     'dashboard-auto-importer': AssetAutoImporter,
     'asset-auto-importer': AssetAutoImporter,
     ChatCreatorModal,
+    'connection-error-popup': ConnectionErrorPopup,
 
     // Utility components (may not be used in template but included for completeness)
     'error-message': ErrorMessage,
