@@ -30,10 +30,13 @@ export default async function setupDemo(
 ) {
   // Idempotent: a repeat demo launch (welcome button or #demo=true deep link)
   // reuses the existing setup rather than clobbering any user edits to it.
+  // The store is keyed by connection.id (e.g. "local:demo-model-connection"),
+  // not the display name, so resolve by name and connect by id.
   const existingEditorId = findDemoEditorId(editorStore)
-  if (existingEditorId && connectionStore.connections[DEMO_CONNECTION_NAME]) {
+  const existingConnection = connectionStore.connectionByName(DEMO_CONNECTION_NAME)
+  if (existingEditorId && existingConnection) {
     connectionStore
-      .connectConnection(DEMO_CONNECTION_NAME)
+      .connectConnection(existingConnection.id)
       .catch((error) => console.error('Demo connection failed to connect:', error))
     return existingEditorId
   }
@@ -52,7 +55,7 @@ export default async function setupDemo(
   await saveDashboards(Object.values(dashboardStore.dashboards))
   // Connect in the background so the first query doesn't pay connection latency
   connectionStore
-    .connectConnection(DEMO_CONNECTION_NAME)
+    .connectConnection(connection.id)
     .catch((error) => console.error('Demo connection failed to connect:', error))
   const editorId = findDemoEditorId(editorStore)
   if (!editorId) {

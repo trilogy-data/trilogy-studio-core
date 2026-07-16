@@ -706,4 +706,7 @@ const handleResize = () => {
   windowWidth.value = window.innerWidth
 }
 provide('isMobile', isMobile)
+// Expose the hydration flag so views can defer bootstrap logic (e.g. the
+// #demo=true deep link) until persisted state has finished loading.
+provide('storesLoaded', loaded)
 </script>
