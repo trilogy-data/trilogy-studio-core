@@ -799,19 +799,19 @@ export default defineComponent({
   align-self: flex-start;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
+  gap: 6px;
+  padding: 3px 8px;
   background-color: var(--query-window-bg);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  font-size: var(--font-size);
+  border-radius: 4px;
+  font-size: 12px;
   color: var(--text-color);
   max-width: 85%;
 }
 
 .loading-spinner {
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   border: 2px solid var(--border-light);
   border-top-color: var(--special-text);
   border-radius: 50%;

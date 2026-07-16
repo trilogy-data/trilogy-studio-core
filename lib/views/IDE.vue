@@ -233,7 +233,9 @@ import {
   provide,
   onBeforeUnmount,
   onMounted,
+  watch,
 } from 'vue'
+import type { Ref } from 'vue'
 import { preloadAllScreensWhenIdle } from '../utility/screenPreloader'
 import useScreenNavigation from '../stores/useScreenNavigation.ts'
 import { getDefaultValueFromHash, removeHashFromUrl, URL_HASH_KEYS } from '../stores/urlStore.ts'
@@ -341,6 +343,9 @@ const IDEComponent: Component = defineComponent({
     const editorStore = inject<EditorStoreType>('editorStore')
     const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore')
     const llmConnectionStore = inject<any>('llmConnectionStore', null)
+    // Hydration flag from Manager; the demo deep link waits on it so it doesn't
+    // race persisted state loading and get clobbered by loadConnections.
+    const storesLoaded = inject<Ref<boolean>>('storesLoaded', ref(true))
 
     let modelStore = inject<ModelConfigStoreType>('modelStore')
     let dashboardStore = inject<DashboardStoreType>('dashboardStore')
@@ -541,12 +546,19 @@ const IDEComponent: Component = defineComponent({
       chatCreatorPreselectedConnection,
       handleCreateNewChat,
       handleChatCreated,
+      storesLoaded,
       sidebarCollapsed: ref(false),
     }
   },
   async mounted() {
     // #demo=true deep link: land directly in the demo editor, connected.
     if (getDefaultValueFromHash(URL_HASH_KEYS.DEMO, '') === 'true') {
+      // Wait for persisted state to hydrate first; running the demo setup
+      // before loadConnections finishes would let hydration overwrite the
+      // freshly-created (and connecting) demo connection, leaving it
+      // disconnected. It also lets setupDemo's idempotency check see any
+      // existing demo editor and reuse it instead of recreating it.
+      await this.waitForStoresLoaded()
       await this.startDemo()
       removeHashFromUrl(URL_HASH_KEYS.DEMO)
     }
@@ -579,6 +591,20 @@ const IDEComponent: Component = defineComponent({
       if (this.editorRef) {
         this.editorRef.openLLMRefinement()
       }
+    },
+    waitForStoresLoaded(): Promise<void> {
+      if (this.storesLoaded) return Promise.resolve()
+      return new Promise((resolve) => {
+        const stop = watch(
+          () => this.storesLoaded,
+          (loaded) => {
+            if (loaded) {
+              stop()
+              resolve()
+            }
+          },
+        )
+      })
     },
     async startDemo() {
       let editor = await setupDemo(
