@@ -1,5 +1,8 @@
 <template>
-  <div class="main">
+  <div
+    class="main mobile-ide-root"
+    :style="{ '--mobile-viewport-height': mobileViewportHeight }"
+  >
     <ChatCreatorModal
       :visible="showChatCreatorModal"
       :preselectedConnection="chatCreatorPreselectedConnection"
@@ -42,7 +45,7 @@
         />
       </template>
       <template v-if="activeScreen && activeScreen !== '' && ['editors'].includes(activeScreen)">
-        <tabbed-layout>
+        <tabbed-layout :show-chat="hasActiveEditorChat">
           <template #editor="slotProps" v-if="activeEditor && activeEditorData">
             <editor
               v-if="activeEditorData.type == 'preql'"
@@ -60,7 +63,10 @@
             />
           </template>
           <template #results v-if="activeEditorData">
-            <ResultsView :editorData="activeEditorData"></ResultsView>
+            <ResultsView :editorData="activeEditorData" display-mode="results"></ResultsView>
+          </template>
+          <template #chat v-if="activeEditorData && hasActiveEditorChat">
+            <ResultsView :editorData="activeEditorData" display-mode="chat"></ResultsView>
           </template>
         </tabbed-layout>
       </template>
@@ -111,6 +117,7 @@
 <style scoped>
 .ide-context-manager {
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -121,6 +128,17 @@ header {
 
 aside {
   flex-shrink: 0;
+}
+</style>
+
+<style>
+@media screen and (max-width: 768px) {
+  /* iOS Safari zooms the page when a focused form control renders below 16px. */
+  .mobile-ide-root input,
+  .mobile-ide-root textarea,
+  .mobile-ide-root select {
+    font-size: 16px !important;
+  }
 }
 </style>
 
@@ -139,9 +157,11 @@ import ModelView from './ModelView.vue'
 import UserSettings from '../components/user/UserSettings.vue'
 import UserProfile from '../components/user/UserProfile.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
+import type EditorModel from '../editors/editor.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
-import { inject, defineAsyncComponent, provide, onBeforeUnmount, ref } from 'vue'
+import type QueryExecutionService from '../stores/queryExecutionService.ts'
+import { inject, defineAsyncComponent, provide, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import { getDefaultValueFromHash, removeHashFromUrl, URL_HASH_KEYS } from '../stores/urlStore.ts'
@@ -208,6 +228,7 @@ const MobileIDEComponent: Component = defineComponent({
     let modelStore = inject<ModelConfigStoreType>('modelStore')
     let dashboardStore = inject<DashboardStoreType>('dashboardStore')
     const trilogyResolver = inject<ResolverType>('trilogyResolver')
+    const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     let saveEditors = inject<Function>('saveEditors')
     let saveConnections = inject<Function>('saveConnections')
     let saveModels = inject<Function>('saveModels')
@@ -285,6 +306,21 @@ const MobileIDEComponent: Component = defineComponent({
     // Chat creator modal management
     const showChatCreatorModal = ref(false)
     const chatCreatorPreselectedConnection = ref('')
+    const mobileViewportHeight = ref('100dvh')
+    const updateMobileViewportHeight = () => {
+      mobileViewportHeight.value = window.visualViewport
+        ? `${window.visualViewport.height}px`
+        : `${window.innerHeight}px`
+    }
+
+    onMounted(() => {
+      updateMobileViewportHeight()
+      window.visualViewport?.addEventListener('resize', updateMobileViewportHeight)
+    })
+
+    onBeforeUnmount(() => {
+      window.visualViewport?.removeEventListener('resize', updateMobileViewportHeight)
+    })
 
     const handleCreateNewChat = (connectionName: string) => {
       chatCreatorPreselectedConnection.value = connectionName
@@ -337,6 +373,7 @@ const MobileIDEComponent: Component = defineComponent({
       editorStore,
       dashboardStore,
       trilogyResolver,
+      queryExecutionService,
       saveEditors,
       saveConnections,
       saveModels,
@@ -377,6 +414,7 @@ const MobileIDEComponent: Component = defineComponent({
       chatCreatorPreselectedConnection,
       handleCreateNewChat,
       handleChatCreated,
+      mobileViewportHeight,
     }
   },
   async mounted() {
@@ -400,6 +438,7 @@ const MobileIDEComponent: Component = defineComponent({
         this.saveConnections,
         this.saveModels,
         this.saveDashboards,
+        this.queryExecutionService,
       )
       this.setActiveScreen('editors')
       this.setActiveEditor(editorId)
@@ -412,10 +451,15 @@ const MobileIDEComponent: Component = defineComponent({
     },
   },
   computed: {
-    activeEditorData() {
+    activeEditorData(): EditorModel | null {
       if (!this.activeEditor) return null
       let r = this.editorStore.editors[this.activeEditor]
       return r
+    },
+    hasActiveEditorChat(): boolean {
+      if (!this.activeEditor) return false
+      const editor = (this.editorStore.editors as Record<string, EditorModel>)[this.activeEditor]
+      return Boolean(editor?.hasActiveRefinement())
     },
     editorList() {
       return Object.keys(this.editors).map((editor) => this.editors[editor])

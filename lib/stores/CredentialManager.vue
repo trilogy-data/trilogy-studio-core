@@ -6,7 +6,7 @@
         <div class="confirmation-dialog">
           <h2>One Moment</h2>
           <h3>Loading Your Saved Studio Credentials</h3>
-          <div v-if="!bypassMode">
+          <div v-if="!bypassMode" class="credential-prompt-content">
             <p>
               Enter a keyphrase to use saved credentials. (This is a secret phrase you created to
               encrypt your credentials. It's not stored anywhere, so keep it safe.) You'll be asked
@@ -36,7 +36,7 @@
 
             <div class="error-message" v-if="error">{{ error }}</div>
 
-            <div class="button-container">
+            <div class="credential-actions">
               <button
                 @click="submitKeyphrase"
                 class="primary-button"
@@ -46,20 +46,16 @@
               </button>
               <button @click="showBypassWarning" class="cancel-btn">Skip</button>
             </div>
-            <p class="warning-message">
-              ⚠️ Use a unique keyphrase. If you lose it, you won't be able to access your
-              credentials. A password manager also works well!
-            </p>
           </div>
 
-          <div v-else>
+          <div v-else class="credential-prompt-content">
             <p class="warning-message">
               ⚠️ Warning: Bypassing encryption will cause all your saved credentials to become
               inaccessible.
             </p>
             <p>Your saved credentials will be lost and you will need to re-enter them.</p>
 
-            <div class="dialog-actions">
+            <div class="credential-actions">
               <button @click="confirmBypass" class="confirm-btn">Confirm Skip</button>
               <button @click="cancelBypass" class="cancel-btn">Go Back</button>
             </div>
@@ -181,5 +177,58 @@ input {
 
 .credential-list li {
   margin-bottom: 4px;
+}
+
+.credential-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+@media screen and (max-width: 768px) {
+  .confirmation-overlay {
+    align-items: stretch;
+    background: var(--query-window-bg);
+  }
+
+  .confirmation-dialog {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: var(--mobile-viewport-height, 100dvh);
+    padding: calc(20px + env(safe-area-inset-top)) 18px
+      calc(12px + env(safe-area-inset-bottom));
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden;
+  }
+
+  .credential-prompt-content {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .credential-actions {
+    position: sticky;
+    bottom: 0;
+    order: 10;
+    flex: 0 0 auto;
+    margin-top: auto;
+    padding: 12px 0 0;
+    background: var(--query-window-bg);
+    border-top: 1px solid var(--border-light);
+  }
+
+  .credential-actions button {
+    flex: 1 1 0;
+    min-height: 48px;
+    font-size: 16px;
+  }
 }
 </style>

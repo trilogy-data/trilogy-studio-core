@@ -5,7 +5,7 @@
         <h3 class="font-sans sidebar-header">Models</h3>
         <div class="models-header-actions">
           <button
-            class="sidebar-control-button sidebar-header-action"
+            class="sidebar-control-button sidebar-header-action sidebar-primary-create"
             @click="creatorVisible = !creatorVisible"
             :data-testid="testTag ? `model-creator-add-${testTag}` : 'model-creator-add'"
           >

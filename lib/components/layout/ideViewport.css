@@ -1,4 +1,7 @@
 .main {
   width: 100vw;
   height: 100vh;
+  height: var(--mobile-viewport-height, 100dvh);
+  min-width: 0;
+  overflow: hidden;
 }

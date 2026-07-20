@@ -299,6 +299,7 @@
   flex-direction: column;
   width: 100%;
   height: 100vh;
+  height: var(--mobile-viewport-height, 100dvh);
   /* Remove overflow hidden to allow sticky positioning */
   overflow: visible;
 }
@@ -320,6 +321,7 @@
   flex-direction: column;
   flex: 1 1 auto;
   height: calc(100vh - 40px);
+  height: calc(var(--mobile-viewport-height, 100dvh) - 40px);
   width: 100%;
   z-index: 51;
   overflow-y: auto;
@@ -330,6 +332,8 @@
 .nested-page-content {
   flex: 1 1 auto;
   height: calc(100vh - 40px);
+  height: calc(var(--mobile-viewport-height, 100dvh) - 40px);
+  min-width: 0;
   z-index: 1;
   overflow: auto;
   /* Improve scrolling on iOS Safari */

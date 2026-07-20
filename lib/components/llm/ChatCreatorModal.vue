@@ -322,11 +322,41 @@ export default defineComponent({
 }
 
 @media screen and (max-width: 480px) {
+  .confirmation-overlay {
+    align-items: stretch;
+    background-color: var(--bg-color);
+  }
+
   .confirmation-dialog {
+    box-sizing: border-box;
     min-width: unset;
-    width: calc(100% - 32px);
-    max-width: calc(100% - 32px);
-    padding: 16px;
+    width: 100%;
+    max-width: none;
+    min-height: 100dvh;
+    padding: calc(20px + env(safe-area-inset-top)) 18px
+      calc(20px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .form-group select,
+  .form-group input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .button-container {
+    flex-direction: column-reverse;
+  }
+
+  .button-container button {
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px;
   }
 }
 

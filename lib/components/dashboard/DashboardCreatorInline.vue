@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="dashboard-creator">
+  <div v-if="visible" class="dashboard-creator creator-container">
     <h4>Create New Dashboard</h4>
     <!-- Prompt-first when an LLM is configured: the assistant can pick the title. -->
     <div v-if="showPromptField" class="form-group">
@@ -63,7 +63,7 @@
         </option>
       </select>
     </div>
-    <div class="form-actions">
+    <div class="form-actions button-row">
       <button
         @click="createDashboard"
         :disabled="!canSubmit"
@@ -363,3 +363,4 @@ export default {
   color: var(--text-color);
 }
 </style>
+<style scoped src="../creatorForm.css"></style>

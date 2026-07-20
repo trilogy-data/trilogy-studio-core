@@ -29,6 +29,7 @@
           :editor-type="editorData.type"
           :scroll-position="editorData.scrollPosition"
           :theme="userSettingsStore.getSettings.theme"
+          :is-mobile="isMobile"
           :editorHeight="containerHeight"
           @contents-change="handleContentsChange"
           @scroll-change="handlePositionChange"
@@ -66,6 +67,17 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+@media screen and (max-width: 768px) {
+  .editor-content {
+    min-width: 0;
+    padding-right: 0;
+    gap: 0;
+    overflow: hidden;
+  }
 }
 </style>
 

@@ -4,7 +4,7 @@
       <div class="editors-header-row">
         <h3 v-if="!isMobile" class="font-sans sidebar-header">Editors</h3>
         <button
-          class="sidebar-control-button sidebar-header-action"
+          class="sidebar-control-button sidebar-header-action sidebar-primary-create"
           @click="creatorVisible = !creatorVisible"
           :data-testid="testTag ? `editor-creator-add-${testTag}` : 'editor-creator-add'"
         >

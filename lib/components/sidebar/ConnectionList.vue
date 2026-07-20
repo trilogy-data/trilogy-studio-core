@@ -4,7 +4,7 @@
       <div class="connections-header">
         <h3 class="font-sans sidebar-header">Connections</h3>
         <button
-          class="sidebar-control-button sidebar-header-action connections-new-btn"
+          class="sidebar-control-button sidebar-header-action sidebar-primary-create connections-new-btn"
           @click="creatorVisible = !creatorVisible"
           :data-testid="testTag ? `connection-creator-add-${testTag}` : 'connection-creator-add'"
         >

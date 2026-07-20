@@ -56,3 +56,56 @@ option {
   font-size: 12px;
   font-weight: 300;
 }
+
+@media screen and (max-width: 768px) {
+  .creator-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .creator-container form {
+    flex: 1 1 auto;
+    gap: 18px;
+  }
+
+  .form-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .form-row label {
+    flex: none;
+    font-size: 14px;
+  }
+
+  .form-row input:not([type='checkbox']),
+  .form-row select,
+  .form-row textarea {
+    flex: none;
+    min-height: 48px;
+    height: 48px;
+    font-size: 16px;
+  }
+
+  .button-row {
+    position: sticky;
+    bottom: calc(-20px - env(safe-area-inset-bottom));
+    z-index: 2;
+    display: flex;
+    flex-direction: row;
+    margin-top: auto;
+    padding: 12px 0 calc(20px + env(safe-area-inset-bottom));
+    background: var(--sidebar-bg);
+    border-top: 1px solid var(--border-light);
+  }
+
+  .button-row button,
+  .button-row :deep(.submit-button) {
+    flex: 1 1 0;
+    width: auto;
+    min-height: 48px;
+    height: 48px;
+    font-size: 16px;
+  }
+}

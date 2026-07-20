@@ -44,6 +44,7 @@ interface Props {
   theme: string
   scrollPosition?: { line: number; column: number } | null
   editorHeight?: number
+  isMobile?: boolean
 }
 
 // Event callback interface
@@ -396,6 +397,19 @@ export const createEditor = (
     acceptSuggestionOnEnter: 'off',
     tabCompletion: 'on',
     wordWrap: 'on',
+    ...(props.isMobile
+      ? {
+          fontSize: 16,
+          scrollBeyondLastLine: false,
+          minimap: { enabled: false },
+          overviewRulerLanes: 0,
+          hideCursorInOverviewRuler: true,
+          glyphMargin: false,
+          folding: false,
+          lineDecorationsWidth: 8,
+          padding: { top: 8, bottom: 16 },
+        }
+      : {}),
   })
 
   // Set theme
