@@ -66,6 +66,17 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+@media screen and (max-width: 768px) {
+  .editor-content {
+    min-width: 0;
+    padding-right: 0;
+    gap: 0;
+    overflow: hidden;
+  }
 }
 </style>
 

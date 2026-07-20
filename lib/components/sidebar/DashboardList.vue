@@ -5,7 +5,7 @@
       <div class="dashboards-header">
         <h3 class="font-sans sidebar-header">Dashboards</h3>
         <button
-          class="sidebar-control-button sidebar-header-action"
+          class="sidebar-control-button sidebar-header-action sidebar-primary-create"
           @click="creatorVisible = !creatorVisible"
           :data-testid="testTag ? `dashboard-creator-add-${testTag}` : 'dashboard-creator-add'"
         >

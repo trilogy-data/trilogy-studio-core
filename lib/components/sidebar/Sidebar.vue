@@ -607,6 +607,12 @@ export default defineComponent({
 
   .sidebar-container {
     height: calc(100vh - 40px);
+    height: calc(100dvh - 40px);
+  }
+
+  .sidebar-content {
+    min-width: 0;
+    overflow: hidden;
   }
 }
 </style>

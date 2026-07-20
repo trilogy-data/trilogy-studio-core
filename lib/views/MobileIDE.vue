@@ -1,5 +1,5 @@
 <template>
-  <div class="main">
+  <div class="main mobile-ide-root">
     <ChatCreatorModal
       :visible="showChatCreatorModal"
       :preselectedConnection="chatCreatorPreselectedConnection"
@@ -42,7 +42,7 @@
         />
       </template>
       <template v-if="activeScreen && activeScreen !== '' && ['editors'].includes(activeScreen)">
-        <tabbed-layout>
+        <tabbed-layout :show-chat="hasActiveEditorChat">
           <template #editor="slotProps" v-if="activeEditor && activeEditorData">
             <editor
               v-if="activeEditorData.type == 'preql'"
@@ -60,7 +60,10 @@
             />
           </template>
           <template #results v-if="activeEditorData">
-            <ResultsView :editorData="activeEditorData"></ResultsView>
+            <ResultsView :editorData="activeEditorData" display-mode="results"></ResultsView>
+          </template>
+          <template #chat v-if="activeEditorData && hasActiveEditorChat">
+            <ResultsView :editorData="activeEditorData" display-mode="chat"></ResultsView>
           </template>
         </tabbed-layout>
       </template>
@@ -111,6 +114,7 @@
 <style scoped>
 .ide-context-manager {
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -121,6 +125,17 @@ header {
 
 aside {
   flex-shrink: 0;
+}
+</style>
+
+<style>
+@media screen and (max-width: 768px) {
+  /* iOS Safari zooms the page when a focused form control renders below 16px. */
+  .mobile-ide-root input,
+  .mobile-ide-root textarea,
+  .mobile-ide-root select {
+    font-size: 16px !important;
+  }
 }
 </style>
 
@@ -420,6 +435,9 @@ const MobileIDEComponent: Component = defineComponent({
       if (!this.activeEditor) return null
       let r = this.editorStore.editors[this.activeEditor]
       return r
+    },
+    hasActiveEditorChat() {
+      return Boolean(this.activeEditorData?.hasActiveRefinement())
     },
     editorList() {
       return Object.keys(this.editors).map((editor) => this.editors[editor])

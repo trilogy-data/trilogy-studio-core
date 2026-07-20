@@ -1,7 +1,17 @@
 <template>
   <div class="results-view">
     <!-- Horizontal split when chat is active -->
-    <div v-if="hasActiveChat" class="split-view" ref="splitViewRef">
+    <div v-if="displayMode === 'chat' && hasActiveChat" class="chat-only-view">
+      <LLMEditorRefinement
+        :editorId="editorData.id"
+        :runEditorQuery="handleRunEditorQuery"
+        @accept="handleAccept"
+        @discard="handleDiscard"
+        @content-change="handleContentChange"
+        @chart-config-change="handleChartConfigChange"
+      />
+    </div>
+    <div v-else-if="displayMode === 'all' && hasActiveChat" class="split-view" ref="splitViewRef">
       <div class="results-pane" :style="{ width: resultsPaneWidth }">
         <!-- Loading in results pane -->
         <loading-view
@@ -44,7 +54,7 @@
       </div>
     </div>
     <!-- No chat active: show loading, results, or hint -->
-    <template v-else>
+    <template v-else-if="displayMode !== 'chat'">
       <loading-view
         v-if="editorData.loading"
         :startTime="editorData.startTime"
@@ -106,6 +116,10 @@ export default defineComponent({
     runEditorQuery: {
       type: Function as PropType<() => Promise<QueryExecutionResult | undefined>>,
       default: undefined,
+    },
+    displayMode: {
+      type: String as PropType<'all' | 'results' | 'chat'>,
+      default: 'all',
     },
   },
   emits: ['llm-query-accepted', 'drilldown-click', 'refresh-click', 'content-change', 'open-chat'],
@@ -263,6 +277,15 @@ export default defineComponent({
   height: 100%;
   overflow: hidden;
   background: var(--query-window-bg);
+}
+
+.chat-only-view {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .results-pane {

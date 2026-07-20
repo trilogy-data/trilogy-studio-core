@@ -17,13 +17,25 @@
       >
         Results
       </button>
+      <button
+        v-if="showChat"
+        class="tab-button"
+        :class="{ active: activeTab === 'chat' }"
+        @click="activeTab = 'chat'"
+        data-testid="chat-tab"
+      >
+        Chat
+      </button>
     </div>
     <div class="tab-content">
       <div v-if="activeTab === 'sql'" class="editor-entry">
         <slot name="editor" :onQueryStarted="() => (activeTab = 'results')"></slot>
       </div>
-      <div v-else class="edit-results">
+      <div v-else-if="activeTab === 'results'" class="edit-results">
         <slot name="results"></slot>
+      </div>
+      <div v-else class="edit-results chat-entry">
+        <slot name="chat"></slot>
       </div>
     </div>
   </div>
@@ -32,16 +44,24 @@
 export default {
   name: 'TabbedLayout',
   props: {
-    // results: {
-    //     type: Results,
-    //     required: true,
-    // },
-    // generatedSql: String,
+    showChat: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
       activeTab: 'sql',
     }
+  },
+  watch: {
+    showChat(isVisible: boolean) {
+      if (isVisible) {
+        this.activeTab = 'chat'
+      } else if (this.activeTab === 'chat') {
+        this.activeTab = 'results'
+      }
+    },
   },
 }
 </script>
@@ -60,6 +80,9 @@ export default {
   overflow: auto; /* Allow scrolling within results if needed */
   display: flex;
   flex-direction: column;
+}
+.chat-entry {
+  overflow: hidden;
 }
 .editor-results {
   height: 100%;

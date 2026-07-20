@@ -4,7 +4,7 @@
       <div class="llm-header">
         <h3 class="font-sans sidebar-header">AI & Agents</h3>
         <button
-          class="sidebar-control-button sidebar-header-action llm-new-button"
+          class="sidebar-control-button sidebar-header-action sidebar-primary-create llm-new-button"
           @click="creatorVisible = !creatorVisible"
           :data-testid="
             testTag ? `llm-connection-creator-add-${testTag}` : 'llm-connection-creator-add'
