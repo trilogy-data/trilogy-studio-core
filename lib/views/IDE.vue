@@ -225,6 +225,7 @@ import Sidebar from '../components/sidebar/Sidebar.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
+import type QueryExecutionService from '../stores/queryExecutionService.ts'
 import {
   inject,
   ref,
@@ -350,6 +351,7 @@ const IDEComponent: Component = defineComponent({
     let modelStore = inject<ModelConfigStoreType>('modelStore')
     let dashboardStore = inject<DashboardStoreType>('dashboardStore')
     const trilogyResolver = inject<ResolverType>('trilogyResolver')
+    const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     let saveEditors = inject<Function>('saveEditors')
     let saveConnections = inject<Function>('saveConnections')
     let saveModels = inject<Function>('saveModels')
@@ -500,6 +502,7 @@ const IDEComponent: Component = defineComponent({
       editorStore,
       dashboardStore,
       trilogyResolver,
+      queryExecutionService,
       saveEditors,
       saveConnections,
       saveModels,
@@ -616,6 +619,7 @@ const IDEComponent: Component = defineComponent({
         this.saveConnections,
         this.saveModels,
         this.saveDashboards,
+        this.queryExecutionService,
       )
       this.setActiveScreen('editors')
       this.setActiveEditor(editor)
