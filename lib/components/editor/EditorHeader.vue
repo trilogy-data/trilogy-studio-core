@@ -419,23 +419,28 @@ export default defineComponent({
 @media screen and (max-width: 768px) {
   .menu-bar {
     min-height: 0;
-    display: block;
-    padding: 8px 8px 10px;
+    display: flex;
+    padding: 6px;
   }
 
   .menu-left {
-    justify-content: flex-start;
-    width: 100%;
-    margin-bottom: 8px;
+    display: none;
   }
 
   .menu-actions {
     display: flex;
     justify-content: flex-start;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 6px;
     align-items: stretch;
     width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .menu-actions::-webkit-scrollbar {
+    display: none;
   }
 
   .action-group {
@@ -443,8 +448,8 @@ export default defineComponent({
   }
 
   .menu-actions :deep(.action-item) {
-    min-height: 36px;
-    height: 36px;
+    min-height: 40px;
+    height: 40px;
     padding: 0 10px;
     border-radius: 10px;
   }
@@ -454,8 +459,8 @@ export default defineComponent({
   }
 
   .menu-actions :deep(.action-item-compact) {
-    width: 36px;
-    min-width: 36px;
+    width: 40px;
+    min-width: 40px;
     padding: 0;
     gap: 0;
   }
@@ -490,25 +495,21 @@ export default defineComponent({
 
 @media screen and (max-width: 520px) {
   .menu-bar {
-    padding: 8px 6px 10px;
+    padding: 5px 4px;
   }
 
   .menu-title {
     padding: 0.15rem 0;
   }
 
-  .action-group {
-    flex-wrap: wrap;
-  }
-
   .menu-actions :deep(.action-item) {
-    min-height: 34px;
-    height: 34px;
+    min-height: 38px;
+    height: 38px;
   }
 
   .menu-actions :deep(.action-item-compact) {
-    width: 34px;
-    min-width: 34px;
+    width: 38px;
+    min-width: 38px;
   }
 
   .menu-actions :deep(.action-group-execute .action-item) {

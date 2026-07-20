@@ -31,6 +31,7 @@ interface Props {
   theme: string
   scrollPosition?: { line: number; column: number } | null
   editorHeight?: number
+  isMobile?: boolean
 }
 
 export default defineComponent({
@@ -63,6 +64,10 @@ export default defineComponent({
     editorHeight: {
       type: Number,
       required: false,
+    },
+    isMobile: {
+      type: Boolean,
+      default: false,
     },
   },
 
@@ -124,10 +129,12 @@ export default defineComponent({
       if (editorElement.value) {
         createEditor(editorElement.value, props, callbacks, providerDisposables.value)
       }
+      window.visualViewport?.addEventListener('resize', layoutEditor)
     })
 
     // Cleanup on unmount
     onUnmounted(() => {
+      window.visualViewport?.removeEventListener('resize', layoutEditor)
       const editorInstance = editorMap.get(props.context)
       if (editorInstance) {
         editorInstance.dispose()
@@ -139,6 +146,10 @@ export default defineComponent({
       providerDisposables.value.forEach((d) => d.dispose())
       providerDisposables.value = []
     })
+
+    const layoutEditor = () => {
+      editorMap.get(props.context)?.layout()
+    }
 
     // Watch for editor ID changes
     watch(

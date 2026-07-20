@@ -13,7 +13,7 @@
             {{ communityStore.loading ? 'Refreshing' : 'Refresh' }}
           </button>
           <button
-            class="sidebar-control-button sidebar-header-action"
+            class="sidebar-control-button sidebar-header-action sidebar-primary-create"
             @click="communityStore.openAddStoreModal()"
             :disabled="communityStore.loading"
           >

@@ -1,5 +1,8 @@
 <template>
-  <div class="main mobile-ide-root">
+  <div
+    class="main mobile-ide-root"
+    :style="{ '--mobile-viewport-height': mobileViewportHeight }"
+  >
     <ChatCreatorModal
       :visible="showChatCreatorModal"
       :preselectedConnection="chatCreatorPreselectedConnection"
@@ -157,7 +160,7 @@ import type { EditorStoreType } from '../stores/editorStore.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
 import type QueryExecutionService from '../stores/queryExecutionService.ts'
-import { inject, defineAsyncComponent, provide, onBeforeUnmount, ref } from 'vue'
+import { inject, defineAsyncComponent, provide, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import { getDefaultValueFromHash, removeHashFromUrl, URL_HASH_KEYS } from '../stores/urlStore.ts'
@@ -302,6 +305,21 @@ const MobileIDEComponent: Component = defineComponent({
     // Chat creator modal management
     const showChatCreatorModal = ref(false)
     const chatCreatorPreselectedConnection = ref('')
+    const mobileViewportHeight = ref('100dvh')
+    const updateMobileViewportHeight = () => {
+      mobileViewportHeight.value = window.visualViewport
+        ? `${window.visualViewport.height}px`
+        : `${window.innerHeight}px`
+    }
+
+    onMounted(() => {
+      updateMobileViewportHeight()
+      window.visualViewport?.addEventListener('resize', updateMobileViewportHeight)
+    })
+
+    onBeforeUnmount(() => {
+      window.visualViewport?.removeEventListener('resize', updateMobileViewportHeight)
+    })
 
     const handleCreateNewChat = (connectionName: string) => {
       chatCreatorPreselectedConnection.value = connectionName
@@ -395,6 +413,7 @@ const MobileIDEComponent: Component = defineComponent({
       chatCreatorPreselectedConnection,
       handleCreateNewChat,
       handleChatCreated,
+      mobileViewportHeight,
     }
   },
   async mounted() {

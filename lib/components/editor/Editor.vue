@@ -29,6 +29,7 @@
           :editor-type="editorData.type"
           :scroll-position="editorData.scrollPosition"
           :theme="userSettingsStore.getSettings.theme"
+          :is-mobile="isMobile"
           :editorHeight="containerHeight"
           @contents-change="handleContentsChange"
           @scroll-change="handlePositionChange"

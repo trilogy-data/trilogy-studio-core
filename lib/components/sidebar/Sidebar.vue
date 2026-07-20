@@ -607,7 +607,7 @@ export default defineComponent({
 
   .sidebar-container {
     height: calc(100vh - 40px);
-    height: calc(100dvh - 40px);
+    height: calc(var(--mobile-viewport-height, 100dvh) - 40px);
   }
 
   .sidebar-content {
