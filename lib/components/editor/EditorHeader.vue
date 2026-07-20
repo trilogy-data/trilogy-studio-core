@@ -1,10 +1,14 @@
 <template>
   <div class="menu-bar">
-    <div class="menu-left">
-      <div class="menu-title" @click="startEditing">
+    <div class="menu-left" :class="{ 'menu-left-editing': isEditing }">
+      <div
+        class="menu-title"
+        :data-testid="!isMobile ? 'edit-editor-name' : undefined"
+        @click="startEditing"
+      >
         <span v-if="!isEditing" class="editable-text" data-testid="editor-name-display">
           {{ name }}
-          <span class="edit-indicator" data-testid="edit-editor-name">
+          <span class="edit-indicator">
             <i class="mdi mdi-pencil-outline"></i>
           </span>
         </span>
@@ -22,7 +26,21 @@
       </div>
     </div>
 
-    <div class="menu-actions">
+    <div class="menu-actions" :class="{ 'menu-actions-editing': isEditing }">
+      <div v-if="isMobile" class="action-group">
+        <button
+          class="action-item action-item-compact"
+          type="button"
+          title="Rename editor"
+          aria-label="Rename editor"
+          data-testid="edit-editor-name"
+          @click="startEditing"
+        >
+          <i class="mdi mdi-pencil-outline icon"></i>
+          <span class="action-label">Rename</span>
+        </button>
+      </div>
+
       <div class="action-group action-group-scope">
         <button
           v-if="editorType === 'sql'"
@@ -134,7 +152,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, inject, type Ref } from 'vue'
 import LoadingButton from '../LoadingButton.vue'
 import { EditorTag } from '../../editors'
 import {
@@ -148,7 +166,9 @@ import {
 export default defineComponent({
   name: 'EditorHeader',
   setup() {
+    const isMobile = inject<Ref<boolean> | boolean>('isMobile', false)
     return {
+      isMobile,
       supportsEditorAssistant,
       supportsEditorFormatting,
       supportsEditorLocalExecution,
@@ -427,6 +447,11 @@ export default defineComponent({
     display: none;
   }
 
+  .menu-left.menu-left-editing {
+    display: flex;
+    width: 100%;
+  }
+
   .menu-actions {
     display: flex;
     justify-content: flex-start;
@@ -437,6 +462,10 @@ export default defineComponent({
     overflow-x: auto;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .menu-actions.menu-actions-editing {
+    display: none;
   }
 
   .menu-actions::-webkit-scrollbar {
