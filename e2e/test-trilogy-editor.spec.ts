@@ -107,5 +107,9 @@ test('test_demo_editor', async ({ page, isMobile, browser }) => {
     .click({
       modifiers: ['ControlOrMeta'],
     })
-  await expect(page.getByTestId('editor-name-display')).toContainText('lineitem')
+  if (isMobile) {
+    await expect(page.locator('.current-tab-title')).toContainText('lineitem')
+  } else {
+    await expect(page.getByTestId('editor-name-display')).toContainText('lineitem')
+  }
 })

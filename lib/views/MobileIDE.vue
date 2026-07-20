@@ -157,6 +157,7 @@ import ModelView from './ModelView.vue'
 import UserSettings from '../components/user/UserSettings.vue'
 import UserProfile from '../components/user/UserProfile.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
+import type EditorModel from '../editors/editor.ts'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
 import type QueryExecutionService from '../stores/queryExecutionService.ts'
@@ -450,13 +451,15 @@ const MobileIDEComponent: Component = defineComponent({
     },
   },
   computed: {
-    activeEditorData() {
+    activeEditorData(): EditorModel | null {
       if (!this.activeEditor) return null
       let r = this.editorStore.editors[this.activeEditor]
       return r
     },
-    hasActiveEditorChat() {
-      return Boolean(this.activeEditorData?.hasActiveRefinement())
+    hasActiveEditorChat(): boolean {
+      if (!this.activeEditor) return false
+      const editor = (this.editorStore.editors as Record<string, EditorModel>)[this.activeEditor]
+      return Boolean(editor?.hasActiveRefinement())
     },
     editorList() {
       return Object.keys(this.editors).map((editor) => this.editors[editor])
