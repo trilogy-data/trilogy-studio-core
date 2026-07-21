@@ -17,6 +17,7 @@ import type {
 } from '../dashboards/base'
 import { CELL_TYPES, type CellType, type MarkdownData } from '../dashboards/base'
 import { getProvenance, formatProvenance } from '../dashboards/provenance'
+import { buildDashboardStateSnapshot } from './dashboardAgentPrompt'
 import type { DashboardStoreType } from '../stores/dashboardStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type { EditorStoreType } from '../stores/editorStore'
@@ -116,6 +117,8 @@ export class DashboardToolExecutor {
 
   async executeToolCall(toolName: string, toolInput: Record<string, any>): Promise<ToolCallResult> {
     switch (toolName) {
+      case 'get_dashboard_state':
+        return this.getDashboardState(toolInput.item_id)
       case 'list_dashboard_items':
         return this.listDashboardItems()
       case 'get_dashboard_item':
@@ -165,6 +168,30 @@ export class DashboardToolExecutor {
           success: false,
           error: `Unknown tool: ${toolName}`,
         }
+    }
+  }
+
+  /**
+   * Re-read dashboard state in the same shape the agent received as starting
+   * context. Deliberately mirrors that format so a refresh reads as an update to
+   * what the agent already has rather than a differently-shaped second view.
+   */
+  private getDashboardState(itemId?: string): ToolCallResult {
+    const dashboard = this.dashboard
+    if (!dashboard) {
+      return { success: false, error: 'Dashboard not found.' }
+    }
+
+    const connection = this.deps.connectionStore?.connections[this.connectionName]
+    return {
+      success: true,
+      message: buildDashboardStateSnapshot({
+        dashboard,
+        dataConnectionName: dashboard.connection,
+        activeImports: this.deps.getActiveImports(),
+        isDataConnectionActive: connection?.connected ?? false,
+        itemId,
+      }),
     }
   }
 

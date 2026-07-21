@@ -11,6 +11,22 @@ import { RETURN_TO_USER_TOOL } from './chatAgentPrompt'
  */
 export const DASHBOARD_TOOLS = [
   {
+    name: 'get_dashboard_state',
+    description:
+      'Re-read the current state of the dashboard: title, description, active data connection, active data source, item list, and (in report mode) section structure. The dashboard state in your starting context is a snapshot from the beginning of the conversation and does NOT update as you work — call this after making changes, or whenever you are unsure whether your view is current. Pass item_id to read just one item instead of the whole dashboard.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        item_id: {
+          type: 'string',
+          description:
+            'Optional. Restrict the result to a single grid item instead of the whole dashboard.',
+        },
+      },
+      required: [],
+    },
+  },
+  {
     name: 'list_dashboard_items',
     description:
       'List all items currently on the dashboard grid with their IDs, types, names, queries, and positions. Use this to understand the current state of the dashboard before making changes.',

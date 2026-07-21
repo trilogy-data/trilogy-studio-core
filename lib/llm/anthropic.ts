@@ -3,36 +3,76 @@ import type { LLMRequestOptions, LLMResponse, LLMMessage, LLMToolCall } from './
 import { fetchWithRetry, type RetryOptions } from './utils'
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from './consts'
 
+/** Tiers recognized in model IDs, highest capability first. */
+const TIER_PATTERN = 'fable|mythos|opus|sonnet|haiku'
+
 /**
  * Parse Anthropic model name into components.
- * Examples: claude-3-opus-20240229 -> { version: '3', tier: 'opus', date: '20240229' }
+ *
+ * Current model IDs are undated aliases (claude-opus-4-8, claude-sonnet-5); older
+ * ones carry a dated snapshot suffix. Both are recognized, and `date` is '' for an
+ * undated alias.
+ *
+ * Examples: claude-3-opus-20240229   -> { version: '3',   tier: 'opus',   date: '20240229' }
  *           claude-3-5-sonnet-20240620 -> { version: '3-5', tier: 'sonnet', date: '20240620' }
- *           claude-sonnet-4-20250514 -> { version: '4', tier: 'sonnet', date: '20250514' }
+ *           claude-sonnet-4-20250514 -> { version: '4',   tier: 'sonnet', date: '20250514' }
+ *           claude-opus-4-8          -> { version: '4-8', tier: 'opus',   date: '' }
+ *           claude-sonnet-5          -> { version: '5',   tier: 'sonnet', date: '' }
  */
 export function parseAnthropicModelVersion(
   model: string,
 ): { version: string; tier: string; date: string } | null {
-  // Match new format: claude-{tier}-{version}-{date} (e.g., claude-sonnet-4-20250514)
-  const newMatch = model.match(/^claude-(opus|sonnet|haiku)-(\d+(?:-\d+)?)-(\d{8})$/)
-  if (newMatch) {
-    return {
-      version: newMatch[2],
-      tier: newMatch[1],
-      date: newMatch[3],
-    }
+  // Dated forms are matched first. The date group cannot be made optional in a single
+  // pattern: on 'claude-sonnet-4-20250514' the version group would greedily swallow
+  // '-20250514' and report version '4-20250514'.
+
+  // Dated new format: claude-{tier}-{version}-{date} (e.g., claude-sonnet-4-20250514)
+  const datedNew = model.match(new RegExp(`^claude-(${TIER_PATTERN})-(\\d+(?:-\\d+)?)-(\\d{8})$`))
+  if (datedNew) {
+    return { version: datedNew[2], tier: datedNew[1], date: datedNew[3] }
   }
 
-  // Match old format: claude-{version}-{tier}-{date} (e.g., claude-3-opus-20240229)
-  const oldMatch = model.match(/^claude-(\d+(?:-\d+)?)-(opus|sonnet|haiku)-(\d{8})$/)
-  if (oldMatch) {
-    return {
-      version: oldMatch[1],
-      tier: oldMatch[2],
-      date: oldMatch[3],
-    }
+  // Dated old format: claude-{version}-{tier}-{date} (e.g., claude-3-opus-20240229)
+  const datedOld = model.match(new RegExp(`^claude-(\\d+(?:-\\d+)?)-(${TIER_PATTERN})-(\\d{8})$`))
+  if (datedOld) {
+    return { version: datedOld[1], tier: datedOld[2], date: datedOld[3] }
+  }
+
+  // Undated alias, new format: claude-{tier}-{version} (e.g., claude-opus-4-8, claude-sonnet-5)
+  const aliasNew = model.match(new RegExp(`^claude-(${TIER_PATTERN})-(\\d+(?:-\\d+)?)$`))
+  if (aliasNew) {
+    return { version: aliasNew[2], tier: aliasNew[1], date: '' }
+  }
+
+  // Undated alias, old format: claude-{version}-{tier} (e.g., claude-3-opus)
+  const aliasOld = model.match(new RegExp(`^claude-(\\d+(?:-\\d+)?)-(${TIER_PATTERN})$`))
+  if (aliasOld) {
+    return { version: aliasOld[1], tier: aliasOld[2], date: '' }
   }
 
   return null
+}
+
+/**
+ * Sampling parameters (temperature/top_p/top_k) were removed on the newest models and
+ * return a 400 if sent. Steer these models with prompting instead.
+ * Rejected on: Fable/Mythos (any version), Opus >= 4.7, Sonnet >= 5.
+ */
+export function modelRejectsSamplingParams(model: string): boolean {
+  const parsed = parseAnthropicModelVersion(model)
+  if (!parsed) return false // unknown ID - preserve existing behavior
+  const version = versionToNumber(parsed.version)
+  switch (parsed.tier) {
+    case 'fable':
+    case 'mythos':
+      return true
+    case 'opus':
+      return version >= 4.7
+    case 'sonnet':
+      return version >= 5
+    default:
+      return false
+  }
 }
 
 /**
@@ -62,15 +102,20 @@ export function compareAnthropicModels(a: string, b: string): number {
     return vNumB - vNumA
   }
 
-  // Same version - prefer opus > sonnet > haiku
-  const tierOrder: Record<string, number> = { opus: 0, sonnet: 1, haiku: 2 }
+  // Same version - prefer fable/mythos > opus > sonnet > haiku
+  const tierOrder: Record<string, number> = { fable: 0, mythos: 0, opus: 1, sonnet: 2, haiku: 3 }
   const tierOrderA = tierOrder[versionA.tier] ?? 99
   const tierOrderB = tierOrder[versionB.tier] ?? 99
   if (tierOrderA !== tierOrderB) {
     return tierOrderA - tierOrderB
   }
 
-  // Same tier - prefer newer date
+  // Same tier - prefer the undated alias (it tracks the latest snapshot), then newer date
+  const aliasA = versionA.date === ''
+  const aliasB = versionB.date === ''
+  if (aliasA !== aliasB) {
+    return aliasA ? -1 : 1
+  }
   return versionB.date.localeCompare(versionA.date)
 }
 
@@ -108,7 +153,25 @@ export class AnthropicProvider extends LLMProvider {
    *   {"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"},"request_id":"..."}
    */
   static async extractErrorMessage(response: Response): Promise<string> {
-    const data = await response.json()
+    const httpLine = `Anthropic API error: HTTP ${response.status}: ${response.statusText}`
+
+    // Read as text first: a non-JSON body (proxy HTML, gateway error page) would make
+    // response.json() throw inside the error handler and mask the real failure.
+    let raw: string
+    try {
+      raw = await response.text()
+    } catch {
+      return httpLine
+    }
+
+    let data: any
+    try {
+      data = JSON.parse(raw)
+    } catch {
+      const snippet = raw.trim().slice(0, 200)
+      return snippet ? `${httpLine} - ${snippet}` : httpLine
+    }
+
     if (data?.error?.message) {
       const kind = data.error.type ? ` (${data.error.type})` : ''
       return `Anthropic API error${kind}: ${data.error.message}`
@@ -116,7 +179,7 @@ export class AnthropicProvider extends LLMProvider {
     if (data?.error) {
       return `Anthropic API error: ${JSON.stringify(data.error)}`
     }
-    return `Anthropic API error: HTTP ${response.status}: ${response.statusText}`
+    return httpLine
   }
 
   async reset(): Promise<void> {
@@ -158,14 +221,32 @@ export class AnthropicProvider extends LLMProvider {
     this.validateRequestOptions(options)
     history = history || []
     try {
-      // Extract system message from history (if any) - Anthropic expects system as a top-level parameter
+      // Extract system message from history (if any) - Anthropic expects system as a top-level
+      // parameter. Only used when options.systemPrompt is absent; any other system message in
+      // history is preserved inline below rather than dropped.
       const systemMessage = history.find(({ role }) => role === 'system')
+      const hoistedSystemMessage = options.systemPrompt ? undefined : systemMessage
 
       // Build Anthropic-formatted messages from history
       // Anthropic expects tool_use blocks in assistant messages and tool_result blocks in user messages
       const cleanedHistory: Array<{ role: string; content: any }> = []
       for (const msg of history) {
-        if (msg.role === 'system') continue // System messages go in top-level parameter
+        if (msg.role === 'system') {
+          // The one message hoisted into the top-level `system` parameter is skipped here.
+          if (msg === hoistedSystemMessage) continue
+          // Any other system message arrived mid-conversation. Keeping it in the top-level
+          // system prompt would change the cached prefix on every turn, so render it inline
+          // at its original position instead of dropping it.
+          if (msg.content) {
+            cleanedHistory.push({
+              role: 'user',
+              content: [
+                { type: 'text', text: `<system-reminder>${msg.content}</system-reminder>` },
+              ],
+            })
+          }
+          continue
+        }
 
         if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
           // Assistant message with tool calls - format as content array with text and tool_use blocks
@@ -228,19 +309,48 @@ export class AnthropicProvider extends LLMProvider {
       const requestBody: Record<string, any> = {
         model: this.model,
         messages: finalMessages,
-        max_tokens: options.maxTokens || DEFAULT_MAX_TOKENS,
-        temperature: options.temperature || DEFAULT_TEMPERATURE,
+        max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
       }
 
-      // Add system prompt - prefer options.systemPrompt, fall back to system message from history
-      const systemPrompt = options.systemPrompt || systemMessage?.content
+      // Sampling params return a 400 on the newest models; send them only where accepted.
+      // ?? not ||: temperature 0 is a valid value that || would silently replace.
+      if (!modelRejectsSamplingParams(this.model)) {
+        requestBody.temperature = options.temperature ?? DEFAULT_TEMPERATURE
+        if (options.topP !== undefined) {
+          requestBody.top_p = options.topP
+        }
+      }
+
+      // Add system prompt - prefer options.systemPrompt, fall back to system message from history.
+      // Sent as a content-block array so it can carry a cache_control breakpoint. Anthropic
+      // renders tools before system, so this single breakpoint caches tools + system together.
+      const systemPrompt = options.systemPrompt || hoistedSystemMessage?.content
       if (systemPrompt) {
-        requestBody.system = systemPrompt
+        requestBody.system = [
+          { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
+        ]
       }
 
       // Add tools if provided
       if (options.tools && options.tools.length > 0) {
         requestBody.tools = options.tools
+      }
+
+      // Second breakpoint at the end of the conversation. Prompt caching is a prefix match,
+      // so each turn of an agentic loop reads the entry written by the previous turn instead
+      // of reprocessing the whole history. Max 4 breakpoints per request; we use 2.
+      const lastMessage = finalMessages[finalMessages.length - 1]
+      if (lastMessage) {
+        const blocks = Array.isArray(lastMessage.content)
+          ? lastMessage.content
+          : lastMessage.content
+            ? [{ type: 'text', text: lastMessage.content }]
+            : []
+        const lastBlock = blocks[blocks.length - 1]
+        if (lastBlock) {
+          blocks[blocks.length - 1] = { ...lastBlock, cache_control: { type: 'ephemeral' } }
+          finalMessages[finalMessages.length - 1] = { ...lastMessage, content: blocks }
+        }
       }
 
       // Merge retry options with request-specific backoff callback and abort signal
@@ -283,30 +393,50 @@ export class AnthropicProvider extends LLMProvider {
       let responseText = ''
       const toolCalls: LLMToolCall[] = []
 
-      if (Array.isArray(data.content)) {
-        for (const block of data.content) {
-          if (block.type === 'text') {
-            responseText += block.text
-          } else if (block.type === 'tool_use') {
-            // Add to structured tool calls array
-            toolCalls.push({
-              id: block.id,
-              name: block.name,
-              input: block.input,
-            })
-          }
+      for (const block of Array.isArray(data.content) ? data.content : []) {
+        if (block.type === 'text') {
+          responseText += block.text
+        } else if (block.type === 'tool_use') {
+          // Add to structured tool calls array
+          toolCalls.push({
+            id: block.id,
+            name: block.name,
+            input: block.input,
+          })
         }
-      } else {
-        responseText = data.content[0]?.text || ''
       }
+
+      // stop_reason arrives on a 200 response, so a refusal or a truncated answer is otherwise
+      // indistinguishable from a complete one.
+      const stopReason: string | undefined = data.stop_reason ?? undefined
+      if (stopReason === 'refusal' && !responseText && toolCalls.length === 0) {
+        const category = data.stop_details?.category
+        throw new Error(`request was refused for safety reasons${category ? ` (${category})` : ''}`)
+      }
+      if (stopReason === 'max_tokens') {
+        console.warn(
+          `Anthropic response hit the max_tokens limit (${requestBody.max_tokens}) and is truncated.`,
+        )
+      }
+
+      // Cached input tokens are reported separately from input_tokens, which counts only the
+      // uncached remainder. Total prompt size is the sum of all three.
+      const usage = data.usage ?? {}
+      const promptTokens = usage.input_tokens ?? 0
+      const completionTokens = usage.output_tokens ?? 0
+      const cacheCreationTokens = usage.cache_creation_input_tokens ?? 0
+      const cacheReadTokens = usage.cache_read_input_tokens ?? 0
 
       return {
         text: responseText,
         toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+        stopReason,
         usage: {
-          promptTokens: data.usage.input_tokens,
-          completionTokens: data.usage.output_tokens,
-          totalTokens: data.usage.input_tokens + data.usage.output_tokens,
+          promptTokens,
+          completionTokens,
+          cacheCreationTokens,
+          cacheReadTokens,
+          totalTokens: promptTokens + cacheCreationTokens + cacheReadTokens + completionTokens,
         },
       }
     } catch (error) {

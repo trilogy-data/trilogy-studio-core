@@ -7,34 +7,55 @@ import { CELL_TYPES } from '../dashboards/base'
 
 export interface DashboardAgentPromptOptions {
   dashboard: DashboardModel
-  dataConnectionName: string | null
   availableConnections: string[]
   availableConcepts?: ModelConceptInput[]
-  activeImports?: ChatImport[]
   availableImportsForConnection?: ChatImport[]
+}
+
+export interface DashboardStateSnapshotOptions {
+  dashboard: DashboardModel
+  dataConnectionName: string | null
+  activeImports?: ChatImport[]
   isDataConnectionActive?: boolean
+  /** When set, report only this item instead of the whole dashboard. */
+  itemId?: string
 }
 
 /**
- * Build the system prompt for the dashboard chat agent.
- * This agent operates directly on a live dashboard — adding, updating,
- * and removing items in real time as the user watches.
+ * Render the mutable half of the agent's view of the dashboard: title, items,
+ * active connection/import, and (in report mode) the section structure.
+ *
+ * This is deliberately NOT part of the system prompt. Every one of these fields
+ * changes as the agent works, and prompt caching is a prefix match — rebuilding
+ * the system prompt each turn would invalidate the cached prefix on every single
+ * tool call. Instead this is injected once as starting context, and the agent
+ * re-reads it on demand via the get_dashboard_state tool.
+ *
+ * Must stay free of timestamps, ids, or anything else that varies between two
+ * calls made against identical dashboard state.
  */
-export function buildDashboardAgentSystemPrompt(options: DashboardAgentPromptOptions): string {
+export function buildDashboardStateSnapshot(options: DashboardStateSnapshotOptions): string {
   const {
     dashboard,
     dataConnectionName,
-    availableConnections,
-    availableConcepts,
     activeImports = [],
-    availableImportsForConnection = [],
     isDataConnectionActive = true,
+    itemId,
   } = options
 
-  const conceptsSection =
-    availableConcepts && availableConcepts.length > 0
-      ? `\n\nAVAILABLE FIELDS FOR QUERIES:\n${conceptsToFieldPrompt(availableConcepts)}`
-      : ''
+  const entries = Object.entries(dashboard.gridItems)
+
+  // Single-item view: skip the dashboard-level framing entirely.
+  if (itemId) {
+    const item = dashboard.gridItems[itemId]
+    if (!item) {
+      const known = entries.map(([id]) => id).join(', ')
+      return `Item "${itemId}" not found on this dashboard.${
+        known ? ` Known item IDs: ${known}` : ' The dashboard is empty.'
+      }`
+    }
+    return `CURRENT STATE OF ITEM [${itemId}]:\n${describeGridItem(itemId, item)}`
+  }
 
   const connectionStatusNote =
     dataConnectionName && !isDataConnectionActive
@@ -43,35 +64,83 @@ export function buildDashboardAgentSystemPrompt(options: DashboardAgentPromptOpt
 
   const connectionInfo = dataConnectionName
     ? `ACTIVE DATA CONNECTION: ${dataConnectionName}${connectionStatusNote}`
-    : 'No data connection currently selected. Ask the user which connection to use.'
+    : 'ACTIVE DATA CONNECTION: none selected. Ask the user which connection to use.'
 
-  const activeImportsSection =
+  const activeImportLine =
     activeImports.length > 0
-      ? `\nACTIVE DATA SOURCE: ${activeImports[0].name} (this is the import the dashboard itself uses — changing it via select_active_import will affect every existing item on the next refresh)`
-      : '\nNo data source currently selected. Use select_active_import to select a data source, or use list_available_imports to see what is available.'
+      ? `ACTIVE DATA SOURCE: ${activeImports[0].name} (this is the import the dashboard itself uses — changing it via select_active_import will affect every existing item on the next refresh)`
+      : 'ACTIVE DATA SOURCE: none selected. Use select_active_import to select a data source, or list_available_imports to see what is available.'
+
+  const itemsSummary =
+    entries.length > 0
+      ? `CURRENT DASHBOARD ITEMS (${entries.length}):\n${entries
+          .map(([id, item]) => describeGridItem(id, item))
+          .join('\n')}`
+      : 'The dashboard is currently empty.'
+
+  const reportStructure =
+    dashboard.layoutType === 'report' ? `\n${describeReportStructure(dashboard)}` : ''
+
+  return `DASHBOARD: "${dashboard.name}"${
+    dashboard.description ? `\nDESCRIPTION: ${dashboard.description}` : ''
+  }
+${connectionInfo}
+${activeImportLine}${reportStructure}
+
+${itemsSummary}`
+}
+
+/** One-line description of a grid item, shared by the full and filtered views. */
+function describeGridItem(id: string, item: DashboardModel['gridItems'][string]): string {
+  const content =
+    typeof item.content === 'string'
+      ? item.content.substring(0, 80)
+      : (item.content as any)?.markdown?.substring(0, 80) || ''
+  return `- [${id}] ${item.type}: "${item.name}" — ${content}${content.length >= 80 ? '...' : ''}`
+}
+
+/** Report-mode section counts. Mutable, so it lives in the snapshot. */
+function describeReportStructure(dashboard: DashboardModel): string {
+  const items = Object.values(dashboard.gridItems)
+  const memoCount = items.filter((i) => i.type === CELL_TYPES.MEMO).length
+  const claimCount = items.filter((i) => i.type === CELL_TYPES.CLAIM).length
+  const appendixCount = items.filter((i) => i.type === CELL_TYPES.APPENDIX_HEADER).length
+  return `CURRENT REPORT STRUCTURE: ${memoCount} memo / ${claimCount} claim section${
+    claimCount === 1 ? '' : 's'
+  } / ${appendixCount} appendix divider${appendixCount === 1 ? '' : 's'}.`
+}
+
+/**
+ * Build the system prompt for the dashboard chat agent.
+ * This agent operates directly on a live dashboard — adding, updating,
+ * and removing items in real time as the user watches.
+ *
+ * This prompt is intentionally FROZEN for the life of a session: it contains no
+ * live dashboard state, so it stays byte-identical across turns and the prompt
+ * cache keeps hitting. Mutable state comes from buildDashboardStateSnapshot,
+ * injected once as starting context and refreshed on demand by the agent via
+ * the get_dashboard_state tool.
+ */
+export function buildDashboardAgentSystemPrompt(options: DashboardAgentPromptOptions): string {
+  const {
+    dashboard,
+    availableConnections,
+    availableConcepts,
+    availableImportsForConnection = [],
+  } = options
+
+  const conceptsSection =
+    availableConcepts && availableConcepts.length > 0
+      ? `\n\nAVAILABLE FIELDS FOR QUERIES:\n${conceptsToFieldPrompt(availableConcepts)}`
+      : ''
 
   const availableImportsSection =
     availableImportsForConnection.length > 0
-      ? `\n\nAVAILABLE DATA SOURCES:\n${availableImportsForConnection.map((i) => `- ${i.name}${activeImports.some((a) => a.id === i.id) ? ' (active)' : ''}`).join('\n')}`
+      ? `\n\nAVAILABLE DATA SOURCES:\n${availableImportsForConnection.map((i) => `- ${i.name}`).join('\n')}`
       : ''
 
-  // Summarize current dashboard state
-  const itemCount = Object.keys(dashboard.gridItems).length
-  const itemsSummary =
-    itemCount > 0
-      ? `\nCURRENT DASHBOARD ITEMS (${itemCount}):\n${Object.entries(dashboard.gridItems)
-          .map(([id, item]) => {
-            const content =
-              typeof item.content === 'string'
-                ? item.content.substring(0, 80)
-                : (item.content as any)?.markdown?.substring(0, 80) || ''
-            return `- [${id}] ${item.type}: "${item.name}" — ${content}${content.length >= 80 ? '...' : ''}`
-          })
-          .join('\n')}`
-      : '\nThe dashboard is currently empty.'
-
   const isReport = dashboard.layoutType === 'report'
-  const reportPreamble = isReport ? buildReportPreamble(dashboard) : ''
+  const reportPreamble = isReport ? buildReportPreamble() : ''
 
   return `${reportPreamble}You are a dashboard assistant with full control over a live ${isReport ? 'report (a single-column analytical memo)' : 'dashboard'}. The user can see changes you make in real time.
 
@@ -81,13 +150,10 @@ ${
     : 'You have tools to add, update, remove, and reposition items on the dashboard grid. The grid is 20 columns wide. Items can be charts, tables, markdown blocks, or filters.'
 }
 
-DASHBOARD: "${dashboard.name}"
-${dashboard.description ? `DESCRIPTION: ${dashboard.description}` : ''}
-${itemsSummary}
+DASHBOARD STATE:
+The current dashboard title, items, active connection, and active data source are provided to you as context at the start of the conversation. That context is a snapshot — it does NOT update as you work. After you add, update, remove, or move items (or change the connection or data source), your snapshot is stale. Call get_dashboard_state to re-read the whole dashboard, or get_dashboard_state with an item_id to re-read a single item.
 
-${connectionInfo}
-AVAILABLE DATA CONNECTIONS: ${availableConnections.length > 0 ? availableConnections.join(', ') : 'None configured'}
-${activeImportsSection}${availableImportsSection}
+AVAILABLE DATA CONNECTIONS: ${availableConnections.length > 0 ? availableConnections.join(', ') : 'None configured'}${availableImportsSection}
 
 TRILOGY LANGUAGE REFERENCE:
 ${trilogySyntaxReference}
@@ -102,10 +168,11 @@ IMPORTANT GUIDELINES:
 6. If the data connection is not active, use connect_data_connection first
 7. Use run_trilogy_query to test queries before adding them to the dashboard
 8. When adding items, choose sensible grid positions — avoid overlapping with existing items
-9. Use list_dashboard_items before making changes to understand the current layout
+9. Re-read state with get_dashboard_state before making changes that depend on the current layout
 10. The user sees changes live — explain what you're doing as you go
 
 DASHBOARD MANAGEMENT:
+- Use get_dashboard_state to refresh your view of the dashboard (optionally pass item_id for one item)
 - Use add_dashboard_item to create new charts, tables, and markdown blocks
 - Use update_dashboard_item to modify existing items (change query, config, title)
 - Use remove_dashboard_item to clean up items that are no longer needed
@@ -165,13 +232,7 @@ ${isReport ? buildReportGuidance() : ''}`
  * Verbatim from the product brief: "make the claim, show the evidence, expose
  * uncertainty, and let the human interrogate it."
  */
-function buildReportPreamble(dashboard: DashboardModel): string {
-  // Surface the existing structure briefly so the agent doesn't add a memo on
-  // top of a memo or two appendix dividers.
-  const items = Object.values(dashboard.gridItems)
-  const memoCount = items.filter((i) => i.type === CELL_TYPES.MEMO).length
-  const claimCount = items.filter((i) => i.type === CELL_TYPES.CLAIM).length
-  const appendixCount = items.filter((i) => i.type === CELL_TYPES.APPENDIX_HEADER).length
+function buildReportPreamble(): string {
   return `# REPORT AUTHORING MODE
 
 You are authoring a source-backed analytical memo, not an interactive dashboard. The reader is a busy decision-maker who wants the answer, the evidence, and the honest caveats — in that order.
@@ -185,8 +246,6 @@ PRINCIPLES (non-negotiable):
 6. Drilldown comes after the answer, not before. Interactivity belongs below the verdict — never use it as the primary communication layer.
 7. Tables go in the appendix. Use add_appendix_header before adding detail tables; never put a giant table above a claim.
 8. Provenance is the price of authorship. Every claim must have a query, filters, and a confidence level. Use get_provenance to audit your own evidence chain before handing off. If you can't justify a number, do not state it.
-
-CURRENT REPORT STRUCTURE: ${memoCount} memo / ${claimCount} claim section${claimCount === 1 ? '' : 's'} / ${appendixCount} appendix divider${appendixCount === 1 ? '' : 's'}.
 
 `
 }

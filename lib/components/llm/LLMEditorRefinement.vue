@@ -3,8 +3,8 @@
     <l-l-m-chat
       ref="chatRef"
       :messages="messages"
-      title=""
-      :showHeader="false"
+      :title="connectionInfo"
+      :showHeader="true"
       :externalLoading="isLoading"
       :activeToolName="activeToolName"
       :sendHandler="handleSendMessage"
@@ -120,10 +120,13 @@ export default defineComponent({
     // Connection info for display
     const connectionInfo = computed(() => {
       const activeName = llmConnectionStore.activeConnection
-      if (!activeName) return ''
+      if (!activeName) return 'No provider selected'
       const connection = llmConnectionStore.connections[activeName]
       if (!connection) return activeName
-      return connection.model || activeName
+      const provider = connection.type
+        ? connection.type.charAt(0).toUpperCase() + connection.type.slice(1)
+        : activeName
+      return connection.model ? `${provider} · ${connection.model}` : provider
     })
 
     // Placeholders for input
@@ -242,6 +245,8 @@ export default defineComponent({
   align-items: center;
   gap: 4px;
   padding: 0 12px;
+  width: 80px;
+  min-width: 80px;
   min-height: 34px;
   border-radius: 8px;
   font-size: 12px;
@@ -305,6 +310,27 @@ export default defineComponent({
   background: var(--query-window-bg);
 }
 
+:deep(.chat-header) {
+  height: 24px;
+  min-height: 24px;
+  padding: 0 8px;
+  background: transparent;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+:deep(.chat-header-left) {
+  justify-content: center;
+}
+
+:deep(.chat-title) {
+  color: var(--text-faint);
+  font-size: 12px;
+  font-weight: 500;
+  flex: 0 1 auto;
+  min-width: 0;
+  text-align: center;
+}
+
 :deep(.chat-messages) {
   padding: 10px 12px 10px 10px;
   gap: 6px;
@@ -345,12 +371,19 @@ export default defineComponent({
 :deep(.send-button) {
   height: 26px;
   min-height: 26px;
+  width: 80px;
+  min-width: 80px;
   padding: 0 10px;
   border-radius: 7px;
   font-size: 11px;
 }
 
 @media screen and (max-width: 768px) {
+  :deep(.chat-header) {
+    height: 48px;
+    min-height: 48px;
+  }
+
   :deep(.input-container) {
     padding: 8px;
   }
@@ -381,6 +414,8 @@ export default defineComponent({
     padding: 0 16px;
     border-radius: 10px;
     font-size: 14px;
+    width: 88px;
+    min-width: 88px;
   }
 }
 </style>

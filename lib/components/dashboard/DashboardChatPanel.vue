@@ -6,7 +6,7 @@ import {
   ensureDashboardChat as ensureDashboardChatShared,
   dashboardAgentToolset,
   dashboardChatImports as buildDashboardChatImports,
-  buildAgentSystemPrompt,
+  createDashboardSystemPromptProvider,
   seedInitialImportContext,
 } from '../../llm/dashboardAgentRuntime'
 import type { DashboardModel } from '../../dashboards/base'
@@ -216,9 +216,24 @@ const toolExecutor = computed(() => {
   })
 })
 
-const systemPrompt = computed(() =>
-  buildAgentSystemPrompt(props.dashboard, connectionStore, editorStore),
-)
+// The provider freezes the dashboard-state snapshot on first use so the system
+// prompt stays byte-stable across the agent loop (see
+// createDashboardSystemPromptProvider). Rebuilt when the panel switches
+// dashboards, or when the conversation is cleared and starts fresh.
+let promptProviderKey = ''
+let promptProvider: (() => string) | null = null
+
+const systemPrompt = computed(() => {
+  if (!promptProvider || promptProviderKey !== props.dashboard.id) {
+    promptProviderKey = props.dashboard.id
+    promptProvider = createDashboardSystemPromptProvider(
+      () => props.dashboard,
+      connectionStore,
+      editorStore,
+    )
+  }
+  return promptProvider()
+})
 
 function handleClear() {
   const chatId = currentChatId.value
@@ -231,6 +246,9 @@ function handleClear() {
     chatStore.stopExecution(chatId)
   }
   chatStore.clearChatMessages(chatId)
+  // New conversation, so the starting-context snapshot should reflect the
+  // dashboard as it is now, not as it was when the panel mounted.
+  promptProvider = null
 }
 
 async function handleSend(message: string, _messages: ChatMessage[]) {

@@ -273,11 +273,11 @@ limit 10;`,
     // Wait for response and verify message appears
     await expect(page.getByTestId('messages-container')).toContainText('order.id.count')
 
-    // Mobile must synchronize refinement edits into the mounted Monaco
-    // instance, not only the editor store/refinement session.
-    await page.getByTestId('editor-tab').click()
+    // Mobile switches between panes; desktop keeps editor and chat mounted
+    // side-by-side. Both must synchronize the edit into Monaco.
+    if (isMobile) await page.getByTestId('editor-tab').click()
     await expect(page.getByTestId('editor')).toContainText('order.id.count')
-    await page.getByTestId('chat-tab').click()
+    if (isMobile) await page.getByTestId('chat-tab').click()
 
     // The mobile ResultsView must pass the active Editor's run callback into
     // refinement tools, just like the desktop split view does.
@@ -289,11 +289,11 @@ limit 10;`,
 
     // The tool run must publish into the same editor state used by the Results
     // tab, not merely return an artifact to the agent.
-    await page.getByTestId('results-tab').click()
+    if (isMobile) await page.getByTestId('results-tab').click()
     await expect(page.getByRole('grid')).toBeVisible({ timeout: 15000 })
     await expect(page.getByTestId('query-results-length')).not.toHaveText('0')
 
-    await page.getByTestId('chat-tab').click()
+    if (isMobile) await page.getByTestId('chat-tab').click()
 
     // Close the refinement session
     await page.getByTestId('discard-button').click()

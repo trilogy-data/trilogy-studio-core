@@ -2,7 +2,10 @@ import { Chat } from '../chats/chat'
 import type { ChatImport, ChatToolCall } from '../chats/chat'
 import type { LLMToolCall, LLMToolResult } from './base'
 import { DASHBOARD_TOOLS, REPORT_TOOLS } from './dashboardAgentTools'
-import { buildDashboardAgentSystemPrompt } from './dashboardAgentPrompt'
+import {
+  buildDashboardAgentSystemPrompt,
+  buildDashboardStateSnapshot,
+} from './dashboardAgentPrompt'
 import { DashboardToolExecutor } from './dashboardToolExecutor'
 import { formatToolResultText } from './toolLoopCore'
 import { isTrilogyType } from '../editors/fileTypes'
@@ -82,7 +85,13 @@ export function dashboardChatImports(dashboard: DashboardModel): ChatImport[] {
   }))
 }
 
-/** System prompt derived entirely from store state. */
+/**
+ * System prompt derived entirely from store state.
+ *
+ * Contains no live dashboard state — see buildDashboardAgentSystemPrompt. Given
+ * stable stores this returns a byte-identical string every turn, which is what
+ * keeps the prompt cache warm across an agent loop.
+ */
 export function buildAgentSystemPrompt(
   dashboard: DashboardModel,
   connectionStore: ConnectionStoreType,
@@ -94,7 +103,8 @@ export function buildAgentSystemPrompt(
   const dashboardConnection =
     (dashboard.connectionId && connectionStore?.connections[dashboard.connectionId]) ||
     (dashboard.connection ? connectionStore?.connectionByName(dashboard.connection) : undefined)
-  const isDataConnectionActive = dashboardConnection?.connected ?? false
+  // Note: connection *connected* status is deliberately not read here — it flips
+  // mid-session (connect_data_connection) and belongs in the state snapshot.
   const availableImports: ChatImport[] =
     editorStore && dashboardConnection
       ? Object.values(editorStore.editors)
@@ -114,12 +124,58 @@ export function buildAgentSystemPrompt(
 
   return buildDashboardAgentSystemPrompt({
     dashboard,
-    dataConnectionName: dashboard.connection,
     availableConnections,
-    activeImports: dashboardChatImports(dashboard),
     availableImportsForConnection: availableImports,
-    isDataConnectionActive,
   })
+}
+
+/** Current mutable dashboard state, in the shape the agent's get_dashboard_state
+ *  tool returns. Used to seed the conversation with starting context. */
+export function buildDashboardStateContext(
+  dashboard: DashboardModel,
+  connectionStore: ConnectionStoreType,
+): string {
+  const dashboardConnection =
+    (dashboard.connectionId && connectionStore?.connections[dashboard.connectionId]) ||
+    (dashboard.connection ? connectionStore?.connectionByName(dashboard.connection) : undefined)
+
+  return buildDashboardStateSnapshot({
+    dashboard,
+    dataConnectionName: dashboard.connection,
+    activeImports: dashboardChatImports(dashboard),
+    isDataConnectionActive: dashboardConnection?.connected ?? false,
+  })
+}
+
+/**
+ * Build the session's system-prompt provider.
+ *
+ * The tool loop calls buildSystemPrompt() on every iteration. The frozen prompt
+ * is recomputed (cheap, and identical each time), while the state snapshot is
+ * captured on first call and reused — so the prompt stays byte-stable for the
+ * whole session even as the agent mutates the dashboard underneath it. The agent
+ * refreshes its view through get_dashboard_state instead.
+ */
+export function createDashboardSystemPromptProvider(
+  getDashboard: () => DashboardModel | null | undefined,
+  connectionStore: ConnectionStoreType,
+  editorStore: EditorStoreType,
+): () => string {
+  let frozenStateContext: string | null = null
+
+  return () => {
+    const dashboard = getDashboard()
+    if (!dashboard) return ''
+
+    if (frozenStateContext === null) {
+      frozenStateContext = buildDashboardStateContext(dashboard, connectionStore)
+    }
+
+    return `${buildAgentSystemPrompt(dashboard, connectionStore, editorStore)}
+
+DASHBOARD STATE AT THE START OF THIS CONVERSATION (snapshot — call get_dashboard_state for current state):
+${frozenStateContext}`
+  }
 }
 
 /** Get (or create) the dashboard's query executor with store-backed item
@@ -281,12 +337,11 @@ export async function startDashboardAgentRun(opts: {
         tools: dashboardAgentToolset(dashboard),
         executeToolCall: (toolName, toolInput) =>
           toolExecutor.executeToolCall(toolName, toolInput as Record<string, any>),
-        buildSystemPrompt: () => {
-          const current = stores.dashboardStore.dashboards[dashboardId]
-          return current
-            ? buildAgentSystemPrompt(current, stores.connectionStore, stores.editorStore)
-            : ''
-        },
+        buildSystemPrompt: createDashboardSystemPromptProvider(
+          () => stores.dashboardStore.dashboards[dashboardId],
+          stores.connectionStore,
+          stores.editorStore,
+        ),
       },
     })
     .catch((err) => {

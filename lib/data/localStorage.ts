@@ -15,6 +15,7 @@ import {
   AnthropicProvider,
   GoogleProvider,
   OpenRouterProvider,
+  DeepSeekProvider,
   DemoProvider,
 } from '../llm'
 import { reactive } from 'vue'
@@ -295,6 +296,10 @@ export default class LocalStorage extends AbstractStorage {
         case 'openrouter':
           // @ts-ignore
           connections[connection.name] = reactive(await OpenRouterProvider.fromJSON(connection))
+          break
+        case 'deepseek':
+          // @ts-ignore
+          connections[connection.name] = reactive(await DeepSeekProvider.fromJSON(connection))
           break
         case 'demo':
           // @ts-ignore

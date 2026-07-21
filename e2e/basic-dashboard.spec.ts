@@ -214,12 +214,14 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
       y: 16,
     },
   })
-  await page.waitForTimeout(250) // wait for the controls to appear
-  await page.getByTestId('toggle-chart-controls-btn').click({ force: true })
-  await page.waitForTimeout(500)
-  await page.getByTestId('toggle-chart-controls-btn').click({ force: true })
-  await page.getByTestId('chart-type-geo-map').waitFor({ state: 'visible', timeout: 10000 })
-  await page.getByTestId('chart-type-geo-map').click({ force: true })
+  const chartControlsToggle = page.getByTestId('toggle-chart-controls-btn')
+  const geoMapType = page.getByTestId('chart-type-geo-map')
+  await expect(chartControlsToggle).toBeVisible({ timeout: 10000 })
+  if (!(await geoMapType.isVisible())) {
+    await chartControlsToggle.click({ force: true })
+  }
+  await expect(geoMapType).toBeVisible({ timeout: 10000 })
+  await geoMapType.click({ force: true })
 
   await page.getByLabel('Geo Field').selectOption('origin_state')
   await page.getByLabel('Color Scale').selectOption('count')

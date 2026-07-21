@@ -27,12 +27,24 @@ export interface LLMToolResult {
 export interface LLMResponse {
   text: string
   usage: {
+    /** Uncached input tokens billed at full rate */
     promptTokens: number
     completionTokens: number
+    /** Total input + output, including cached input. */
     totalTokens: number
+    /** Input tokens written to the prompt cache this request (~1.25x cost) */
+    cacheCreationTokens?: number
+    /** Input tokens served from the prompt cache this request (~0.1x cost) */
+    cacheReadTokens?: number
   }
   // Structured tool calls from the response (preferred over parsing from text)
   toolCalls?: LLMToolCall[]
+  /**
+   * Provider-reported reason generation stopped (e.g. 'end_turn', 'tool_use', 'max_tokens',
+   * 'refusal'). Present only for providers that report it. 'max_tokens' means the text is
+   * truncated mid-thought, not complete.
+   */
+  stopReason?: string
 }
 
 // Tool definition interface for LLM function calling

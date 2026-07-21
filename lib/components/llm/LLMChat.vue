@@ -119,6 +119,9 @@
       </div>
 
       <div v-if="isLoading" class="loading-indicator" data-testid="loading-indicator">
+        <span class="message-avatar loading-avatar" aria-hidden="true">
+          <i class="mdi mdi-robot-outline"></i>
+        </span>
         <span class="loading-spinner"></span>
         <span class="loading-message">
           {{ activeToolName ? getToolDisplayText(activeToolName) : loadingText }}
@@ -762,7 +765,7 @@ export default defineComponent({
 /* Messages with only tool calls should be minimal (no bg, less padding) */
 .message.assistant:has(.tool-calls):not(:has(p)):not(:has(pre)):not(:has(.markdown-renderer)) {
   background-color: transparent;
-  padding: 2px 0;
+  padding: 2px 8px;
 }
 
 .message-content pre {
@@ -797,6 +800,7 @@ export default defineComponent({
 }
 
 .loading-indicator {
+  position: relative;
   align-self: flex-start;
   display: flex;
   align-items: center;
@@ -808,6 +812,17 @@ export default defineComponent({
   font-size: 12px;
   color: var(--text-color);
   max-width: 85%;
+  margin-left: 34px;
+}
+
+.loading-avatar {
+  top: 50%;
+  left: -30px;
+  transform: translateY(-50%);
+}
+
+.loading-avatar i {
+  font-size: 14px;
 }
 
 .loading-spinner {

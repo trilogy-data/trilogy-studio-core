@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { OpenAIProvider, parseOpenAIModelVersion, compareOpenAIModels } from './openai'
-import { AnthropicProvider, parseAnthropicModelVersion, compareAnthropicModels } from './anthropic'
+import {
+  AnthropicProvider,
+  parseAnthropicModelVersion,
+  compareAnthropicModels,
+  modelRejectsSamplingParams,
+} from './anthropic'
 import { GoogleProvider, parseGoogleModelVersion, compareGoogleModels } from './googlev2'
+import { DeepSeekProvider, parseDeepSeekModel } from './deepseek'
 import {
   OpenRouterProvider,
   parseOpenRouterModelId,
@@ -175,6 +181,59 @@ describe('Anthropic Model Filtering', () => {
       expect(parseAnthropicModelVersion('gpt-4o')).toBeNull()
       expect(parseAnthropicModelVersion('some-random-model')).toBeNull()
     })
+
+    it('should parse undated aliases (current model IDs)', () => {
+      expect(parseAnthropicModelVersion('claude-opus-4-8')).toEqual({
+        version: '4-8',
+        tier: 'opus',
+        date: '',
+      })
+      expect(parseAnthropicModelVersion('claude-sonnet-5')).toEqual({
+        version: '5',
+        tier: 'sonnet',
+        date: '',
+      })
+      expect(parseAnthropicModelVersion('claude-haiku-4-5')).toEqual({
+        version: '4-5',
+        tier: 'haiku',
+        date: '',
+      })
+      expect(parseAnthropicModelVersion('claude-fable-5')).toEqual({
+        version: '5',
+        tier: 'fable',
+        date: '',
+      })
+    })
+
+    it('should not mistake a dated snapshot suffix for part of the version', () => {
+      // Regression guard: a single optional-date pattern would greedily read
+      // '4-20250514' as the version here.
+      expect(parseAnthropicModelVersion('claude-sonnet-4-20250514')).toEqual({
+        version: '4',
+        tier: 'sonnet',
+        date: '20250514',
+      })
+    })
+  })
+
+  describe('modelRejectsSamplingParams', () => {
+    it('is true for models that removed sampling params', () => {
+      expect(modelRejectsSamplingParams('claude-opus-4-8')).toBe(true)
+      expect(modelRejectsSamplingParams('claude-opus-4-7')).toBe(true)
+      expect(modelRejectsSamplingParams('claude-sonnet-5')).toBe(true)
+      expect(modelRejectsSamplingParams('claude-fable-5')).toBe(true)
+    })
+
+    it('is false for models that still accept them', () => {
+      expect(modelRejectsSamplingParams('claude-opus-4-6')).toBe(false)
+      expect(modelRejectsSamplingParams('claude-sonnet-4-6')).toBe(false)
+      expect(modelRejectsSamplingParams('claude-haiku-4-5')).toBe(false)
+      expect(modelRejectsSamplingParams('claude-3-opus-20240229')).toBe(false)
+    })
+
+    it('is false for unrecognized model IDs', () => {
+      expect(modelRejectsSamplingParams('some-proxy-model')).toBe(false)
+    })
   })
 
   describe('compareAnthropicModels', () => {
@@ -244,6 +303,32 @@ describe('Anthropic Model Filtering', () => {
       expect(filtered[0]).toBe('claude-opus-4-20250514')
       expect(filtered[1]).toBe('claude-sonnet-4-20250514')
     })
+
+    it('should keep current undated model IDs', () => {
+      const models = [
+        'claude-opus-4-8',
+        'claude-opus-4-7',
+        'claude-sonnet-5',
+        'claude-haiku-4-5',
+        'claude-3-opus-20240229',
+        'text-embedding',
+      ]
+      const filtered = AnthropicProvider.filterModels(models)
+
+      expect(filtered).toContain('claude-opus-4-8')
+      expect(filtered).toContain('claude-opus-4-7')
+      expect(filtered).toContain('claude-sonnet-5')
+      expect(filtered).toContain('claude-haiku-4-5')
+      expect(filtered).not.toContain('text-embedding')
+    })
+
+    it('should prefer the undated alias over a dated snapshot of the same model', () => {
+      const filtered = AnthropicProvider.filterModels([
+        'claude-opus-4-5-20251101',
+        'claude-opus-4-5',
+      ])
+      expect(filtered[0]).toBe('claude-opus-4-5')
+    })
   })
 
   describe('AnthropicProvider.getDefaultModel', () => {
@@ -278,9 +363,74 @@ describe('Anthropic Model Filtering', () => {
       expect(defaultModel).toBe('claude-sonnet-4-20250514')
     })
 
+    it('should default to the latest opus, not the premium fable tier', () => {
+      const models = ['claude-fable-5', 'claude-sonnet-5', 'claude-opus-4-8', 'claude-opus-4-7']
+      const defaultModel = AnthropicProvider.getDefaultModel(models)
+      expect(defaultModel).toBe('claude-opus-4-8')
+    })
+
     it('should return empty string for empty array', () => {
       const defaultModel = AnthropicProvider.getDefaultModel([])
       expect(defaultModel).toBe('')
+    })
+  })
+})
+
+describe('DeepSeek Model Filtering', () => {
+  describe('parseDeepSeekModel', () => {
+    it('should parse versioned models', () => {
+      expect(parseDeepSeekModel('deepseek-v4-pro')).toEqual({ version: 4, tier: 'pro' })
+      expect(parseDeepSeekModel('deepseek-v4-flash')).toEqual({ version: 4, tier: 'flash' })
+    })
+
+    it('should parse legacy unversioned aliases below every versioned model', () => {
+      expect(parseDeepSeekModel('deepseek-chat')).toEqual({ version: 0, tier: 'chat' })
+      expect(parseDeepSeekModel('deepseek-reasoner')).toEqual({ version: 0, tier: 'reasoner' })
+    })
+
+    it('should return null for non-DeepSeek models', () => {
+      expect(parseDeepSeekModel('gpt-4o')).toBeNull()
+      expect(parseDeepSeekModel('deepseek/deepseek-v3.2')).toBeNull() // OpenRouter-style ID
+    })
+  })
+
+  describe('DeepSeekProvider.filterModels', () => {
+    it('should keep DeepSeek chat models and sort newest/preferred first', () => {
+      const filtered = DeepSeekProvider.filterModels([
+        'deepseek-chat',
+        'deepseek-v4-flash',
+        'deepseek-v4-pro',
+        'deepseek-reasoner',
+        'some-embedding-model',
+      ])
+
+      expect(filtered[0]).toBe('deepseek-v4-flash')
+      expect(filtered[1]).toBe('deepseek-v4-pro')
+      expect(filtered).not.toContain('some-embedding-model')
+      // Legacy aliases still list, but last
+      expect(filtered.slice(2)).toEqual(['deepseek-reasoner', 'deepseek-chat'])
+    })
+
+    it('should include future versions automatically', () => {
+      const filtered = DeepSeekProvider.filterModels(['deepseek-v4-pro', 'deepseek-v5-pro'])
+      expect(filtered[0]).toBe('deepseek-v5-pro')
+    })
+  })
+
+  describe('DeepSeekProvider.getDefaultModel', () => {
+    it('should prefer the newest flash tier over pro', () => {
+      const models = ['deepseek-v4-pro', 'deepseek-v4-flash', 'deepseek-chat']
+      expect(DeepSeekProvider.getDefaultModel(models)).toBe('deepseek-v4-flash')
+    })
+
+    it('should fall back to the top-sorted model when no flash tier exists', () => {
+      expect(DeepSeekProvider.getDefaultModel(['deepseek-chat', 'deepseek-v4-pro'])).toBe(
+        'deepseek-v4-pro',
+      )
+    })
+
+    it('should return empty string for empty array', () => {
+      expect(DeepSeekProvider.getDefaultModel([])).toBe('')
     })
   })
 })
