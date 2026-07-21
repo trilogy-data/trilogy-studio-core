@@ -4,8 +4,8 @@
       <div class="editor-entry">
         <slot name="editor" :onQueryStarted="() => (activeTab = 'results')"></slot>
       </div>
-      <div v-show="activeTab === 'results'" class="edit-results">
-        <slot name="results"></slot>
+      <div v-show="activeTab === 'results'" class="edit-results" ref="resultsPane">
+        <slot name="results" :containerHeight="resultsHeight"></slot>
       </div>
       <div v-show="activeTab === 'chat'" class="edit-results chat-entry">
         <slot name="chat"></slot>
@@ -41,6 +41,8 @@
   </div>
 </template>
 <script lang="ts">
+import { markRaw } from 'vue'
+
 export default {
   name: 'TabbedLayout',
   props: {
@@ -52,6 +54,29 @@ export default {
   data() {
     return {
       activeTab: 'sql',
+      // Consumers (results table, charts) want an explicit pixel height. The
+      // pane is v-show'd, so it measures 0 while hidden — keep the last real
+      // measurement rather than publishing a zero.
+      resultsHeight: 0,
+      resultsObserver: null as ResizeObserver | null,
+    }
+  },
+  mounted() {
+    const pane = this.$refs.resultsPane as HTMLElement | undefined
+    if (!pane || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => {
+      const height = pane.getBoundingClientRect().height
+      if (height > 0) {
+        this.resultsHeight = height
+      }
+    })
+    observer.observe(pane)
+    this.resultsObserver = markRaw(observer)
+  },
+  unmounted() {
+    if (this.resultsObserver) {
+      this.resultsObserver.disconnect()
+      this.resultsObserver = null
     }
   },
   watch: {

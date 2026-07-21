@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="root"
     class="result-table row pa-0 ba-0"
     :class="{ 'result-table-flush': flushChrome }"
     @mouseenter="controlsVisible = true"
@@ -217,7 +218,7 @@ import type { CellComponent, ColumnDefinition } from 'tabulator-tables'
 import type { ResultColumn, Row } from '../editors/results'
 import { ColumnType } from '../editors/results'
 import type { PropType, ShallowRef } from 'vue'
-import { shallowRef, inject } from 'vue'
+import { shallowRef, inject, markRaw } from 'vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore.ts'
 import { useResolvedThemeMode } from '../embed/config'
 import { snakeCaseToCapitalizedWords } from '../dashboards/formatting.ts'
@@ -415,6 +416,13 @@ export default {
       tabulator: null as ShallowRef<Tabulator> | null,
       selectedCell: null,
       controlsVisible: false,
+      // Tabulator measures its container on construction. If we build (or rebuild)
+      // it inside a `display: none` subtree — e.g. the mobile Results tab while
+      // the user is on Chat — it lays out at 0x0 and renders no rows. Defer the
+      // build until the container actually has a box, and redraw on re-show.
+      pendingRebuild: false,
+      visibilityObserver: null as ResizeObserver | null,
+      redrawFrame: 0,
     }
   },
   props: {
@@ -495,17 +503,59 @@ export default {
     },
   },
   unmounted() {
+    if (this.redrawFrame) {
+      cancelAnimationFrame(this.redrawFrame)
+      this.redrawFrame = 0
+    }
+    if (this.visibilityObserver) {
+      this.visibilityObserver.disconnect()
+      this.visibilityObserver = null
+    }
     if (this.tabulator) {
       this.tabulator.destroy()
       this.tabulator = null
     }
   },
   mounted() {
+    this.observeVisibility()
     if (!this.tabulator) {
-      this.create()
+      if (this.isVisible()) {
+        this.create()
+      } else {
+        this.pendingRebuild = true
+      }
     }
   },
   methods: {
+    isVisible(): boolean {
+      const root = this.$refs.root as HTMLElement | undefined
+      if (!root) return false
+      return root.offsetWidth > 0 && root.offsetHeight > 0
+    },
+
+    observeVisibility() {
+      const root = this.$refs.root as HTMLElement | undefined
+      if (!root || typeof ResizeObserver === 'undefined') return
+      const observer = new ResizeObserver(() => {
+        // Coalesce bursts (a split-pane drag fires per frame) into one pass.
+        if (this.redrawFrame) return
+        this.redrawFrame = requestAnimationFrame(() => {
+          this.redrawFrame = 0
+          if (!this.isVisible()) return
+          if (this.pendingRebuild) {
+            this.pendingRebuild = false
+            this.create()
+          } else if (this.tabulator) {
+            // We were built or last drawn at a different size — most importantly
+            // at 0x0 while hidden. Force a full re-render at the real size.
+            this.tabulator.redraw(true)
+          }
+        })
+      })
+      observer.observe(root)
+      this.visibilityObserver = markRaw(observer)
+    },
+
     clearHighlights(target: HTMLElement) {
       const highlightedCells = target.querySelectorAll('.highlighted-cell')
       highlightedCells.forEach((highlightedCell) => {
@@ -687,6 +737,12 @@ export default {
       if (this.tabulator) {
         this.tabulator.destroy()
         this.tabulator = null
+      }
+      // Results can land while this pane is hidden (agent-driven runs on mobile
+      // update the store without switching tabs). Wait for a real box.
+      if (!this.isVisible()) {
+        this.pendingRebuild = true
+        return
       }
       this.create()
     },

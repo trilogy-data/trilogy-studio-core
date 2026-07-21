@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="main mobile-ide-root"
-    :style="{ '--mobile-viewport-height': mobileViewportHeight }"
-  >
+  <div class="main mobile-ide-root" :style="{ '--mobile-viewport-height': mobileViewportHeight }">
     <ChatCreatorModal
       :visible="showChatCreatorModal"
       :preselectedConnection="chatCreatorPreselectedConnection"
@@ -65,9 +62,10 @@
               @save-editors="saveEditorsCall"
             />
           </template>
-          <template #results v-if="activeEditorData">
+          <template #results="{ containerHeight }" v-if="activeEditorData">
             <ResultsView
               :editorData="activeEditorData"
+              :containerHeight="containerHeight"
               :runEditorQuery="runQuery"
               display-mode="results"
               @content-change="handleEditorContentChange"
