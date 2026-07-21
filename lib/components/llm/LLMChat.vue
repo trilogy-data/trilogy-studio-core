@@ -118,14 +118,16 @@
         </div>
       </div>
 
-      <div v-if="isLoading" class="loading-indicator" data-testid="loading-indicator">
-        <span class="message-avatar loading-avatar" aria-hidden="true">
+      <div v-if="isLoading" class="message assistant loading-row">
+        <span class="message-avatar assistant-avatar" aria-hidden="true">
           <i class="mdi mdi-robot-outline"></i>
         </span>
-        <span class="loading-spinner"></span>
-        <span class="loading-message">
-          {{ activeToolName ? getToolDisplayText(activeToolName) : loadingText }}
-        </span>
+        <div class="loading-indicator" data-testid="loading-indicator">
+          <span class="loading-spinner"></span>
+          <span class="loading-message">
+            {{ activeToolName ? getToolDisplayText(activeToolName) : loadingText }}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -800,8 +802,6 @@ export default defineComponent({
 }
 
 .loading-indicator {
-  position: relative;
-  align-self: flex-start;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -812,17 +812,11 @@ export default defineComponent({
   font-size: 12px;
   color: var(--text-color);
   max-width: 85%;
-  margin-left: 34px;
 }
 
-.loading-avatar {
-  top: 50%;
-  left: -30px;
-  transform: translateY(-50%);
-}
-
-.loading-avatar i {
-  font-size: 14px;
+.loading-row {
+  width: fit-content;
+  background: transparent;
 }
 
 .loading-spinner {
