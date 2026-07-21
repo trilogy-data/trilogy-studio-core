@@ -265,4 +265,30 @@ export default defineComponent({
 .cancel-container {
   height: 10px;
 }
+
+@media screen and (max-width: 768px) {
+  .loading-container {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .loading-text,
+  .display-text {
+    font-size: 16px;
+    line-height: 1.35;
+  }
+
+  .cancel-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    height: auto;
+  }
+
+  .cancel-button {
+    width: min(160px, 100%);
+    min-height: 44px;
+    font-size: 16px;
+  }
+}
 </style>

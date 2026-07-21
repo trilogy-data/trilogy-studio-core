@@ -9,6 +9,19 @@
         ></i>
       </div>
       <div class="header-center">
+        <input
+          v-if="titleEditing"
+          ref="titleInput"
+          v-model="editableTitle"
+          class="mobile-name-input"
+          data-testid="editor-name-input"
+          type="text"
+          aria-label="Editor name"
+          @blur="finishTitleEditing"
+          @keyup.enter="finishTitleEditing"
+          @keyup.esc="cancelTitleEditing"
+        />
+        <template v-else>
         <div
           v-if="tabs.length > 1"
           class="tab-dropdown-container"
@@ -22,6 +35,7 @@
           ></i>
         </div>
         <span v-else class="header">{{ screenTitle }}</span>
+        </template>
 
         <!-- Tab Dropdown -->
         <div
@@ -58,6 +72,17 @@
           </div>
         </div>
       </div>
+      <button
+        v-if="activeScreen === 'editors' && !menuOpen && !titleEditing"
+        class="mobile-title-edit"
+        type="button"
+        title="Rename editor"
+        aria-label="Rename editor"
+        data-testid="edit-editor-name"
+        @click="startTitleEditing"
+      >
+        <i class="mdi mdi-pencil-outline"></i>
+      </button>
     </div>
 
     <div class="interface-wrap">
@@ -126,6 +151,43 @@
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.mobile-title-edit {
+  position: absolute;
+  right: 12px;
+  top: 0;
+  width: 40px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 18px;
+}
+
+.mobile-title-edit:hover,
+.mobile-title-edit:focus-visible {
+  background: var(--button-mouseover);
+}
+
+.mobile-name-input {
+  width: calc(100% - 112px);
+  height: 36px;
+  min-width: 0;
+  padding: 0 10px;
+  border: 1px solid rgba(var(--special-text-rgb, 37, 99, 235), 0.45);
+  border-radius: 8px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-size: 16px;
+  font-weight: 500;
+  box-shadow: 0 0 0 3px rgba(var(--special-text-rgb, 37, 99, 235), 0.08);
 }
 
 .header {
@@ -387,7 +449,7 @@
 </style>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import TabDropdownItem from './TabDropdownItem.vue'
 import { type Tab } from '../../stores/useScreenNavigation'
 
@@ -410,18 +472,22 @@ const emit = defineEmits<{
   'tab-selected': [data: Tab]
   'tab-closed': [tabId: string]
   'close-other-tabs': [tabId: string]
+  'active-title-updated': [title: string]
 }>()
 
 // Reactive data
 const tabDropdownOpen = ref(false)
 const showCloseOthersConfirm = ref(false)
 const batchCloseInProgress = ref(false)
+const titleEditing = ref(false)
+const editableTitle = ref('')
 
 // Template refs
 const tabDropdownContainer = ref<HTMLElement>()
 const tabDropdown = ref<HTMLElement>()
 const sidebar = ref<HTMLElement>()
 const content = ref<HTMLElement>()
+const titleInput = ref<HTMLInputElement>()
 
 // Icon mapping that matches the desktop tabbed component
 const iconMap = ref({
@@ -475,6 +541,27 @@ const toggleTabDropdown = (): void => {
 
 const closeTabDropdown = (): void => {
   tabDropdownOpen.value = false
+}
+
+const startTitleEditing = async (): Promise<void> => {
+  editableTitle.value = currentTabTitle.value
+  titleEditing.value = true
+  await nextTick()
+  titleInput.value?.focus()
+  titleInput.value?.select()
+}
+
+const finishTitleEditing = (): void => {
+  if (!titleEditing.value) return
+  titleEditing.value = false
+  const title = editableTitle.value.trim()
+  if (title && title !== currentTabTitle.value) {
+    emit('active-title-updated', title)
+  }
+}
+
+const cancelTitleEditing = (): void => {
+  titleEditing.value = false
 }
 
 const selectTab = (tab: Tab): void => {

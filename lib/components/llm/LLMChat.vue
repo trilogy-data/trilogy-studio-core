@@ -118,11 +118,16 @@
         </div>
       </div>
 
-      <div v-if="isLoading" class="loading-indicator" data-testid="loading-indicator">
-        <span class="loading-spinner"></span>
-        <span class="loading-message">
-          {{ activeToolName ? getToolDisplayText(activeToolName) : loadingText }}
+      <div v-if="isLoading" class="message assistant loading-row">
+        <span class="message-avatar assistant-avatar" aria-hidden="true">
+          <i class="mdi mdi-robot-outline"></i>
         </span>
+        <div class="loading-indicator" data-testid="loading-indicator">
+          <span class="loading-spinner"></span>
+          <span class="loading-message">
+            {{ activeToolName ? getToolDisplayText(activeToolName) : loadingText }}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -205,6 +210,7 @@
             {{ currentPlaceholder }}
           </span>
         </div>
+        <slot name="input-actions"></slot>
         <button
           v-if="isLoading && stopHandler"
           @click="handleStop"
@@ -761,7 +767,7 @@ export default defineComponent({
 /* Messages with only tool calls should be minimal (no bg, less padding) */
 .message.assistant:has(.tool-calls):not(:has(p)):not(:has(pre)):not(:has(.markdown-renderer)) {
   background-color: transparent;
-  padding: 2px 0;
+  padding: 2px 8px;
 }
 
 .message-content pre {
@@ -796,7 +802,6 @@ export default defineComponent({
 }
 
 .loading-indicator {
-  align-self: flex-start;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -807,6 +812,11 @@ export default defineComponent({
   font-size: 12px;
   color: var(--text-color);
   max-width: 85%;
+}
+
+.loading-row {
+  width: fit-content;
+  background: transparent;
 }
 
 .loading-spinner {

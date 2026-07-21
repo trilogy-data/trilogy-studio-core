@@ -179,7 +179,10 @@ remoteStoreImportDescribe('Remote Store Auto Import', () => {
 
     await page.waitForSelector('.loading-state', { timeout: 10000 })
     await expect(page.locator('.error-state')).toHaveCount(0)
-    await expect(page.getByTestId('editor-name-display')).toContainText('core_local.preql', {
+    const editorTitle = isMobile
+      ? page.locator('.current-tab-title')
+      : page.getByTestId('editor-name-display')
+    await expect(editorTitle).toContainText('core_local.preql', {
       timeout: 30000,
     })
 
@@ -220,17 +223,20 @@ remoteStoreImportDescribe('Remote Store Auto Import', () => {
       `&token=${encodeURIComponent(TEST_TOKEN)}`
 
     await page.goto(autoImportUrl)
-    await expect(page.getByTestId('editor-name-display')).toContainText('core_local.preql', {
+    const editorTitle = isMobile
+      ? page.locator('.current-tab-title')
+      : page.getByTestId('editor-name-display')
+    await expect(editorTitle).toContainText('core_local.preql', {
       timeout: 30000,
     })
 
     await openSidebarScreen(page, 'editors', isMobile)
     await createEditorFromConnection(page, TEST_CONNECTION_NAME, 'trilogy', TEST_STORE_ID)
 
-    await expect(page.getByTestId('editor-name-display')).toContainText('new-editor-', {
+    await expect(editorTitle).toContainText('new-editor-', {
       timeout: 30000,
     })
-    const newEditorLabel = (await page.getByTestId('editor-name-display').textContent()) || ''
+    const newEditorLabel = (await editorTitle.textContent()) || ''
     const newEditorName = newEditorLabel.trim()
 
     await openSidebarScreen(page, 'editors', isMobile)

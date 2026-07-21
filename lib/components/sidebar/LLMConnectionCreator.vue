@@ -32,6 +32,7 @@
           <option value="openrouter" data-testid="llm-connection-creator-openrouter">
             OpenRouter
           </option>
+          <option value="deepseek" data-testid="llm-connection-creator-deepseek">DeepSeek</option>
         </select>
       </div>
 
@@ -102,6 +103,7 @@ import { OpenAIProvider } from '../../llm/openai'
 import { AnthropicProvider } from '../../llm/anthropic'
 import { GoogleProvider } from '../../llm/googlev2'
 import { OpenRouterProvider } from '../../llm/openrouter'
+import { DeepSeekProvider } from '../../llm/deepseek'
 import { DemoProvider } from '../../llm/demo'
 
 // Hardcoded fallback models for when the API hasn't been validated yet
@@ -110,6 +112,7 @@ const FALLBACK_MODELS = {
   anthropic: ['claude-opus-4-6-20260514', 'claude-opus-4-20250514', 'claude-sonnet-4-20250514'],
   google: ['models/gemini-2.5-pro', 'models/gemini-2.5-flash'],
   openrouter: ['anthropic/claude-sonnet-4', 'openai/gpt-4o', 'google/gemini-2.5-pro'],
+  deepseek: ['deepseek-v4-flash', 'deepseek-v4-pro'],
   demo: ['deepseek/deepseek-v3.2'],
 }
 
@@ -191,6 +194,11 @@ export default defineComponent({
         case 'openrouter':
           connectionDetails.value.options.model = OpenRouterProvider.getDefaultModel(
             FALLBACK_MODELS.openrouter,
+          )
+          break
+        case 'deepseek':
+          connectionDetails.value.options.model = DeepSeekProvider.getDefaultModel(
+            FALLBACK_MODELS.deepseek,
           )
           break
         default:

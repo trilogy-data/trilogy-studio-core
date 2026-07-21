@@ -3,7 +3,7 @@
     <l-l-m-chat
       ref="chatRef"
       :messages="messages"
-      :title="'Refine Query'"
+      :title="connectionInfo"
       :showHeader="true"
       :externalLoading="isLoading"
       :activeToolName="activeToolName"
@@ -12,32 +12,24 @@
       :placeholder="placeholders"
       @update:messages="handleMessagesUpdate"
     >
-      <template #header-actions>
-        <div class="refinement-actions">
-          <span v-if="connectionInfo" class="connection-info" :title="connectionInfo">
-            {{ connectionInfo }}
-          </span>
-          <div class="refinement-action-group">
-            <button
-              class="action-btn accept-btn"
-              @click="handleAccept"
-              :disabled="isLoading"
-              data-testid="accept-button"
-            >
-              <i class="mdi mdi-close"></i>
-              Close
-            </button>
-            <button
-              class="action-btn discard-btn"
-              @click="handleDiscard"
-              :disabled="isLoading"
-              data-testid="discard-button"
-            >
-              <i class="mdi mdi-undo-variant"></i>
-              Discard
-            </button>
-          </div>
-        </div>
+      <template #input-actions>
+        <button
+          v-if="!isMobile"
+          class="action-btn accept-btn"
+          @click="handleAccept"
+          :disabled="isLoading"
+          data-testid="accept-button"
+        >
+          Close
+        </button>
+        <button
+          class="action-btn discard-btn"
+          @click="handleDiscard"
+          :disabled="isLoading"
+          data-testid="discard-button"
+        >
+          Discard
+        </button>
       </template>
 
       <!-- Render artifacts inline -->
@@ -66,7 +58,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject, computed, type PropType } from 'vue'
+import { defineComponent, ref, inject, computed, type PropType, type Ref } from 'vue'
 import LLMChat from './LLMChat.vue'
 import ResultsComponent from '../editor/Results.vue'
 import type { ChatMessage, ChatArtifact } from '../../chats/chat'
@@ -104,6 +96,7 @@ export default defineComponent({
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     const editorStore = inject<EditorStoreType>('editorStore')
+    const isMobile = inject<Ref<boolean> | boolean>('isMobile', false)
 
     if (!llmConnectionStore || !connectionStore || !queryExecutionService || !editorStore) {
       throw new Error(
@@ -127,10 +120,13 @@ export default defineComponent({
     // Connection info for display
     const connectionInfo = computed(() => {
       const activeName = llmConnectionStore.activeConnection
-      if (!activeName) return ''
+      if (!activeName) return 'No provider selected'
       const connection = llmConnectionStore.connections[activeName]
       if (!connection) return activeName
-      return connection.model || activeName
+      const provider = connection.type
+        ? connection.type.charAt(0).toUpperCase() + connection.type.slice(1)
+        : activeName
+      return connection.model ? `${provider} · ${connection.model}` : provider
     })
 
     // Placeholders for input
@@ -217,6 +213,7 @@ export default defineComponent({
 
     return {
       chatRef,
+      isMobile,
       messages,
       artifacts,
       isLoading,
@@ -243,43 +240,16 @@ export default defineComponent({
   overflow: hidden;
 }
 
-.refinement-actions {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.connection-info {
-  font-size: 11px;
-  color: var(--text-faint);
-  padding: 0;
-  background-color: transparent;
-  border: none;
-  border-radius: 0;
-  max-width: 120px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.refinement-action-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: 2px;
-  padding-left: 8px;
-  border-left: 1px solid rgba(148, 163, 184, 0.16);
-}
-
 .action-btn {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 0 7px;
-  min-height: 22px;
-  border-radius: 5px;
-  font-size: 11px;
+  padding: 0 12px;
+  width: 80px;
+  min-width: 80px;
+  min-height: 34px;
+  border-radius: 8px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.15s ease;
   border: 1px solid var(--border-light);
@@ -343,16 +313,22 @@ export default defineComponent({
 :deep(.chat-header) {
   height: 24px;
   min-height: 24px;
-  padding: 0 6px;
-  gap: 4px;
-  background: var(--query-window-bg);
-  border-bottom-color: rgba(148, 163, 184, 0.1);
+  padding: 0 8px;
+  background: transparent;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+:deep(.chat-header-left) {
+  justify-content: center;
 }
 
 :deep(.chat-title) {
+  color: var(--text-faint);
   font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
+  font-weight: 500;
+  flex: 0 1 auto;
+  min-width: 0;
+  text-align: center;
 }
 
 :deep(.chat-messages) {
@@ -395,8 +371,51 @@ export default defineComponent({
 :deep(.send-button) {
   height: 26px;
   min-height: 26px;
+  width: 80px;
+  min-width: 80px;
   padding: 0 10px;
   border-radius: 7px;
   font-size: 11px;
+}
+
+@media screen and (max-width: 768px) {
+  :deep(.chat-header) {
+    height: 48px;
+    min-height: 48px;
+  }
+
+  :deep(.input-container) {
+    padding: 8px;
+  }
+
+  :deep(.input-wrapper) {
+    padding: 8px;
+    gap: 8px;
+    border-radius: 12px;
+  }
+
+  :deep(.textarea-wrapper textarea) {
+    min-height: 88px;
+    max-height: 180px;
+    padding: 8px;
+    font-size: 16px;
+  }
+
+  :deep(.animated-placeholder) {
+    top: 8px;
+    left: 9px;
+    font-size: 16px;
+  }
+
+  .action-btn,
+  :deep(.send-button) {
+    height: 44px;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    width: 88px;
+    min-width: 88px;
+  }
 }
 </style>

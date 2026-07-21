@@ -600,8 +600,9 @@ export default defineComponent({
 @media screen and (max-width: 768px) {
   .sidebar-icons {
     overflow-y: scroll;
-    min-width: 55px;
-    max-width: 55px;
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
     font-size: var(--small-font-size);
   }
 

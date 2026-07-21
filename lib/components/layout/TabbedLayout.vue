@@ -1,6 +1,17 @@
 <template>
-  <div class="results-container">
-    <div class="tabs">
+  <div class="results-container" :class="`view-${activeTab}`">
+    <div class="tab-content">
+      <div class="editor-entry">
+        <slot name="editor" :onQueryStarted="() => (activeTab = 'results')"></slot>
+      </div>
+      <div v-show="activeTab === 'results'" class="edit-results" ref="resultsPane">
+        <slot name="results" :containerHeight="resultsHeight"></slot>
+      </div>
+      <div v-show="activeTab === 'chat'" class="edit-results chat-entry">
+        <slot name="chat"></slot>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Editor views">
       <button
         class="tab-button"
         :class="{ active: activeTab === 'sql' }"
@@ -26,21 +37,12 @@
       >
         Chat
       </button>
-    </div>
-    <div class="tab-content">
-      <div v-if="activeTab === 'sql'" class="editor-entry">
-        <slot name="editor" :onQueryStarted="() => (activeTab = 'results')"></slot>
-      </div>
-      <div v-else-if="activeTab === 'results'" class="edit-results">
-        <slot name="results"></slot>
-      </div>
-      <div v-else class="edit-results chat-entry">
-        <slot name="chat"></slot>
-      </div>
-    </div>
+    </nav>
   </div>
 </template>
 <script lang="ts">
+import { markRaw } from 'vue'
+
 export default {
   name: 'TabbedLayout',
   props: {
@@ -52,6 +54,29 @@ export default {
   data() {
     return {
       activeTab: 'sql',
+      // Consumers (results table, charts) want an explicit pixel height. The
+      // pane is v-show'd, so it measures 0 while hidden — keep the last real
+      // measurement rather than publishing a zero.
+      resultsHeight: 0,
+      resultsObserver: null as ResizeObserver | null,
+    }
+  },
+  mounted() {
+    const pane = this.$refs.resultsPane as HTMLElement | undefined
+    if (!pane || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => {
+      const height = pane.getBoundingClientRect().height
+      if (height > 0) {
+        this.resultsHeight = height
+      }
+    })
+    observer.observe(pane)
+    this.resultsObserver = markRaw(observer)
+  },
+  unmounted() {
+    if (this.resultsObserver) {
+      this.resultsObserver.disconnect()
+      this.resultsObserver = null
     }
   },
   watch: {
@@ -73,6 +98,8 @@ export default {
   flex-wrap: nowrap;
   height: 100%;
   width: 100%;
+  position: absolute;
+  inset: 0;
 }
 .edit-results {
   height: 100%;
@@ -80,11 +107,37 @@ export default {
   overflow: auto; /* Allow scrolling within results if needed */
   display: flex;
   flex-direction: column;
+  position: absolute;
+  inset: 0 0 var(--mobile-editor-toolbar-height, 53px);
+  z-index: 2;
 }
 .chat-entry {
   overflow: hidden;
+  inset: 0;
 }
 .editor-results {
   height: 100%;
+}
+
+.view-results :deep(.editor-content),
+.view-chat :deep(.editor-content) {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.view-results :deep(.mobile-editor-toolbar),
+.view-chat :deep(.mobile-editor-toolbar) {
+  position: relative;
+  z-index: 3;
+}
+
+.view-chat :deep(.mobile-editor-toolbar) {
+  display: none;
+}
+
+@media screen and (max-width: 520px) {
+  .results-container {
+    --mobile-editor-toolbar-height: 49px;
+  }
 }
 </style>

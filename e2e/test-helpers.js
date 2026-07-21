@@ -52,11 +52,8 @@ async function ensureConnectionsSidebarVisible(page, connectionName) {
   }
 
   const mobileMenuToggle = page.getByTestId('mobile-menu-toggle').filter({ visible: true })
-  if ((await mobileMenuToggle.count()) > 0) {
-    await mobileMenuToggle.first().click()
-    await page.getByTestId(`sidebar-icon-connections`).click()
-    await expect(page.getByTestId(connectionTestId).filter({ visible: true }).first()).toBeVisible()
-  }
+  await openSidebarScreen(page, 'connections', (await mobileMenuToggle.count()) > 0)
+  await expect(visibleRow.first()).toBeVisible({ timeout: SIDEBAR_SHELL_TIMEOUT })
 }
 
 export async function waitForConnectionReady(page, connectionName, timeout = 60000) {

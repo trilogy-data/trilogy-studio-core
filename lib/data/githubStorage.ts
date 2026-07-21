@@ -13,6 +13,7 @@ import {
   AnthropicProvider,
   GoogleProvider,
   OpenRouterProvider,
+  DeepSeekProvider,
 } from '../llm'
 import { reactive } from 'vue'
 import AbstractStorage from './storage'
@@ -304,6 +305,10 @@ export default class GitHubStorage extends AbstractStorage {
         case 'openrouter':
           // @ts-ignore
           connections[connection.name] = reactive(OpenRouterProvider.fromJSON(connection))
+          break
+        case 'deepseek':
+          // @ts-ignore
+          connections[connection.name] = reactive(DeepSeekProvider.fromJSON(connection))
           break
         default:
           console.log(`Unknown LLM provider type: ${connection.type}`)

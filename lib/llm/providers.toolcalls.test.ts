@@ -3,6 +3,7 @@ import { OpenAIProvider } from './openai'
 import { AnthropicProvider } from './anthropic'
 import { GoogleProvider } from './googlev2'
 import { OpenRouterProvider } from './openrouter'
+import { DeepSeekProvider } from './deepseek'
 import type { LLMMessage, LLMToolDefinition, LLMToolCall, LLMToolResult } from './base'
 
 /**
@@ -695,5 +696,182 @@ describe('Cross-Provider - Multi-Turn Tool Conversation', () => {
       (item: any) => item.type === 'function_call_output',
     )
     expect(toolOutputs).toHaveLength(2)
+  })
+})
+
+describe('DeepSeek Provider - Tool Calls and Cache Usage', () => {
+  let provider: DeepSeekProvider
+  let capturedRequestBody: any
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', mockFetch)
+    provider = new DeepSeekProvider('test-deepseek', 'test-api-key', 'deepseek-v4-pro', false, {
+      maxRetries: 0,
+      initialDelayMs: 0,
+      retryStatusCodes: [],
+    })
+    capturedRequestBody = null
+    mockFetch.mockReset()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('should preserve tool_calls and tool results in history', async () => {
+    const history: LLMMessage[] = [
+      { role: 'user', content: 'Run a query to get all users' },
+      {
+        role: 'assistant',
+        content: '',
+        toolCalls: [
+          { id: 'call_ds_1', name: 'run_query', input: { query: 'SELECT * FROM users' } },
+        ],
+      },
+      {
+        role: 'user',
+        content: '',
+        toolResults: [
+          { toolCallId: 'call_ds_1', toolName: 'run_query', result: 'Success. 10 rows returned.' },
+        ],
+      },
+    ]
+
+    mockFetch.mockImplementation(async (_url, options) => {
+      capturedRequestBody = JSON.parse(options.body)
+      return {
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: 'Done!' }, finish_reason: 'stop' }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        }),
+      }
+    })
+
+    await provider.generateCompletion(
+      { prompt: 'What were the results?', systemPrompt: 'You are a helper', tools: [testTool] },
+      history,
+    )
+
+    // System prompt must lead the request: DeepSeek caches on prefix match
+    expect(capturedRequestBody.messages[0].role).toBe('system')
+
+    const assistantWithToolCalls = capturedRequestBody.messages.find(
+      (m: any) => m.role === 'assistant' && m.tool_calls,
+    )
+    expect(assistantWithToolCalls.tool_calls[0].id).toBe('call_ds_1')
+    expect(assistantWithToolCalls.tool_calls[0].function.name).toBe('run_query')
+
+    const toolResultMessage = capturedRequestBody.messages.find((m: any) => m.role === 'tool')
+    expect(toolResultMessage.tool_call_id).toBe('call_ds_1')
+    expect(toolResultMessage.content).toBe('Success. 10 rows returned.')
+
+    // Tools use the OpenAI function shape
+    expect(capturedRequestBody.tools[0].type).toBe('function')
+    expect(capturedRequestBody.tools[0].function.name).toBe('run_query')
+  })
+
+  it('should parse structured tool_calls from the response', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: null,
+              tool_calls: [
+                {
+                  id: 'call_ds_2',
+                  type: 'function',
+                  function: { name: 'run_query', arguments: '{"query":"SELECT 1"}' },
+                },
+              ],
+            },
+            finish_reason: 'tool_calls',
+          },
+        ],
+        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+      }),
+    })
+
+    const response = await provider.generateCompletion({ prompt: 'Run a query', tools: [testTool] })
+
+    expect(response.toolCalls).toHaveLength(1)
+    expect(response.toolCalls![0].id).toBe('call_ds_2')
+    expect(response.toolCalls![0].input).toEqual({ query: 'SELECT 1' })
+    expect(response.stopReason).toBe('tool_calls')
+  })
+
+  it('should map context cache hits to cacheReadTokens and report uncached promptTokens', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: 'hi' }, finish_reason: 'stop' }],
+        usage: {
+          prompt_tokens: 1000,
+          prompt_cache_hit_tokens: 900,
+          prompt_cache_miss_tokens: 100,
+          completion_tokens: 20,
+          total_tokens: 1020,
+        },
+      }),
+    })
+
+    const response = await provider.generateCompletion({ prompt: 'hi' })
+
+    expect(response.usage.cacheReadTokens).toBe(900)
+    expect(response.usage.promptTokens).toBe(100) // uncached portion only
+    expect(response.usage.totalTokens).toBe(1020)
+  })
+
+  it('should fall back to prompt_tokens when cache fields are absent', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: 'hi' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 42, completion_tokens: 8, total_tokens: 50 },
+      }),
+    })
+
+    const response = await provider.generateCompletion({ prompt: 'hi' })
+
+    expect(response.usage.promptTokens).toBe(42)
+    expect(response.usage.cacheReadTokens).toBe(0)
+  })
+
+  it('should note dropped images rather than sending them to a text-only model', async () => {
+    mockFetch.mockImplementation(async (_url, options) => {
+      capturedRequestBody = JSON.parse(options.body)
+      return {
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: 'ok' }, finish_reason: 'stop' }],
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+        }),
+      }
+    })
+
+    await provider.generateCompletion({ prompt: 'describe it' }, [
+      {
+        role: 'user',
+        content: '',
+        toolResults: [
+          {
+            toolCallId: 'call_img',
+            toolName: 'screenshot',
+            result: 'captured',
+            imageData: { data: 'AAAA', mediaType: 'image/png' },
+          },
+        ],
+      },
+    ])
+
+    const serialized = JSON.stringify(capturedRequestBody)
+    expect(serialized).not.toContain('image_url')
+    expect(serialized).not.toContain('AAAA')
+    const note = capturedRequestBody.messages.find(
+      (m: any) => typeof m.content === 'string' && m.content.includes('could not be included'),
+    )
+    expect(note).toBeDefined()
   })
 })

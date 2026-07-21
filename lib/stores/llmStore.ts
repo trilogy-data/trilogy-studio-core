@@ -6,6 +6,7 @@ import {
   OpenAIProvider,
   GoogleProvider,
   OpenRouterProvider,
+  DeepSeekProvider,
   DemoProvider,
   createPrompt,
   createDashboardPrompt,
@@ -147,6 +148,13 @@ const useLLMConnectionStore = defineStore('llmConnections', {
             appTitle: options.appTitle,
           },
         )
+      } else if (type === 'deepseek') {
+        connection = new DeepSeekProvider(
+          name,
+          options.apiKey,
+          options.model,
+          options.saveCredential,
+        )
       } else {
         throw new Error(`LLM provider type "${type}" not found.`)
       }
@@ -168,6 +176,8 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         provider = new GoogleProvider(tempName, apiKey, '', false)
       } else if (type === 'openrouter') {
         provider = new OpenRouterProvider(tempName, apiKey, '', false)
+      } else if (type === 'deepseek') {
+        provider = new DeepSeekProvider(tempName, apiKey, '', false)
       } else {
         throw new Error(`LLM provider type "${type}" not found.`)
       }

@@ -8,6 +8,7 @@ export const PROVIDERS = [
   { value: 'google', label: 'Google' },
   { value: 'openai', label: 'OpenAI' },
   { value: 'openrouter', label: 'OpenRouter' },
+  { value: 'deepseek', label: 'DeepSeek' },
 ] as const
 
 export type ProviderValue = (typeof PROVIDERS)[number]['value']
@@ -21,4 +22,5 @@ export const KEY_PLACEHOLDERS: Record<string, string> = {
   openai: 'sk-...',
   google: 'AIza...',
   openrouter: 'sk-or-...',
+  deepseek: 'sk-...',
 }

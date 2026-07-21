@@ -154,11 +154,6 @@ test.describe('LLM Connection Tests', () => {
   })
 
   test('can use prompt refinement with interactive chat', async ({ page, isMobile }) => {
-    // Skip if mobile - refinement UI not optimized for mobile
-    if (isMobile) {
-      test.skip()
-    }
-
     // Set up mocks with tool call responses for the new interactive chat experience
     await setupOpenAIMocks(page, {
       models: CONST_GPT_MODELS,
@@ -203,6 +198,9 @@ limit 10;`,
             },
           ],
         ),
+        'run the current query': createToolCallResponse("I'll run the current editor query.", [
+          { name: 'run_active_editor_query', input: {} },
+        ]),
         // Tool result continuation - request close
         'Continue based on the tool results': createToolCallResponse(
           "I've updated the query. The changes look good.",
@@ -274,6 +272,28 @@ limit 10;`,
 
     // Wait for response and verify message appears
     await expect(page.getByTestId('messages-container')).toContainText('order.id.count')
+
+    // Mobile switches between panes; desktop keeps editor and chat mounted
+    // side-by-side. Both must synchronize the edit into Monaco.
+    if (isMobile) await page.getByTestId('editor-tab').click()
+    await expect(page.getByTestId('editor')).toContainText('order.id.count')
+    if (isMobile) await page.getByTestId('chat-tab').click()
+
+    // The mobile ResultsView must pass the active Editor's run callback into
+    // refinement tools, just like the desktop split view does.
+    await page.getByTestId('input-textarea').fill('run the current query')
+    await page.getByTestId('send-button').click()
+    await expect(page.getByTestId('messages-container')).toContainText('Ran editor query', {
+      timeout: 15000,
+    })
+
+    // The tool run must publish into the same editor state used by the Results
+    // tab, not merely return an artifact to the agent.
+    if (isMobile) await page.getByTestId('results-tab').click()
+    await expect(page.getByRole('grid')).toBeVisible({ timeout: 15000 })
+    await expect(page.getByTestId('query-results-length')).not.toHaveText('0')
+
+    if (isMobile) await page.getByTestId('chat-tab').click()
 
     // Close the refinement session
     await page.getByTestId('discard-button').click()

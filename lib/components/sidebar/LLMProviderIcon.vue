@@ -4,12 +4,20 @@
     <i v-else-if="providerType === 'openai'" class="mdi mdi-flash" title="OpenAI"></i>
     <i v-else-if="providerType === 'google'" class="mdi mdi-google" title="Google"></i>
     <i v-else-if="providerType === 'openrouter'" class="mdi mdi-robot" title="OpenRouter"></i>
+    <img
+      v-else-if="providerType === 'deepseek'"
+      :src="deepseekIcon"
+      class="deepseek-icon"
+      alt="DeepSeek"
+      title="DeepSeek"
+    />
     <i v-else-if="providerType === 'demo'" class="mdi mdi-history demo-icon" title="Demo"></i>
     <i v-else class="mdi mdi-robot" title="LLM Provider"></i>
   </div>
 </template>
 <script lang="ts">
 import { defineComponent } from 'vue'
+import deepseekIcon from '../../static/deepseek.png'
 export default defineComponent({
   name: 'LLMProviderIcon',
   props: {
@@ -17,6 +25,9 @@ export default defineComponent({
       type: String,
       required: true,
     },
+  },
+  setup() {
+    return { deepseekIcon }
   },
 })
 </script>
@@ -42,5 +53,10 @@ export default defineComponent({
 }
 .demo-icon {
   color: #f59e0b;
+}
+.deepseek-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
 }
 </style>
