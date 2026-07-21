@@ -3,8 +3,8 @@
     <l-l-m-chat
       ref="chatRef"
       :messages="messages"
-      :title="'Refine Query'"
-      :showHeader="true"
+      title=""
+      :showHeader="false"
       :externalLoading="isLoading"
       :activeToolName="activeToolName"
       :sendHandler="handleSendMessage"
@@ -12,32 +12,24 @@
       :placeholder="placeholders"
       @update:messages="handleMessagesUpdate"
     >
-      <template #header-actions>
-        <div class="refinement-actions">
-          <span v-if="connectionInfo" class="connection-info" :title="connectionInfo">
-            {{ connectionInfo }}
-          </span>
-          <div class="refinement-action-group">
-            <button
-              class="action-btn accept-btn"
-              @click="handleAccept"
-              :disabled="isLoading"
-              data-testid="accept-button"
-            >
-              <i class="mdi mdi-close"></i>
-              Close
-            </button>
-            <button
-              class="action-btn discard-btn"
-              @click="handleDiscard"
-              :disabled="isLoading"
-              data-testid="discard-button"
-            >
-              <i class="mdi mdi-undo-variant"></i>
-              Discard
-            </button>
-          </div>
-        </div>
+      <template #input-actions>
+        <button
+          v-if="!isMobile"
+          class="action-btn accept-btn"
+          @click="handleAccept"
+          :disabled="isLoading"
+          data-testid="accept-button"
+        >
+          Close
+        </button>
+        <button
+          class="action-btn discard-btn"
+          @click="handleDiscard"
+          :disabled="isLoading"
+          data-testid="discard-button"
+        >
+          Discard
+        </button>
       </template>
 
       <!-- Render artifacts inline -->
@@ -66,7 +58,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject, computed, type PropType } from 'vue'
+import { defineComponent, ref, inject, computed, type PropType, type Ref } from 'vue'
 import LLMChat from './LLMChat.vue'
 import ResultsComponent from '../editor/Results.vue'
 import type { ChatMessage, ChatArtifact } from '../../chats/chat'
@@ -104,6 +96,7 @@ export default defineComponent({
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     const editorStore = inject<EditorStoreType>('editorStore')
+    const isMobile = inject<Ref<boolean> | boolean>('isMobile', false)
 
     if (!llmConnectionStore || !connectionStore || !queryExecutionService || !editorStore) {
       throw new Error(
@@ -217,6 +210,7 @@ export default defineComponent({
 
     return {
       chatRef,
+      isMobile,
       messages,
       artifacts,
       isLoading,
@@ -243,43 +237,14 @@ export default defineComponent({
   overflow: hidden;
 }
 
-.refinement-actions {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.connection-info {
-  font-size: 11px;
-  color: var(--text-faint);
-  padding: 0;
-  background-color: transparent;
-  border: none;
-  border-radius: 0;
-  max-width: 120px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.refinement-action-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: 2px;
-  padding-left: 8px;
-  border-left: 1px solid rgba(148, 163, 184, 0.16);
-}
-
 .action-btn {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 0 7px;
-  min-height: 22px;
-  border-radius: 5px;
-  font-size: 11px;
+  padding: 0 12px;
+  min-height: 34px;
+  border-radius: 8px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.15s ease;
   border: 1px solid var(--border-light);
@@ -340,21 +305,6 @@ export default defineComponent({
   background: var(--query-window-bg);
 }
 
-:deep(.chat-header) {
-  height: 24px;
-  min-height: 24px;
-  padding: 0 6px;
-  gap: 4px;
-  background: var(--query-window-bg);
-  border-bottom-color: rgba(148, 163, 184, 0.1);
-}
-
-:deep(.chat-title) {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-}
-
 :deep(.chat-messages) {
   padding: 10px 12px 10px 10px;
   gap: 6px;
@@ -398,5 +348,39 @@ export default defineComponent({
   padding: 0 10px;
   border-radius: 7px;
   font-size: 11px;
+}
+
+@media screen and (max-width: 768px) {
+  :deep(.input-container) {
+    padding: 8px;
+  }
+
+  :deep(.input-wrapper) {
+    padding: 8px;
+    gap: 8px;
+    border-radius: 12px;
+  }
+
+  :deep(.textarea-wrapper textarea) {
+    min-height: 88px;
+    max-height: 180px;
+    padding: 8px;
+    font-size: 16px;
+  }
+
+  :deep(.animated-placeholder) {
+    top: 8px;
+    left: 9px;
+    font-size: 16px;
+  }
+
+  .action-btn,
+  :deep(.send-button) {
+    height: 44px;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
 }
 </style>

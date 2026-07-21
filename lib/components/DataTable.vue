@@ -180,11 +180,19 @@
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .control-btn {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    font-size: 16px;
   }
 
   .controls-toggle {
+    top: auto;
+    right: 10px;
+    bottom: 10px;
+    transform: none;
+    flex-direction: row;
+    gap: 6px;
     opacity: 1;
     visibility: visible;
   }

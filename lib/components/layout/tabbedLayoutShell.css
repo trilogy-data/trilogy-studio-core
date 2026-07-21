@@ -20,14 +20,14 @@
   min-height: 44px;
   height: 44px;
   padding: 0 14px;
-  border-bottom: 1px solid var(--border-light);
+  border-top: 1px solid var(--border-light);
   background: var(--query-window-bg);
 }
 
 .tab-button {
   flex: 1 1 0;
   border: none;
-  border-bottom: 2px solid transparent;
+  border-top: 2px solid transparent;
   padding: 0 16px;
   border-radius: 0;
   background: none;
@@ -44,7 +44,21 @@
 
 .tab-button.active {
   color: var(--special-text);
-  border-bottom-color: var(--special-text);
+  border-top-color: var(--special-text);
+}
+
+@media screen and (max-width: 768px) {
+  .tabs {
+    min-height: calc(48px + env(safe-area-inset-bottom));
+    height: calc(48px + env(safe-area-inset-bottom));
+    padding: 0 8px env(safe-area-inset-bottom);
+  }
+
+  .tab-button {
+    min-height: 48px;
+    padding: 0 8px;
+    font-size: 16px;
+  }
 }
 
 .sql-view {

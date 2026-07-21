@@ -7,34 +7,46 @@
           :class="{ active: activeTab === 'results' }"
           @click="setTab('results')"
           data-testid="results-tab-button"
+          aria-label="Results"
+          title="Results"
         >
-          Results (<span v-if="error">Error</span
+          <i class="mdi mdi-table mobile-tab-icon" aria-hidden="true"></i>
+          <span class="tab-label">Results (</span><span v-if="error">Error</span
           ><span v-else data-testid="query-results-length">{{ results.data.length }}</span
-          >)
+          ><span class="tab-label">)</span>
         </button>
         <button
           class="tab-button"
           v-if="!(type === 'sql')"
           :class="{ active: activeTab === 'visualize' }"
           @click="setTab('visualize')"
+          aria-label="Visualize"
+          title="Visualize"
         >
-          Visualize
+          <i class="mdi mdi-chart-bar mobile-tab-icon" aria-hidden="true"></i>
+          <span class="tab-label">Visualize</span>
         </button>
         <button
           class="tab-button"
           v-if="!(type === 'sql') && trilogySource"
           :class="{ active: activeTab === 'trilogy' }"
           @click="setTab('trilogy')"
+          aria-label="Trilogy"
+          title="Trilogy"
         >
-          Trilogy
+          <i class="mdi mdi-code-braces mobile-tab-icon" aria-hidden="true"></i>
+          <span class="tab-label">Trilogy</span>
         </button>
         <button
           class="tab-button"
           v-if="!(type === 'sql')"
           :class="{ active: activeTab === 'sql' }"
           @click="setTab('sql')"
+          aria-label="Generated SQL"
+          title="Generated SQL"
         >
-          Generated SQL
+          <i class="mdi mdi-database-outline mobile-tab-icon" aria-hidden="true"></i>
+          <span class="tab-label">Generated SQL</span>
         </button>
       </div>
       <div class="tabs-right">
@@ -42,7 +54,8 @@
           v-if="showChatButton"
           class="chat-button"
           @click="$emit('open-chat')"
-          title="Open AI Chat"
+          aria-label="Open Chat"
+          title="Open Chat"
         >
           <i class="mdi mdi-creation-outline"></i>
           <span class="chat-button-label">Chat</span>
@@ -224,7 +237,7 @@ export default {
   computed: {
     tabContentHeight(): number {
       // Subtract tabs height from container height for components that need explicit heights
-      return this.containerHeight ? this.containerHeight - this.TABS_HEIGHT : 0
+      return this.containerHeight ? this.containerHeight - (this.isMobile ? 48 : this.TABS_HEIGHT) : 0
     },
     eligibleTabs() {
       const tabs: string[] = ['results']
@@ -247,6 +260,7 @@ export default {
   },
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
+    const isMobile = inject<boolean>('isMobile', false)
 
     if (!connectionStore) {
       throw new Error('Requires injection of connection store')
@@ -274,6 +288,7 @@ export default {
     return {
       codeBlock,
       connectionStore,
+      isMobile,
     }
   },
 }
@@ -363,6 +378,10 @@ export default {
   border-radius: 0px;
 }
 
+.mobile-tab-icon {
+  display: none;
+}
+
 .tab-content {
   flex: 1;
   overflow: auto;
@@ -434,5 +453,48 @@ export default {
 .tab-content :deep(.tabulator .tabulator-footer .tabulator-footer-contents) {
   padding-top: 3px;
   padding-bottom: 3px;
+}
+
+@media screen and (max-width: 768px) {
+  .tabs {
+    min-height: 48px;
+    height: 48px;
+  }
+
+  .tabs-left {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+  }
+
+  .tab-button,
+  .chat-button {
+    min-width: 48px;
+    height: 48px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .tab-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    flex: 1 1 0;
+  }
+
+  .mobile-tab-icon {
+    display: inline-block;
+    font-size: 20px;
+  }
+
+  .tab-label,
+  .chat-button-label {
+    display: none;
+  }
+
+  .tabs-right {
+    padding-right: 0;
+  }
 }
 </style>

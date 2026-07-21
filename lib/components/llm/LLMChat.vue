@@ -205,6 +205,7 @@
             {{ currentPlaceholder }}
           </span>
         </div>
+        <slot name="input-actions"></slot>
         <button
           v-if="isLoading && stopHandler"
           @click="handleStop"

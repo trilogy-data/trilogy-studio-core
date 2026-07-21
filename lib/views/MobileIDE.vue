@@ -19,6 +19,7 @@
       :activeTab="activeTab"
       @tab-closed="handleTabClosed"
       @close-other-tabs="handleCloseOtherTabs"
+      @active-title-updated="updateActiveEditorName"
     >
       <template #sidebar>
         <sidebar
@@ -49,6 +50,7 @@
           <template #editor="slotProps" v-if="activeEditor && activeEditorData">
             <editor
               v-if="activeEditorData.type == 'preql'"
+              ref="editorRef"
               context="main-trilogy"
               :editorId="activeEditor"
               @query-started="slotProps.onQueryStarted"
@@ -57,16 +59,27 @@
             <editor
               @query-started="slotProps.onQueryStarted"
               v-else
+              ref="editorRef"
               context="main-sql"
               :editorId="activeEditor"
               @save-editors="saveEditorsCall"
             />
           </template>
           <template #results v-if="activeEditorData">
-            <ResultsView :editorData="activeEditorData" display-mode="results"></ResultsView>
+            <ResultsView
+              :editorData="activeEditorData"
+              :runEditorQuery="runQuery"
+              display-mode="results"
+              @content-change="handleEditorContentChange"
+            ></ResultsView>
           </template>
           <template #chat v-if="activeEditorData && hasActiveEditorChat">
-            <ResultsView :editorData="activeEditorData" display-mode="chat"></ResultsView>
+            <ResultsView
+              :editorData="activeEditorData"
+              :runEditorQuery="runQuery"
+              display-mode="chat"
+              @content-change="handleEditorContentChange"
+            ></ResultsView>
           </template>
         </tabbed-layout>
       </template>
@@ -158,6 +171,7 @@ import UserSettings from '../components/user/UserSettings.vue'
 import UserProfile from '../components/user/UserProfile.vue'
 import type { EditorStoreType } from '../stores/editorStore.ts'
 import type EditorModel from '../editors/editor.ts'
+import { EditorTag } from '../editors'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
 import type QueryExecutionService from '../stores/queryExecutionService.ts'
@@ -251,6 +265,7 @@ const MobileIDEComponent: Component = defineComponent({
       saveEditors = () => {}
     }
     const screenNavigation = useScreenNavigation()
+    const editorRef = ref<any>(null)
     const {
       activeScreen,
       activeEditor,
@@ -281,6 +296,7 @@ const MobileIDEComponent: Component = defineComponent({
       addBackListeners,
       removeBacklisteners,
       onInitialLoad,
+      updateTabName,
     } = screenNavigation
     const tabSelected = (e: Tab) => {
       openTab(e.screen, null, e.address)
@@ -408,6 +424,7 @@ const MobileIDEComponent: Component = defineComponent({
       tabSelected,
       handleTabClosed,
       handleCloseOtherTabs,
+      updateTabName,
       llmInitialTab,
       handleLLMOpenView,
       showChatCreatorModal,
@@ -415,6 +432,7 @@ const MobileIDEComponent: Component = defineComponent({
       handleCreateNewChat,
       handleChatCreated,
       mobileViewportHeight,
+      editorRef,
     }
   },
   async mounted() {
@@ -425,6 +443,33 @@ const MobileIDEComponent: Component = defineComponent({
     }
   },
   methods: {
+    async runQuery() {
+      // Agent tool runs should stay in Chat; direct toolbar runs still emit
+      // query-started from Editor and switch to Results.
+      return await this.editorRef?.runQuery(false)
+    },
+    handleEditorContentChange(content: string) {
+      this.editorRef?.setContent(content)
+    },
+    updateActiveEditorName(newName: string) {
+      const editorId = this.activeEditor
+      if (!editorId) return
+      const editor = (this.editorStore.editors as Record<string, EditorModel>)[editorId]
+      if (!editor) return
+      this.editorStore.updateEditorName(editorId, newName)
+
+      if (editor.tags.includes(EditorTag.SOURCE)) {
+        const connection = editor.connectionId
+          ? this.connectionStore.connections[editor.connectionId]
+          : this.connectionStore.connectionByName(editor.connection)
+        if (connection?.model) {
+          this.modelStore.models[connection.model].updateModelSourceName(editor.id, newName)
+          this.saveModels()
+        }
+      }
+
+      this.updateTabName('editors', null, editorId)
+    },
     saveEditorsCall() {
       this.saveEditors()
     },

@@ -1,6 +1,17 @@
 <template>
-  <div class="results-container">
-    <div class="tabs">
+  <div class="results-container" :class="`view-${activeTab}`">
+    <div class="tab-content">
+      <div class="editor-entry">
+        <slot name="editor" :onQueryStarted="() => (activeTab = 'results')"></slot>
+      </div>
+      <div v-show="activeTab === 'results'" class="edit-results">
+        <slot name="results"></slot>
+      </div>
+      <div v-show="activeTab === 'chat'" class="edit-results chat-entry">
+        <slot name="chat"></slot>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Editor views">
       <button
         class="tab-button"
         :class="{ active: activeTab === 'sql' }"
@@ -26,18 +37,7 @@
       >
         Chat
       </button>
-    </div>
-    <div class="tab-content">
-      <div v-if="activeTab === 'sql'" class="editor-entry">
-        <slot name="editor" :onQueryStarted="() => (activeTab = 'results')"></slot>
-      </div>
-      <div v-else-if="activeTab === 'results'" class="edit-results">
-        <slot name="results"></slot>
-      </div>
-      <div v-else class="edit-results chat-entry">
-        <slot name="chat"></slot>
-      </div>
-    </div>
+    </nav>
   </div>
 </template>
 <script lang="ts">
@@ -73,6 +73,8 @@ export default {
   flex-wrap: nowrap;
   height: 100%;
   width: 100%;
+  position: absolute;
+  inset: 0;
 }
 .edit-results {
   height: 100%;
@@ -80,11 +82,37 @@ export default {
   overflow: auto; /* Allow scrolling within results if needed */
   display: flex;
   flex-direction: column;
+  position: absolute;
+  inset: 0 0 var(--mobile-editor-toolbar-height, 53px);
+  z-index: 2;
 }
 .chat-entry {
   overflow: hidden;
+  inset: 0;
 }
 .editor-results {
   height: 100%;
+}
+
+.view-results :deep(.editor-content),
+.view-chat :deep(.editor-content) {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.view-results :deep(.mobile-editor-toolbar),
+.view-chat :deep(.mobile-editor-toolbar) {
+  position: relative;
+  z-index: 3;
+}
+
+.view-chat :deep(.mobile-editor-toolbar) {
+  display: none;
+}
+
+@media screen and (max-width: 520px) {
+  .results-container {
+    --mobile-editor-toolbar-height: 49px;
+  }
 }
 </style>

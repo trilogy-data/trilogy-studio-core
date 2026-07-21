@@ -4,7 +4,22 @@
       >An editor by this ID ({{ editorId }}) could not be found.</error-message
     >
     <template v-else>
+      <editor-mobile-toolbar
+        v-if="isMobile"
+        :editor-type="editorData.type"
+        :tags="editorData.tags"
+        :loading="editorData.loading"
+        :connection-has-model="connectionHasModel"
+        @save="$emit('save-editors')"
+        @validate="validateQuery"
+        @format="formatQuery"
+        @run="runQuery"
+        @cancel="cancelQuery"
+        @toggle-tag="toggleTag"
+        @generate="handleLLMTrigger"
+      />
       <editor-header
+        v-else
         :name="editorData.name"
         :editor-type="editorData.type"
         :tags="editorData.tags"
@@ -72,7 +87,14 @@
 }
 
 @media screen and (max-width: 768px) {
+  .parent > .mobile-editor-toolbar {
+    order: 2;
+  }
+
   .editor-content {
+    order: 1;
+    flex: 1 1 auto;
+    min-height: 0;
     min-width: 0;
     padding-right: 0;
     gap: 0;
@@ -103,6 +125,7 @@ import QueryExecutionService from '../../stores/queryExecutionService.ts'
 import type { QueryResult, QueryUpdate } from '../../stores/queryExecutionService.ts'
 import SymbolsPane from '../SymbolsPane.vue'
 import EditorHeader from './EditorHeader.vue'
+import EditorMobileToolbar from './EditorMobileToolbar.vue'
 import CodeEditor from './EditorCode.vue'
 import { Range } from 'monaco-editor'
 import { type AnalyticsStoreType } from '../../stores/analyticsStore.ts'
@@ -154,6 +177,7 @@ export default defineComponent({
     ErrorMessage,
     SymbolsPane,
     EditorHeader,
+    EditorMobileToolbar,
     CodeEditor,
   },
   emits: ['save-editors', 'save-models', 'query-started', 'query-finished'],
@@ -533,7 +557,7 @@ export default defineComponent({
         console.error('Error formatting query:', error)
       }
     },
-    async runQuery(): Promise<any> {
+    async runQuery(switchToResults: boolean = true): Promise<any> {
       if (!this.editorData || !supportsEditorLocalExecution(this.editorData.type)) {
         if (this.editorData) {
           this.editorData.setError('Python files are editable but cannot be run locally.')
@@ -541,7 +565,9 @@ export default defineComponent({
         return
       }
 
-      this.$emit('query-started')
+      if (switchToResults) {
+        this.$emit('query-started')
+      }
       // clear existing error state (but keep refinement session so user can continue chatting)
       this.editorData.setError(null)
 
