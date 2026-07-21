@@ -216,9 +216,11 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   })
   const chartControlsToggle = page.getByTestId('toggle-chart-controls-btn')
   const geoMapType = page.getByTestId('chart-type-geo-map')
-  await expect(chartControlsToggle).toBeVisible({ timeout: 10000 })
   if (!(await geoMapType.isVisible())) {
-    await chartControlsToggle.click({ force: true })
+    // The toolbar is intentionally hover-revealed. Its button remains mounted
+    // while hidden, so dispatch directly to the Vue handler instead of relying
+    // on pointer hit-testing through the chart/dashboard overlay layers.
+    await chartControlsToggle.dispatchEvent('click')
   }
   await expect(geoMapType).toBeVisible({ timeout: 10000 })
   await geoMapType.click({ force: true })
@@ -226,8 +228,7 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   await page.getByLabel('Geo Field').selectOption('origin_state')
   await page.getByLabel('Color Scale').selectOption('count')
 
-  await page.getByTestId('toggle-chart-controls-btn').click({ force: true })
-  await page.waitForTimeout(1000)
+  await chartControlsToggle.dispatchEvent('click')
   await firstChartCanvas.waitFor({ state: 'visible', timeout: 45000 })
 
   // Get canvas dimensions
