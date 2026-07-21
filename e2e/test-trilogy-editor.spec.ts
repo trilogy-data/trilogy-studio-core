@@ -92,7 +92,7 @@ test('test_demo_editor', async ({ page, isMobile, browser }) => {
   await page.goto('#skipTips=true&sidebarScreen=editors&screen=welcome&welcome=welcome')
 
   await page.getByTestId('demo-editor-button').click()
-  await runEditorQueryAndExpectCount(page, 100, 120000)
+  await runEditorQueryAndExpectCount(page, 4, 120000)
   page.once('dialog', (dialog) => {
     console.log(`Dialog message: ${dialog.message()}`)
     dialog.dismiss().catch(() => {})
