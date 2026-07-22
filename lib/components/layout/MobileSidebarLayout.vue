@@ -1,7 +1,17 @@
 <template>
   <div id="interface" class="interface">
     <div class="mobile-select-bar">
-      <div class="icon-container" tooltip="Menu">
+      <button
+        v-if="menuOpen && mobileNavigationLevel === 'detail'"
+        type="button"
+        class="icon-container mobile-nav-button"
+        aria-label="Back"
+        data-testid="mobile-menu-back"
+        @click="$emit('menu-back')"
+      >
+        <i class="mdi mdi-chevron-left back-icon"></i>
+      </button>
+      <div v-else class="icon-container" tooltip="Menu">
         <i
           @click="$emit('menu-toggled')"
           class="mdi mdi-menu hamburger-icon"
@@ -22,19 +32,19 @@
           @keyup.esc="cancelTitleEditing"
         />
         <template v-else>
-        <div
-          v-if="tabs.length > 1"
-          class="tab-dropdown-container"
-          @click="toggleTabDropdown"
-          ref="tabDropdownContainer"
-        >
-          <span class="current-tab-title">{{ currentTabTitle }}</span>
-          <i
-            :class="['mdi', 'dropdown-arrow', { rotated: tabDropdownOpen }]"
-            class="mdi-chevron-down"
-          ></i>
-        </div>
-        <span v-else class="header">{{ screenTitle }}</span>
+          <div
+            v-if="!menuOpen && tabs.length > 1"
+            class="tab-dropdown-container"
+            @click="toggleTabDropdown"
+            ref="tabDropdownContainer"
+          >
+            <span class="current-tab-title">{{ currentTabTitle }}</span>
+            <i
+              :class="['mdi', 'dropdown-arrow', { rotated: tabDropdownOpen }]"
+              class="mdi-chevron-down"
+            ></i>
+          </div>
+          <span v-else class="header">{{ screenTitle }}</span>
         </template>
 
         <!-- Tab Dropdown -->
@@ -82,6 +92,20 @@
         @click="startTitleEditing"
       >
         <i class="mdi mdi-pencil-outline"></i>
+      </button>
+      <!-- The rename button is hidden whenever the menu is open, so this slot is
+           free for the jump-to-root control. Back walks up one level; this
+           escapes the whole stack in a single tap. -->
+      <button
+        v-else-if="menuOpen && mobileNavigationLevel === 'detail'"
+        class="mobile-title-edit"
+        type="button"
+        title="Back to menu"
+        aria-label="Back to menu"
+        data-testid="mobile-menu-home"
+        @click="$emit('menu-home')"
+      >
+        <i class="mdi mdi-home-outline"></i>
       </button>
     </div>
 
@@ -137,6 +161,24 @@
   height: 100%;
   display: flex;
   align-items: center;
+}
+
+.mobile-nav-button {
+  /* Overlaps the bar's 40px height; left offset is pulled back so the enlarged
+     hit area doesn't visually shift the chevron. */
+  width: 44px;
+  margin-left: -6px;
+  justify-content: center;
+  z-index: 2;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.back-icon {
+  font-size: 28px;
 }
 
 .hamburger-icon {
@@ -457,6 +499,8 @@ type IconMapKey = keyof typeof iconMap.value
 
 export interface Props {
   menuOpen: boolean
+  mobileNavigationLevel?: 'root' | 'detail'
+  mobileNavigationTitle?: string
   activeScreen: string
   tabs?: Tab[]
   activeTab: string | null
@@ -464,11 +508,15 @@ export interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   tabs: () => [],
+  mobileNavigationLevel: 'root',
+  mobileNavigationTitle: '',
 })
 
 // Emits
 const emit = defineEmits<{
   'menu-toggled': []
+  'menu-back': []
+  'menu-home': []
   'tab-selected': [data: Tab]
   'tab-closed': [tabId: string]
   'close-other-tabs': [tabId: string]
@@ -510,7 +558,7 @@ const iconMap = ref({
 // Computed properties
 const screenTitle = computed(() => {
   if (props.menuOpen) {
-    return 'Menu'
+    return props.mobileNavigationLevel === 'detail' ? props.mobileNavigationTitle : 'Menu'
   }
   if (props.activeScreen) {
     return props.activeScreen

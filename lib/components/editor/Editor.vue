@@ -131,6 +131,7 @@ import { Range } from 'monaco-editor'
 import { type AnalyticsStoreType } from '../../stores/analyticsStore.ts'
 import { type GoToDefinitionEvent } from './events'
 import {
+import { useIsMobile } from '../useIsMobile'
   supportsEditorFormatting,
   supportsEditorLocalExecution,
   supportsEditorValidation,
@@ -188,7 +189,7 @@ export default defineComponent({
     const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore')
     const trilogyResolver = inject<FetchResolver>('trilogyResolver')
     const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore')
-    const isMobile = inject<boolean>('isMobile', false)
+    const isMobile = useIsMobile()
     // Optional inject — host apps that mount the editor in a narrow column
     // (e.g. explorer's center pane) can suppress the symbols pane without
     // pretending to be a mobile context.

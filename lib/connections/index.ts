@@ -26,6 +26,11 @@ export type {
   RemoteColumnDTO,
   ArrowBatchHandler,
 } from './remoteWorker'
-export { buildConnectionTree, filterConnectionTree } from './helpers'
+export {
+  buildConnectionTree,
+  filterConnectionTree,
+  CONNECTION_CONFIG_NODE_TYPES,
+  CONNECTION_BRANCH_NODE_TYPES,
+} from './helpers'
 // export {default as SQLServerConnection} from './sql_server';
 // export {default as BigQueryServiceConnection} from './bigquery_sa';

@@ -78,12 +78,14 @@ export interface CommunityModelListItemProps {
   activeModel?: string
   isCollapsed?: boolean
   isMobile?: boolean
+  mobileTreeMode?: boolean
 }
 
 const props = withDefaults(defineProps<CommunityModelListItemProps>(), {
   activeModel: '',
   isCollapsed: false,
   isMobile: false,
+  mobileTreeMode: false,
 })
 
 const emit = defineEmits<{
@@ -92,11 +94,16 @@ const emit = defineEmits<{
   'model-details': [model: any]
   'item-toggle': [type: string, key: string, modelRoot: any]
   'delete-store': [store: AnyModelStore]
+  'mobile-item-click': [item: any]
 }>()
 
 const communityStore = useCommunityApiStore()
 
 const handleItemClick = () => {
+  if (props.mobileTreeMode) {
+    emit('mobile-item-click', props.item)
+    return
+  }
   if (props.item.type === 'model') {
     // Pass the entire model object for more detailed information
     emit('model-selected', props.item.model, props.item.key, props.item.modelRoot)

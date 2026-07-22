@@ -9,8 +9,12 @@
     />
     <mobile-sidebar-layout
       @menu-toggled="mobileMenuOpen = !mobileMenuOpen"
+      @menu-back="handleMobileMenuBack"
+      @menu-home="handleMobileMenuHome"
       @tab-selected="tabSelected"
       :menuOpen="mobileMenuOpen"
+      :mobileNavigationLevel="mobileNavigationLevel"
+      :mobileNavigationTitle="mobileNavigationTitle"
       :activeScreen="activeScreen"
       :tabs="tabs"
       :activeTab="activeTab"
@@ -180,6 +184,7 @@ import { getDefaultValueFromHash, removeHashFromUrl, URL_HASH_KEYS } from '../st
 import { KeySeparator } from '../data/constants'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import useScreenNavigation, { type Tab } from '../stores/useScreenNavigation.ts'
+import useMobileSidebarNavigation from '../stores/useMobileSidebarNavigation'
 import { type DashboardStoreType } from '../stores/dashboardStore.ts'
 import { defineComponent, type Component } from 'vue'
 import PageLoading from '../components/PageLoading.vue'
@@ -264,6 +269,7 @@ const MobileIDEComponent: Component = defineComponent({
     }
     const screenNavigation = useScreenNavigation()
     const editorRef = ref<any>(null)
+    const mobileNavigation = useMobileSidebarNavigation()
     const {
       activeScreen,
       activeEditor,
@@ -431,6 +437,10 @@ const MobileIDEComponent: Component = defineComponent({
       handleChatCreated,
       mobileViewportHeight,
       editorRef,
+      mobileNavigationLevel: mobileNavigation.level,
+      mobileNavigationTitle: mobileNavigation.title,
+      handleMobileMenuBack: mobileNavigation.back,
+      handleMobileMenuHome: mobileNavigation.home,
     }
   },
   async mounted() {

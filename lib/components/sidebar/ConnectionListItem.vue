@@ -277,6 +277,7 @@ import { Connection, MotherDuckConnection } from '../../connections'
 import SidebarOverflowMenu from './SidebarOverflowMenu.vue'
 import type { ContextMenuItem } from '../ContextMenu.vue'
 import type { EditorStoreType } from '../../stores/editorStore'
+import { useIsMobile } from '../useIsMobile'
 
 // Interface for connections that have common properties
 interface ConnectionWithSaveCredential {
@@ -357,7 +358,7 @@ export default {
     'toggleMobileMenu',
   ],
   setup(props, { emit }) {
-    const isMobile = inject<boolean>('isMobile', false)
+    const isMobile = useIsMobile()
     const editorStore = inject<EditorStoreType>('editorStore')
     const saveEditors = inject<Function>('saveEditors')
     const setActiveScreen = inject<Function>('setActiveScreen')

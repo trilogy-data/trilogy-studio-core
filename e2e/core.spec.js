@@ -1,6 +1,10 @@
 // tests/example.spec.js
 import { test, expect } from '@playwright/test'
-import { createEditorFromConnectionList, openSidebarScreen } from './test-helpers.js'
+import {
+  createEditorFromConnectionList,
+  drillMobileTree,
+  openSidebarScreen,
+} from './test-helpers.js'
 
 test('user settings', async ({ page, isMobile }) => {
   const requestPromise = page.waitForRequest((request) => {
@@ -52,6 +56,7 @@ test('user settings', async ({ page, isMobile }) => {
   // bottom-right CTA rather than an auto-opening modal, so no dismissal needed.
   if (isMobile) {
     await openSidebarScreen(page, 'editors', isMobile)
+    await drillMobileTree(page, ['Browser Storage', 'test'])
   }
 
   await page.locator('[data-testid^="editor-e-local-local:test-new-editor-"]').last().click()

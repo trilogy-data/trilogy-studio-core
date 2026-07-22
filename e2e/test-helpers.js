@@ -84,7 +84,17 @@ export async function openSidebarScreen(page, screen, isMobile = false) {
       try {
         await expect(sidebarIcon).toBeVisible({ timeout: 500 })
       } catch {
-        await mobileMenuToggle.click()
+        // Either the menu is closed, or it's open but drilled into a
+        // destination. `mobile-menu-home` jumps straight back to the root menu
+        // from any depth, so one click resolves the drilled case regardless of
+        // how many levels deep we are.
+        const mobileHome = page.getByTestId('mobile-menu-home')
+        if (await mobileHome.isVisible()) {
+          await mobileHome.click()
+        } else {
+          await mobileMenuToggle.click()
+          if (await mobileHome.isVisible()) await mobileHome.click()
+        }
         await expect(sidebarIcon).toBeVisible({ timeout: 5000 })
       }
       try {
@@ -115,6 +125,18 @@ export async function openSidebarScreen(page, screen, isMobile = false) {
   await sidebarIcon.click({ force: true })
   await expect(sidebarIcon).toHaveClass(/selected/, { timeout: 10000 })
   await expect(expandedSidebarContent).toBeVisible({ timeout: 10000 })
+}
+
+export async function drillMobileTree(page, branchLabels) {
+  for (const label of branchLabels) {
+    const branch = page.getByText(label).filter({ visible: true }).last()
+    await expect(branch).toBeVisible({ timeout: SIDEBAR_SHELL_TIMEOUT })
+    await branch.click()
+    // Branches containing configuration rows expose a Children step. Pure
+    // containers drill directly into their child list.
+    const children = page.getByTestId('mobile-tree-children')
+    if (await children.isVisible()) await children.click()
+  }
 }
 
 async function getVisibleConnectionRow(page, connectionName) {

@@ -165,11 +165,11 @@
     padding: 10px 12px;
     font-size: 16px;
   }
-
 }
 </style>
 <script lang="ts">
-import { defineComponent, inject } from 'vue'
+import { defineComponent } from 'vue'
+import { useIsMobile } from '../useIsMobile'
 
 export default defineComponent({
   name: 'SidebarList',
@@ -180,7 +180,7 @@ export default defineComponent({
     },
   },
   setup(props) {
-    const isMobile = inject<boolean>('isMobile')
+    const isMobile = useIsMobile()
     return {
       title: props.title,
       isMobile,
