@@ -799,21 +799,34 @@ export default defineComponent({
     background: var(--button-mouseover);
   }
 
-  .mobile-menu-destination > i:first-child {
+  /* The glyph and the label are different fonts with different metrics, and the
+     icon font ships its own line-height, so centring the two line boxes leaves
+     the icon sitting high against the text. Give each icon a fixed box with
+     line-height 1 and centre the glyph inside it, so what the row centres is
+     the glyph itself rather than a line box padded by inherited leading. */
+  .mobile-menu-destination > i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    line-height: 1;
     color: var(--sidebar-selector-font, var(--text-faint));
+  }
+
+  .mobile-menu-destination > i:first-child {
     font-size: 22px;
-    text-align: center;
   }
 
   .mobile-menu-destination > span {
     font-size: 16px;
     font-weight: 550;
+    line-height: 24px;
   }
 
-  .mobile-menu-chevron {
+  .mobile-menu-destination > .mobile-menu-chevron {
+    justify-content: flex-end;
     color: var(--text-faint);
     font-size: 20px;
-    text-align: right;
   }
 
   .mobile-menu-bottom {

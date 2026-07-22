@@ -3,7 +3,7 @@ import { Article, Paragraph, DocData } from './docTypes.ts'
 // Helper type for DocData function property for brevity
 type FuncData = { function: DocData['function'] }
 
-export const builtinFunctions = new Article('Functions', [
+const builtinFunctionCatalog = new Article('Functions', [
   new Paragraph(
     'Trilogy Built-in Functions',
     'Trilogy provides a comprehensive set of built-in functions that closely map to standard SQL functions. These functions enable data transformation, aggregation, and manipulation within your queries. They are categorized into aggregate, date/time, string, numeric, collection, and utility functions.',
@@ -944,4 +944,32 @@ export const builtinFunctions = new Article('Functions', [
       },
     } as FuncData,
   ),
+])
+
+const aggregateSectionStart = builtinFunctionCatalog.paragraphs.findIndex(
+  (paragraph) => paragraph.title === 'Aggregate Functions',
+)
+const scalarSectionStart = builtinFunctionCatalog.paragraphs.findIndex(
+  (paragraph) => paragraph.title === 'Date/Time Functions',
+)
+
+if (aggregateSectionStart < 0 || scalarSectionStart < 0) {
+  throw new Error('Built-in function documentation sections are incomplete')
+}
+
+const functionUsage = builtinFunctionCatalog.paragraphs[1]
+
+export const aggregateFunctions = new Article('Aggregate Functions', [
+  builtinFunctionCatalog.paragraphs[aggregateSectionStart],
+  functionUsage,
+  ...builtinFunctionCatalog.paragraphs.slice(aggregateSectionStart + 1, scalarSectionStart),
+])
+
+export const builtinFunctions = new Article('Functions', [
+  new Paragraph(
+    'Trilogy Built-in Functions',
+    'Trilogy provides built-in scalar functions for transforming and manipulating individual values. They are categorized into date/time, string, numeric, collection, and utility functions. Aggregate functions, which summarize groups of rows, are documented separately.',
+  ),
+  functionUsage,
+  ...builtinFunctionCatalog.paragraphs.slice(scalarSectionStart),
 ])

@@ -75,6 +75,8 @@ const props = withDefaults(
     isBranch: (item: T) => boolean
     /** A branch which is also a loadable destination, rather than only a container. */
     isSelectable?: (item: T) => boolean
+    /** A pure container which should skip the generic detail screen entirely. */
+    isDirectBranch?: (item: T) => boolean
     isConfig?: (item: T) => boolean
     enabled?: boolean
     /** Bypass the drill-down and render `items` as-is (search results). */
@@ -87,6 +89,7 @@ const props = withDefaults(
     flat: false,
     isConfig: () => false,
     isSelectable: () => false,
+    isDirectBranch: () => false,
   },
 )
 const emit = defineEmits<{
@@ -156,7 +159,7 @@ const openItem = (item: T) => {
   const hasConfig = itemDescendants(item, true).some((candidate) => props.isConfig(candidate))
   // Pure containers do not need an intermediate detail -> Children interaction.
   // Selectable parents keep that screen so the parent itself remains loadable.
-  const needsDetail = hasConfig || props.isSelectable(item)
+  const needsDetail = !props.isDirectBranch(item) && (hasConfig || props.isSelectable(item))
   setView({ mode: needsDetail ? 'detail' : 'children', nodeKey: itemKey(item) })
   navigation.push({ title: itemLabel(item), onBack: () => restore(previous) })
 }
