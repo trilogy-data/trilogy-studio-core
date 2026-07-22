@@ -134,7 +134,7 @@ export async function drillMobileTree(page, branchLabels) {
     await branch.click()
     // Branches containing configuration rows expose a Children step. Pure
     // containers drill directly into their child list.
-    const children = page.getByTestId('mobile-tree-children')
+    const children = page.locator('[data-testid^="mobile-tree-children-"]:visible')
     if (await children.isVisible()) await children.click()
   }
 }

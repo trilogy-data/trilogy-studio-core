@@ -34,6 +34,7 @@
       :enabled="isMobile"
       :flat="!!searchQuery"
       :is-branch="isModelBranch"
+      :is-selectable="isModelBranch"
       @expand="expandMobileBranch"
       @select="selectMobileItem"
     >

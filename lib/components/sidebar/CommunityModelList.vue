@@ -42,6 +42,7 @@
       label-field="label"
       :enabled="isMobile"
       :is-branch="isCommunityBranch"
+      :is-selectable="isCommunityBranch"
       @expand="expandMobileBranch"
       @select="selectMobileItem"
     >

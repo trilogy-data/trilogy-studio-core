@@ -9,9 +9,14 @@
     <span :class="{ 'hidden-text': isLoading, contents: true }">
       <slot></slot>
     </span>
-    <span v-if="status === 'success'" class="success status_overlay">✔</span>
+    <Transition name="status-fade">
+      <span v-if="status === 'success'" class="success status_overlay">
+        <span class="success-backdrop" aria-hidden="true"></span>
+        <span class="status-symbol">✔</span>
+      </span>
+    </Transition>
     <span
-      v-else-if="status === 'error'"
+      v-if="status === 'error'"
       class="error status_overlay"
       :data-testid="`${effectiveTestId}-error`"
       >✖</span
@@ -214,7 +219,36 @@ export default {
 }
 
 .success {
+  inset: 0;
+  width: 100%;
+  transform: none;
+  overflow: hidden;
+  border-radius: inherit;
   color: green;
+  pointer-events: none;
+}
+
+.success-backdrop {
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background: var(--query-window-bg, var(--sidebar-bg));
+  opacity: 0.9;
+}
+
+.status-symbol {
+  position: relative;
+  z-index: 1;
+}
+
+.status-fade-enter-active,
+.status-fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.status-fade-enter-from,
+.status-fade-leave-to {
+  opacity: 0;
 }
 
 .error {

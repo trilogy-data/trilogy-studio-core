@@ -1,10 +1,34 @@
 <template>
   <div class="mobile-tree-list" :class="{ 'mobile-tree-list-enabled': enabled }">
     <template v-if="!flat && view.mode === 'detail' && currentNode">
-      <slot name="item" :item="currentNode" :detail="true"></slot>
-      <slot v-for="item in configItems" name="item" :key="itemKey(item)" :item="item"></slot>
+      <slot
+        v-if="!isSelectable(currentNode)"
+        name="item"
+        :item="currentNode"
+        :detail="true"
+      ></slot>
       <button
-        v-if="childItems.length"
+        v-if="isSelectable(currentNode)"
+        type="button"
+        class="mobile-tree-open"
+        :data-testid="`mobile-tree-open-${listId}`"
+        @click="emit('select', currentNode)"
+      >
+        <i class="mdi mdi-open-in-new"></i>
+        <span>Open</span>
+      </button>
+      <div v-for="item in configItems" :key="itemKey(item)" class="mobile-tree-entry">
+        <slot name="item" :item="item"></slot>
+      </div>
+      <div
+        v-for="item in isSelectable(currentNode) ? childItems : []"
+        :key="itemKey(item)"
+        class="mobile-tree-entry"
+      >
+        <slot name="item" :item="item"></slot>
+      </div>
+      <button
+        v-if="childItems.length && !isSelectable(currentNode)"
         type="button"
         class="mobile-tree-children"
         :data-testid="`mobile-tree-children-${listId}`"
@@ -49,20 +73,34 @@ const props = withDefaults(
     idField?: string
     labelField?: string
     isBranch: (item: T) => boolean
+    /** A branch which is also a loadable destination, rather than only a container. */
+    isSelectable?: (item: T) => boolean
     isConfig?: (item: T) => boolean
     enabled?: boolean
     /** Bypass the drill-down and render `items` as-is (search results). */
     flat?: boolean
   }>(),
-  { idField: 'id', labelField: 'name', enabled: true, flat: false, isConfig: () => false },
+  {
+    idField: 'id',
+    labelField: 'name',
+    enabled: true,
+    flat: false,
+    isConfig: () => false,
+    isSelectable: () => false,
+  },
 )
-const emit = defineEmits<{ expand: [item: T]; select: [item: T] }>()
+const emit = defineEmits<{
+  expand: [item: T]
+  select: [item: T]
+  viewChange: [isRoot: boolean]
+}>()
 const navigation = useMobileSidebarNavigation()
 const view = reactive<TreeView>({ mode: 'root', nodeKey: null })
 
 const itemKey = (item: T) => String(item[props.idField] ?? item.key)
 const itemLabel = (item: T) => String(item[props.labelField] ?? item.label ?? '')
 const isBranch = (item: T) => props.isBranch(item)
+const isSelectable = (item: T) => props.isSelectable(item)
 const currentNode = computed(() => props.items.find((item) => itemKey(item) === view.nodeKey))
 const descendants = computed(() => {
   if (!currentNode.value) return []
@@ -89,7 +127,11 @@ const visibleItems = computed(() => {
   return childItems.value.length ? childItems.value : descendants.value
 })
 
-const restore = (previous: TreeView) => Object.assign(view, previous)
+const setView = (next: TreeView) => {
+  Object.assign(view, next)
+  emit('viewChange', view.mode === 'root')
+}
+const restore = (previous: TreeView) => setView(previous)
 const itemDescendants = (item: T, directOnly = false) => {
   const start = props.items.findIndex((candidate) => itemKey(candidate) === itemKey(item))
   if (start < 0) return []
@@ -113,14 +155,15 @@ const openItem = (item: T) => {
   const previous = { ...view }
   const hasConfig = itemDescendants(item, true).some((candidate) => props.isConfig(candidate))
   // Pure containers do not need an intermediate detail -> Children interaction.
-  // Their row is already the navigation affordance, so drill straight into the list.
-  Object.assign(view, { mode: hasConfig ? 'detail' : 'children', nodeKey: itemKey(item) })
+  // Selectable parents keep that screen so the parent itself remains loadable.
+  const needsDetail = hasConfig || props.isSelectable(item)
+  setView({ mode: needsDetail ? 'detail' : 'children', nodeKey: itemKey(item) })
   navigation.push({ title: itemLabel(item), onBack: () => restore(previous) })
 }
 const openChildren = () => {
   if (!currentNode.value) return
   const previous = { ...view }
-  view.mode = 'children'
+  setView({ mode: 'children', nodeKey: view.nodeKey })
   navigation.push({
     title: `${itemLabel(currentNode.value)} children`,
     onBack: () => restore(previous),
@@ -148,10 +191,11 @@ defineExpose({ openItem })
   color: var(--text-faint);
   pointer-events: none;
 }
-.mobile-tree-list-enabled .mobile-tree-entry :deep(.chevron-button),
-.mobile-tree-list-enabled .mobile-tree-entry :deep(.sidebar-padding) {
+.mobile-tree-list-enabled :deep(.chevron-button),
+.mobile-tree-list-enabled :deep(.sidebar-padding) {
   display: none;
 }
+.mobile-tree-open,
 .mobile-tree-children {
   display: grid;
   grid-template-columns: 28px 1fr auto 24px;
@@ -170,6 +214,9 @@ defineExpose({ openItem })
   text-align: left;
   font: inherit;
   cursor: pointer;
+}
+.mobile-tree-open {
+  grid-template-columns: 28px 1fr;
 }
 .mobile-tree-count {
   color: var(--text-faint);

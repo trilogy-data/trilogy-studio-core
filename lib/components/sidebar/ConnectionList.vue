@@ -86,7 +86,7 @@
 </template>
 
 <script lang="ts">
-import { type Ref, ref, computed, inject } from 'vue'
+import { ref, computed, inject } from 'vue'
 import SidebarList from './SidebarList.vue'
 import ConnectionCreatorInline from './ConnectionCreatorInline.vue'
 import LoadingButton from '../LoadingButton.vue'

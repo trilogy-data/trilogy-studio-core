@@ -889,8 +889,9 @@ export default defineComponent({
   }
 
   .sidebar-container {
-    height: calc(100vh - 40px);
-    height: calc(var(--mobile-viewport-height, 100dvh) - 40px);
+    /* --mobile-header-height is set by MobileSidebarLayout on the shell above. */
+    height: calc(100vh - var(--mobile-header-height, 35px));
+    height: calc(var(--mobile-viewport-height, 100dvh) - var(--mobile-header-height, 35px));
   }
 
   .sidebar-content {

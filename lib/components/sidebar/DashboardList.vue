@@ -3,7 +3,7 @@
   <sidebar-list title="Dashboards">
     <template #header>
       <div class="dashboards-header">
-        <h3 class="font-sans sidebar-header">Dashboards</h3>
+        <h3 v-if="!isMobile" class="font-sans sidebar-header">Dashboards</h3>
         <button
           class="sidebar-control-button sidebar-header-action sidebar-primary-create"
           @click="creatorVisible = !creatorVisible"
@@ -15,7 +15,7 @@
       </div>
     </template>
     <template #actions>
-      <div class="button-container">
+      <div v-if="!isMobile || mobileTreeAtRoot" class="button-container">
         <button
           class="sidebar-control-button sidebar-header-action"
           @click="importPopupVisible = true"
@@ -41,8 +41,10 @@
       label-field="label"
       :enabled="isMobile"
       :is-branch="isDashboardBranch"
+      :is-selectable="(item) => item.type === 'dashboard'"
       @expand="expandMobileBranch"
       @select="selectMobileItem"
+      @view-change="mobileTreeAtRoot = $event"
     >
       <template #item="{ item }">
         <dashboard-list-item
@@ -223,6 +225,7 @@ export default {
     const importPopupVisible = ref(false)
     const isMobile = useIsMobile()
     const mobileTree = ref<any>(null)
+    const mobileTreeAtRoot = ref(true)
 
     const toggleCollapse = (key: string) => {
       if (collapsed.value[key] === undefined) {
@@ -302,6 +305,7 @@ export default {
       confirmDelete,
       isMobile,
       mobileTree,
+      mobileTreeAtRoot,
     }
   },
   methods: {

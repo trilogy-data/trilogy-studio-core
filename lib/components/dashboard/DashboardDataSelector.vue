@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch, type PropType } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch, type PropType } from 'vue'
 import type { ResultColumn, Row } from '../../editors/results'
 import { ColumnType } from '../../editors/results'
 import type { CrossFilterEntry, CrossFilterScalar } from '../../dashboards/conditions'
@@ -165,11 +165,36 @@ function updateDropdownPosition() {
     return
   }
   const rect = el.getBoundingClientRect()
+  const viewport = window.visualViewport
+  const viewportLeft = viewport?.offsetLeft ?? 0
+  const viewportTop = viewport?.offsetTop ?? 0
+  const viewportWidth = viewport?.width ?? window.innerWidth
+  const viewportHeight = viewport?.height ?? window.innerHeight
+  const viewportRight = viewportLeft + viewportWidth
+  const viewportBottom = viewportTop + viewportHeight
+  const gutter = 8
+  const gap = 4
+  const width = Math.min(Math.max(rect.width, 220), Math.max(0, viewportWidth - gutter * 2))
+  const left = Math.min(
+    Math.max(rect.left, viewportLeft + gutter),
+    Math.max(viewportLeft + gutter, viewportRight - width - gutter),
+  )
+  const spaceBelow = viewportBottom - rect.bottom - gap - gutter
+  const spaceAbove = rect.top - viewportTop - gap - gutter
+  const openAbove = spaceBelow < 240 && spaceAbove > spaceBelow
+  const availableHeight = Math.max(96, openAbove ? spaceAbove : spaceBelow)
+  const maxHeight = Math.min(360, availableHeight)
+  const top = openAbove
+    ? Math.max(viewportTop + gutter, rect.top - gap - maxHeight)
+    : Math.max(viewportTop + gutter, rect.bottom + gap)
+
   dropdownStyle.value = {
     position: 'fixed',
-    top: `${rect.bottom + 4}px`,
-    left: `${rect.left}px`,
-    minWidth: `${rect.width}px`,
+    top: `${top}px`,
+    left: `${left}px`,
+    width: `${width}px`,
+    minWidth: '0',
+    maxHeight: `${maxHeight}px`,
   }
 }
 
@@ -212,10 +237,21 @@ watch(showDropdown, (open) => {
   if (open) {
     window.addEventListener('scroll', onReposition, true)
     window.addEventListener('resize', onReposition)
+    window.visualViewport?.addEventListener('scroll', onReposition)
+    window.visualViewport?.addEventListener('resize', onReposition)
   } else {
     window.removeEventListener('scroll', onReposition, true)
     window.removeEventListener('resize', onReposition)
+    window.visualViewport?.removeEventListener('scroll', onReposition)
+    window.visualViewport?.removeEventListener('resize', onReposition)
   }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', onReposition, true)
+  window.removeEventListener('resize', onReposition)
+  window.visualViewport?.removeEventListener('scroll', onReposition)
+  window.visualViewport?.removeEventListener('resize', onReposition)
 })
 
 // ── Selection mutations (draft) ───────────────────────────────────────────
@@ -604,6 +640,8 @@ function onDropdownKeydown(e: KeyboardEvent) {
   flex-direction: column;
   max-height: 360px;
   min-width: 220px;
+  max-width: calc(100vw - 16px);
+  box-sizing: border-box;
   background-color: var(--result-window-bg, #ffffff);
   border: 1px solid var(--border-color, #d6dde6);
   border-radius: 10px;

@@ -760,6 +760,13 @@ async function captureDashboardImage(): Promise<{
   background-color: var(--main-bg-color);
 }
 
+@media (max-width: 768px) {
+  .dashboard-container {
+    box-sizing: border-box;
+    padding-bottom: calc(110px + env(safe-area-inset-bottom));
+  }
+}
+
 .dashboard-body {
   display: flex;
   flex: 1;

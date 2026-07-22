@@ -55,6 +55,8 @@ const emit = defineEmits([
   'title-update',
   'export-image',
   'toggle-chat',
+  'navigate-up',
+  'navigate-down',
 ])
 
 const connectionStore = useConnectionStore()
@@ -250,7 +252,7 @@ const modeIcon = computed(() => {
         <LoadingButton
           :action="handleDownloadAction"
           :use-default-style="false"
-          class="btn btn-secondary filter-action-btn"
+          class="btn btn-secondary filter-action-btn dashboard-download-action"
           data-testid="download-button"
           test-id="download-button"
           title="Download dashboard image"
@@ -262,13 +264,31 @@ const modeIcon = computed(() => {
 
         <button
           @click="toggleSharePopup"
-          class="btn btn-secondary filter-action-btn"
+          class="btn btn-secondary filter-action-btn dashboard-export-action"
           data-testid="share-dashboard-button"
           title="Export dashboard"
           aria-label="Export dashboard"
         >
           <i class="mdi mdi-export-variant filter-action-icon" aria-hidden="true"></i>
           <span class="filter-action-label">Export</span>
+        </button>
+
+        <button
+          @click="$emit('navigate-up')"
+          class="btn btn-secondary filter-action-btn mobile-dashboard-nav-action"
+          title="Previous dashboard item"
+          aria-label="Previous dashboard item"
+        >
+          <i class="mdi mdi-chevron-up filter-action-icon" aria-hidden="true"></i>
+        </button>
+
+        <button
+          @click="$emit('navigate-down')"
+          class="btn btn-secondary filter-action-btn mobile-dashboard-nav-action"
+          title="Next dashboard item"
+          aria-label="Next dashboard item"
+        >
+          <i class="mdi mdi-chevron-down filter-action-icon" aria-hidden="true"></i>
         </button>
 
         <button
@@ -565,6 +585,10 @@ const modeIcon = computed(() => {
   flex: 0 0 auto;
 }
 
+.mobile-dashboard-nav-action {
+  display: none;
+}
+
 .filter-action-icon {
   display: inline-flex;
   align-items: center;
@@ -674,6 +698,44 @@ const modeIcon = computed(() => {
 }
 
 @media (max-width: 768px) {
+  .dashboard-download-action,
+  .dashboard-export-action {
+    display: none;
+  }
+
+  .mobile-dashboard-nav-action {
+    display: inline-flex;
+  }
+  .filter-row {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 90;
+    box-sizing: border-box;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+    min-height: calc(110px + env(safe-area-inset-bottom));
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    background: var(--query-window-bg);
+    border-top: 1px solid var(--border-light);
+    box-shadow: 0 -8px 20px rgba(15, 23, 42, 0.08);
+  }
+
+  .filter-row > :first-child {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .filter-row :deep(.filter-dropdown) {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: 8px;
+  }
+
   .controls-row {
     gap: 10px;
     padding: 8px 10px;
@@ -687,7 +749,7 @@ const modeIcon = computed(() => {
   }
 
   .dashboard-title {
-    flex-basis: auto;
+    display: none;
   }
 
   .editable-text {
@@ -737,6 +799,7 @@ const modeIcon = computed(() => {
   .filter-actions {
     justify-content: stretch;
     margin-left: 0;
+    width: 100%;
   }
 
   .top-actions .btn {
@@ -764,10 +827,6 @@ const modeIcon = computed(() => {
     flex: 0 0 auto;
   }
 
-  .filter-row > :first-child {
-    min-width: 0;
-    flex-basis: 100%;
-  }
 }
 
 @media (max-width: 640px) {
@@ -775,10 +834,15 @@ const modeIcon = computed(() => {
     gap: 6px;
   }
 
-  .filter-action-btn {
+  .filter-action-btn,
+  .filter-actions :deep(button.filter-action-btn) {
+    box-sizing: border-box;
     width: 44px;
     min-width: 44px;
+    min-height: 44px;
     height: 44px;
+    max-height: 44px;
+    margin: 0;
     padding: 0;
   }
 

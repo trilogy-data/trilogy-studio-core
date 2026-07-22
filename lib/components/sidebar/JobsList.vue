@@ -32,6 +32,7 @@
       label-field="label"
       :enabled="isMobile"
       :is-branch="isJobsBranch"
+      :is-selectable="isJobsBranch"
       @expand="expandMobileBranch"
       @select="handleItemClick"
     >

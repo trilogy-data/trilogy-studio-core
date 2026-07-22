@@ -7,6 +7,7 @@
       :items="documentationNodes"
       :enabled="isMobile"
       :is-branch="(node) => node.type === 'documentation'"
+      :is-selectable="(node) => node.type === 'documentation'"
       @expand="expandMobileBranch"
       @select="selectMobileNode"
     >

@@ -130,8 +130,8 @@ import CodeEditor from './EditorCode.vue'
 import { Range } from 'monaco-editor'
 import { type AnalyticsStoreType } from '../../stores/analyticsStore.ts'
 import { type GoToDefinitionEvent } from './events'
-import {
 import { useIsMobile } from '../useIsMobile'
+import {
   supportsEditorFormatting,
   supportsEditorLocalExecution,
   supportsEditorValidation,

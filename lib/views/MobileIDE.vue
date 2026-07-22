@@ -16,11 +16,12 @@
       :mobileNavigationLevel="mobileNavigationLevel"
       :mobileNavigationTitle="mobileNavigationTitle"
       :activeScreen="activeScreen"
+      :titleEditable="['editors', 'dashboard'].includes(activeScreen)"
       :tabs="tabs"
       :activeTab="activeTab"
       @tab-closed="handleTabClosed"
       @close-other-tabs="handleCloseOtherTabs"
-      @active-title-updated="updateActiveEditorName"
+      @active-title-updated="updateActiveTitle"
     >
       <template #sidebar>
         <sidebar
@@ -440,7 +441,12 @@ const MobileIDEComponent: Component = defineComponent({
       mobileNavigationLevel: mobileNavigation.level,
       mobileNavigationTitle: mobileNavigation.title,
       handleMobileMenuBack: mobileNavigation.back,
-      handleMobileMenuHome: mobileNavigation.home,
+      // Home is offered on terminal screens too, where the drawer is closed —
+      // resetting the stack there is only useful if we also surface it.
+      handleMobileMenuHome: () => {
+        mobileNavigation.home()
+        mobileMenuOpen.value = true
+      },
     }
   },
   async mounted() {
@@ -451,6 +457,17 @@ const MobileIDEComponent: Component = defineComponent({
     }
   },
   methods: {
+    updateActiveTitle(newName: string) {
+      if (this.activeScreen === 'editors') {
+        this.updateActiveEditorName(newName)
+        return
+      }
+      if (this.activeScreen === 'dashboard' && this.activeDashboard) {
+        this.dashboardStore.updateDashboardName(this.activeDashboard, newName)
+        this.saveDashboards()
+        this.updateTabName('dashboard', null, this.activeDashboard)
+      }
+    },
     async runQuery() {
       // Agent tool runs should stay in Chat; direct toolbar runs still emit
       // query-started from Editor and switch to Results.
