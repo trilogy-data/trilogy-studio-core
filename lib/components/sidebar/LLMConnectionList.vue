@@ -48,6 +48,7 @@
       :enabled="isMobile"
       :is-branch="isLLMBranch"
       :is-config="isLLMConfig"
+      :is-detail-branch="(item) => ['connection', 'settings-group'].includes(item.type)"
       @expand="expandMobileBranch"
       @select="selectMobileItem"
     >

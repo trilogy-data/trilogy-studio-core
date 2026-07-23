@@ -5,7 +5,12 @@ import * as net from 'net'
 import * as os from 'os'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
-import { createEditorFromConnection, openSidebarScreen, prepareTestPage } from './test-helpers.js'
+import {
+  createEditorFromConnection,
+  drillMobileTree,
+  openSidebarScreen,
+  prepareTestPage,
+} from './test-helpers.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -193,9 +198,16 @@ remoteStoreImportDescribe('Remote Store Auto Import', () => {
     ).toBeVisible({
       timeout: 30000,
     })
+    if (isMobile) {
+      await drillMobileTree(page, ['Remote Storage'])
+    }
     await expect(
       page.locator('.truncate-text').filter({ hasText: TEST_CONNECTION_NAME }).first(),
     ).toBeVisible()
+
+    if (isMobile) {
+      await drillMobileTree(page, [TEST_CONNECTION_NAME])
+    }
 
     await expect(
       page.locator('.truncate-text').filter({ hasText: 'core_local.preql' }).first(),
@@ -240,6 +252,9 @@ remoteStoreImportDescribe('Remote Store Auto Import', () => {
     const newEditorName = newEditorLabel.trim()
 
     await openSidebarScreen(page, 'editors', isMobile)
+    if (isMobile) {
+      await drillMobileTree(page, ['Remote Storage'])
+    }
     await expect(
       page
         .getByTestId(`editor-c-remote-remote:${TEST_STORE_ID}:${TEST_CONNECTION_NAME}`)

@@ -43,6 +43,7 @@
       :enabled="isMobile"
       :is-branch="isConnectionBranch"
       :is-config="isConnectionConfig"
+      :is-detail-branch="(item) => item.type === 'connection'"
       @expand="expandMobileBranch"
       @select="selectMobileItem"
     >

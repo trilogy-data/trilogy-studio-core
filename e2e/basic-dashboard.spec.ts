@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import {
+  drillMobileTree,
   localConnectionId,
   openDashboardItemEditor,
   openSidebarScreen,
@@ -114,6 +115,9 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   await page.goto('#skipTips=true')
 
   await openSidebarScreen(page, 'community-models', isMobile)
+  if (isMobile) {
+    await drillMobileTree(page, ['Trilogy Public Models', 'duckdb'])
+  }
   // await page.getByTestId('trilogy-data-trilogy-public-models-main').click({ force: true })
   // await page.getByTestId('community-model-search').click()
   // await page.getByTestId('community-model-search').press('ControlOrMeta+a')
@@ -574,6 +578,9 @@ test('test-custom-editor-dashboard', async ({ page, isMobile }) => {
   await page.getByTestId('editor-creator-submit').click()
 
   // Switch to test_one editor and add content
+  if (isMobile) {
+    await drillMobileTree(page, ['Browser Storage', connectionName])
+  }
   await page.getByTestId(`editor-e-local-${localConnectionId('duckdb-test2')}-test_one`).click()
   const editor = page.getByTestId('editor')
   await editor.click({ clickCount: 3 })
@@ -681,6 +688,9 @@ test('test-drilldown', async ({ page, isMobile, browser }) => {
   await page.getByTestId('editor-creator-submit').click()
 
   // Switch to test_one editor and add content
+  if (isMobile) {
+    await drillMobileTree(page, ['Browser Storage', connectionName])
+  }
   await page.getByTestId(`editor-e-local-${localConnectionId('duckdb-test2')}-test_one`).click()
   const editor = page.getByTestId('editor')
   await editor.click({ clickCount: 3 })

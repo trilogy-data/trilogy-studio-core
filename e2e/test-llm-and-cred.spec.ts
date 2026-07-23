@@ -5,7 +5,12 @@ import {
   createCompletionHandler,
   createToolCallResponse,
 } from './mock-openai'
-import { createEditorFromConnection, openSidebarScreen, prepareTestPage } from './test-helpers.js'
+import {
+  createEditorFromConnection,
+  drillMobileTree,
+  openSidebarScreen,
+  prepareTestPage,
+} from './test-helpers.js'
 
 test.describe('LLM Connection Tests', () => {
   test.beforeEach(async ({ page }) => {
@@ -48,12 +53,17 @@ test.describe('LLM Connection Tests', () => {
     await page.getByTestId('llm-connection-creator-save-credential').check()
     await page.getByTestId('llm-connection-creator-submit').click()
 
-    // Expand the connection settings and verify available models were loaded
-    await page.getByTestId('expand-llm-connection-trilogy-llm-openai').click()
-    await page.getByTestId('expand-llm-connection-trilogy-llm-openai-settings').click()
     await expect(page.getByTestId('status-icon-trilogy-llm-openai')).toHaveClass(/connected/, {
       timeout: 5000,
     })
+
+    // Expand the connection settings and verify available models were loaded
+    if (isMobile) {
+      await drillMobileTree(page, ['trilogy-llm-openai', 'Settings'])
+    } else {
+      await page.getByTestId('expand-llm-connection-trilogy-llm-openai').click()
+      await page.getByTestId('expand-llm-connection-trilogy-llm-openai-settings').click()
+    }
     await expect(page.getByTestId('model-select-trilogy-llm-openai')).toBeVisible()
 
     // Select a different model (assuming gpt-5.2-mini is not the default)
@@ -88,8 +98,12 @@ test.describe('LLM Connection Tests', () => {
     await page.waitForTimeout(2000)
     await openSidebarScreen(page, 'llms', isMobile)
 
-    await page.getByTestId('expand-llm-connection-trilogy-llm-openai').click()
-    await page.getByTestId('expand-llm-connection-trilogy-llm-openai-settings').click()
+    if (isMobile) {
+      await drillMobileTree(page, ['trilogy-llm-openai', 'Settings'])
+    } else {
+      await page.getByTestId('expand-llm-connection-trilogy-llm-openai').click()
+      await page.getByTestId('expand-llm-connection-trilogy-llm-openai-settings').click()
+    }
     await page.getByTestId('toggle-api-key-visibility-trilogy-llm-openai').click()
     await expect(page.getByTestId('model-select-trilogy-llm-openai')).toHaveValue('gpt-5.2-mini')
 
@@ -232,6 +246,9 @@ limit 10;`,
     await openSidebarScreen(page, 'editors', isMobile)
     await openSidebarScreen(page, 'community-models', isMobile)
     await page.getByTestId('community-trilogy-data-trilogy-public-models-main').click()
+    if (isMobile) {
+      await page.getByTestId('mobile-tree-open-community').click()
+    }
     await page.getByTestId('community-model-search').click()
     await page.getByTestId('community-model-search').fill('demo')
     await page.getByTestId('import-demo-model').click()
@@ -376,6 +393,9 @@ select
     await openSidebarScreen(page, 'editors', isMobile)
     await openSidebarScreen(page, 'community-models', isMobile)
     await page.getByTestId('community-trilogy-data-trilogy-public-models-main').click()
+    if (isMobile) {
+      await page.getByTestId('mobile-tree-open-community').click()
+    }
     await page.getByTestId('community-model-search').fill('demo')
     await page.getByTestId('import-demo-model').click()
     await page.getByTestId('model-creation-submit').click()

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import {
   createEditorFromConnectionList,
+  drillMobileTree,
   localConnectionId,
   openSidebarScreen,
   prepareTestPage,
@@ -12,20 +13,6 @@ import {
 test.beforeEach(async ({ page }) => {
   await prepareTestPage(page)
 })
-
-async function pruneTrailingQuoteIfPresent(page, expectedText) {
-  const currentText = await page.evaluate(() => {
-    const monaco = window.monaco
-    const model = monaco?.editor?.getModels?.()[0]
-    return model?.getValue?.() || ''
-  })
-
-  await page.evaluate((nextText) => {
-    const monaco = window.monaco
-    const model = monaco?.editor?.getModels?.()[0]
-    model?.setValue?.(nextText)
-  }, expectedText)
-}
 
 test('test', async ({ page, isMobile, browserName }) => {
   await page.goto('#skipTips=true')
@@ -75,7 +62,11 @@ test('test', async ({ page, isMobile, browserName }) => {
   if (isMobile) {
     await openSidebarScreen(page, 'tutorial', isMobile)
   }
-  await page.getByTestId('expand-documentation-documentation+Studio').click()
+  if (isMobile) {
+    await drillMobileTree(page, ['Studio'])
+  } else {
+    await page.getByTestId('expand-documentation-documentation+Studio').click()
+  }
   await page.getByTestId('documentation-article+Studio+Model Tutorial').click()
 
   // Step 3: Complete Tutorial Queries - Declaring a constant
@@ -115,8 +106,9 @@ select
   order by 
       state asc;`
 
-  await page.keyboard.type(typingQuery)
-  await pruneTrailingQuoteIfPresent(page, typingQuery)
+  // insertText bypasses Monaco's auto-closing quote behavior, which can append
+  // a delayed quote when Playwright types this list literal on mobile.
+  await page.keyboard.insertText(typingQuery)
   await page.getByTestId('editor-run-button').click()
   await waitForEditorQueryComplete(page)
 
@@ -218,9 +210,11 @@ select count(order.id) as order_count;`
 
   // Go back to the documentation
   if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
+    await openSidebarScreen(page, 'tutorial', true)
+    await drillMobileTree(page, ['Studio'])
+  } else {
+    await page.getByTestId('sidebar-icon-tutorial').click()
   }
-  await page.getByTestId('sidebar-icon-tutorial').click()
 
   // Step 8: Create iris model from the connection
   if (isMobile) {
@@ -229,10 +223,17 @@ select count(order.id) as order_count;`
     await page.getByTestId('tab-article+Studio+Model Tutorial').click()
   }
   const irisConnectionId = localConnectionId('iris-data')
-  await page.getByTestId(`expand-tutorial-connection-${irisConnectionId}`).click()
-
-  await page.getByTestId(`expand-tutorial-connection-${irisConnectionId}+memory`).click()
-  await page.getByTestId(`expand-tutorial-connection-${irisConnectionId}+memory+main`).click()
+  if (isMobile) {
+    await drillMobileTree(page, ['iris-data'], { openChildren: false })
+    const connectionChildren = page.getByTestId('mobile-tree-children-connections')
+    await expect(connectionChildren).toBeVisible({ timeout: 10000 })
+    await connectionChildren.click()
+    await drillMobileTree(page, ['memory', 'main'])
+  } else {
+    await page.getByTestId(`expand-tutorial-connection-${irisConnectionId}`).click()
+    await page.getByTestId(`expand-tutorial-connection-${irisConnectionId}+memory`).click()
+    await page.getByTestId(`expand-tutorial-connection-${irisConnectionId}+memory+main`).click()
+  }
   await page.getByTestId('create-datasource-iris_data').click()
   await page.getByTestId('create-datasource-button').click()
 
@@ -276,12 +277,14 @@ address iris_data;`
 
   // Step 9: Create a new Trilogy editor and query the iris data
   if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
+    await openSidebarScreen(page, 'connections', true)
+  } else {
+    await page.getByTestId('sidebar-icon-connections').click()
   }
-  await page.getByTestId('sidebar-icon-connections').click()
   await createEditorFromConnectionList(page, 'iris-data', 'trilogy')
   if (isMobile) {
     await openSidebarScreen(page, 'editors', isMobile)
+    await drillMobileTree(page, ['Browser Storage', 'iris-data'])
   }
 
   await page
