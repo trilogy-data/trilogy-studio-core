@@ -1,21 +1,33 @@
 <template>
   <sidebar-list title="Documentation">
     <template #actions></template>
-    <sidebar-item
-      v-for="node in documentationNodes"
-      :key="node.id"
-      :item-id="node.id"
-      :name="node.name"
-      :indent="node.indent"
-      :is-selected="isActiveNode(node.id)"
-      :is-collapsible="node.type === 'documentation'"
-      :is-collapsed="collapsed[node.id]"
-      :icon="node.type === 'article' ? 'mdi-text-box-outline' : ''"
-      :extra-info="node.type === 'documentation' ? node.count : ''"
-      itemType="documentation"
-      @click="handleClick"
-      @toggle="toggleCollapse"
-    />
+    <mobile-tree-list
+      list-id="tutorial"
+      ref="mobileTree"
+      :items="documentationNodes"
+      :enabled="isMobile"
+      :is-branch="(node) => node.type === 'documentation'"
+      :is-direct-branch="(node) => node.type === 'documentation'"
+      @expand="expandMobileBranch"
+      @select="selectMobileNode"
+    >
+      <template #item="{ item: node }">
+        <sidebar-item
+          :key="node.id"
+          :item-id="node.id"
+          :name="node.name"
+          :indent="node.indent"
+          :is-selected="isActiveNode(node.id)"
+          :is-collapsible="node.type === 'documentation'"
+          :is-collapsed="collapsed[node.id]"
+          :icon="node.type === 'article' ? 'mdi-text-box-outline' : ''"
+          :extra-info="node.type === 'documentation' ? node.count : ''"
+          itemType="documentation"
+          @click="isMobile ? mobileTree?.openItem(node) : handleClick(node.id)"
+          @toggle="toggleCollapse"
+        />
+      </template>
+    </mobile-tree-list>
   </sidebar-list>
 </template>
 
@@ -27,6 +39,8 @@ import type { EditorStoreType } from '../../stores/editorStore'
 import { documentation } from '../../data/tutorial/documentation'
 import { KeySeparator } from '../../data/constants'
 import { getDefaultValueFromHash, URL_HASH_KEYS } from '../../stores/urlStore'
+import { useIsMobile } from '../useIsMobile'
+import MobileTreeList from './MobileTreeList.vue'
 
 export default {
   name: 'DocumentationSidebar',
@@ -37,7 +51,7 @@ export default {
       optional: true,
     },
   },
-  setup(props) {
+  setup(props, { emit }) {
     const editorStore = inject<EditorStoreType>('editorStore')
     if (!editorStore) {
       throw new Error('Editor store is not provided!')
@@ -46,6 +60,8 @@ export default {
     const current = getDefaultValueFromHash(URL_HASH_KEYS.TUTORIAL) || ''
 
     const collapsed = ref<Record<string, boolean>>({})
+    const isMobile = useIsMobile()
+    const mobileTree = ref<any>(null)
 
     // Initialize current path and collapse states
     onMounted(() => {
@@ -96,12 +112,20 @@ export default {
     const toggleCollapse = (id: string) => {
       collapsed.value[id] = !collapsed.value[id]
     }
+    const expandMobileBranch = (node: any) => {
+      if (collapsed.value[node.id]) toggleCollapse(node.id)
+    }
+    const selectMobileNode = (node: any) => emit('documentation-key-selected', node.id)
 
     return {
       documentationNodes,
       toggleCollapse,
       collapsed,
       isActiveNode,
+      isMobile,
+      mobileTree,
+      expandMobileBranch,
+      selectMobileNode,
     }
   },
 
@@ -114,6 +138,7 @@ export default {
   components: {
     SidebarList,
     SidebarItem,
+    MobileTreeList,
   },
 }
 </script>

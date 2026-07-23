@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import DashboardChart from './DashboardChart.vue'
 import DashboardMarkdown from './DashboardMarkdown.vue'
 import DashboardTable from './DashboardTable.vue'
@@ -46,6 +46,9 @@ const isHeaderVisible = ref(false)
 const controlsDismissed = ref(false)
 const contentEditToolbarRef = ref<HTMLElement | null>(null)
 const devToolbarRef = ref<HTMLElement | null>(null)
+const mobileFilterPopoverRef = ref<HTMLElement | null>(null)
+const activeMobileFilterGroup = ref<'global' | 'cross' | null>(null)
+const mobileFilterPopoverStyle = ref<Record<string, string>>({})
 
 function cleanFilterValue(value: string): string {
   return value.replace(/'''/g, "'").replace('local.', '')
@@ -224,6 +227,69 @@ const hiddenFilterCount = computed(() => {
   return Math.max(0, filterCount.value - visibleHeaderFilters.value.length)
 })
 
+const mobileFilterGroups = computed(() => {
+  const filters = itemData.value.filters || []
+  return (['global', 'cross'] as const)
+    .map((type) => ({
+      type,
+      filters: filters.filter((filter) =>
+        type === 'global' ? filter.source === 'global' : filter.source !== 'global',
+      ),
+    }))
+    .filter((group) => group.filters.length > 0)
+})
+
+const activeMobileFilters = computed(
+  () => mobileFilterGroups.value.find((group) => group.type === activeMobileFilterGroup.value)?.filters || [],
+)
+
+async function openMobileFilterPopover(event: MouseEvent, type: 'global' | 'cross') {
+  if (activeMobileFilterGroup.value === type) {
+    activeMobileFilterGroup.value = null
+    return
+  }
+
+  const anchor = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  const viewport = window.visualViewport
+  const viewportLeft = viewport?.offsetLeft ?? 0
+  const viewportTop = viewport?.offsetTop ?? 0
+  const viewportWidth = viewport?.width ?? window.innerWidth
+  const gutter = 8
+  const width = Math.min(320, viewportWidth - gutter * 2)
+  const left = Math.min(
+    Math.max(anchor.right - width, viewportLeft + gutter),
+    viewportLeft + viewportWidth - width - gutter,
+  )
+
+  activeMobileFilterGroup.value = type
+  mobileFilterPopoverStyle.value = {
+    position: 'fixed',
+    left: `${left}px`,
+    top: `${anchor.bottom + 6}px`,
+    width: `${width}px`,
+  }
+
+  await nextTick()
+  const popup = mobileFilterPopoverRef.value
+  if (!popup) return
+  const popupRect = popup.getBoundingClientRect()
+  const viewportBottom = viewportTop + (viewport?.height ?? window.innerHeight)
+  if (popupRect.bottom > viewportBottom - gutter) {
+    mobileFilterPopoverStyle.value = {
+      ...mobileFilterPopoverStyle.value,
+      top: `${Math.max(viewportTop + gutter, anchor.top - popupRect.height - 6)}px`,
+    }
+  }
+}
+
+useClickOutside(
+  () => mobileFilterPopoverRef.value,
+  () => {
+    activeMobileFilterGroup.value = null
+  },
+  { enabled: () => activeMobileFilterGroup.value !== null },
+)
+
 type WidgetHeaderLevel = 1 | 2 | 3
 
 function parseWidgetHeaderTitle(
@@ -304,6 +370,7 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
         //@ts-ignore
         itemData.type,
       ),
+      'grid-item-markdown-style': itemData.type === CELL_TYPES.MARKDOWN,
       'grid-item-section-header-style': isSectionHeader,
       'grid-item-edit-style': editMode,
     }"
@@ -392,7 +459,8 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
 
       <div class="grid-item-header-right">
         <div v-if="supportsFilters && filterCount > 0" class="header-filters no-drag">
-          <Tooltip
+          <div class="desktop-header-filters">
+            <Tooltip
             v-for="(filter, index) in visibleHeaderFilters"
             :key="`${filter.source}-${filter.value}-${index}`"
             :content="resolveFilterValue(filter.value, filter.parameters)"
@@ -423,15 +491,29 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
                 x
               </button>
             </div>
-          </Tooltip>
+            </Tooltip>
 
-          <Tooltip
-            v-if="hiddenFilterCount > 0"
-            :content="`${hiddenFilterCount} more filter(s)`"
-            position="bottom"
-          >
-            <div class="header-filter-chip filter-overflow">+{{ hiddenFilterCount }}</div>
-          </Tooltip>
+            <Tooltip
+              v-if="hiddenFilterCount > 0"
+              :content="`${hiddenFilterCount} more filter(s)`"
+              position="bottom"
+            >
+              <div class="header-filter-chip filter-overflow">+{{ hiddenFilterCount }}</div>
+            </Tooltip>
+          </div>
+
+          <div class="mobile-header-filters">
+            <button
+              v-for="group in mobileFilterGroups"
+              :key="group.type"
+              type="button"
+              class="header-filter-chip mobile-filter-summary"
+              :aria-expanded="activeMobileFilterGroup === group.type"
+              @click.stop="openMobileFilterPopover($event, group.type)"
+            >
+              {{ group.type }}:{{ group.filters.length }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -540,6 +622,38 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
       </div>
     </div>
   </div>
+
+  <Teleport to="body">
+    <div
+      v-if="activeMobileFilterGroup"
+      ref="mobileFilterPopoverRef"
+      class="mobile-filter-popover"
+      :style="mobileFilterPopoverStyle"
+      role="dialog"
+      :aria-label="`${activeMobileFilterGroup} filters`"
+      @click.stop
+    >
+      <div class="mobile-filter-popover-header">
+        <span>{{ activeMobileFilterGroup }} filters</span>
+        <button
+          type="button"
+          aria-label="Close filter details"
+          @click="activeMobileFilterGroup = null"
+        >
+          <i class="mdi mdi-close"></i>
+        </button>
+      </div>
+      <div class="mobile-filter-popover-values">
+        <div
+          v-for="(filter, index) in activeMobileFilters"
+          :key="`${filter.source}-${index}`"
+          class="mobile-filter-popover-value"
+        >
+          {{ resolveFilterValue(filter.value, filter.parameters) }}
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -954,6 +1068,84 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   margin-left: auto;
 }
 
+.desktop-header-filters,
+.mobile-header-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mobile-header-filters {
+  display: none;
+}
+
+.mobile-filter-summary {
+  flex: 0 0 auto;
+  min-width: 64px;
+  max-width: none;
+  justify-content: center;
+  overflow: visible;
+  border: 0;
+  cursor: pointer;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.mobile-filter-popover {
+  z-index: 10000;
+  box-sizing: border-box;
+  max-height: min(240px, calc(100dvh - 16px));
+  overflow: hidden;
+  color: var(--text-color);
+  background: var(--query-window-bg, var(--sidebar-bg));
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+}
+
+.mobile-filter-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 0 8px 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.mobile-filter-popover-header button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--text-color);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+}
+
+.mobile-filter-popover-values {
+  max-height: 196px;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.mobile-filter-popover-value {
+  padding: 7px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.mobile-filter-popover-value + .mobile-filter-popover-value {
+  border-top: 1px solid var(--border-light);
+}
+
 /* Tooltip wrappers inside filter list must shrink with the container */
 .header-filters > * {
   min-width: 0;
@@ -1048,6 +1240,29 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
 }
 
 @media (max-width: 768px) {
+  .grid-item-chart-style,
+  .grid-item-markdown-style {
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .grid-item-chart-style .content-area,
+  .grid-item-markdown-style .content-area {
+    border: 0;
+    border-radius: 0;
+  }
+
+  .desktop-header-filters {
+    display: none;
+  }
+
+  .mobile-header-filters {
+    display: flex;
+    flex-shrink: 0;
+    overflow: visible;
+  }
+
   .dev-toolbar-visible {
     max-height: calc(var(--chart-control-height) + 6px);
   }
@@ -1057,8 +1272,13 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   }
 
   .grid-item-header {
+    box-sizing: border-box;
+    width: 100%;
     padding: 3px 10px 2px;
     min-height: 25px;
+    background: var(--trilogy-embed-panel-header-bg, var(--panel-header-bg, #f6f8fb));
+    border: 0;
+    border-radius: 0;
   }
 
   .content-edit-overlay {

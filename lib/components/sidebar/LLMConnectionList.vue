@@ -41,22 +41,37 @@
         </div>
       </div>
     </template>
-    <LLMConnectionListItem
-      v-for="item in contentList"
-      :key="item.id"
-      :item="item"
-      :is-collapsed="collapsed[item.id]"
-      :isSelected="isItemSelected(item)"
-      @toggle="toggleCollapse"
-      @refresh="refreshId"
-      @updateApiKey="updateApiKey"
-      @updateModel="updateModel"
-      @updateFastModel="updateFastModel"
-      @setActive="setActiveConnection"
-      @deleteConnection="deleteConnection"
-      @deleteChat="deleteChat"
-      @toggleSaveCredential="toggleSaveCredential"
-    />
+    <mobile-tree-list
+      list-id="llms"
+      ref="mobileTree"
+      :items="contentList"
+      :enabled="isMobile"
+      :is-branch="isLLMBranch"
+      :is-config="isLLMConfig"
+      :is-detail-branch="(item) => ['connection', 'settings-group'].includes(item.type)"
+      @expand="expandMobileBranch"
+      @select="selectMobileItem"
+    >
+      <template #item="{ item }">
+        <LLMConnectionListItem
+          :key="item.id"
+          :item="item"
+          :mobile-tree-mode="isMobile"
+          :is-collapsed="collapsed[item.id]"
+          :isSelected="isItemSelected(item)"
+          @toggle="toggleCollapse"
+          @refresh="refreshId"
+          @updateApiKey="updateApiKey"
+          @updateModel="updateModel"
+          @updateFastModel="updateFastModel"
+          @setActive="setActiveConnection"
+          @deleteConnection="deleteConnection"
+          @deleteChat="deleteChat"
+          @toggleSaveCredential="toggleSaveCredential"
+          @mobileItemClick="handleMobileItemClick"
+        />
+      </template>
+    </mobile-tree-list>
   </sidebar-list>
 </template>
 
@@ -72,6 +87,8 @@ import LLMConnectionListItem from './LLMConnectionListItem.vue'
 import LLMConnectionCreator from './LLMConnectionCreator.vue'
 import type { Chat, ChatSource } from '../../chats/chat'
 import useScreenNavigation from '../../stores/useScreenNavigation'
+import MobileTreeList from './MobileTreeList.vue'
+import { useIsMobile } from '../useIsMobile'
 
 const SCOPE_OPTIONS: Array<{ value: ChatSource; label: string }> = [
   { value: 'user', label: 'User Chats' },
@@ -105,6 +122,8 @@ export default {
     const isLoading = ref<Record<string, boolean>>({})
     const isErrored = ref<Record<string, string>>({})
     const creatorVisible = ref(false)
+    const mobileTree = ref<any>(null)
+    const isMobile = useIsMobile()
     const collapsed = ref<Record<string, boolean>>({})
 
     // Scope filter — hide dashboard-owned chats by default so the sidebar stays
@@ -267,6 +286,24 @@ export default {
     onBeforeUnmount(() => {
       document.removeEventListener('click', handleDocumentClick)
     })
+
+    // Node types that configure or report on their parent rather than being
+    // browsable children. The mobile drill-down renders these inline on the
+    // parent's detail screen instead of burying them behind "Children", so both
+    // sets must stay in step with the node types `contentList` emits below.
+    const LLM_CONFIG_NODE_TYPES = new Set([
+      'loading',
+      'error',
+      'refresh-connection',
+      'api-key',
+      'model',
+      'fast-model',
+      'toggle-save-credential',
+      'open-chat',
+      'open-validation',
+      'new-chat',
+    ])
+    const LLM_BRANCH_NODE_TYPES = new Set(['connection', 'settings-group', 'chats-header'])
 
     const contentList = computed(() => {
       const list: Array<{
@@ -454,6 +491,21 @@ export default {
       }
       return false
     }
+    const isLLMConfig = (item: any) => LLM_CONFIG_NODE_TYPES.has(item.type)
+    const isLLMBranch = (item: any) => LLM_BRANCH_NODE_TYPES.has(item.type)
+    const expandMobileBranch = async (item: any) => {
+      if (collapsed.value[item.id] !== false) {
+        await toggleCollapse(item.id, item.connection?.name || '', item.type)
+      }
+    }
+    const selectMobileItem = (item: any) =>
+      toggleCollapse(
+        item.id,
+        item.connection?.name || '',
+        item.type,
+        item.type === 'chat-item' ? { chatId: item.chatId } : undefined,
+      )
+    const handleMobileItemClick = (item: any) => mobileTree.value?.openItem(item)
 
     return {
       llmConnectionStore,
@@ -475,12 +527,20 @@ export default {
       filterSummary,
       toggleScopeFilter,
       SCOPE_OPTIONS,
+      mobileTree,
+      isMobile,
+      isLLMConfig,
+      isLLMBranch,
+      expandMobileBranch,
+      selectMobileItem,
+      handleMobileItemClick,
     }
   },
   components: {
     SidebarList,
     LLMConnectionListItem,
     LLMConnectionCreator,
+    MobileTreeList,
   },
   methods: {
     resetConnection(connection: LLMProvider) {

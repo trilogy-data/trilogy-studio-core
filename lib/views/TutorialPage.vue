@@ -1,6 +1,6 @@
 <template>
   <div v-if="currentData" class="tutorial-root" data-testid="tutorial-root">
-    <div class="section-header tutorial-header">{{ currentData.title }}</div>
+    <div v-if="!isMobile" class="section-header tutorial-header">{{ currentData.title }}</div>
     <div class="tutorial-container" data-testid="tutorial-container">
       <section id="navigation" class="tutorial-section">
         <template v-for="paragraph in visibleParagraphs">
@@ -164,6 +164,7 @@ import LLMConnectionList from '../components/sidebar/LLMConnectionList.vue'
 import Dashboard from '../components/dashboard/Dashboard.vue'
 import CodeBlock from '../components/CodeBlock.vue'
 import TutorialPrompt from '../components/tutorial/TutorialPrompt.vue'
+import { useIsMobile } from '../components/useIsMobile'
 
 const defaultDocumentationKey = 'Studio'
 const defaultDocumentationTopic = 'Welcome'
@@ -182,6 +183,7 @@ export default {
   },
 
   setup() {
+    const isMobile = useIsMobile()
     const editorStore = inject<EditorStoreType>('editorStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
@@ -226,6 +228,7 @@ export default {
       demoConnectionName,
       demoModelName,
       demoDashboardID,
+      isMobile,
     }
   },
   components: {
@@ -415,6 +418,10 @@ export default {
 }
 
 @media screen and (max-width: 768px) {
+  .tutorial-header {
+    display: none;
+  }
+
   .editor-top {
     height: 700px;
   }

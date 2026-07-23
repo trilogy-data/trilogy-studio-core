@@ -193,15 +193,9 @@ customStoreDescribe('Custom Model Store', () => {
 
     await page.waitForTimeout(1000)
 
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
     await expect(page.getByTestId(`community-${storeId}+duckdb`)).toBeVisible()
 
     await page.getByTestId(`community-${storeId}+duckdb`).click()
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
     await expect(page.getByTestId(`community-${storeId}+duckdb+example-duckdb-model`)).toBeVisible()
 
     await page.getByTestId(`community-${storeId}+duckdb+example-duckdb-model`).click()
@@ -226,22 +220,16 @@ customStoreDescribe('Custom Model Store', () => {
 
     const connectionName = 'example-duckdb-model-connection'
 
-    await expect(
-      page.getByTestId(`expand-connection-${localConnectionId(connectionName)}`),
-    ).toBeVisible()
+    if (!isMobile) {
+      await expect(
+        page.getByTestId(`expand-connection-${localConnectionId(connectionName)}`),
+      ).toBeVisible()
+    }
 
     await refreshConnection(page, connectionName)
     await waitForConnectionReady(page, connectionName, 10000)
 
     await openSidebarScreen(page, 'editors', isMobile)
-
-    const editorConnectionTestId = `editor-c-local-${localConnectionId(connectionName)}`
-    try {
-      await page.getByTestId(editorConnectionTestId).click({ timeout: 1000 })
-    } catch (e) {
-      await page.getByTestId('editor-s-local').click()
-      await page.getByTestId(editorConnectionTestId).click()
-    }
 
     await createEditorFromConnection(page, connectionName, 'trilogy')
 
@@ -277,15 +265,9 @@ customStoreDescribe('Custom Model Store', () => {
     await page.getByTestId(`community-${storeId}`).click()
     await page.waitForTimeout(1000)
 
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
     await expect(page.getByTestId(`community-${storeId}+bigquery`)).toBeVisible()
 
     await page.getByTestId(`community-${storeId}+bigquery`).click()
-    if (isMobile) {
-      await page.getByTestId('mobile-menu-toggle').click()
-    }
     await expect(
       page.getByTestId(`community-${storeId}+bigquery+example-bigquery-model`),
     ).toBeVisible()

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import {
+  drillMobileTree,
   localConnectionId,
   openSidebarScreen,
   prepareTestPage,
@@ -35,6 +36,9 @@ test('test', async ({ page, isMobile, browser }) => {
   await page.getByTestId('editor-creator-submit').click()
 
   // Switch to test-one editor and add content
+  if (isMobile) {
+    await drillMobileTree(page, ['Browser Storage', connectionName])
+  }
   await page.getByTestId(`editor-e-local-${localConnectionId(connectionName)}-test-one`).click()
   const editor = page.getByTestId('editor')
   await editor.click()

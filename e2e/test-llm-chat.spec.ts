@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { setupOpenAIMocks, createCompletionHandler } from './mock-openai'
-import { openSidebarScreen } from './test-helpers.js'
+import { drillMobileTree, openSidebarScreen } from './test-helpers.js'
 
 /**
  * Helper function to set up an LLM connection for tests
@@ -23,7 +23,13 @@ async function setupLLMConnection(page: any, isMobile: boolean, connectionName =
  * Helper to navigate to chat view by creating a new chat
  */
 async function navigateToChatView(page: any, connectionName = 'test-openai', isMobile = false) {
-  await page.getByTestId(`llm-connection-${connectionName}`).click()
+  if (isMobile) {
+    // New Chat and Validation are connection actions on the detail screen;
+    // do not advance into the separate chat/settings children list.
+    await drillMobileTree(page, [connectionName], { openChildren: false })
+  } else {
+    await page.getByTestId(`llm-connection-${connectionName}`).click()
+  }
 
   // Both mobile and desktop use the chat creator modal
   await expect(page.getByTestId(`llm-connection-${connectionName}-new-chat`)).toBeVisible({

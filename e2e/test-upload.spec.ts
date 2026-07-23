@@ -3,6 +3,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
 import {
+  drillMobileTree,
   localConnectionId,
   openSidebarScreen,
   prepareTestPage,
@@ -70,7 +71,11 @@ test.describe('CSV Upload and Datasource Creation', () => {
 
     // Click on the connection to expand it
     const uploadConnectionId = localConnectionId('upload-test')
-    await page.getByTestId(`expand-connection-${uploadConnectionId}`).click()
+    if (isMobile) {
+      await drillMobileTree(page, ['upload-test'], { openChildren: false })
+    } else {
+      await page.getByTestId(`expand-connection-${uploadConnectionId}`).click()
+    }
 
     // Upload CSV file via drag and drop
     const fileBuffer = fs.readFileSync(csvFilePath)
@@ -112,9 +117,14 @@ test.describe('CSV Upload and Datasource Creation', () => {
     )
 
     // expand the connection
-    await page.getByTestId(`expand-connection-${uploadConnectionId}+memory`).click()
-    // Wait for the table to appear in the connection tree
-    await page.getByTestId(`expand-connection-${uploadConnectionId}+memory+main`).click()
+    if (isMobile) {
+      await page.getByTestId('mobile-tree-children-connections').click()
+      await drillMobileTree(page, ['memory', 'main'])
+    } else {
+      await page.getByTestId(`expand-connection-${uploadConnectionId}+memory`).click()
+      // Wait for the table to appear in the connection tree
+      await page.getByTestId(`expand-connection-${uploadConnectionId}+memory+main`).click()
+    }
     // The table should appear under the expanded database
     await page.waitForSelector('[data-testid="create-datasource-sample_users"]', { timeout: 10000 })
 

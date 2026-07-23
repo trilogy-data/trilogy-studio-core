@@ -1,5 +1,5 @@
 import { DocumentationNode, Article, Paragraph } from './docTypes.ts'
-import { builtinFunctions } from './builtinFunctions.ts'
+import { aggregateFunctions, builtinFunctions } from './builtinFunctions.ts'
 import { windowFunctions } from './windowFunctionsReference.ts'
 import { modelReference } from './modelReference.ts'
 
@@ -126,87 +126,142 @@ LIMIT 10;`,
   ]),
   new Article('Syntax', [
     new Paragraph(
-      'Basic SELECT Statement',
-      'A Trilogy statement consists of one or more lines ending in a semicolon. Trilogy follows SQL syntax closely but removes redundant features like explicit joins and the FROM clause. A basic select could look like this:',
+      'Trilogy Syntax',
+      'Trilogy scripts contain semantic declarations and queries. Statements end with a semicolon, comments begin with #, and only SELECT statements return rows. Trilogy resembles SQL, but concepts replace table columns and the semantic model resolves datasources and joins.',
     ),
     new Paragraph(
-      'Example',
-      "SELECT\n    1 -> constant_one,\n    1 AS constant_one_2,\n    '2' -> constant_string_two;",
-      'code',
-    ),
-    new Paragraph(
-      'Select',
-      'The general form of a select statement below. The where clause can also go after, but is idiomatically first.',
-    ),
-    new Paragraph(
-      'Select',
-      `where? 
+      'Basic SELECT',
+      `where orders.status = 'complete'
 select
-select_list 
-having? 
-order_by? 
-limit?`,
+    orders.customer.name,
+    sum(orders.revenue) as total_revenue
+having sum(orders.revenue) > 1000
+order by sum(orders.revenue) desc
+limit 100;`,
       'code',
     ),
     new Paragraph(
-      'select_list',
-      'A select list has one or more expressions, each with an optional alias. Aliased fields can be immediately referenced.',
+      'SELECT Structure',
+      'WHERE filters source rows before aggregation or window evaluation. SELECT defines the output and its grain. HAVING filters the projected result, including aggregates and windows. ORDER BY and LIMIT are applied last. WHERE is conventionally written before SELECT.',
     ),
     new Paragraph(
-      'select_list',
-      `select_item ("," select_item)* ","?
-select_item: expression "->" IDENTIFIER ","?`,
+      'SELECT Structure',
+      `with <name> as?
+where <condition>?
+select
+    <expression> [as <alias>], ...
+    <subset|union join clauses>?
+having <condition>?
+order by <expression> [asc|desc]?
+limit <count>?;`,
       'code',
     ),
     new Paragraph(
-      'where',
-      'The where clause restricts data before the select expression. It can reference any field in the model, not just those in the select list. It cannot reference aggregates calculated in the select.',
-    ),
-    new Paragraph('where', `where_clause: where expression ("," expression)* ","?`, 'code'),
-    new Paragraph(
-      'having',
-      'The having clause restricts data after the select expression. It can reference any field in the select list, including aggregates.',
-    ),
-    new Paragraph('having', `having_clause: where expression ("," expression)* ","?`, 'code'),
-    new Paragraph(
-      'Select List',
-      'A multiselect statement can merge multiple select statements into a unified rowset by defining output keys to align on. This is rarely required, but can be used to produce certain outputs.',
+      'Fields and Aliases',
+      'Use the full path for imported concepts, such as orders.customer.name. Existing concepts can be selected directly. Every new expression should be named with AS. An output alias is a label, not a reusable concept: do not reference it inside calculations or WHERE, HAVING, or ORDER BY. Define an AUTO or METRIC when an expression must be reused.',
     ),
     new Paragraph(
-      'Multi-Select',
-      `where? select_statement ( "merge" select_statement)+ 
-"align"i align_clause 
-having?
-order_by? 
-limit?`,
+      'Aliases',
+      `select
+    orders.customer.id,
+    sum(orders.revenue) as total_revenue,
+    sum(orders.revenue) / count(orders.id) as average_order_value
+order by sum(orders.revenue) desc;`,
       'code',
     ),
     new Paragraph(
-      'Align Clause',
-      `align_item: IDENTIFIER ":" IDENTIFIER ("," IDENTIFIER)* ","?
-align_clause: align_item ("," align_item)* ","?`,
-      'code',
+      'Automatic Grouping',
+      'Trilogy has no GROUP BY clause. Aggregates automatically group to the non-aggregated dimensions selected by the query. Override one aggregate with BY, use BY * for a grand total, or place BY ROLLUP, BY CUBE, or BY GROUPING SETS after the select list for multi-level output.',
     ),
-    new Paragraph('datasource text', 'A datasource defines a warehouse table to pull data from'),
     new Paragraph(
-      'Datasource',
-      `datasource IDENTIFIER 
-( column_assignment_list )
-grain_clause?
-complete_for_clause?
-(address='string' | query='''string''')
-`,
-      'code',
-    ),
-    new Paragraph('Merge', 'merge_statement: merge IDENTIFIER (, IDENTIFIER)_ ,? comment_', 'code'),
-    new Paragraph(
-      'Import',
-      'import_statement: import (IDENTIFIER .) * IDENTIFIER as IDENTIFIER',
+      'Explicit Aggregate Grain',
+      `select
+    orders.customer.region,
+    sum(orders.revenue) as regional_revenue,
+    sum(orders.revenue) by * as company_revenue,
+    sum(orders.revenue) / (sum(orders.revenue) by *) as revenue_share;`,
       'code',
     ),
     new Paragraph(
-      'Function Definition',
-      'function_derivation: def ( (IDENTIFIER ,)* ) -> EXPR;',
+      'Inline Filters',
+      'Use expression ? condition to filter the input to one expression without filtering the whole query. Parenthesize arithmetic on the left side. This is especially useful for conditional aggregates.',
+    ),
+    new Paragraph(
+      'Inline Filter',
+      `select
+    orders.customer.region,
+    sum(orders.revenue) as all_revenue,
+    sum(orders.revenue ? orders.status = 'complete') as completed_revenue;`,
+      'code',
+    ),
+    new Paragraph(
+      'Imports',
+      'IMPORT makes a reusable model available under an alias. Imported relationships are exposed through dot paths, so importing a fact model normally also provides access to its dimensions.',
+    ),
+    new Paragraph('Import', 'import orders as orders;', 'code'),
+    new Paragraph(
+      'Parameters',
+      'PARAMETER declares a runtime value. A parameter without a default must be supplied by the caller; a default makes it optional.',
+    ),
+    new Paragraph(
+      'Parameter',
+      `parameter minimum_revenue numeric default 1000;
+
+where orders.revenue >= minimum_revenue
+select orders.id, orders.revenue;`,
+      'code',
+    ),
+    new Paragraph(
+      'Named Rowsets',
+      'Prefix a SELECT with WITH name AS to create a reusable rowset. Its outputs are namespaced beneath that name and can be referenced by later statements.',
+    ),
+    new Paragraph(
+      'Named Rowset',
+      `with large_orders as
+where orders.revenue > 1000
+select
+    orders.id,
+    orders.customer.id,
+    orders.revenue;
+
+select
+    large_orders.customer.id,
+    sum(large_orders.revenue) as total_revenue;`,
+      'code',
+    ),
+    new Paragraph(
+      'Scoped Joins',
+      'Use SUBSET JOIN or UNION JOIN inside a SELECT when concepts from separate models share a value domain. SUBSET declares that the left domain is contained by the right; UNION preserves values exclusive to either side. Joins declare relationships and do not imply row filtering—use explicit predicates to restrict rows. Join every key in a composite grain.',
+    ),
+    new Paragraph(
+      'Scoped Join',
+      `select
+    actuals.account_id,
+    sum(actuals.amount) as actual_amount,
+    sum(budget.amount) as budget_amount
+union join actuals.account_id = budget.account_id;`,
+      'code',
+    ),
+    new Paragraph(
+      'Expressions',
+      'Cast with ::type, call every function with parentheses, and use unquoted date parts such as date_part(orders.created_at, year). Logical AND binds more tightly than OR. The inline-filter operator ? binds to a primary expression, so write (revenue - cost) ? condition when filtering arithmetic.',
+    ),
+    new Paragraph(
+      'How Trilogy Differs from SQL',
+      'Do not write FROM, GROUP BY, DISTINCT, SELECT *, SQL subqueries, or SQL-style set operators. Use model paths instead of FROM/JOIN, automatic grain instead of GROUP BY, count_distinct for non-key distinct counts, named rowsets instead of subqueries, and union(...) to stack rows. The -- prefix hides a selected field; it is not a comment.',
+      'warning',
+    ),
+    new Paragraph(
+      'Reusable Definitions',
+      'KEY, PROPERTY, AUTO, and METRIC declare reusable concepts; their expressions are evaluated in the scope of the query that references them. DEF declares a reusable expression macro invoked with @name(...). See Concepts and Datasources and Joins for full modeling syntax.',
+    ),
+    new Paragraph(
+      'Definition Examples',
+      `key customer_id int;
+property customer_id.customer_name string;
+auto gross_profit <- revenue - cost;
+metric total_revenue <- sum(revenue);
+def percent(part, whole) -> 100 * part / whole;`,
       'code',
     ),
   ]),
@@ -326,6 +381,7 @@ address warehouse.sales_archive;`,
     ),
   ]),
   builtinFunctions,
+  aggregateFunctions,
   windowFunctions,
   new Article('Custom Functions', [
     new Paragraph(

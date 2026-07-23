@@ -27,44 +27,56 @@
       <model-creator :visible="creatorVisible" @close="creatorVisible = !creatorVisible" />
     </template>
 
-    <template v-for="item in flatList" :key="item.id">
-      <sidebar-item
-        :item-id="item.id"
-        :name="item.name"
-        :indent="item.indent"
-        :is-selected="activeModelKey === item.id"
-        :is-collapsible="
-          ['model'].includes(item.type) ||
-          (['source', 'datasource'].includes(item.type) && item.count > 0)
-        "
-        :is-collapsed="collapsed[item.id]"
-        @click="handleClick"
-        @toggle="handleToggle"
-      >
-        <!-- Custom icon slot for different item types -->
-        <template #icon>
-          <img v-if="item.type === 'source'" :src="trilogyIcon" class="trilogy-icon" />
-          <span
-            v-else-if="item.type === 'concept'"
-            :class="`purpose-${item.concept.purpose.toLowerCase()}`"
-          >
-            {{ item.concept.purpose.charAt(0).toUpperCase() }}
-          </span>
-          <i v-else-if="item.type === 'datasource'" class="mdi mdi-table node-icon"></i>
-        </template>
+    <mobile-tree-list
+      list-id="models"
+      ref="mobileTree"
+      :items="flatList"
+      :enabled="isMobile"
+      :flat="!!searchQuery"
+      :is-branch="isModelBranch"
+      :is-selectable="isModelBranch"
+      @expand="expandMobileBranch"
+      @select="selectMobileItem"
+    >
+      <template #item="{ item }">
+        <sidebar-item
+          :item-id="item.id"
+          :name="item.name"
+          :indent="item.indent"
+          :is-selected="activeModelKey === item.id"
+          :is-collapsible="
+            ['model'].includes(item.type) ||
+            (['source', 'datasource'].includes(item.type) && item.count > 0)
+          "
+          :is-collapsed="collapsed[item.id]"
+          @click="isMobile ? mobileTree?.openItem(item) : handleClick(item.id)"
+          @toggle="handleToggle"
+        >
+          <!-- Custom icon slot for different item types -->
+          <template #icon>
+            <img v-if="item.type === 'source'" :src="trilogyIcon" class="trilogy-icon" />
+            <span
+              v-else-if="item.type === 'concept'"
+              :class="`purpose-${item.concept.purpose.toLowerCase()}`"
+            >
+              {{ item.concept.purpose.charAt(0).toUpperCase() }}
+            </span>
+            <i v-else-if="item.type === 'datasource'" class="mdi mdi-table node-icon"></i>
+          </template>
 
-        <!-- Custom extra content slot for action buttons -->
-        <template #extra-content>
-          <span v-if="item.type === 'model'" class="right-container">
-            <sidebar-overflow-menu
-              :items="contextMenuItems(item)"
-              tooltip="Model actions"
-              @select="handleContextMenuItemClick(item, $event)"
-            />
-          </span>
-        </template>
-      </sidebar-item>
-    </template>
+          <!-- Custom extra content slot for action buttons -->
+          <template #extra-content>
+            <span v-if="item.type === 'model'" class="right-container">
+              <sidebar-overflow-menu
+                :items="contextMenuItems(item)"
+                tooltip="Model actions"
+                @select="handleContextMenuItemClick(item, $event)"
+              />
+            </span>
+          </template>
+        </sidebar-item>
+      </template>
+    </mobile-tree-list>
   </sidebar-list>
 </template>
 
@@ -84,6 +96,8 @@ import { useScreenNavigation } from '../../stores'
 import Tooltip from '../Tooltip.vue'
 import SidebarOverflowMenu from './SidebarOverflowMenu.vue'
 import type { ContextMenuItem } from '../ContextMenu.vue'
+import { useIsMobile } from '../useIsMobile'
+import MobileTreeList from './MobileTreeList.vue'
 
 export default {
   name: 'ModelList',
@@ -93,13 +107,19 @@ export default {
       type: String,
       default: '',
     },
+    mobileSearchQuery: {
+      type: String,
+      default: '',
+    },
   },
-  setup() {
+  setup(props) {
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const saveModels = inject<Function>('saveModels')
     const editorStore = inject<EditorStoreType>('editorStore')
     const trilogyResolver = inject<TrilogyResolver>('trilogyResolver')
     const navigationStore = useScreenNavigation()
+    const isMobile = useIsMobile()
+    const mobileTree = ref<any>(null)
 
     const creatorVisible = ref(false)
     const current =
@@ -158,6 +178,13 @@ export default {
 
     const collapsed = ref<Record<string, boolean>>(collapsedPre)
 
+    const searchQuery = computed(() => props.mobileSearchQuery.trim().toLocaleLowerCase())
+    // While searching, treat everything as expanded — otherwise concepts inside
+    // a collapsed source or datasource are never emitted and can't be found.
+    const effectiveCollapsed = computed(() =>
+      searchQuery.value ? ({} as Record<string, boolean>) : collapsed.value,
+    )
+
     const flatList = computed(() => {
       const list: Array<{
         id: string
@@ -180,7 +207,7 @@ export default {
           concept: null,
         })
 
-        if (!collapsed.value[modelId]) {
+        if (!effectiveCollapsed.value[modelId]) {
           model.sources.forEach((source) => {
             let sourceId = ['source', model.name, source.alias].join(KeySeparator)
             list.push({
@@ -191,7 +218,7 @@ export default {
               type: 'source',
               concept: null,
             })
-            if (!collapsed.value[sourceId]) {
+            if (!effectiveCollapsed.value[sourceId]) {
               source.concepts.forEach((concept) => {
                 list.push({
                   id: ['concept', model.name, source.alias, concept.namespace, concept.name].join(
@@ -217,7 +244,7 @@ export default {
                   type: 'datasource',
                   concept: null,
                 })
-                if (!collapsed.value[dsId]) {
+                if (!effectiveCollapsed.value[dsId]) {
                   ds.concepts.forEach((field) => {
                     list.push({
                       id: [
@@ -244,7 +271,12 @@ export default {
           })
         }
       })
-      return list
+      if (!searchQuery.value) return list
+      // Results are a flat list of matching leaves, not a tree slice.
+      return list.filter(
+        (item) =>
+          item.type === 'concept' && item.name.toLocaleLowerCase().includes(searchQuery.value),
+      )
     })
 
     const fetchParseResults = (model: string) => {
@@ -275,6 +307,12 @@ export default {
     const handleToggle = (id: string) => {
       collapsed.value[id] = !collapsed.value[id]
     }
+    const isModelBranch = (item: { type: string; count: number }) =>
+      item.type === 'model' || (['source', 'datasource'].includes(item.type) && item.count > 0)
+    const expandMobileBranch = (item: { id: string }) => {
+      if (collapsed.value[item.id]) handleToggle(item.id)
+    }
+    const selectMobileItem = (item: { id: string }) => handleClick(item.id)
 
     const contextMenuItems = (item: any): ContextMenuItem[] => {
       if (item.type !== 'model') {
@@ -312,6 +350,12 @@ export default {
       modelStore,
       contextMenuItems,
       handleContextMenuItemClick,
+      isMobile,
+      mobileTree,
+      searchQuery,
+      isModelBranch,
+      expandMobileBranch,
+      selectMobileItem,
     }
   },
 
@@ -322,6 +366,7 @@ export default {
     LoadingButton,
     Tooltip,
     SidebarOverflowMenu,
+    MobileTreeList,
   },
 }
 </script>

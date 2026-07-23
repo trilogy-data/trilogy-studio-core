@@ -137,6 +137,7 @@ import type { ChartConfig } from '../../editors/results'
 import type { CompletionItem } from '../../stores/resolver'
 import { objectToSqlExpression } from '../../dashboards/conditions'
 import type { DrillDownTriggerEvent } from '../../events/display'
+import { useIsMobile } from '../useIsMobile'
 
 export interface Drilldown {
   remove: string
@@ -237,7 +238,9 @@ export default {
   computed: {
     tabContentHeight(): number {
       // Subtract tabs height from container height for components that need explicit heights
-      return this.containerHeight ? this.containerHeight - (this.isMobile ? 48 : this.TABS_HEIGHT) : 0
+      return this.containerHeight
+        ? this.containerHeight - (this.isMobile ? 48 : this.TABS_HEIGHT)
+        : 0
     },
     eligibleTabs() {
       const tabs: string[] = ['results']
@@ -260,7 +263,7 @@ export default {
   },
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
-    const isMobile = inject<boolean>('isMobile', false)
+    const isMobile = useIsMobile()
 
     if (!connectionStore) {
       throw new Error('Requires injection of connection store')

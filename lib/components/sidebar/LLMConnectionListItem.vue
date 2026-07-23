@@ -233,6 +233,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    mobileTreeMode: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: [
     'toggle',
@@ -244,6 +248,7 @@ export default defineComponent({
     'toggleSaveCredential',
     'deleteConnection',
     'deleteChat',
+    'mobileItemClick',
   ],
   setup(props, { emit }) {
     const apiKeyInput = ref<string>('')
@@ -363,6 +368,10 @@ export default defineComponent({
 
     // Handle item click (toggle collapse or navigate)
     const handleItemClick = () => {
+      if (props.mobileTreeMode) {
+        emit('mobileItemClick', props.item)
+        return
+      }
       if (isExpandable.value) {
         toggleCollapse(props.item.id)
       } else if (

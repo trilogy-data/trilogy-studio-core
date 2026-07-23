@@ -77,6 +77,7 @@ import Tooltip from '../Tooltip.vue'
 import StatusIcon from '../StatusIcon.vue'
 import SidebarOverflowMenu from './SidebarOverflowMenu.vue'
 import type { ContextMenuItem } from '../ContextMenu.vue'
+import { useIsMobile } from '../useIsMobile'
 
 export default {
   name: 'DashboardListItem',
@@ -98,7 +99,7 @@ export default {
   setup(props) {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const dashboardStore = inject<DashboardStoreType>('dashboardStore')
-    const isMobile = inject<boolean>('isMobile', false)
+    const isMobile = useIsMobile()
 
     if (!connectionStore || !dashboardStore) {
       throw new Error('Connection/Dashboard stores is not provided!')

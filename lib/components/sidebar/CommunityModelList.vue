@@ -34,17 +34,33 @@
     </div>
 
     <!-- Model List -->
-    <CommunityModelListItem
-      v-for="item in displayTree"
-      :key="item.key"
-      :item="item"
-      :is-collapsed="collapsed[item.key]"
-      :active-model="navigationStore.activeCommunityModelKey.value"
-      @item-click="handleItemClick"
-      @item-toggle="handleItemToggle"
-      @model-selected="handleModelSelected"
-      @delete-store="showDeleteStoreConfirmation"
-    />
+    <mobile-tree-list
+      list-id="community"
+      ref="mobileTree"
+      :items="displayTree"
+      id-field="key"
+      label-field="label"
+      :enabled="isMobile"
+      :is-branch="isCommunityBranch"
+      :is-selectable="isCommunityBranch"
+      @expand="expandMobileBranch"
+      @select="selectMobileItem"
+    >
+      <template #item="{ item }">
+        <CommunityModelListItem
+          :key="item.key"
+          :item="item"
+          :mobile-tree-mode="isMobile"
+          :is-collapsed="collapsed[item.key]"
+          :active-model="navigationStore.activeCommunityModelKey.value"
+          @item-click="handleItemClick"
+          @item-toggle="handleItemToggle"
+          @model-selected="handleModelSelected"
+          @delete-store="showDeleteStoreConfirmation"
+          @mobile-item-click="handleMobileItemClick"
+        />
+      </template>
+    </mobile-tree-list>
 
     <!-- Add Store Modal -->
     <AddStoreModal
@@ -82,6 +98,8 @@ import type { EditorStoreType } from '../../stores/editorStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { ModelConfigStoreType } from '../../stores/modelStore'
 import { removeRemoteStoreFromIde } from '../../remotes/remoteStoreSync'
+import { useIsMobile } from '../useIsMobile'
+import MobileTreeList from './MobileTreeList.vue'
 
 export default defineComponent({
   name: 'CommunityModelList',
@@ -92,6 +110,8 @@ export default defineComponent({
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const collapsed = ref<Record<string, boolean>>({})
+    const isMobile = useIsMobile()
+    const mobileTree = ref<any>(null)
 
     // Get the currently active model key
     const activeKey = navigationStore.activeCommunityModelKey.value || ''
@@ -175,6 +195,15 @@ export default defineComponent({
         communityStore.filesByStore,
       )
     })
+    const isCommunityBranch = (item: any) => ['root', 'engine'].includes(item.type)
+    const expandMobileBranch = (item: any) => {
+      if (collapsed.value[item.key]) collapsed.value[item.key] = false
+    }
+    const selectMobileItem = (item: any) => {
+      if (item.type === 'model') handleModelSelected(item.model, item.key, item.modelRoot)
+      else handleItemClick(item.type, item.key, item.modelRoot)
+    }
+    const handleMobileItemClick = (item: any) => mobileTree.value?.openItem(item)
 
     // Initialize store on component mount
     onMounted(async () => {
@@ -194,6 +223,12 @@ export default defineComponent({
       handleItemToggle,
       collapsed,
       displayTree,
+      isMobile,
+      mobileTree,
+      isCommunityBranch,
+      expandMobileBranch,
+      selectMobileItem,
+      handleMobileItemClick,
     }
   },
   components: {
@@ -201,6 +236,7 @@ export default defineComponent({
     CommunityModelListItem,
     AddStoreModal,
     ConfirmDialog,
+    MobileTreeList,
   },
 })
 </script>

@@ -2,6 +2,32 @@ import { KeySeparator } from '../data/constants'
 import type Connection from './base'
 import { Table } from './base'
 
+/**
+ * Node types that configure or report on their parent connection rather than
+ * being browsable children of it (credentials, toggles, loading/error rows).
+ *
+ * The mobile drill-down renders these inline on the parent's detail screen
+ * instead of burying them behind "Children", so this must stay in step with the
+ * node types emitted by `buildConnectionTree` below.
+ */
+export const CONNECTION_CONFIG_NODE_TYPES = new Set([
+  'duckdb-upload',
+  'model',
+  'motherduck-token',
+  'bigquery-project',
+  'bigquery-browsing-project',
+  'snowflake-account',
+  'snowflake-username',
+  'snowflake-private-key',
+  'toggle-save-credential',
+  'duckdb-toggle-compatible-fetch',
+  'loading',
+  'error',
+])
+
+/** Node types whose children are browsable — i.e. worth drilling into. */
+export const CONNECTION_BRANCH_NODE_TYPES = new Set(['connection', 'database', 'schema', 'table'])
+
 export function buildConnectionTree(
   connections: Connection[],
   collapsed: Record<string, boolean>,

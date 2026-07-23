@@ -9,14 +9,19 @@
     />
     <mobile-sidebar-layout
       @menu-toggled="mobileMenuOpen = !mobileMenuOpen"
+      @menu-back="handleMobileMenuBack"
+      @menu-home="handleMobileMenuHome"
       @tab-selected="tabSelected"
       :menuOpen="mobileMenuOpen"
+      :mobileNavigationLevel="mobileNavigationLevel"
+      :mobileNavigationTitle="mobileNavigationTitle"
       :activeScreen="activeScreen"
+      :titleEditable="['editors', 'dashboard'].includes(activeScreen)"
       :tabs="tabs"
       :activeTab="activeTab"
       @tab-closed="handleTabClosed"
       @close-other-tabs="handleCloseOtherTabs"
-      @active-title-updated="updateActiveEditorName"
+      @active-title-updated="updateActiveTitle"
     >
       <template #sidebar>
         <sidebar
@@ -180,6 +185,7 @@ import { getDefaultValueFromHash, removeHashFromUrl, URL_HASH_KEYS } from '../st
 import { KeySeparator } from '../data/constants'
 import type { ModelConfigStoreType } from '../stores/modelStore.ts'
 import useScreenNavigation, { type Tab } from '../stores/useScreenNavigation.ts'
+import useMobileSidebarNavigation from '../stores/useMobileSidebarNavigation'
 import { type DashboardStoreType } from '../stores/dashboardStore.ts'
 import { defineComponent, type Component } from 'vue'
 import PageLoading from '../components/PageLoading.vue'
@@ -264,6 +270,7 @@ const MobileIDEComponent: Component = defineComponent({
     }
     const screenNavigation = useScreenNavigation()
     const editorRef = ref<any>(null)
+    const mobileNavigation = useMobileSidebarNavigation()
     const {
       activeScreen,
       activeEditor,
@@ -431,6 +438,15 @@ const MobileIDEComponent: Component = defineComponent({
       handleChatCreated,
       mobileViewportHeight,
       editorRef,
+      mobileNavigationLevel: mobileNavigation.level,
+      mobileNavigationTitle: mobileNavigation.title,
+      handleMobileMenuBack: mobileNavigation.back,
+      // Home is offered on terminal screens too, where the drawer is closed —
+      // resetting the stack there is only useful if we also surface it.
+      handleMobileMenuHome: () => {
+        mobileNavigation.home()
+        mobileMenuOpen.value = true
+      },
     }
   },
   async mounted() {
@@ -441,6 +457,17 @@ const MobileIDEComponent: Component = defineComponent({
     }
   },
   methods: {
+    updateActiveTitle(newName: string) {
+      if (this.activeScreen === 'editors') {
+        this.updateActiveEditorName(newName)
+        return
+      }
+      if (this.activeScreen === 'dashboard' && this.activeDashboard) {
+        this.dashboardStore.updateDashboardName(this.activeDashboard, newName)
+        this.saveDashboards()
+        this.updateTabName('dashboard', null, this.activeDashboard)
+      }
+    },
     async runQuery() {
       // Agent tool runs should stay in Chat; direct toolbar runs still emit
       // query-started from Editor and switch to Results.

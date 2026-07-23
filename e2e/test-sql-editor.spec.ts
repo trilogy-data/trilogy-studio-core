@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import {
   deleteEditor,
+  drillMobileTree,
   localConnectionId,
   openSidebarScreen,
   prepareTestPage,
@@ -51,9 +52,16 @@ test('test', async ({ page, isMobile }) => {
   await page.getByTestId('editor-creator-submit').click()
 
   // Verify folder structure is created
+  if (isMobile) {
+    await drillMobileTree(page, ['Browser Storage', 'duckdb-test'])
+  }
   // Check that analysis folder exists
   const analysisFolder = page.getByTestId('editor-f-local-local:duckdb-test-analysis')
   await expect(analysisFolder).toBeVisible()
+
+  if (isMobile) {
+    await drillMobileTree(page, ['analysis'])
+  }
 
   // Check that reports folder exists (should be collapsed initially)
   // pause for debugging 10 seconds
@@ -74,6 +82,9 @@ test('test', async ({ page, isMobile }) => {
   const salesReportEditor = page.getByTestId(
     'editor-e-local-local:duckdb-test-analysis/reports/sales-report',
   )
+  if (isMobile) {
+    await drillMobileTree(page, ['reports'])
+  }
   await expect(salesReportEditor).toBeVisible()
 
   // Expand data folder and verify customer-data editor is there
@@ -82,11 +93,19 @@ test('test', async ({ page, isMobile }) => {
   const customerDataEditor = page.getByTestId(
     'editor-e-local-local:duckdb-test-analysis/data/customer-data',
   )
+  if (isMobile) {
+    await openSidebarScreen(page, 'editors', true)
+    await drillMobileTree(page, ['Browser Storage', 'duckdb-test', 'analysis', 'data'])
+  }
   await expect(customerDataEditor).toBeVisible()
 
   // ==== SCROLL POSITION TESTING START ====
 
   // Test clicking on the sales-report editor and add content to make it scrollable
+  if (isMobile) {
+    await openSidebarScreen(page, 'editors', true)
+    await drillMobileTree(page, ['Browser Storage', 'duckdb-test', 'analysis', 'reports'])
+  }
   await salesReportEditor.click()
 
   // Clear existing content and add multi-line SQL to enable scrolling
@@ -165,8 +184,8 @@ SELECT 1;
   // Wait a bit for the scroll position to be saved
   await page.waitForTimeout(150)
   if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-    // await page.getByTestId('editor-e-local-local:duckdb-test-analysis/data').click()
+    await openSidebarScreen(page, 'editors', true)
+    await drillMobileTree(page, ['Browser Storage', 'duckdb-test', 'analysis', 'data'])
   }
 
   // Switch to customer-data editor and add different content
@@ -233,7 +252,8 @@ SELECT 1;
 
   await page.waitForTimeout(150)
   if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
+    await openSidebarScreen(page, 'editors', true)
+    await drillMobileTree(page, ['Browser Storage', 'duckdb-test'])
   }
 
   // Switch to test-one editor and add content
@@ -292,9 +312,8 @@ SELECT 1;
 
   // Now switch back to sales-report and verify scroll position is preserved
   if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-    // await page.getByTestId('editor-f-local-local:duckdb-test-analysis').click()
-    // await page.getByTestId('editor-f-local-local:duckdb-test-analysis/reports').click()
+    await openSidebarScreen(page, 'editors', true)
+    await drillMobileTree(page, ['Browser Storage', 'duckdb-test', 'analysis', 'reports'])
   }
 
   await salesReportEditor.click()
@@ -316,9 +335,8 @@ SELECT 1;
 
   // Switch back to customer-data and verify its scroll position
   if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
-    // await page.getByTestId('editor-f-local-local:duckdb-test-analysis').click()
-    // await page.getByTestId('editor-f-local-local:duckdb-test-analysis/data').click()
+    await openSidebarScreen(page, 'editors', true)
+    await drillMobileTree(page, ['Browser Storage', 'duckdb-test', 'analysis', 'data'])
   }
 
   await customerDataEditor.click()
@@ -339,7 +357,8 @@ SELECT 1;
 
   // Switch back to test-one and verify its scroll position
   if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
+    await openSidebarScreen(page, 'editors', true)
+    await drillMobileTree(page, ['Browser Storage', 'duckdb-test'])
   }
 
   await page.getByTestId('editor-e-local-local:duckdb-test-test-one').click()
@@ -380,6 +399,7 @@ SELECT 1;
   // Navigate back to the editors
   if (isMobile) {
     await openSidebarScreen(page, 'editors', isMobile)
+    await drillMobileTree(page, ['Browser Storage', 'duckdb-test'])
   }
 
   // Click on test-one editor
@@ -408,7 +428,8 @@ SELECT 1;
 
   // Test folder collapse/expand functionality
   if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
+    await openSidebarScreen(page, 'editors', true)
+    await drillMobileTree(page, ['Browser Storage', 'duckdb-test', 'analysis'])
   }
 
   // Post-reload the analysis folder's collapsed state is reset by EditorList.onMounted
@@ -421,6 +442,8 @@ SELECT 1;
 
   // check for errors
   if (isMobile) {
+    await openSidebarScreen(page, 'editors', true)
+    await drillMobileTree(page, ['Browser Storage', 'duckdb-test'])
     await page.getByTestId('editor-e-local-local:duckdb-test-test-one').click()
     await page.getByTestId('editor-tab').click()
   }

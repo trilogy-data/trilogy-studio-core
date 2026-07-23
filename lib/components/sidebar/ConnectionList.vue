@@ -36,28 +36,41 @@
         </button>
       </div>
     </template>
-    <connection-list-item
-      v-for="item in filteredContentList"
-      :key="item.id"
-      :item="item"
-      :is-collapsed="collapsed[item.id]"
-      :isSelected="item.id === activeConnectionKey"
-      :isMobile="isMobile"
-      :testTag="testTag"
-      @toggle="toggleCollapse"
-      @click="handleItemClick"
-      @refresh="refreshId"
-      @updateMotherduckToken="updateMotherDuckToken"
-      @updateBigqueryProject="updateBigqueryProject"
-      @updateBigqueryBrowsingProject="updateBigqueryBrowsingProject"
-      @update-snowflake-private-key="updateSnowflakePrivateKey"
-      @update-snowflake-account="updateSnowflakeAccount"
-      @update-snowflake-username="updateSnowflakeUsername"
-      @toggle-save-credential="toggleSaveCredential"
-      @toggle-duckdb-compatible-fetch="toggleDuckdbCompatibleFetch"
-      @toggle-mobile-menu="toggleMobileMenu"
-      @delete-connection="deleteConnection"
-    />
+    <mobile-tree-list
+      list-id="connections"
+      ref="mobileTree"
+      :items="filteredContentList"
+      :enabled="isMobile"
+      :is-branch="isConnectionBranch"
+      :is-config="isConnectionConfig"
+      :is-detail-branch="(item) => item.type === 'connection'"
+      @expand="expandMobileBranch"
+      @select="selectMobileItem"
+    >
+      <template #item="{ item }">
+        <connection-list-item
+          :key="item.id"
+          :item="item"
+          :is-collapsed="collapsed[item.id]"
+          :isSelected="item.id === activeConnectionKey"
+          :isMobile="isMobile"
+          :testTag="testTag"
+          @toggle="toggleCollapse"
+          @click="handleConnectionTreeClick(item)"
+          @refresh="refreshId"
+          @updateMotherduckToken="updateMotherDuckToken"
+          @updateBigqueryProject="updateBigqueryProject"
+          @updateBigqueryBrowsingProject="updateBigqueryBrowsingProject"
+          @update-snowflake-private-key="updateSnowflakePrivateKey"
+          @update-snowflake-account="updateSnowflakeAccount"
+          @update-snowflake-username="updateSnowflakeUsername"
+          @toggle-save-credential="toggleSaveCredential"
+          @toggle-duckdb-compatible-fetch="toggleDuckdbCompatibleFetch"
+          @toggle-mobile-menu="toggleMobileMenu"
+          @delete-connection="deleteConnection"
+        />
+      </template>
+    </mobile-tree-list>
     <div v-if="showDeleteConfirmationState" class="confirmation-overlay" @click.self="cancelDelete">
       <div class="confirmation-dialog">
         <h3>Confirm Deletion</h3>
@@ -74,7 +87,7 @@
 </template>
 
 <script lang="ts">
-import { type Ref, ref, computed, inject } from 'vue'
+import { ref, computed, inject } from 'vue'
 import SidebarList from './SidebarList.vue'
 import ConnectionCreatorInline from './ConnectionCreatorInline.vue'
 import LoadingButton from '../LoadingButton.vue'
@@ -92,7 +105,14 @@ import type {
 } from '../../connections'
 import { KeySeparator } from '../../data/constants'
 import ConnectionListItem from './ConnectionListItem.vue'
-import { buildConnectionTree, filterConnectionTree } from '../../connections'
+import {
+  buildConnectionTree,
+  filterConnectionTree,
+  CONNECTION_CONFIG_NODE_TYPES,
+  CONNECTION_BRANCH_NODE_TYPES,
+} from '../../connections'
+import { useIsMobile } from '../useIsMobile'
+import MobileTreeList from './MobileTreeList.vue'
 
 export default {
   name: 'ConnectionList',
@@ -124,7 +144,7 @@ export default {
     // (embeds, etc.) should still be able to delete a connection.
     const dashboardStore = inject<DashboardStoreType | null>('dashboardStore', null)
     const saveDashboards = inject<Function | null>('saveDashboards', null)
-    const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
+    const isMobile = useIsMobile()
     if (!connectionStore || !saveConnections || !saveEditors || !modelStore || !editorStore) {
       throw new Error('Connection store is not provided!')
     }
@@ -134,6 +154,7 @@ export default {
     const creatorVisible = ref(false)
     // Add search term ref
     const searchTerm = ref('')
+    const mobileTree = ref<any>(null)
 
     // Function to clear search
     const clearSearch = () => {
@@ -386,6 +407,18 @@ export default {
       const index = str.lastIndexOf(KeySeparator)
       return index !== -1 ? str.substring(0, index) : str
     }
+    const isConnectionConfig = (item: any) => CONNECTION_CONFIG_NODE_TYPES.has(item.type)
+    const isConnectionBranch = (item: any) => CONNECTION_BRANCH_NODE_TYPES.has(item.type)
+    const expandMobileBranch = async (item: any) => {
+      if (collapsed.value[item.id] !== false) {
+        await toggleCollapse(item.id, item.connection?.id || item.connection?.name, item.type)
+      }
+    }
+    const selectMobileItem = (item: any) => handleItemClick(item.id, '', '')
+    const handleConnectionTreeClick = (item: any) => {
+      if (isMobile.value) mobileTree.value?.openItem(item)
+      else handleItemClick(item.id, '', '')
+    }
     return {
       connectionStore,
       editorStore,
@@ -411,6 +444,12 @@ export default {
       updateBigqueryBrowsingProject,
       refreshId,
       rightSplit,
+      mobileTree,
+      isConnectionConfig,
+      isConnectionBranch,
+      expandMobileBranch,
+      selectMobileItem,
+      handleConnectionTreeClick,
       creatorVisible,
       isMobile,
       searchTerm,
@@ -424,6 +463,7 @@ export default {
     StatusIcon,
     Tooltip,
     ConnectionListItem,
+    MobileTreeList,
   },
   methods: {
     resetConnection(connection: Connection) {

@@ -1,11 +1,12 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import {
   createEditorFromConnectionList,
+  drillMobileTree,
   localConnectionId,
   openSidebarScreen,
   prepareTestPage,
   refreshConnection,
-  waitForEditorQueryComplete,
+  runEditorQueryAndWait,
   waitForConnectionReady,
 } from './test-helpers.js'
 
@@ -13,18 +14,11 @@ test.beforeEach(async ({ page }) => {
   await prepareTestPage(page)
 })
 
-async function pruneTrailingQuoteIfPresent(page, expectedText) {
-  const currentText = await page.evaluate(() => {
-    const monaco = window.monaco
-    const model = monaco?.editor?.getModels?.()[0]
-    return model?.getValue?.() || ''
-  })
-
-  await page.evaluate((nextText) => {
-    const monaco = window.monaco
-    const model = monaco?.editor?.getModels?.()[0]
-    model?.setValue?.(nextText)
-  }, expectedText)
+async function clearEditor(page: Page, browserName: string, isMobile: boolean) {
+  const editor = page.getByTestId('editor')
+  await editor.click()
+  await page.keyboard.press(browserName === 'webkit' && !isMobile ? 'Meta+a' : 'Control+a')
+  await page.keyboard.press('Delete')
 }
 
 test('test', async ({ page, isMobile, browserName }) => {
@@ -75,36 +69,26 @@ test('test', async ({ page, isMobile, browserName }) => {
   if (isMobile) {
     await openSidebarScreen(page, 'tutorial', isMobile)
   }
-  await page.getByTestId('expand-documentation-documentation+Studio').click()
+  if (isMobile) {
+    await drillMobileTree(page, ['Studio'])
+  } else {
+    await page.getByTestId('expand-documentation-documentation+Studio').click()
+  }
   await page.getByTestId('documentation-article+Studio+Model Tutorial').click()
 
   // Step 3: Complete Tutorial Queries - Declaring a constant
-  await page.getByTestId('editor').click()
-  if (isMobile) {
-    await page.getByTestId('editor').click()
-    await page.getByTestId('editor').press('ControlOrMeta+a')
-  } else {
-    await page.getByTestId('editor').click({ clickCount: 4 })
-  }
-  await page.keyboard.press('Delete')
+  await clearEditor(page, browserName, isMobile)
 
   const constantQuery = 'const pi <- 3.14; select pi;'
   await page.keyboard.type(constantQuery)
-  await page.getByTestId('editor-run-button').click()
-  await waitForEditorQueryComplete(page)
+  await runEditorQueryAndWait(page)
 
   const firstRowCellPi = await page.getByRole('gridcell', { name: '3.14' })
   await expect(firstRowCellPi).toContainText('3.14')
 
   // Step 4: Complete Typing example with states
   await page.getByTestId('next-prompt').click()
-  if (isMobile) {
-    await page.getByTestId('editor').click()
-    await page.getByTestId('editor').press('ControlOrMeta+a')
-  } else {
-    await page.getByTestId('editor').click({ clickCount: 4 })
-  }
-  await page.keyboard.press('Delete')
+  await clearEditor(page, browserName, isMobile)
 
   const typingQuery = `import std.geography; 
 auto states <- ['NY', 'CA', 'TX']::list<string::us_state_short>;
@@ -115,42 +99,34 @@ select
   order by 
       state asc;`
 
-  await page.keyboard.type(typingQuery)
-  await pruneTrailingQuoteIfPresent(page, typingQuery)
-  await page.getByTestId('editor-run-button').click()
-  await waitForEditorQueryComplete(page)
+  // insertText bypasses Monaco's auto-closing quote behavior on mobile.
+  // Firefox desktop handles Monaco's input events more reliably through type().
+  if (isMobile) {
+    await page.keyboard.insertText(typingQuery)
+  } else {
+    await page.keyboard.type(typingQuery)
+  }
+  await runEditorQueryAndWait(page)
 
-  const firstRowCell = await page.getByRole('gridcell', { name: 'CA' })
-  await expect(firstRowCell).toContainText('CA')
+  await expect(page.getByRole('gridcell', { name: 'CA' })).toContainText('CA', {
+    timeout: 60000,
+  })
 
   // Step 5: Import from lineitem
   await page.getByTestId('next-prompt').click()
-  if (isMobile) {
-    await page.getByTestId('editor').click()
-    await page.getByTestId('editor').press('ControlOrMeta+a')
-  } else {
-    await page.getByTestId('editor').click({ clickCount: 4 })
-  }
-  await page.keyboard.press('Delete')
+  await clearEditor(page, browserName, isMobile)
 
   const lineItemQuery = `import lineitem;
 select count(order.id) as order_count;`
 
   await page.keyboard.type(lineItemQuery)
-  await page.getByTestId('editor-run-button').click()
-  await waitForEditorQueryComplete(page)
+  await runEditorQueryAndWait(page)
 
   await expect(await page.getByRole('gridcell', { name: '15000' })).toContainText('15000')
   await page.getByTestId('next-prompt').click()
 
   // Step 6: Create datasource with headquarters
-  if (isMobile) {
-    await page.getByTestId('editor').click()
-    await page.getByTestId('editor').press('ControlOrMeta+a')
-  } else {
-    await page.getByTestId('editor').click({ clickCount: 4 })
-  }
-  await page.keyboard.press('Delete')
+  await clearEditor(page, browserName, isMobile)
 
   const chunks = [
     'import lineitem;\n',
@@ -181,8 +157,7 @@ select count(order.id) as order_count;`
 
   await page.keyboard.press('Delete')
 
-  await page.getByTestId('editor-run-button').click()
-  await waitForEditorQueryComplete(page)
+  await runEditorQueryAndWait(page)
 
   // Create a new DuckDB connection for iris data
   await page.getByTestId('connection-creator-add-tutorial-connection').click()
@@ -197,19 +172,12 @@ select count(order.id) as order_count;`
   if (['safari', 'firefox'].includes(page?.context()?.browser()?.browserType()?.name() || '')) {
     return
   }
-  if (isMobile) {
-    await page.getByTestId('editor').click()
-    await page.getByTestId('editor').press('ControlOrMeta+a')
-  } else {
-    await page.getByTestId('editor').click({ clickCount: 4 })
-  }
-  await page.keyboard.press('Delete')
+  await clearEditor(page, browserName, isMobile)
   const irisTableScript = `CREATE OR REPLACE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`
 
   await page.keyboard.type(irisTableScript)
 
-  await page.getByTestId('editor-run-button').click()
-  await waitForEditorQueryComplete(page)
+  await runEditorQueryAndWait(page)
   if (isMobile) {
     await page.getByTestId('editor-tab').click()
   }
@@ -218,9 +186,11 @@ select count(order.id) as order_count;`
 
   // Go back to the documentation
   if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
+    await openSidebarScreen(page, 'tutorial', true)
+    await drillMobileTree(page, ['Studio'])
+  } else {
+    await page.getByTestId('sidebar-icon-tutorial').click()
   }
-  await page.getByTestId('sidebar-icon-tutorial').click()
 
   // Step 8: Create iris model from the connection
   if (isMobile) {
@@ -229,22 +199,22 @@ select count(order.id) as order_count;`
     await page.getByTestId('tab-article+Studio+Model Tutorial').click()
   }
   const irisConnectionId = localConnectionId('iris-data')
-  await page.getByTestId(`expand-tutorial-connection-${irisConnectionId}`).click()
-
-  await page.getByTestId(`expand-tutorial-connection-${irisConnectionId}+memory`).click()
-  await page.getByTestId(`expand-tutorial-connection-${irisConnectionId}+memory+main`).click()
+  if (isMobile) {
+    await drillMobileTree(page, ['iris-data'], { openChildren: false })
+    const connectionChildren = page.getByTestId('mobile-tree-children-connections')
+    await expect(connectionChildren).toBeVisible({ timeout: 10000 })
+    await connectionChildren.click()
+    await drillMobileTree(page, ['memory', 'main'])
+  } else {
+    await page.getByTestId(`expand-tutorial-connection-${irisConnectionId}`).click()
+    await page.getByTestId(`expand-tutorial-connection-${irisConnectionId}+memory`).click()
+    await page.getByTestId(`expand-tutorial-connection-${irisConnectionId}+memory+main`).click()
+  }
   await page.getByTestId('create-datasource-iris_data').click()
   await page.getByTestId('create-datasource-button').click()
 
   // Modify the generated datasource file
-  if (isMobile) {
-    await page.getByTestId('editor').click()
-    await page.getByTestId('editor').press('ControlOrMeta+a')
-  } else {
-    await page.getByTestId('editor').click({ clickCount: 4 })
-  }
-
-  await page.keyboard.press('Delete')
+  await clearEditor(page, browserName, isMobile)
 
   const irisDataSource = `key pk int; # surrogate primary key for the dataset
 property pk.sepal_length float;
@@ -276,25 +246,21 @@ address iris_data;`
 
   // Step 9: Create a new Trilogy editor and query the iris data
   if (isMobile) {
-    await page.getByTestId('mobile-menu-toggle').click()
+    await openSidebarScreen(page, 'connections', true)
+  } else {
+    await page.getByTestId('sidebar-icon-connections').click()
   }
-  await page.getByTestId('sidebar-icon-connections').click()
   await createEditorFromConnectionList(page, 'iris-data', 'trilogy')
   if (isMobile) {
     await openSidebarScreen(page, 'editors', isMobile)
+    await drillMobileTree(page, ['Browser Storage', 'iris-data'])
   }
 
   await page
     .locator(`[data-testid^="editor-e-local-${localConnectionId('iris-data')}-new-editor-"]`)
     .last()
     .click()
-  if (isMobile) {
-    await page.getByTestId('editor').click()
-    await page.getByTestId('editor').press('ControlOrMeta+a')
-  } else {
-    await page.getByTestId('editor').click({ clickCount: 4 })
-  }
-  await page.keyboard.press('Delete')
+  await clearEditor(page, browserName, isMobile)
 
   const irisQuery = `import iris;
 select
@@ -304,8 +270,7 @@ select
 ;`
 
   await page.keyboard.type(irisQuery)
-  await page.getByTestId('editor-run-button').click()
-  await waitForEditorQueryComplete(page)
+  await runEditorQueryAndWait(page)
   if (isMobile) {
     await page.getByTestId('results-tab').click()
   }

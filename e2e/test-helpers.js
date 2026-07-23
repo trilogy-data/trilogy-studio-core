@@ -66,7 +66,7 @@ export async function waitForConnectionReady(page, connectionName, timeout = 600
 export async function openSidebarScreen(page, screen, isMobile = false) {
   if (isMobile) {
     const mobileMenuToggle = page.getByTestId('mobile-menu-toggle')
-    await expect(mobileMenuToggle).toBeVisible({ timeout: SIDEBAR_SHELL_TIMEOUT })
+    const mobileHome = page.getByTestId('mobile-menu-home')
 
     const sidebarIcon = page.getByTestId(`sidebar-icon-${screen}`).first()
 
@@ -84,7 +84,17 @@ export async function openSidebarScreen(page, screen, isMobile = false) {
       try {
         await expect(sidebarIcon).toBeVisible({ timeout: 500 })
       } catch {
-        await mobileMenuToggle.click()
+        // Either the menu is closed, or it's open but drilled into a
+        // destination. `mobile-menu-home` jumps straight back to the root menu
+        // from any depth, so one click resolves the drilled case regardless of
+        // how many levels deep we are.
+        if (await mobileHome.isVisible()) {
+          await mobileHome.click()
+        } else {
+          await expect(mobileMenuToggle).toBeVisible({ timeout: SIDEBAR_SHELL_TIMEOUT })
+          await mobileMenuToggle.click()
+          if (await mobileHome.isVisible()) await mobileHome.click()
+        }
         await expect(sidebarIcon).toBeVisible({ timeout: 5000 })
       }
       try {
@@ -115,6 +125,23 @@ export async function openSidebarScreen(page, screen, isMobile = false) {
   await sidebarIcon.click({ force: true })
   await expect(sidebarIcon).toHaveClass(/selected/, { timeout: 10000 })
   await expect(expandedSidebarContent).toBeVisible({ timeout: 10000 })
+}
+
+export async function drillMobileTree(page, branchLabels, { openChildren = true } = {}) {
+  for (const label of branchLabels) {
+    const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const labelPattern = new RegExp(`^\\s*${escapedLabel}(?:\\s*\\([^)]*\\))?\\s*$`)
+    const branch = page
+      .locator('.mobile-tree-entry .truncate-text')
+      .filter({ hasText: labelPattern, visible: true })
+      .last()
+    await expect(branch).toBeVisible({ timeout: SIDEBAR_SHELL_TIMEOUT })
+    await branch.click()
+    // Branches containing configuration rows expose a Children step. Pure
+    // containers drill directly into their child list.
+    const children = page.locator('[data-testid^="mobile-tree-children-"]:visible')
+    if (openChildren && (await children.isVisible())) await children.click()
+  }
 }
 
 async function getVisibleConnectionRow(page, connectionName) {
@@ -211,6 +238,15 @@ export async function createEditorFromConnection(
   const editorConnectionLabel = page
     .getByTestId(`editor-c-${storage}-${editorConnId}`)
     .filter({ visible: true })
+
+  // Mobile editor navigation starts at the storage roots. Reveal the target
+  // connection before looking for its overflow actions.
+  if (
+    (await editorConnectionLabel.count()) === 0 &&
+    (await page.getByTestId('mobile-menu-home').isVisible())
+  ) {
+    await drillMobileTree(page, [isRemote ? 'Remote Storage' : 'Browser Storage'])
+  }
   const connectionRow = editorConnectionLabel
     .first()
     .locator('xpath=ancestor::div[contains(@class,"sidebar-content")][1]')
@@ -251,16 +287,28 @@ export async function deleteEditor(page, editorTestId, isMobile = false) {
 }
 
 export async function waitForEditorQueryComplete(page, timeout = 60000) {
-  await Promise.race([
-    page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")', { timeout }),
-    page.getByTestId('query-results-length').waitFor({ state: 'visible', timeout }),
-    page.getByTestId('error-text').waitFor({ state: 'visible', timeout }),
-  ])
+  await expect(page.getByTestId('editor-run-button')).toHaveAttribute('aria-label', 'Run query', {
+    timeout,
+  })
+}
+
+export async function runEditorQueryAndWait(page, timeout = 60000) {
+  const runButton = page.getByTestId('editor-run-button')
+  const editor = runButton.locator('xpath=ancestor::*[@data-query-start-time][1]')
+  const previousStartTime = (await editor.getAttribute('data-query-start-time')) ?? ''
+
+  await runButton.click()
+
+  // startTime persists after completion, unlike the transient loading state.
+  // This detects queries that start and finish before Vue paints "Cancel".
+  await expect(editor).not.toHaveAttribute('data-query-start-time', previousStartTime, {
+    timeout,
+  })
+  await waitForEditorQueryComplete(page, timeout)
 }
 
 export async function runEditorQueryAndExpectCount(page, expectedCount, timeout = 60000) {
-  await page.getByTestId('editor-run-button').click()
-  await waitForEditorQueryComplete(page, timeout)
+  await runEditorQueryAndWait(page, timeout)
 
   await expect(page.getByTestId('query-results-length')).toContainText(String(expectedCount), {
     timeout,

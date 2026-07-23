@@ -20,6 +20,7 @@ export interface DashboardMobileProps {
 const props = defineProps<DashboardMobileProps>()
 
 const mobileMinHeight = 400 // Minimum height for mobile items
+const mobileFilterHeight = 120
 const dashboardStore = useDashboardStore()
 const dashboard = computed(() => {
   const dashboard = Object.values(dashboardStore.dashboards).find((d) => d.id === props.name)
@@ -131,7 +132,7 @@ function calculateMobileWidth(_: any): number | string {
 function calculateMobileHeight(item: any): number | string {
   let minHeight = Math.min(window.innerWidth, 400)
   if (!dashboard.value || !dashboard.value.gridItems[item.i]) {
-    return minHeight // Default height if we can't calculate
+    return `${minHeight}px` // Default height if we can't calculate
   }
 
   let itemData = getItemData(item.i, dashboard.value.id)
@@ -140,7 +141,7 @@ function calculateMobileHeight(item: any): number | string {
   }
 
   if (itemData.type === CELL_TYPES.FILTER) {
-    return '100%' // Full height for filter items
+    return `${mobileFilterHeight}px`
   }
 
   if (itemData.type === CELL_TYPES.SECTION_HEADER) {
@@ -187,21 +188,6 @@ function handleToggleMode(mode: DashboardState) {
     triggerResize()
   })
 }
-// Mobile navigation scroll functions
-function scrollToTop() {
-  const container = document.getElementById('page-content')
-  if (container) {
-    container.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-}
-
-function scrollToBottom() {
-  const container = document.getElementById('page-content')
-  if (container) {
-    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
-  }
-}
-
 function scrollUpOne() {
   const container = document.getElementById('page-content')
   if (!container) return
@@ -275,6 +261,8 @@ function scrollDownOne() {
       @mode-change="handleToggleMode"
       @refresh="handleRefresh"
       @clear-filter="handleFilterClear"
+      @navigate-up="scrollUpOne"
+      @navigate-down="scrollDownOne"
     />
 
     <div v-if="dashboard && sortedLayout.length === 0" class="empty-dashboard-wrapper">
@@ -288,9 +276,13 @@ function scrollDownOne() {
         :key="item.i"
         :data-i="item.i"
         class="mobile-item"
+        :class="{
+          'mobile-item-filter':
+            getItemData(item.i, dashboard.id).type === CELL_TYPES.FILTER,
+        }"
         :style="{
-          height: `${calculateMobileHeight(item)}`,
-          width: `${calculateMobileWidth(item)}`,
+          height: calculateMobileHeight(item),
+          width: calculateMobileWidth(item),
         }"
       >
         <DashboardGridItem
@@ -311,22 +303,6 @@ function scrollDownOne() {
           @copy-item="copyItem"
         />
       </div>
-    </div>
-
-    <!-- Mobile Navigation Bar -->
-    <div class="mobile-nav-bar" v-if="sortedLayout.length > 1">
-      <button @click="scrollToTop" class="nav-btn" title="Scroll to top">
-        <i class="mdi mdi-chevron-double-up"></i>
-      </button>
-      <button @click="scrollUpOne" class="nav-btn" title="Previous item">
-        <i class="mdi mdi-chevron-up"></i>
-      </button>
-      <button @click="scrollDownOne" class="nav-btn" title="Next item">
-        <i class="mdi mdi-chevron-down"></i>
-      </button>
-      <button @click="scrollToBottom" class="nav-btn" title="Scroll to bottom">
-        <i class="mdi mdi-chevron-double-down"></i>
-      </button>
     </div>
 
     <!-- Add Item Modal -->
@@ -393,8 +369,8 @@ function scrollDownOne() {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  padding-bottom: 80px;
-  /* Space for navigation bar */
+  padding-bottom: calc(125px + env(safe-area-inset-bottom));
+  /* Keep the final item above the pinned filter/action dock. */
 }
 
 .mobile-item {
@@ -403,50 +379,11 @@ function scrollDownOne() {
   position: relative;
 }
 
-.mobile-nav-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: var(--result-window-bg);
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  padding: 8px;
-  z-index: 1000;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+.mobile-item-filter {
+  flex: 0 0 120px;
+  min-height: 120px;
 }
 
-.nav-btn {
-  background: var(--button-bg, var(--bg-color));
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 12px 16px;
-  color: var(--text-color);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 48px;
-  min-height: 48px;
-  font-size: 20px;
-}
-
-.nav-btn:hover {
-  background: var(--button-hover-bg, var(--highlight-color));
-  transform: translateY(-1px);
-}
-
-.nav-btn:active {
-  transform: translateY(0);
-  background: var(--button-active-bg, var(--accent-color));
-}
-
-.nav-btn i {
-  line-height: 1;
-}
 
 .dashboard-not-found {
   display: flex;
@@ -475,17 +412,4 @@ function scrollDownOne() {
   flex: 1;
 }
 
-/* Add responsive touch target sizing */
-@media (max-width: 480px) {
-  .nav-btn {
-    padding: 10px 12px;
-    min-width: 44px;
-    min-height: 44px;
-    font-size: 18px;
-  }
-
-  .mobile-nav-bar {
-    padding: 6px;
-  }
-}
 </style>

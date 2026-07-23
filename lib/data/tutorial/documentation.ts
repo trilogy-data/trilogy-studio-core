@@ -64,28 +64,59 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph('ConnectionList', '', 'connections'),
     ]),
-    new Article('DuckDB', [
-      new Paragraph(
-        'DuckDB',
-        'DuckDB is always available as an in-browser database using the DuckDB WASM integration. No authentication is required. DuckDB also natively supports csv uploads through a widget available on the connection view. Most community duckdb models will reference publically available CSV or parquet files.',
-      ),
-    ]),
-    new Article('Bigquery', [
-      new Paragraph(
-        'Connections',
-        'Bigquery is supported through Oauth authentication as your identity. If you wish to use a service key file, please upvote this github issue: <a href="https://github.com/trilogy-data/trilogy-studio-core/issues/33" target="_blank">BQ Service Account Support</a>.',
-      ),
-    ]),
-    new Article('Snowflake', [
-      new Paragraph(
-        'Connections',
-        'Snowflake is supported with private key authentication. Read more at this link: <a href="https://docs.snowflake.com/en/user-guide/key-pair-auth" target="_blank">Snowflake Private Key Pairs</a>. You will need to provide the private key to connect after configuring your user with the public key portion. The rest of the authentication header can be derived from this. Remember to use caution of saving this key.',
-      ),
-    ]),
     new Article('Scheduling', [
       new Paragraph(
         'Scheduling',
         'Scheduling dashboards/scripts is a future feature. Please upvote this github issue: <a href="https://github.com/trilogy-data/trilogy-studio-core/issues/75" target="_blank">Scheduling</a>.',
+      ),
+    ]),
+  ]),
+  new DocumentationNode('Supported Databases', [
+    new Article('Overview', [
+      new Paragraph(
+        'Supported Databases',
+        'Trilogy Studio supports two classes of database connections: local browser engines and remote databases. Every editor runs against one of these connections, and Trilogy queries are compiled to the SQL dialect selected by that connection.',
+      ),
+      new Paragraph(
+        'Local Browser Engines',
+        'DuckDB and SQLite run locally inside the browser using WebAssembly. They require no database server or credentials, and uploaded data stays in the browser tab. These connections are convenient for local files, examples, prototyping, and offline query execution after their runtime assets have loaded.',
+      ),
+      new Paragraph(
+        'Remote Databases',
+        'BigQuery and Snowflake connect to externally hosted databases and require authentication. Queries run against the remote service, while Trilogy Studio manages the connection configuration, SQL dialect, schema browser, and query results in the interface. Use narrowly scoped credentials and review the Stored Info documentation before saving secrets.',
+      ),
+    ]),
+    new Article('DuckDB', [
+      new Paragraph(
+        'DuckDB',
+        'DuckDB is always available as an in-browser database using the DuckDB WASM integration. No authentication is required. DuckDB also natively supports CSV uploads through a widget available on the connection view. Most community DuckDB models reference publicly available CSV or Parquet files.',
+      ),
+    ]),
+    new Article('SQLite', [
+      new Paragraph(
+        'SQLite',
+        'SQLite is available as an in-browser database using the sql.js WebAssembly integration. No server or authentication is required. Create a SQLite connection when you want to query an existing SQLite database or work with a lightweight local dataset using SQLite SQL.',
+      ),
+      new Paragraph(
+        'Importing Data',
+        'Open the SQLite connection and select Upload to import a .db or .sqlite database file. Importing a database replaces the current in-memory database for that connection. You can also upload a CSV file; Trilogy Studio creates a table named after the file, sanitizes its column names, and infers INTEGER, REAL, or TEXT column types from the data.',
+      ),
+      new Paragraph(
+        'Browser Storage',
+        'SQLite connection configuration is saved with the rest of your Studio workspace, but the contents of the in-browser database are memory-backed. After reloading the page, reconnect and upload the database or CSV files again before running queries that depend on them.',
+        'tip',
+      ),
+    ]),
+    new Article('BigQuery', [
+      new Paragraph(
+        'BigQuery',
+        'BigQuery is supported through OAuth authentication using your Google identity. If you wish to use a service key file, please upvote this GitHub issue: <a href="https://github.com/trilogy-data/trilogy-studio-core/issues/33" target="_blank">BQ Service Account Support</a>.',
+      ),
+    ]),
+    new Article('Snowflake', [
+      new Paragraph(
+        'Snowflake',
+        'Snowflake is supported with private key authentication. Read more at this link: <a href="https://docs.snowflake.com/en/user-guide/key-pair-auth" target="_blank">Snowflake Private Key Pairs</a>. Configure your Snowflake user with the public key, then provide the private key when connecting. Use caution when choosing whether to save this credential.',
       ),
     ]),
   ]),

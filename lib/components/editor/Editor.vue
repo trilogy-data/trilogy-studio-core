@@ -1,5 +1,9 @@
 <template>
-  <div class="parent" :data-testid="`editor-${editorId}`">
+  <div
+    class="parent"
+    :data-testid="`editor-${editorId}`"
+    :data-query-start-time="editorData?.startTime ?? ''"
+  >
     <error-message v-if="!editorData"
       >An editor by this ID ({{ editorId }}) could not be found.</error-message
     >
@@ -130,6 +134,7 @@ import CodeEditor from './EditorCode.vue'
 import { Range } from 'monaco-editor'
 import { type AnalyticsStoreType } from '../../stores/analyticsStore.ts'
 import { type GoToDefinitionEvent } from './events'
+import { useIsMobile } from '../useIsMobile'
 import {
   supportsEditorFormatting,
   supportsEditorLocalExecution,
@@ -188,7 +193,7 @@ export default defineComponent({
     const llmStore = inject<LLMConnectionStoreType>('llmConnectionStore')
     const trilogyResolver = inject<FetchResolver>('trilogyResolver')
     const userSettingsStore = inject<UserSettingsStoreType>('userSettingsStore')
-    const isMobile = inject<boolean>('isMobile', false)
+    const isMobile = useIsMobile()
     // Optional inject — host apps that mount the editor in a narrow column
     // (e.g. explorer's center pane) can suppress the symbols pane without
     // pretending to be a mobile context.

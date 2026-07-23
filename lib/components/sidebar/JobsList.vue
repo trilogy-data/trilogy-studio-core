@@ -24,17 +24,31 @@
       </div>
     </div>
 
-    <JobsListItem
-      v-for="item in displayTree"
-      :key="item.key"
-      :item="item"
-      :is-collapsed="collapsed[item.key]"
-      :active-jobs-key="activeJobsKey"
-      @item-click="handleItemClick"
-      @item-toggle="handleItemToggle"
-      @delete-store="showDeleteStoreConfirmation"
-      @refresh-store="handleRefreshStore"
-    />
+    <mobile-tree-list
+      list-id="jobs"
+      ref="mobileTree"
+      :items="displayTree"
+      id-field="key"
+      label-field="label"
+      :enabled="isMobile"
+      :is-branch="isJobsBranch"
+      :is-selectable="isJobsBranch"
+      @expand="expandMobileBranch"
+      @select="handleItemClick"
+    >
+      <template #item="{ item }">
+        <JobsListItem
+          :key="item.key"
+          :item="item"
+          :is-collapsed="collapsed[item.key]"
+          :active-jobs-key="activeJobsKey"
+          @item-click="handleJobsTreeClick"
+          @item-toggle="handleItemToggle"
+          @delete-store="showDeleteStoreConfirmation"
+          @refresh-store="handleRefreshStore"
+        />
+      </template>
+    </mobile-tree-list>
 
     <JobsAddStoreModal
       :show="showAddStoreModal"
@@ -70,6 +84,8 @@ import type { EditorStoreType } from '../../stores/editorStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { ModelConfigStoreType } from '../../stores/modelStore'
 import { removeRemoteStoreFromIde, syncRemoteStoreIntoIde } from '../../remotes/remoteStoreSync'
+import MobileTreeList from './MobileTreeList.vue'
+import { useIsMobile } from '../useIsMobile'
 
 const props = withDefaults(
   defineProps<{
@@ -93,6 +109,8 @@ const connectionStore = inject<ConnectionStoreType>('connectionStore')
 const modelStore = inject<ModelConfigStoreType>('modelStore')
 const collapsed = ref<Record<string, boolean>>({})
 const showAddStoreModal = ref(false)
+const isMobile = useIsMobile()
+const mobileTree = ref<any>(null)
 
 const remoteStorage = computed(
   () => storageSources.find((source) => source.type === 'remote') as RemoteStoreStorage | undefined,
@@ -185,6 +203,14 @@ const handleItemClick = (item: JobsTreeNode) => {
 
 const handleItemToggle = (item: JobsTreeNode) => {
   collapsed.value[item.key] = !collapsed.value[item.key]
+}
+const isJobsBranch = (item: JobsTreeNode) => ['store', 'directory'].includes(item.type)
+const expandMobileBranch = (item: JobsTreeNode) => {
+  if (collapsed.value[item.key]) handleItemToggle(item)
+}
+const handleJobsTreeClick = (item: JobsTreeNode) => {
+  if (isMobile.value) mobileTree.value?.openItem(item)
+  else handleItemClick(item)
 }
 
 const handleRefreshStore = async (storeId: string) => {

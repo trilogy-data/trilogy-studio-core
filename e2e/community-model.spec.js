@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import {
   createEditorFromConnection,
+  drillMobileTree,
   localConnectionId,
   openSidebarScreen,
   prepareTestPage,
@@ -16,6 +17,9 @@ test.beforeEach(async ({ page }) => {
 test('test', async ({ page, isMobile }) => {
   await page.goto('#skipTips=true')
   await openSidebarScreen(page, 'community-models', isMobile)
+  if (isMobile) {
+    await drillMobileTree(page, ['Trilogy Public Models', 'duckdb'])
+  }
   await page.getByTestId('community-trilogy-data-trilogy-public-models-main+duckdb+titanic').click()
   await page.getByTestId('import-titanic').click()
   await page.getByTestId('model-creator-connection').selectOption('New DuckDB')
@@ -24,17 +28,6 @@ test('test', async ({ page, isMobile }) => {
   await refreshConnection(page, 'titanic-connection')
   await waitForConnectionReady(page, 'titanic-connection')
   await openSidebarScreen(page, 'editors', isMobile)
-  // make sure the button has fully loaded
-
-  // this status is flaky depending on device
-  // so handle both cases - where we need to expand or not
-  const titanicEditorConnectionTestId = `editor-c-local-${localConnectionId('titanic-connection')}`
-  try {
-    await page.getByTestId(titanicEditorConnectionTestId).click({ timeout: 1000 })
-  } catch (e) {
-    await page.getByTestId('editor-s-local').click()
-    await page.getByTestId(titanicEditorConnectionTestId).click()
-  }
   await createEditorFromConnection(page, 'titanic-connection', 'trilogy')
   await runEditorQueryAndExpectCount(page, 1)
 })

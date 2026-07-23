@@ -3,7 +3,7 @@
   <sidebar-list title="Dashboards">
     <template #header>
       <div class="dashboards-header">
-        <h3 class="font-sans sidebar-header">Dashboards</h3>
+        <h3 v-if="!isMobile" class="font-sans sidebar-header">Dashboards</h3>
         <button
           class="sidebar-control-button sidebar-header-action sidebar-primary-create"
           @click="creatorVisible = !creatorVisible"
@@ -15,7 +15,7 @@
       </div>
     </template>
     <template #actions>
-      <div class="button-container">
+      <div v-if="!isMobile || mobileTreeAtRoot" class="button-container">
         <button
           class="sidebar-control-button sidebar-header-action"
           @click="importPopupVisible = true"
@@ -33,15 +33,30 @@
       <dashboard-import-popup :isOpen="importPopupVisible" @close="importPopupVisible = false" />
     </template>
 
-    <dashboard-list-item
-      v-for="item in contentList"
-      :key="item.key"
-      :item="item"
-      :is-active="activeDashboardKey === item.id"
-      :is-collapsed="collapsed[item.key]"
-      @click="clickAction(item)"
-      @delete="showDeleteConfirmation"
-    />
+    <mobile-tree-list
+      list-id="dashboards"
+      ref="mobileTree"
+      :items="contentList"
+      id-field="key"
+      label-field="label"
+      :enabled="isMobile"
+      :is-branch="isDashboardBranch"
+      :is-selectable="(item) => item.type === 'dashboard'"
+      @expand="expandMobileBranch"
+      @select="selectMobileItem"
+      @view-change="mobileTreeAtRoot = $event"
+    >
+      <template #item="{ item }">
+        <dashboard-list-item
+          :key="item.key"
+          :item="item"
+          :is-active="activeDashboardKey === item.id"
+          :is-collapsed="collapsed[item.key]"
+          @click="handleDashboardTreeClick(item)"
+          @delete="showDeleteConfirmation"
+        />
+      </template>
+    </mobile-tree-list>
 
     <ConfirmDialog
       :show="showDeleteConfirmationState"
@@ -70,6 +85,8 @@ import LoadingButton from '../LoadingButton.vue'
 import { getDefaultValueFromHash, URL_HASH_KEYS } from '../../stores/urlStore'
 import ConfirmDialog from '../ConfirmDialog.vue'
 import { useConfirmationState } from '../useConfirmationState'
+import { useIsMobile } from '../useIsMobile'
+import MobileTreeList from './MobileTreeList.vue'
 
 // Helper function to build dashboard tree
 function buildDashboardTree(
@@ -206,6 +223,9 @@ export default {
     const collapsed = ref<Record<string, boolean>>({})
     const creatorVisible = ref(false)
     const importPopupVisible = ref(false)
+    const isMobile = useIsMobile()
+    const mobileTree = ref<any>(null)
+    const mobileTreeAtRoot = ref(true)
 
     const toggleCollapse = (key: string) => {
       if (collapsed.value[key] === undefined) {
@@ -283,6 +303,9 @@ export default {
       showDeleteConfirmation,
       cancelDelete,
       confirmDelete,
+      isMobile,
+      mobileTree,
+      mobileTreeAtRoot,
     }
   },
   methods: {
@@ -300,6 +323,22 @@ export default {
         this.toggleCollapse(item.key)
       }
     },
+    isDashboardBranch(item: any) {
+      return (
+        ['storage', 'connection'].includes(item.type) ||
+        (item.type === 'dashboard' && item.hasInvestigations)
+      )
+    },
+    expandMobileBranch(item: any) {
+      if (this.collapsed[item.key]) this.toggleCollapse(item.key)
+    },
+    selectMobileItem(item: any) {
+      this.clickAction(item)
+    },
+    handleDashboardTreeClick(item: any) {
+      if (this.isMobile) (this.$refs.mobileTree as any)?.openItem(item)
+      else this.clickAction(item)
+    },
   },
   components: {
     DashboardCreatorInline,
@@ -308,6 +347,7 @@ export default {
     SidebarList,
     LoadingButton,
     ConfirmDialog,
+    MobileTreeList,
   },
 }
 </script>

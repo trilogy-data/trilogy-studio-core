@@ -40,17 +40,30 @@
       </div>
     </template>
 
-    <editor-list-item
-      v-for="item in contentList"
-      :key="item.key"
-      :item="item"
-      :active-editor="activeEditor"
-      :is-collapsed="collapsed[item.key]"
-      :is-mobile="isMobile"
-      @item-click="clickAction"
-      @delete-editor="showDeleteConfirmation"
-      @refresh-store="refreshStore"
-    />
+    <mobile-tree-list
+      list-id="editors"
+      ref="mobileTree"
+      :items="contentList"
+      id-field="key"
+      label-field="label"
+      :enabled="isMobile"
+      :flat="!!searchQuery"
+      :is-branch="isEditorBranch"
+      @expand="expandMobileBranch"
+      @select="selectMobileItem"
+    >
+      <template #item="{ item }">
+        <editor-list-item
+          :item="item"
+          :active-editor="activeEditor"
+          :is-collapsed="collapsed[item.key]"
+          :is-mobile="isMobile"
+          @item-click="handleTreeItemClick(item)"
+          @delete-editor="showDeleteConfirmation"
+          @refresh-store="refreshStore"
+        />
+      </template>
+    </mobile-tree-list>
 
     <ConfirmDialog
       :show="showDeleteConfirmationState"
@@ -84,6 +97,8 @@ import { useConfirmationState } from '../useConfirmationState'
 import type Storage from '../../data/storage'
 import type RemoteStoreStorage from '../../data/remoteStoreStorage'
 import { removeRemoteStoreFromIde, syncRemoteStoreIntoIde } from '../../remotes/remoteStoreSync'
+import { useIsMobile } from '../useIsMobile'
+import MobileTreeList from './MobileTreeList.vue'
 
 export default {
   name: 'EditorList',
@@ -93,15 +108,19 @@ export default {
       type: String,
       default: '',
     },
+    mobileSearchQuery: {
+      type: String,
+      default: '',
+    },
   },
-  setup() {
+  setup(props) {
     const communityStore = useCommunityApiStore()
     const jobsStore = useJobsApiStore()
     const editorStore = inject<EditorStoreType>('editorStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
     const storageSources = inject<Storage[]>('storageSources', [])
-    const isMobile = inject<boolean>('isMobile', false)
+    const isMobile = useIsMobile()
     if (!editorStore || !connectionStore || !modelStore) {
       throw new Error('Editor store is not provided!')
     }
@@ -230,12 +249,25 @@ export default {
       document.removeEventListener('click', handleDocumentClick)
     })
 
+    const searchQuery = computed(() => props.mobileSearchQuery.trim().toLocaleLowerCase())
+
     const contentList = computed(() => {
-      return buildEditorTree(
+      // While searching, build the tree fully expanded — buildEditorTree prunes
+      // the children of collapsed nodes, so filtering the collapsed tree would
+      // silently miss every editor inside a closed connection or folder.
+      const list = buildEditorTree(
         Object.values(connectionStore.connections),
         Object.values(editorStore.editors),
-        collapsed.value,
+        // MobileTreeList owns disclosure on mobile and needs the complete flat
+        // tree to calculate counts and navigate without expanding desktop rows.
+        isMobile || searchQuery.value ? {} : collapsed.value,
         hiddenTags.value,
+      )
+      if (!searchQuery.value) return list
+      // Results are a flat list of matching editors, not a tree slice.
+      return list.filter(
+        (item) =>
+          item.type === 'editor' && item.label.toLocaleLowerCase().includes(searchQuery.value),
       )
     })
 
@@ -274,6 +306,7 @@ export default {
       EditorTag,
       toggleTagFilter,
       contentList,
+      searchQuery,
       toggleCollapse,
       collapsed,
       hiddenTags,
@@ -308,6 +341,22 @@ export default {
         this.toggleCollapse(key)
       }
     },
+    isEditorBranch(item: any) {
+      return !['editor', 'creator'].includes(item.type)
+    },
+    handleTreeItemClick(item: any) {
+      if (this.isMobile) {
+        ;(this.$refs.mobileTree as any)?.openItem(item)
+      } else {
+        this.clickAction(item.type, item.objectKey, item.key)
+      }
+    },
+    expandMobileBranch(item: any) {
+      if (this.collapsed[item.key]) this.toggleCollapse(item.key)
+    },
+    selectMobileItem(item: any) {
+      this.clickAction(item.type, item.objectKey, item.key)
+    },
   },
   components: {
     EditorCreatorInline,
@@ -315,6 +364,7 @@ export default {
     LoadingButton,
     EditorListItem,
     ConfirmDialog,
+    MobileTreeList,
   },
 }
 </script>

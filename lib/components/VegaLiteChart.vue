@@ -99,7 +99,6 @@
 import {
   defineComponent,
   ref,
-  type Ref,
   watch,
   onMounted,
   computed,
@@ -122,6 +121,7 @@ import { ChartRenderManager } from './chartRenderManager'
 import { ChartControlsManager } from './chartControlsManager'
 import { ChartOperationsManager } from './chartOperationsManager'
 import { safeJsonStringify } from '../utility/jsonSerialization'
+import { useIsMobile } from './useIsMobile'
 
 export default defineComponent({
   name: 'VegaLiteChart',
@@ -165,7 +165,7 @@ export default defineComponent({
 
   setup(props, { emit }) {
     const settingsStore = inject<UserSettingsStoreType | null>('userSettingsStore', null)
-    const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
+    const isMobile = useIsMobile()
 
     // Create a computed property for the current theme
     const currentTheme = useResolvedThemeMode(settingsStore)
