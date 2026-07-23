@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import {
   createEditorFromConnectionList,
   drillMobileTree,
@@ -13,6 +13,13 @@ import {
 test.beforeEach(async ({ page }) => {
   await prepareTestPage(page)
 })
+
+async function clearEditor(page: Page) {
+  const editor = page.getByTestId('editor')
+  await editor.click()
+  await editor.press('ControlOrMeta+a')
+  await page.keyboard.press('Delete')
+}
 
 test('test', async ({ page, isMobile, browserName }) => {
   await page.goto('#skipTips=true')
@@ -70,14 +77,7 @@ test('test', async ({ page, isMobile, browserName }) => {
   await page.getByTestId('documentation-article+Studio+Model Tutorial').click()
 
   // Step 3: Complete Tutorial Queries - Declaring a constant
-  await page.getByTestId('editor').click()
-  if (isMobile) {
-    await page.getByTestId('editor').click()
-    await page.getByTestId('editor').press('ControlOrMeta+a')
-  } else {
-    await page.getByTestId('editor').click({ clickCount: 4 })
-  }
-  await page.keyboard.press('Delete')
+  await clearEditor(page)
 
   const constantQuery = 'const pi <- 3.14; select pi;'
   await page.keyboard.type(constantQuery)
@@ -88,13 +88,7 @@ test('test', async ({ page, isMobile, browserName }) => {
 
   // Step 4: Complete Typing example with states
   await page.getByTestId('next-prompt').click()
-  if (isMobile) {
-    await page.getByTestId('editor').click()
-    await page.getByTestId('editor').press('ControlOrMeta+a')
-  } else {
-    await page.getByTestId('editor').click({ clickCount: 4 })
-  }
-  await page.keyboard.press('Delete')
+  await clearEditor(page)
 
   const typingQuery = `import std.geography; 
 auto states <- ['NY', 'CA', 'TX']::list<string::us_state_short>;
@@ -105,22 +99,22 @@ select
   order by 
       state asc;`
 
-  // insertText bypasses Monaco's auto-closing quote behavior, which can append
-  // a delayed quote when Playwright types this list literal on mobile.
-  await page.keyboard.insertText(typingQuery)
+  // insertText bypasses Monaco's auto-closing quote behavior on mobile.
+  // Firefox desktop handles Monaco's input events more reliably through type().
+  if (isMobile) {
+    await page.keyboard.insertText(typingQuery)
+  } else {
+    await page.keyboard.type(typingQuery)
+  }
   await runEditorQueryAndWait(page)
 
-  await expect(page.getByRole('gridcell', { name: 'CA' })).toContainText('CA')
+  await expect(page.getByRole('gridcell', { name: 'CA' })).toContainText('CA', {
+    timeout: 60000,
+  })
 
   // Step 5: Import from lineitem
   await page.getByTestId('next-prompt').click()
-  if (isMobile) {
-    await page.getByTestId('editor').click()
-    await page.getByTestId('editor').press('ControlOrMeta+a')
-  } else {
-    await page.getByTestId('editor').click({ clickCount: 4 })
-  }
-  await page.keyboard.press('Delete')
+  await clearEditor(page)
 
   const lineItemQuery = `import lineitem;
 select count(order.id) as order_count;`
@@ -132,13 +126,7 @@ select count(order.id) as order_count;`
   await page.getByTestId('next-prompt').click()
 
   // Step 6: Create datasource with headquarters
-  if (isMobile) {
-    await page.getByTestId('editor').click()
-    await page.getByTestId('editor').press('ControlOrMeta+a')
-  } else {
-    await page.getByTestId('editor').click({ clickCount: 4 })
-  }
-  await page.keyboard.press('Delete')
+  await clearEditor(page)
 
   const chunks = [
     'import lineitem;\n',
@@ -184,13 +172,7 @@ select count(order.id) as order_count;`
   if (['safari', 'firefox'].includes(page?.context()?.browser()?.browserType()?.name() || '')) {
     return
   }
-  if (isMobile) {
-    await page.getByTestId('editor').click()
-    await page.getByTestId('editor').press('ControlOrMeta+a')
-  } else {
-    await page.getByTestId('editor').click({ clickCount: 4 })
-  }
-  await page.keyboard.press('Delete')
+  await clearEditor(page)
   const irisTableScript = `CREATE OR REPLACE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`
 
   await page.keyboard.type(irisTableScript)
@@ -232,14 +214,7 @@ select count(order.id) as order_count;`
   await page.getByTestId('create-datasource-button').click()
 
   // Modify the generated datasource file
-  if (isMobile) {
-    await page.getByTestId('editor').click()
-    await page.getByTestId('editor').press('ControlOrMeta+a')
-  } else {
-    await page.getByTestId('editor').click({ clickCount: 4 })
-  }
-
-  await page.keyboard.press('Delete')
+  await clearEditor(page)
 
   const irisDataSource = `key pk int; # surrogate primary key for the dataset
 property pk.sepal_length float;
@@ -285,13 +260,7 @@ address iris_data;`
     .locator(`[data-testid^="editor-e-local-${localConnectionId('iris-data')}-new-editor-"]`)
     .last()
     .click()
-  if (isMobile) {
-    await page.getByTestId('editor').click()
-    await page.getByTestId('editor').press('ControlOrMeta+a')
-  } else {
-    await page.getByTestId('editor').click({ clickCount: 4 })
-  }
-  await page.keyboard.press('Delete')
+  await clearEditor(page)
 
   const irisQuery = `import iris;
 select

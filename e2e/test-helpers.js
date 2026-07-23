@@ -294,16 +294,16 @@ export async function waitForEditorQueryComplete(page, timeout = 60000) {
 
 export async function runEditorQueryAndWait(page, timeout = 60000) {
   const runButton = page.getByTestId('editor-run-button')
-
-  // Arm this before clicking so Playwright can observe even a short loading
-  // transition. Waiting for completion alone can match the previous query's
-  // already-idle button and stale results.
-  const queryStarted = expect(runButton).toHaveAttribute('aria-label', 'Cancel query', {
-    timeout,
-  })
+  const editor = runButton.locator('xpath=ancestor::*[@data-query-start-time][1]')
+  const previousStartTime = (await editor.getAttribute('data-query-start-time')) ?? ''
 
   await runButton.click()
-  await queryStarted
+
+  // startTime persists after completion, unlike the transient loading state.
+  // This detects queries that start and finish before Vue paints "Cancel".
+  await expect(editor).not.toHaveAttribute('data-query-start-time', previousStartTime, {
+    timeout,
+  })
   await waitForEditorQueryComplete(page, timeout)
 }
 

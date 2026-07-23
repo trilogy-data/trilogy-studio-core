@@ -1,5 +1,9 @@
 <template>
-  <div class="parent" :data-testid="`editor-${editorId}`">
+  <div
+    class="parent"
+    :data-testid="`editor-${editorId}`"
+    :data-query-start-time="editorData?.startTime ?? ''"
+  >
     <error-message v-if="!editorData"
       >An editor by this ID ({{ editorId }}) could not be found.</error-message
     >
