@@ -14,10 +14,10 @@ test.beforeEach(async ({ page }) => {
   await prepareTestPage(page)
 })
 
-async function clearEditor(page: Page) {
+async function clearEditor(page: Page, browserName: string, isMobile: boolean) {
   const editor = page.getByTestId('editor')
   await editor.click()
-  await editor.press('ControlOrMeta+a')
+  await page.keyboard.press(browserName === 'webkit' && !isMobile ? 'Meta+a' : 'Control+a')
   await page.keyboard.press('Delete')
 }
 
@@ -77,7 +77,7 @@ test('test', async ({ page, isMobile, browserName }) => {
   await page.getByTestId('documentation-article+Studio+Model Tutorial').click()
 
   // Step 3: Complete Tutorial Queries - Declaring a constant
-  await clearEditor(page)
+  await clearEditor(page, browserName, isMobile)
 
   const constantQuery = 'const pi <- 3.14; select pi;'
   await page.keyboard.type(constantQuery)
@@ -88,7 +88,7 @@ test('test', async ({ page, isMobile, browserName }) => {
 
   // Step 4: Complete Typing example with states
   await page.getByTestId('next-prompt').click()
-  await clearEditor(page)
+  await clearEditor(page, browserName, isMobile)
 
   const typingQuery = `import std.geography; 
 auto states <- ['NY', 'CA', 'TX']::list<string::us_state_short>;
@@ -114,7 +114,7 @@ select
 
   // Step 5: Import from lineitem
   await page.getByTestId('next-prompt').click()
-  await clearEditor(page)
+  await clearEditor(page, browserName, isMobile)
 
   const lineItemQuery = `import lineitem;
 select count(order.id) as order_count;`
@@ -126,7 +126,7 @@ select count(order.id) as order_count;`
   await page.getByTestId('next-prompt').click()
 
   // Step 6: Create datasource with headquarters
-  await clearEditor(page)
+  await clearEditor(page, browserName, isMobile)
 
   const chunks = [
     'import lineitem;\n',
@@ -172,7 +172,7 @@ select count(order.id) as order_count;`
   if (['safari', 'firefox'].includes(page?.context()?.browser()?.browserType()?.name() || '')) {
     return
   }
-  await clearEditor(page)
+  await clearEditor(page, browserName, isMobile)
   const irisTableScript = `CREATE OR REPLACE TABLE iris_data AS select *, row_number() over () as pk FROM read_csv('https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv');`
 
   await page.keyboard.type(irisTableScript)
@@ -214,7 +214,7 @@ select count(order.id) as order_count;`
   await page.getByTestId('create-datasource-button').click()
 
   // Modify the generated datasource file
-  await clearEditor(page)
+  await clearEditor(page, browserName, isMobile)
 
   const irisDataSource = `key pk int; # surrogate primary key for the dataset
 property pk.sepal_length float;
@@ -260,7 +260,7 @@ address iris_data;`
     .locator(`[data-testid^="editor-e-local-${localConnectionId('iris-data')}-new-editor-"]`)
     .last()
     .click()
-  await clearEditor(page)
+  await clearEditor(page, browserName, isMobile)
 
   const irisQuery = `import iris;
 select
