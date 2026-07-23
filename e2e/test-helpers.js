@@ -287,16 +287,28 @@ export async function deleteEditor(page, editorTestId, isMobile = false) {
 }
 
 export async function waitForEditorQueryComplete(page, timeout = 60000) {
-  await Promise.race([
-    page.waitForSelector('[data-testid="editor-run-button"]:has-text("Run")', { timeout }),
-    page.getByTestId('query-results-length').waitFor({ state: 'visible', timeout }),
-    page.getByTestId('error-text').waitFor({ state: 'visible', timeout }),
-  ])
+  await expect(page.getByTestId('editor-run-button')).toHaveAttribute('aria-label', 'Run query', {
+    timeout,
+  })
+}
+
+export async function runEditorQueryAndWait(page, timeout = 60000) {
+  const runButton = page.getByTestId('editor-run-button')
+
+  // Arm this before clicking so Playwright can observe even a short loading
+  // transition. Waiting for completion alone can match the previous query's
+  // already-idle button and stale results.
+  const queryStarted = expect(runButton).toHaveAttribute('aria-label', 'Cancel query', {
+    timeout,
+  })
+
+  await runButton.click()
+  await queryStarted
+  await waitForEditorQueryComplete(page, timeout)
 }
 
 export async function runEditorQueryAndExpectCount(page, expectedCount, timeout = 60000) {
-  await page.getByTestId('editor-run-button').click()
-  await waitForEditorQueryComplete(page, timeout)
+  await runEditorQueryAndWait(page, timeout)
 
   await expect(page.getByTestId('query-results-length')).toContainText(String(expectedCount), {
     timeout,

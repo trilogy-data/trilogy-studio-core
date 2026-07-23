@@ -6,7 +6,7 @@ import {
   openSidebarScreen,
   prepareTestPage,
   refreshConnection,
-  waitForEditorQueryComplete,
+  runEditorQueryAndWait,
   waitForConnectionReady,
 } from './test-helpers.js'
 
@@ -81,8 +81,7 @@ test('test', async ({ page, isMobile, browserName }) => {
 
   const constantQuery = 'const pi <- 3.14; select pi;'
   await page.keyboard.type(constantQuery)
-  await page.getByTestId('editor-run-button').click()
-  await waitForEditorQueryComplete(page)
+  await runEditorQueryAndWait(page)
 
   const firstRowCellPi = await page.getByRole('gridcell', { name: '3.14' })
   await expect(firstRowCellPi).toContainText('3.14')
@@ -109,15 +108,9 @@ select
   // insertText bypasses Monaco's auto-closing quote behavior, which can append
   // a delayed quote when Playwright types this list literal on mobile.
   await page.keyboard.insertText(typingQuery)
-  await page.getByTestId('editor-run-button').click()
-  await waitForEditorQueryComplete(page)
+  await runEditorQueryAndWait(page)
 
-  // The previous result remains mounted while Firefox processes the next query,
-  // so the generic completion helper can observe that stale result. Wait for a
-  // value unique to this query before advancing the tutorial.
-  await expect(page.getByRole('gridcell', { name: 'CA' })).toContainText('CA', {
-    timeout: 60000,
-  })
+  await expect(page.getByRole('gridcell', { name: 'CA' })).toContainText('CA')
 
   // Step 5: Import from lineitem
   await page.getByTestId('next-prompt').click()
@@ -133,8 +126,7 @@ select
 select count(order.id) as order_count;`
 
   await page.keyboard.type(lineItemQuery)
-  await page.getByTestId('editor-run-button').click()
-  await waitForEditorQueryComplete(page)
+  await runEditorQueryAndWait(page)
 
   await expect(await page.getByRole('gridcell', { name: '15000' })).toContainText('15000')
   await page.getByTestId('next-prompt').click()
@@ -177,8 +169,7 @@ select count(order.id) as order_count;`
 
   await page.keyboard.press('Delete')
 
-  await page.getByTestId('editor-run-button').click()
-  await waitForEditorQueryComplete(page)
+  await runEditorQueryAndWait(page)
 
   // Create a new DuckDB connection for iris data
   await page.getByTestId('connection-creator-add-tutorial-connection').click()
@@ -204,8 +195,7 @@ select count(order.id) as order_count;`
 
   await page.keyboard.type(irisTableScript)
 
-  await page.getByTestId('editor-run-button').click()
-  await waitForEditorQueryComplete(page)
+  await runEditorQueryAndWait(page)
   if (isMobile) {
     await page.getByTestId('editor-tab').click()
   }
@@ -311,8 +301,7 @@ select
 ;`
 
   await page.keyboard.type(irisQuery)
-  await page.getByTestId('editor-run-button').click()
-  await waitForEditorQueryComplete(page)
+  await runEditorQueryAndWait(page)
   if (isMobile) {
     await page.getByTestId('results-tab').click()
   }
