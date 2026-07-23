@@ -112,8 +112,12 @@ select
   await page.getByTestId('editor-run-button').click()
   await waitForEditorQueryComplete(page)
 
-  const firstRowCell = await page.getByRole('gridcell', { name: 'CA' })
-  await expect(firstRowCell).toContainText('CA')
+  // The previous result remains mounted while Firefox processes the next query,
+  // so the generic completion helper can observe that stale result. Wait for a
+  // value unique to this query before advancing the tutorial.
+  await expect(page.getByRole('gridcell', { name: 'CA' })).toContainText('CA', {
+    timeout: 60000,
+  })
 
   // Step 5: Import from lineitem
   await page.getByTestId('next-prompt').click()
