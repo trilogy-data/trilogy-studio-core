@@ -458,7 +458,11 @@ for (let source of props.storageSources) {
   )
 }
 
-// Wait for all promises to resolve, then set loaded to true
+// Wait for all promises to settle, then set loaded to true. `loaded` flips in
+// finally: consumers gate bootstrap logic (e.g. the #demo=true deep link) on
+// it, so a hydration failure must not leave them waiting forever — they
+// proceed with whatever did load, and the error is exposed separately.
+const hydrationError = ref<unknown>(null)
 Promise.all(loadingPromises)
   .then(() => {
     // One-time backfill for entities persisted before connectionId existed.
@@ -484,11 +488,13 @@ Promise.all(loadingPromises)
         }
       }
     }
-    loaded.value = true
   })
   .catch((error) => {
-    console.error('Error loading editor data:', error)
-    // You might want to handle the error state appropriately
+    console.error('Error loading workspace data:', error)
+    hydrationError.value = error
+  })
+  .finally(() => {
+    loaded.value = true
   })
 
 const saveEditors = async () => {
@@ -709,4 +715,7 @@ provide('isMobile', isMobile)
 // Expose the hydration flag so views can defer bootstrap logic (e.g. the
 // #demo=true deep link) until persisted state has finished loading.
 provide('storesLoaded', loaded)
+// Non-null when hydration partially failed; loaded still flips true so
+// consumers never hang, but they can surface a workspace-loading warning.
+provide('storesLoadError', hydrationError)
 </script>

@@ -12,6 +12,7 @@ from trilogy.core.models.core import (
     DataTyped,
     StructComponent,
     EnumType,
+    ValidatedType,
 )
 import httpx
 from trilogy.core.models.environment import DictImportResolver, EnvironmentConfig
@@ -103,6 +104,7 @@ def datatype_to_str_datatype(
         | DataTyped
         | StructComponent
         | EnumType
+        | ValidatedType
     ),
 ) -> str:
     """Convert a TraitDataType to a string representation"""
@@ -127,6 +129,8 @@ def datatype_to_str_datatype(
         return f"{datatype.name}:{datatype_to_str_datatype(datatype.type)}>"
     elif isinstance(datatype, EnumType):
         return f"ENUM<{datatype_to_str_datatype(datatype.data_type)}[{','.join(datatype.values)}]>"
+    elif isinstance(datatype, ValidatedType):
+        return str(datatype)
     return str(datatype.name)
 
 

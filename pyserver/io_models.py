@@ -9,6 +9,7 @@ from trilogy.authoring import (
     NumericType,
     TraitDataType,
     MapType,
+    ValidatedType,
 )  # , NumericType, TraitDataType
 from pydantic import BaseModel, Field
 
@@ -41,6 +42,7 @@ class UIConcept(BaseModel):
         | NumericType
         | TraitDataType
         | EnumType
+        | ValidatedType
     )
     purpose: Purpose
     description: Optional[str] = None
@@ -167,6 +169,7 @@ class QueryOutColumn(BaseModel):
         | MapType
         | NumericType
         | EnumType
+        | ValidatedType
     )
     purpose: Purpose
     traits: List[str] | None = None
