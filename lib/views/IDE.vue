@@ -153,10 +153,9 @@
         </template>
         <template v-else>
           <welcome-page
-            :demo-error="demoLaunchError"
             @screen-selected="setActiveScreen"
             @sidebar-screen-selected="setActiveSidebarScreen"
-            @demo-started="launchDemo"
+            @demo-started="startDemo"
             @documentation-key-selected="setActiveDocumentationKey"
           />
         </template>
@@ -296,10 +295,6 @@ const IDEComponent: Component = defineComponent({
   data() {
     return {
       activeTab: 'results',
-      // Demo deep-link launch state; error is surfaced on the welcome page.
-      demoLaunchInFlight: false,
-      demoLaunchError: '',
-      demoHashListener: null as (() => void) | null,
     }
   },
   props: {
@@ -560,21 +555,15 @@ const IDEComponent: Component = defineComponent({
   },
   async mounted() {
     // #demo=true deep link: land directly in the demo editor, connected.
-    // Also listen for hashchange: navigating to the demo link while the app is
-    // already loaded (Safari restoring a tab, tapping the link twice) is a
-    // same-document navigation — mounted never re-runs, and without this the
-    // hashchange handler in useScreenNavigation resets to the welcome screen
-    // and the demo never launches, stranding the user on an endless spinner.
-    this.demoHashListener = () => {
-      this.maybeStartDemoFromHash()
-    }
-    window.addEventListener('hashchange', this.demoHashListener)
-    await this.maybeStartDemoFromHash()
-  },
-  beforeUnmount() {
-    if (this.demoHashListener) {
-      window.removeEventListener('hashchange', this.demoHashListener)
-      this.demoHashListener = null
+    if (getDefaultValueFromHash(URL_HASH_KEYS.DEMO, '') === 'true') {
+      // Wait for persisted state to hydrate first; running the demo setup
+      // before loadConnections finishes would let hydration overwrite the
+      // freshly-created (and connecting) demo connection, leaving it
+      // disconnected. It also lets setupDemo's idempotency check see any
+      // existing demo editor and reuse it instead of recreating it.
+      await this.waitForStoresLoaded()
+      await this.startDemo()
+      removeHashFromUrl(URL_HASH_KEYS.DEMO)
     }
   },
   methods: {
@@ -619,33 +608,6 @@ const IDEComponent: Component = defineComponent({
           },
         )
       })
-    },
-    maybeStartDemoFromHash(): Promise<void> {
-      if (getDefaultValueFromHash(URL_HASH_KEYS.DEMO, '') !== 'true') return Promise.resolve()
-      return this.launchDemo()
-    },
-    // Guarded wrapper: single-flight, waits for hydration, and surfaces
-    // failures on the welcome page instead of dying as an unhandled rejection
-    // with the splash spinner running forever.
-    async launchDemo() {
-      if (this.demoLaunchInFlight) return
-      this.demoLaunchInFlight = true
-      this.demoLaunchError = ''
-      try {
-        // Wait for persisted state to hydrate first; running the demo setup
-        // before loadConnections finishes would let hydration overwrite the
-        // freshly-created (and connecting) demo connection, leaving it
-        // disconnected. It also lets setupDemo's idempotency check see any
-        // existing demo editor and reuse it instead of recreating it.
-        await this.waitForStoresLoaded()
-        await this.startDemo()
-        removeHashFromUrl(URL_HASH_KEYS.DEMO)
-      } catch (error) {
-        console.error('Demo setup failed:', error)
-        this.demoLaunchError = error instanceof Error ? error.message : String(error)
-      } finally {
-        this.demoLaunchInFlight = false
-      }
     },
     async startDemo() {
       let editor = await setupDemo(

@@ -123,11 +123,7 @@
         <LLMView :initialTab="llmInitialTab" />
       </template>
       <template v-else>
-        <welcome-page
-          :demo-error="demoLaunchError"
-          @screen-selected="setActiveScreen"
-          @demo-started="launchDemo"
-        />
+        <welcome-page @screen-selected="setActiveScreen" @demo-started="startDemo" />
       </template>
     </mobile-sidebar-layout>
   </div>
@@ -182,8 +178,7 @@ import { EditorTag } from '../editors'
 import type { ConnectionStoreType } from '../stores/connectionStore.ts'
 import TrilogyResolver from '../stores/resolver.ts'
 import type QueryExecutionService from '../stores/queryExecutionService.ts'
-import { inject, defineAsyncComponent, provide, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { Ref } from 'vue'
+import { inject, defineAsyncComponent, provide, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import setupDemo from '../data/tutorial/demoSetup'
 import { getDefaultValueFromHash, removeHashFromUrl, URL_HASH_KEYS } from '../stores/urlStore.ts'
@@ -218,12 +213,7 @@ export interface MobileIDEProps {}
 const MobileIDEComponent: Component = defineComponent({
   name: 'MobileIDEComponent',
   data() {
-    return {
-      // Demo deep-link launch state; error is surfaced on the welcome page.
-      demoLaunchInFlight: false,
-      demoLaunchError: '',
-      demoHashListener: null as (() => void) | null,
-    }
+    return {}
   },
   components: {
     Sidebar,
@@ -257,9 +247,6 @@ const MobileIDEComponent: Component = defineComponent({
     let dashboardStore = inject<DashboardStoreType>('dashboardStore')
     const trilogyResolver = inject<ResolverType>('trilogyResolver')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
-    // Hydration flag from Manager; the demo deep link waits on it so it doesn't
-    // race persisted state loading and get clobbered by loadConnections.
-    const storesLoaded = inject<Ref<boolean>>('storesLoaded', ref(true))
     let saveEditors = inject<Function>('saveEditors')
     let saveConnections = inject<Function>('saveConnections')
     let saveModels = inject<Function>('saveModels')
@@ -405,7 +392,6 @@ const MobileIDEComponent: Component = defineComponent({
     return {
       connectionStore,
       editorStore,
-      storesLoaded,
       dashboardStore,
       trilogyResolver,
       queryExecutionService,
@@ -465,21 +451,9 @@ const MobileIDEComponent: Component = defineComponent({
   },
   async mounted() {
     // #demo=true deep link: land directly in the demo editor, connected.
-    // Also listen for hashchange: navigating to the demo link while the app is
-    // already loaded (Safari restoring a tab, tapping the link twice) is a
-    // same-document navigation — mounted never re-runs, and without this the
-    // hashchange handler in useScreenNavigation resets to the welcome screen
-    // and the demo never launches, stranding the user on an endless spinner.
-    this.demoHashListener = () => {
-      this.maybeStartDemoFromHash()
-    }
-    window.addEventListener('hashchange', this.demoHashListener)
-    await this.maybeStartDemoFromHash()
-  },
-  beforeUnmount() {
-    if (this.demoHashListener) {
-      window.removeEventListener('hashchange', this.demoHashListener)
-      this.demoHashListener = null
+    if (getDefaultValueFromHash(URL_HASH_KEYS.DEMO, '') === 'true') {
+      await this.startDemo()
+      removeHashFromUrl(URL_HASH_KEYS.DEMO)
     }
   },
   methods: {
@@ -523,45 +497,6 @@ const MobileIDEComponent: Component = defineComponent({
     },
     saveEditorsCall() {
       this.saveEditors()
-    },
-    waitForStoresLoaded(): Promise<void> {
-      if (this.storesLoaded) return Promise.resolve()
-      return new Promise((resolve) => {
-        const stop = watch(
-          () => this.storesLoaded,
-          (loaded) => {
-            if (loaded) {
-              stop()
-              resolve()
-            }
-          },
-        )
-      })
-    },
-    maybeStartDemoFromHash(): Promise<void> {
-      if (getDefaultValueFromHash(URL_HASH_KEYS.DEMO, '') !== 'true') return Promise.resolve()
-      return this.launchDemo()
-    },
-    // Guarded wrapper: single-flight, waits for hydration, and surfaces
-    // failures on the welcome page instead of dying as an unhandled rejection
-    // with the splash spinner running forever.
-    async launchDemo() {
-      if (this.demoLaunchInFlight) return
-      this.demoLaunchInFlight = true
-      this.demoLaunchError = ''
-      try {
-        // Wait for persisted state to hydrate first (parity with IDE.vue);
-        // running the demo setup before loadConnections finishes would let
-        // hydration overwrite the freshly-created demo connection.
-        await this.waitForStoresLoaded()
-        await this.startDemo()
-        removeHashFromUrl(URL_HASH_KEYS.DEMO)
-      } catch (error) {
-        console.error('Demo setup failed:', error)
-        this.demoLaunchError = error instanceof Error ? error.message : String(error)
-      } finally {
-        this.demoLaunchInFlight = false
-      }
     },
     async startDemo() {
       let editorId = await setupDemo(

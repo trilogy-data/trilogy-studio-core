@@ -30,9 +30,6 @@
             New Editor
           </button>
         </div>
-        <p v-if="demoMessage" class="demo-message" data-testid="demo-status-message">
-          {{ demoMessage }}
-        </p>
       </template>
       <div v-else>
         <editor-creator-inline :visible="showCreator" @close="showCreator = !showCreator">
@@ -43,69 +40,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, computed, watch, onUnmounted } from 'vue'
+import { ref, inject, computed } from 'vue'
 import trilogyIcon from '../static/trilogy.png'
 import EditorCreatorInline from '../components/editor/EditorCreatorInline.vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import { getDefaultValueFromHash, URL_HASH_KEYS } from '../stores/urlStore'
 const connectionStore = inject<ConnectionStoreType>('connectionStore')
-
-const props = defineProps({
-  // Set by the parent view when the demo launch fails; stops the spinner and
-  // is shown so a failure never reads as an endless load.
-  demoError: {
-    type: String,
-    default: '',
-  },
-})
-
-const DEMO_LOADING_TIMEOUT_MS = 30000
-const demoLoading = ref(false)
-const demoTimedOut = ref(false)
-const showCreator = ref(false)
-let demoTimer: ReturnType<typeof setTimeout> | null = null
-
-// Every loading state is bounded: if the launch hasn't landed us in the demo
-// editor by the deadline, give the button back so the user can retry instead
-// of watching a spinner forever.
-const beginDemoLoading = () => {
-  demoLoading.value = true
-  demoTimedOut.value = false
-  if (demoTimer) clearTimeout(demoTimer)
-  demoTimer = setTimeout(() => {
-    demoLoading.value = false
-    demoTimedOut.value = true
-  }, DEMO_LOADING_TIMEOUT_MS)
-}
-
 // The #demo=true deep link auto-launches the demo from the IDE shell; show
 // the loading state right away so this page reads as a splash, not a stop.
-if (getDefaultValueFromHash(URL_HASH_KEYS.DEMO, '') === 'true') {
-  beginDemoLoading()
-}
-
-watch(
-  () => props.demoError,
-  (error) => {
-    if (error) {
-      demoLoading.value = false
-      if (demoTimer) clearTimeout(demoTimer)
-    }
-  },
-)
-
-onUnmounted(() => {
-  if (demoTimer) clearTimeout(demoTimer)
-})
-
-const demoMessage = computed(() => {
-  if (props.demoError) return `Demo setup failed: ${props.demoError}`
-  if (demoTimedOut.value && !demoLoading.value)
-    return 'Demo setup is taking longer than expected. Tap Demo Editor to retry.'
-  if (demoLoading.value) return 'Setting up the demo environment…'
-  return ''
-})
-
+const demoLoading = ref(getDefaultValueFromHash(URL_HASH_KEYS.DEMO, '') === 'true')
+const showCreator = ref(false)
 const emit = defineEmits([
   'demo-started',
   'sidebar-screen-selected',
@@ -113,8 +57,12 @@ const emit = defineEmits([
   'documentation-key-selected',
 ])
 const startDemo = () => {
-  beginDemoLoading()
+  demoLoading.value = true
+
   emit('demo-started')
+  setTimeout(() => {
+    demoLoading.value = false
+  }, 30000)
 }
 
 const hasConnections = computed(() => {
@@ -250,12 +198,6 @@ h1 {
 
 .btn-tertiary:hover {
   background-color: #545b62;
-}
-
-.demo-message {
-  margin-top: 16px;
-  font-size: 14px;
-  color: var(--text-faint, #6c757d);
 }
 
 .spinner {
