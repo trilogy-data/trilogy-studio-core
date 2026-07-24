@@ -62,7 +62,51 @@ select unnest(x) as rows;
 test('test_demo_deep_link', async ({ page }) => {
   // #demo=true lands directly in a connected demo editor with no clicks
   await page.goto('#skipTips=true&demo=true')
-  await page.getByTestId('editor-run-button').click()
+  await runEditorQueryAndExpectCount(page, 4, 120000)
+  await page.getByRole('gridcell', { name: 'R' }).click()
+})
+
+test('test_demo_deep_link_with_persisted_state', async ({ page, isMobile }) => {
+  // Regression: the demo bootstrap must not race persisted-workspace
+  // hydration. A revisit with existing IndexedDB/localStorage data hydrates
+  // stores asynchronously; running the deep link before hydration finishes
+  // used to let hydration clobber the fresh demo connection (or duplicate the
+  // demo workspace) on mobile, which skipped the storesLoaded guard.
+  await page.goto('#skipTips=true&demo=true')
+  await runEditorQueryAndExpectCount(page, 4, 120000)
+
+  // Revisit: cold document load with the deep link AND persisted state.
+  // replaceState avoids firing hashchange before the reload so this exercises
+  // the mounted() bootstrap path, not the hashchange relaunch path.
+  await page.evaluate(() => {
+    window.history.replaceState(null, '', '#skipTips=true&demo=true')
+  })
+  await page.reload()
+  await runEditorQueryAndExpectCount(page, 4, 120000)
+
+  // The repeat bootstrap reused the existing workspace: exactly one demo editor
+  await openSidebarScreen(page, 'editors', isMobile)
+  if (isMobile) {
+    await drillMobileTree(page, ['Browser Storage', 'demo-model-connection'])
+  }
+  await expect(
+    page.getByTestId(
+      `editor-e-local-${localConnectionId('demo-model-connection')}-tutorial_one_basic`,
+    ),
+  ).toHaveCount(1)
+})
+
+test('test_demo_deep_link_same_document', async ({ page }) => {
+  // Regression: navigating to #demo=true while the app is ALREADY loaded
+  // (Safari restoring a tab, tapping the link twice) is a same-document
+  // navigation — mounted never re-runs. The demo must still launch from the
+  // hashchange, not strand the user on the welcome screen with a spinner.
+  await page.goto('#skipTips=true')
+  await expect(page.getByTestId('demo-editor-button')).toBeVisible()
+
+  // Only the hash differs, so this does not reload the document
+  await page.goto('#skipTips=true&demo=true')
+  await runEditorQueryAndExpectCount(page, 4, 120000)
   await page.getByRole('gridcell', { name: 'R' }).click()
 })
 
