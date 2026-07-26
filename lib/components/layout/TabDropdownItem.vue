@@ -11,6 +11,7 @@
     @touchstart="onTouchStart"
     @touchmove="onTouchMove"
     @touchend="onTouchEnd"
+    @touchcancel="onTouchCancel"
     :style="swipeStyle"
   >
     <div :class="['tab-dropdown-item', { active: isActive }]" @click="handleClick">
@@ -27,6 +28,20 @@
 
 <script lang="ts">
 import { type Tab } from '../../stores/useScreenNavigation'
+
+/** How far a finger must travel before we decide it's a swipe and not a scroll. */
+const DIRECTION_SLOP = 10
+
+/** Matches the CSS transition on the wrapper, so the row is gone once it lands. */
+const CLOSE_ANIMATION_MS = 200
+
+/**
+ * 'idle'    - no touch in progress, or this row declined the gesture
+ * 'pending' - touch down, direction not yet known
+ * 'swipe'   - we own the gesture and are dragging the row
+ * 'scroll'  - the list owns the gesture; stay out of its way
+ */
+type Gesture = 'idle' | 'pending' | 'swipe' | 'scroll'
 
 export default {
   name: 'TabDropdownItem',
@@ -47,20 +62,19 @@ export default {
       type: Number,
       default: 100,
     },
-    disabled: {
-      type: Boolean,
-      default: false,
-    },
   },
   emits: ['select', 'close'],
   data() {
     return {
+      gesture: 'idle' as Gesture,
       isSwiping: false,
       isClosing: false,
       swipeStartX: 0,
-      swipeCurrentX: 0,
+      swipeStartY: 0,
       swipePosition: 0,
       maxSwipeDistance: 150,
+      closeTimer: null as ReturnType<typeof setTimeout> | null,
+      resetTimer: null as ReturnType<typeof setTimeout> | null,
     }
   },
   computed: {
@@ -73,75 +87,98 @@ export default {
   },
   methods: {
     handleClick() {
-      if (!this.isSwiping && !this.isClosing && !this.disabled) {
+      if (!this.isSwiping && !this.isClosing) {
         this.$emit('select', this.tab)
       }
     },
 
     onTouchStart(event: TouchEvent) {
-      if (this.disabled || this.isActive || event.touches.length !== 1) return
+      // The active row can't be swiped away, and a row already animating out is
+      // no longer interactive; both leave the gesture to the list.
+      if (this.isActive || this.isClosing || event.touches.length !== 1) {
+        this.gesture = 'idle'
+        return
+      }
 
+      this.gesture = 'pending'
       this.swipeStartX = event.touches[0].clientX
-      this.swipeCurrentX = this.swipeStartX
-      this.isSwiping = true
-
-      // Prevent text selection
-      event.preventDefault()
+      this.swipeStartY = event.touches[0].clientY
     },
 
     onTouchMove(event: TouchEvent) {
-      if (!this.isSwiping || event.touches.length !== 1) return
+      if ((this.gesture !== 'pending' && this.gesture !== 'swipe') || event.touches.length !== 1) {
+        return
+      }
 
-      event.preventDefault() // Prevent scrolling while swiping
+      const deltaX = event.touches[0].clientX - this.swipeStartX
+      const deltaY = event.touches[0].clientY - this.swipeStartY
 
-      this.swipeCurrentX = event.touches[0].clientX
-      const deltaX = this.swipeCurrentX - this.swipeStartX
+      if (this.gesture === 'pending') {
+        // Hold off until the finger commits to a direction. Claiming every touch
+        // up front meant a drag anywhere on a row was swallowed as a swipe, so a
+        // long tab list could only be scrolled by grabbing the container padding.
+        if (Math.abs(deltaX) < DIRECTION_SLOP && Math.abs(deltaY) < DIRECTION_SLOP) return
 
-      // Only allow left swipe (negative deltaX)
-      if (deltaX < 0) {
-        this.swipePosition = Math.max(deltaX, -this.maxSwipeDistance)
+        // Rightward drags are not a close gesture: the row can't travel that way,
+        // so treating them as one closed tabs with no visible warning.
+        if (Math.abs(deltaY) >= Math.abs(deltaX) || deltaX > 0) {
+          this.gesture = 'scroll'
+          return
+        }
+
+        this.gesture = 'swipe'
+        this.isSwiping = true
+      }
+
+      // Only suppress scrolling once the gesture is provably ours.
+      event.preventDefault()
+      this.swipePosition = Math.min(0, Math.max(deltaX, -this.maxSwipeDistance))
+    },
+
+    onTouchEnd() {
+      const wasSwiping = this.gesture === 'swipe'
+      this.gesture = 'idle'
+      if (!wasSwiping) return
+
+      // Test the rendered offset, not the raw delta, so the decision matches what
+      // the user actually saw the row do.
+      if (this.swipePosition <= -this.swipeThreshold) {
+        this.closeTab()
       } else {
-        this.swipePosition = 0
+        // A short swipe just snaps back. It used to fall through to `select`, so
+        // a close attempt that came up short navigated somewhere instead.
+        this.resetSwipe()
       }
     },
 
-    onTouchEnd(_: TouchEvent) {
-      if (!this.isSwiping) return
-
-      const deltaX = this.swipeCurrentX - this.swipeStartX
-
-      if (Math.abs(deltaX) > this.swipeThreshold) {
-        // Trigger close
-        this.closeTab()
-      } else {
-        // Snap back to original position
-        // emit a click
-        this.$emit('select', this.tab)
-        this.resetSwipe()
-      }
+    onTouchCancel() {
+      if (this.gesture === 'swipe') this.resetSwipe()
+      this.gesture = 'idle'
     },
 
     closeTab() {
       this.isClosing = true
       this.swipePosition = -300 // Animate full swipe out
 
-      setTimeout(() => {
+      this.closeTimer = setTimeout(() => {
+        this.closeTimer = null
         this.$emit('close', this.tab.id)
-      }, 200)
+      }, CLOSE_ANIMATION_MS)
     },
 
     resetSwipe() {
       this.swipePosition = 0
-      setTimeout(() => {
+      // Held past the animation so the trailing click doesn't read as a tap.
+      this.resetTimer = setTimeout(() => {
+        this.resetTimer = null
         this.isSwiping = false
-      }, 200)
+      }, CLOSE_ANIMATION_MS)
     },
+  },
 
-    // Public method for programmatic closing (for batch operations)
-    triggerClose() {
-      if (this.isActive) return
-      this.closeTab()
-    },
+  beforeUnmount() {
+    if (this.closeTimer) clearTimeout(this.closeTimer)
+    if (this.resetTimer) clearTimeout(this.resetTimer)
   },
 }
 </script>
