@@ -51,16 +51,23 @@ describe('mobile viewport height declarations', () => {
     expect(offenders).toEqual([])
   })
 
-  it('the dashboard dock ties its bottom edge to --mobile-viewport-height', () => {
-    // iOS Safari 26.0 can end the layout viewport (which anchors position:
-    // fixed) above the visual viewport the panes are sized to, so a plain
-    // bottom: 0 dock floats with the dashboard visible in the gutter below it.
-    // The dock must keep the min()-clamped compensation to the measured
-    // viewport height; no browser we can automate reproduces the mismatch.
+  it('the dashboard dock stays at bottom: 0 and underpaints the chrome strip', () => {
+    // With viewport-fit=cover the page paints behind iOS Safari's translucent
+    // bottom chrome, but WebKit anchors position: fixed elements above the
+    // chrome, so dashboard content showed through the strip below the dock.
+    // Repositioning the dock into that strip (e.g. compensating bottom with
+    // the layout/visual viewport delta) truncates the controls behind the
+    // chrome — that regression shipped once. The dock must keep bottom: 0 and
+    // instead extend its background downward with solid box-shadow copies,
+    // which are ink overflow and so can never create scrollable overflow.
+    // No browser we can automate reproduces any of this.
     const css = stripComments(styleText('../dashboard/DashboardHeader.vue'))
-    expect(css).toMatch(
-      /bottom:\s*min\(\s*0px,\s*calc\(100dvh\s*-\s*var\(--mobile-viewport-height,\s*100dvh\)\)\s*\)/,
-    )
+    const dockRules = [...css.matchAll(/\.filter-row\s*\{([^}]*)\}/g)].map((m) => m[1])
+    const fixedDock = dockRules.find((r) => /position:\s*fixed/.test(r))
+    expect(fixedDock, 'fixed mobile dock rule not found').toBeTruthy()
+    expect(fixedDock!).toMatch(/bottom:\s*0/)
+    expect(fixedDock!).toMatch(/0\s+100px\s+0\s+var\(--query-window-bg\)/)
+    expect(fixedDock!).toMatch(/0\s+200px\s+0\s+var\(--query-window-bg\)/)
   })
 
   it('the mobile panes keep a definite height driven by --mobile-viewport-height', () => {

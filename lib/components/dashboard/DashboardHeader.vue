@@ -709,16 +709,7 @@ const modeIcon = computed(() => {
   .filter-row {
     position: fixed;
     right: 0;
-    /* iOS Safari 26.0 anchors fixed elements to a layout viewport that can end
-       short of the visual viewport (WebKit bug, fixed in 26.1), so bottom: 0
-       left a gutter under the dock with the dashboard visible through it. The
-       calc term is that shortfall — 100dvh tracks the (possibly short) layout
-       viewport, --mobile-viewport-height is the measured visual one — pushing
-       the dock down to the same bottom edge the panes are sized to. min()
-       clamps it to plain bottom: 0 whenever the visual viewport is the smaller
-       one (healthy browsers, or iOS with the keyboard up, where lifting the
-       dock would fight the input-reveal pan). */
-    bottom: min(0px, calc(100dvh - var(--mobile-viewport-height, 100dvh)));
+    bottom: 0;
     left: 0;
     z-index: 90;
     box-sizing: border-box;
@@ -730,7 +721,20 @@ const modeIcon = computed(() => {
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
     background: var(--query-window-bg);
     border-top: 1px solid var(--border-light);
-    box-shadow: 0 -8px 20px rgba(15, 23, 42, 0.08);
+    /* The trailing solid shadows repaint the dock's rect 100px and 200px
+       lower. With viewport-fit=cover the page paints behind Safari's
+       translucent bottom chrome, but WebKit anchors fixed elements above the
+       chrome, so a strip of dashboard showed through "under" the dock. The
+       dock itself must stay at bottom: 0 — repositioning it into the strip
+       just truncates the controls behind the chrome — so we underpaint the
+       strip instead. Shadows are ink overflow, which by spec never becomes
+       scrollable overflow, so unlike a real element hanging below the
+       viewport this cannot reintroduce stray page panning. (Seam-free
+       because min-height 110px > the 100px step between copies.) */
+    box-shadow:
+      0 -8px 20px rgba(15, 23, 42, 0.08),
+      0 100px 0 var(--query-window-bg),
+      0 200px 0 var(--query-window-bg);
   }
 
   .filter-row > :first-child {
