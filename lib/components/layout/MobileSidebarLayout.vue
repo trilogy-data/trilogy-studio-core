@@ -34,9 +34,12 @@
           @keyup.esc="cancelTitleEditing"
         />
         <template v-else>
-          <div
+          <button
             v-if="!menuOpen && tabs.length > 1"
+            type="button"
             class="tab-dropdown-container"
+            aria-haspopup="menu"
+            :aria-expanded="tabDropdownOpen"
             @click="toggleTabDropdown"
             ref="tabDropdownContainer"
           >
@@ -45,7 +48,7 @@
               :class="['mdi', 'dropdown-arrow', { rotated: tabDropdownOpen }]"
               class="mdi-chevron-down"
             ></i>
-          </div>
+          </button>
           <span v-else class="header">{{ screenTitle }}</span>
         </template>
 
@@ -53,16 +56,13 @@
         <div
           v-if="tabDropdownOpen && tabs.length > 1"
           class="tab-dropdown"
+          role="menu"
           ref="tabDropdown"
           @click.stop
         >
           <!-- Batch Actions Header -->
           <div class="tab-dropdown-header" v-if="tabs.length > 2">
-            <button
-              class="close-others-btn"
-              @click="showCloseOthersConfirm = true"
-              :disabled="batchCloseInProgress"
-            >
+            <button type="button" class="close-others-btn" @click="showCloseOthersConfirm = true">
               <i class="mdi mdi-close-box-multiple-outline"></i>
               <span>Close other tabs</span>
             </button>
@@ -73,11 +73,9 @@
             <TabDropdownItem
               v-for="tab in tabs"
               :key="tab.id"
-              :ref="'tabItem-' + tab.id"
               :tab="tab"
               :is-active="isActiveTab(tab)"
               :icon="getTabIcon(tab.screen)"
-              :disabled="batchCloseInProgress"
               @select="selectTab"
               @close="closeTab"
             />
@@ -114,10 +112,10 @@
     </div>
 
     <div class="interface-wrap">
-      <div v-show="menuOpen" ref="sidebar" class="sidebar">
+      <div v-show="menuOpen" class="sidebar">
         <slot name="sidebar"></slot>
       </div>
-      <div v-show="!menuOpen" ref="content" class="nested-page-content" id="page-content">
+      <div v-show="!menuOpen" class="nested-page-content" id="page-content">
         <slot></slot>
       </div>
     </div>
@@ -128,11 +126,15 @@
       class="close-confirm-overlay"
       @click="showCloseOthersConfirm = false"
     >
-      <div class="close-confirm-dialog" @click.stop>
+      <div class="close-confirm-dialog" role="dialog" aria-modal="true" @click.stop>
         <p>Close {{ otherTabsCount }} other tabs?</p>
         <div class="confirm-buttons">
-          <button @click="showCloseOthersConfirm = false" class="cancel-btn">Cancel</button>
-          <button @click="executeCloseOthers" class="confirm-btn">Close Others</button>
+          <button type="button" @click="showCloseOthersConfirm = false" class="cancel-btn">
+            Cancel
+          </button>
+          <button type="button" @click="executeCloseOthers" class="confirm-btn">
+            Close Others
+          </button>
         </div>
       </div>
     </div>
@@ -144,10 +146,20 @@
   /* Single source of truth for the bar: the panes below subtract it, and
      Sidebar.vue reads it for its own mobile pane height. */
   --mobile-header-height: 35px;
-  /* Widest the control clusters can get (right side holds two buttons). The
-     title box is inset by this on both sides so it can never collide with them
-     and stays symmetric about the viewport centre. */
-  --mobile-header-gutter: 76px;
+  /* Widest the control clusters can get: 2 * 34px button + 12px slot padding on
+     the right, which holds two. The title box is inset by this on both sides so
+     it can never collide with them and stays symmetric about the viewport
+     centre. */
+  --mobile-header-gutter: 80px;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: var(--mobile-viewport-height, 100dvh);
+  /* No clipping here: the header is sticky and the dropdown overhangs it. */
+  overflow: visible;
 }
 
 .mobile-select-bar {
@@ -248,6 +260,12 @@
   display: flex;
   align-items: center;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   cursor: pointer;
   padding: 2px 6px;
   border-radius: 4px;
@@ -285,8 +303,6 @@
   z-index: 1001;
   min-width: 200px;
   max-width: 280px;
-  max-height: 300px;
-  overflow-y: auto;
   padding: 4px 0;
   margin-top: 4px;
 }
@@ -326,6 +342,9 @@
   font-size: 16px;
 }
 
+/* The only scroller in the dropdown: capping the wrapper too left an outer
+   scroll container that could never move, and kept the batch header from
+   staying put while the list scrolled under it. */
 .tab-dropdown-items {
   max-height: 240px;
   overflow-y: auto;
@@ -396,25 +415,13 @@
   background-color: var(--error-color-dark, #c82333);
 }
 
-.interface {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100vh;
-  height: var(--mobile-viewport-height, 100dvh);
-  /* Remove overflow hidden to allow sticky positioning */
-  overflow: visible;
-}
-
 .interface-wrap {
   display: flex;
   flex-wrap: nowrap;
   flex: 1 1 auto;
-  /* Remove max-height and padding-top since we're no longer using fixed positioning */
   isolation: isolate;
   box-sizing: border-box;
-  /* Allow natural scrolling flow */
+  /* The panes below own their scrolling; clipping here would fight them. */
   overflow: visible;
 }
 
@@ -444,13 +451,11 @@
   position: relative;
 }
 
-
 /* Ensure safe area insets are respected on newer iPhones */
 @media screen and (max-width: 768px) {
   .mobile-select-bar {
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
-    /* Remove top positioning since sticky handles this naturally */
   }
 }
 
@@ -461,9 +466,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import TabDropdownItem from './TabDropdownItem.vue'
+import { getTabIcon, getScreenLabel } from './screenPresentation'
 import { type Tab } from '../../stores/useScreenNavigation'
-
-type IconMapKey = keyof typeof iconMap.value
 
 export interface Props {
   menuOpen: boolean
@@ -496,7 +500,6 @@ const emit = defineEmits<{
 // Reactive data
 const tabDropdownOpen = ref(false)
 const showCloseOthersConfirm = ref(false)
-const batchCloseInProgress = ref(false)
 const titleEditing = ref(false)
 const editableTitle = ref('')
 /** What the in-progress edit was started on; see finishTitleEditing. */
@@ -505,27 +508,7 @@ const titleEditTarget = ref<string | null>(null)
 // Template refs
 const tabDropdownContainer = ref<HTMLElement>()
 const tabDropdown = ref<HTMLElement>()
-const sidebar = ref<HTMLElement>()
-const content = ref<HTMLElement>()
 const titleInput = ref<HTMLInputElement>()
-
-// Icon mapping that matches the desktop tabbed component
-const iconMap = ref({
-  editors: 'mdi mdi-file-document-edit-outline',
-  connections: 'mdi mdi-database-outline',
-  llms: 'mdi mdi-creation-outline',
-  dashboard: 'mdi mdi-chart-multiple',
-  'dashboard-import': 'mdi mdi-chart-multiple',
-  'asset-import': 'mdi mdi-import',
-  models: 'mdi mdi-set-center',
-  'community-models': 'mdi mdi-library-outline',
-  jobs: 'mdi mdi-playlist-play',
-  tutorial: 'mdi mdi-help',
-  settings: 'mdi mdi-cog-outline',
-  profile: 'mdi mdi-account-outline',
-  welcome: 'mdi mdi-home-outline',
-  '': 'mdi mdi-file-document-outline',
-} as const)
 
 // Computed properties
 const screenTitle = computed(() => {
@@ -533,10 +516,7 @@ const screenTitle = computed(() => {
     return props.mobileNavigationLevel === 'detail' ? props.mobileNavigationTitle : 'Menu'
   }
   if (props.activeScreen) {
-    return props.activeScreen
-      .split('-')
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ')
+    return getScreenLabel(props.activeScreen)
   }
   return 'Trilogy'
 })
@@ -597,6 +577,11 @@ const closeTabDropdown = (): void => {
   tabDropdownOpen.value = false
 }
 
+// The template also gates the dropdown on these: opening the drawer or dropping
+// back to a single tab hides it without clearing the flag, and it would then pop
+// back open unprompted the next time the trigger renders.
+watch([() => props.menuOpen, () => props.tabs.length], closeTabDropdown)
+
 const startTitleEditing = async (): Promise<void> => {
   if (!props.titleEditable || props.menuOpen) return
   editableTitle.value = currentTabTitle.value
@@ -646,15 +631,15 @@ const isActiveTab = (tab: Tab): boolean => {
   return tab.id === props.activeTab
 }
 
-const getTabIcon = (screenType: string): string => {
-  return iconMap.value[screenType as IconMapKey] || 'mdi mdi-file-document-outline'
-}
-
 const executeCloseOthers = (): void => {
   showCloseOthersConfirm.value = false
-  emit('close-other-tabs', props.activeTab as string)
+  // Without a tab to keep, "close others" would close everything.
+  if (!props.activeTab) return
+  emit('close-other-tabs', props.activeTab)
 }
 
+// Spelled out rather than `emit(leftControl.value.event)`: the emit overloads
+// don't accept a union of event names.
 const emitLeftControl = (): void => {
   if (leftControl.value.event === 'menu-back') emit('menu-back')
   else emit('menu-toggled')
@@ -673,12 +658,25 @@ const handleOutsideClick = (event: Event): void => {
   }
 }
 
+// Escape dismisses the topmost layer only, so it unwinds one step at a time
+// rather than clearing the confirm and the dropdown behind it in one press.
+const handleEscape = (event: KeyboardEvent): void => {
+  if (event.key !== 'Escape') return
+  if (showCloseOthersConfirm.value) {
+    showCloseOthersConfirm.value = false
+  } else if (tabDropdownOpen.value) {
+    closeTabDropdown()
+  }
+}
+
 // Lifecycle hooks
 onMounted(() => {
   document.addEventListener('click', handleOutsideClick)
+  document.addEventListener('keydown', handleEscape)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleOutsideClick)
+  document.removeEventListener('keydown', handleEscape)
 })
 </script>

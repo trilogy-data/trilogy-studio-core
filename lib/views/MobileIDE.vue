@@ -319,11 +319,12 @@ const MobileIDEComponent: Component = defineComponent({
     const tabSelected = (e: Tab) => {
       openTab(e.screen, null, e.address)
     }
-    const handleTabClosed = (tab: Tab) => {
-      closeTab(tab.id, null)
+    // Both of these arrive as a tab id, not a Tab.
+    const handleTabClosed = (tabId: string) => {
+      closeTab(tabId, null)
     }
-    const handleCloseOtherTabs = (tab: Tab) => {
-      closeOtherTabsExcept(tab.id)
+    const handleCloseOtherTabs = (tabId: string) => {
+      closeOtherTabsExcept(tabId)
     }
     onInitialLoad()
     addBackListeners()

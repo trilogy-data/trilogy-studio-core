@@ -65,6 +65,7 @@ import useEditorStore from '../../stores/editorStore'
 import useConnectionStore from '../../stores/connectionStore'
 import useChatStore from '../../stores/chatStore'
 import type { Status } from '../StatusIcon.vue'
+import { getTabIcon } from './screenPresentation'
 
 export default defineComponent({
   name: 'TabbedLayout',
@@ -146,22 +147,6 @@ export default defineComponent({
         targetTabId: '',
         targetTabIndex: -1,
       },
-      iconMap: {
-        editors: 'mdi mdi-file-document-edit-outline',
-        connections: 'mdi mdi-database-outline',
-        llms: 'mdi mdi-creation-outline',
-        dashboard: 'mdi mdi-chart-multiple',
-        'dashboard-import': 'mdi mdi-chart-multiple',
-        'asset-import': 'mdi mdi-import',
-        models: 'mdi mdi-set-center',
-        'community-models': 'mdi mdi-library-outline',
-        jobs: 'mdi mdi-playlist-play',
-        tutorial: 'mdi mdi-help',
-        settings: 'mdi mdi-cog-outline',
-        profile: 'mdi mdi-account-outline',
-        welcome: 'mdi mdi-home-outline',
-        '': 'mdi mdi-file-document-outline',
-      } as Record<ScreenType, string>,
     }
   },
   computed: {
@@ -170,9 +155,7 @@ export default defineComponent({
     },
   },
   methods: {
-    getTabIcon(screenType: ScreenType): string {
-      return this.iconMap[screenType] || 'mdi mdi-file-document-outline'
-    },
+    getTabIcon,
 
     selectTab(tabId: string): void {
       this.setActiveTab(tabId)
