@@ -4,7 +4,10 @@
 <head>
 	<meta charset="UTF-8" />
 	<link rel="icon" type="image/png+xml" href="/trilogy.png" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<!-- viewport-fit=cover: without it iOS reports every env(safe-area-inset-*) as
+	     0, so the bottom-docked mobile controls sat flush against the screen edge
+	     and were overlapped by the home indicator / minimized Safari tab bar. -->
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 	<meta name="google-site-verification" content="xpSs_GFAJnR-mRHMuyU_nvwNsq2rK6iwXHBu3aBRZuA" />
 	<script src="https://accounts.google.com/gsi/client" async></script>
 	<meta http-equiv="Content-Security-Policy" content="

@@ -67,6 +67,15 @@ const createHeadlineLayer = (
     ? `min(10 , max(8, (height * 0.4) / (${total} * max(1, sqrt(${maxLabelLength})))))` // Mobile labels
     : `min(14, max(10, (width * 0.3) / (${total} * max(1, sqrt(${maxLabelLength} * 1.2)))))` // Desktop labels
 
+  // Mobile text values stack on a fixed pitch — half the value glyph + the
+  // 20px value-to-label offset + the label + a 10px gap between blocks —
+  // capped at an even spread so large stacks still fit the cell. Spreading by
+  // percent-of-height left far too much air between a handful of metrics.
+  const mobileStackOffset =
+    total > 1
+      ? `(${index - (total + 1) / 2}) * min((0.7 * height) / ${total - 1}, (${fontSizeFormula}) / 2 + (${labelFontSizeFormula}) + 30)`
+      : '0'
+
   let topMark = {}
   let includeLabel = includeLabelSetting
   let selectMarks: object[] = []
@@ -152,7 +161,7 @@ const createHeadlineLayer = (
         align: 'center',
         baseline: 'middle',
         dx: isMobile ? 0 : { expr: `(${xOffset} / 100) * width` }, // Horizontal offset for desktop
-        dy: isMobile ? { expr: `(${yOffset} / 100) * height - 20` } : -5, // Vertical offset for mobile, fixed for desktop
+        dy: isMobile ? { expr: `${mobileStackOffset} - 20` } : -5, // Stacked offset for mobile, fixed for desktop
       },
       encoding: {
         text: {
@@ -186,7 +195,7 @@ const createHeadlineLayer = (
       align: 'center',
       baseline: 'top',
       dx: isMobile ? 0 : { expr: `(${xOffset} / 100) * width` }, // Same offset as the value for desktop
-      dy: isMobile ? { expr: `(${yOffset} / 100) * height` } : 15, // Vertical offset for mobile, fixed for desktop
+      dy: isMobile ? { expr: mobileStackOffset } : 15, // Stacked offset for mobile, fixed for desktop
     },
     encoding: {
       text: { value: snakeCaseToCapitalizedWords(column) },

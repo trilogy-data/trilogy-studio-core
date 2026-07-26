@@ -199,7 +199,10 @@ const asyncPage = (loader: () => Promise<any>) =>
   defineAsyncComponent({
     loader,
     loadingComponent: PageLoading,
-    delay: 150,
+    /* No delay: a deferred placeholder reads as a white flash between the app
+       splash and the loaded page; the skeleton unmounts as soon as the chunk
+       resolves, so already-cached loads barely show it. */
+    delay: 0,
   })
 
 const TutorialPage = asyncPage(() => import('./TutorialPage.vue'))
@@ -343,9 +346,18 @@ const MobileIDEComponent: Component = defineComponent({
     const chatCreatorPreselectedConnection = ref('')
     const mobileViewportHeight = ref('100dvh')
     const updateMobileViewportHeight = () => {
-      mobileViewportHeight.value = window.visualViewport
-        ? `${window.visualViewport.height}px`
-        : `${window.innerHeight}px`
+      const viewport = window.visualViewport
+      mobileViewportHeight.value = viewport ? `${viewport.height}px` : `${window.innerHeight}px`
+      // iOS Safari scrolls the document to reveal a focused input (e.g. the
+      // bottom-docked dashboard filter) even though the app manages all
+      // scrolling internally, and can leave that scroll behind after the
+      // keyboard closes — shifting the whole app up so the header is cut off
+      // at the top. Only reset once the viewport is back to full height:
+      // while the keyboard is up (viewport shrunk) that scroll is what keeps
+      // the focused input visible.
+      if (viewport && viewport.height >= window.innerHeight - 1 && window.scrollY > 0) {
+        window.scrollTo(0, 0)
+      }
     }
 
     onMounted(() => {

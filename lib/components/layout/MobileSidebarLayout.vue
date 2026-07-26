@@ -144,8 +144,10 @@
 <style scoped>
 .interface {
   /* Single source of truth for the bar: the panes below subtract it, and
-     Sidebar.vue reads it for its own mobile pane height. */
-  --mobile-header-height: 35px;
+     Sidebar.vue reads it for its own mobile pane height. Includes the top
+     safe-area inset (non-zero when running full-bleed, e.g. added to home
+     screen) so the bar's content is never under the status bar. */
+  --mobile-header-height: calc(35px + env(safe-area-inset-top, 0px));
   /* Widest the control clusters can get: 2 * 34px button + 12px slot padding on
      the right, which holds two. The title box is inset by this on both sides so
      it can never collide with them and stays symmetric about the viewport
@@ -167,8 +169,10 @@
   top: 0;
   z-index: 100;
   width: 100%;
+  box-sizing: border-box;
   height: var(--mobile-header-height);
   min-height: var(--mobile-header-height);
+  padding-top: env(safe-area-inset-top, 0px);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
