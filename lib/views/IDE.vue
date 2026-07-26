@@ -258,7 +258,10 @@ const asyncPage = (loader: () => Promise<any>) =>
   defineAsyncComponent({
     loader,
     loadingComponent: PageLoading,
-    delay: 150,
+    /* No delay: a deferred placeholder reads as a white flash between the app
+       splash and the loaded page; the skeleton unmounts as soon as the chunk
+       resolves, so already-cached loads barely show it. */
+    delay: 0,
   })
 
 // Lazy load all page components

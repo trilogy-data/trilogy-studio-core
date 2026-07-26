@@ -254,13 +254,44 @@ describe('createHeadlineSpec', (): void => {
         mockIntChart,
       )
 
-      // Single metric should have centered positioning
+      // Single metric should have centered positioning: a bare 0 offset for
+      // the label, and the fixed -20 value-above-label shift for the value.
       const layersWithDy = spec.layer.filter(
         (layer: any) => layer.mark.dy && typeof layer.mark.dy === 'object',
       )
+      expect(layersWithDy.length).toBeGreaterThan(0)
       layersWithDy.forEach((layer: any): void => {
-        expect(layer.mark.dy.expr).toContain('(0 / 100)')
+        expect(['0', '0 - 20']).toContain(layer.mark.dy.expr)
       })
+    })
+
+    it('should stack multiple metrics on a capped fixed pitch', (): void => {
+      const spec = createHeadlineSpec(
+        mockConfig,
+        mockData,
+        mockColumns,
+        'light' as Theme,
+        true,
+        mockIntChart,
+      )
+
+      // 4 metrics: offsets are index-centred multiples of a pitch that is the
+      // block height plus a 10px gap, capped at an even spread of the cell.
+      const dyExprs: string[] = spec.layer.map((layer: any) => layer.mark.dy?.expr).filter(Boolean)
+      expect(dyExprs.length).toBeGreaterThan(0)
+      dyExprs.forEach((expr: string): void => {
+        expect(expr).toContain('min((0.7 * height) / 3,')
+        expect(expr).toContain('+ 30)')
+      })
+
+      // The stack is centred: offsets are symmetric around 0.
+      const multipliers = dyExprs.map((expr: string): number => {
+        const match = expr.match(/^\((-?[\d.]+)\) \* min/)
+        expect(match).toBeTruthy()
+        return Number(match![1])
+      })
+      expect(Math.min(...multipliers)).toBe(-1.5)
+      expect(Math.max(...multipliers)).toBe(1.5)
     })
 
     it('should use smaller font sizes for mobile', (): void => {
