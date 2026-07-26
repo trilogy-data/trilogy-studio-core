@@ -51,6 +51,18 @@ describe('mobile viewport height declarations', () => {
     expect(offenders).toEqual([])
   })
 
+  it('the dashboard dock ties its bottom edge to --mobile-viewport-height', () => {
+    // iOS Safari 26.0 can end the layout viewport (which anchors position:
+    // fixed) above the visual viewport the panes are sized to, so a plain
+    // bottom: 0 dock floats with the dashboard visible in the gutter below it.
+    // The dock must keep the min()-clamped compensation to the measured
+    // viewport height; no browser we can automate reproduces the mismatch.
+    const css = stripComments(styleText('../dashboard/DashboardHeader.vue'))
+    expect(css).toMatch(
+      /bottom:\s*min\(\s*0px,\s*calc\(100dvh\s*-\s*var\(--mobile-viewport-height,\s*100dvh\)\)\s*\)/,
+    )
+  })
+
   it('the mobile panes keep a definite height driven by --mobile-viewport-height', () => {
     const css = stripComments(styleText('MobileSidebarLayout.vue'))
     // Both scrollable panes must retain a definite height; #page-content in
