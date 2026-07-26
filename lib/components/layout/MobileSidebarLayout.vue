@@ -444,28 +444,6 @@
   position: relative;
 }
 
-/* No iOS `-webkit-fill-available` override here on purpose.
-   `-webkit-fill-available` is a keyword, not a length, so it is illegal inside
-   calc(). Written as `calc(-webkit-fill-available - var(--mobile-header-height))`
-   the var() defers validation to computed-value time, where the declaration is
-   "invalid at computed-value time" — that does NOT fall back to the previous
-   declaration, it resets height to its initial `auto`. On iOS Safari (the only
-   engine matching -webkit-touch-callout) that collapsed the panes' definite
-   height, so #page-content stopped being a scroll container and dashboards —
-   which scroll #page-content rather than an inner element — could not be
-   scrolled at all.
-
-   Worth knowing how this armed itself: the rule sat here for a year as
-   `calc(-webkit-fill-available - 40px)`, which is invalid at PARSE time and so
-   was simply dropped — dead code. #231 swapped the literal for
-   var(--mobile-header-height) as part of centralising the bar height. Same
-   value, but it moved the failure from parse time to computed-value time and
-   turned a corpse into a live bug. Substituting a var() into a calc() is not a
-   no-op; it changes which error-handling rule applies.
-
-   --mobile-viewport-height (visualViewport, set in MobileIDE) with a 100dvh
-   fallback already handles the iOS URL-bar resize, and tracks it more
-   accurately than -webkit-fill-available's largest-viewport sizing. */
 
 /* Ensure safe area insets are respected on newer iPhones */
 @media screen and (max-width: 768px) {
