@@ -1,4 +1,4 @@
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 from dataclasses import dataclass
 from trilogy import Dialects, Environment
 from trilogy.authoring import Concept
@@ -83,10 +83,15 @@ class ModelSourceReponse:
     files: dict[str, str]
 
 
-# Create an MCP server
-mcp = FastMCP(
+# Create an MCP server.
+#
+# `instructions` is keyword-only here on purpose: FastMCP 1.x took it as the
+# second positional argument, but MCPServer's second positional is `title`.
+# Passing it positionally would silently demote the guidance below to a display
+# name and leave clients with no instructions at all.
+mcp = MCPServer(
     "Trilogy Language Tools",
-    "Use to fetch Trilogy models and run Trilogy Queries. Trilogy is a SQL-like language for data access and transformation.",
+    instructions="Use to fetch Trilogy models and run Trilogy Queries. Trilogy is a SQL-like language for data access and transformation.",
 )
 
 
@@ -128,7 +133,10 @@ def datatype_to_str_datatype(
     if isinstance(datatype, StructComponent):
         return f"{datatype.name}:{datatype_to_str_datatype(datatype.type)}>"
     elif isinstance(datatype, EnumType):
-        return f"ENUM<{datatype_to_str_datatype(datatype.data_type)}[{','.join(datatype.values)}]>"
+        # EnumType.values is list[Any] — numeric enums are common, so joining
+        # the raw values raises TypeError.
+        values = ",".join(str(value) for value in datatype.values)
+        return f"ENUM<{datatype_to_str_datatype(datatype.data_type)}[{values}]>"
     elif isinstance(datatype, ValidatedType):
         return str(datatype)
     return str(datatype.name)
