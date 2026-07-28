@@ -53,6 +53,7 @@
           :is-active="activeDashboardKey === item.id"
           :is-collapsed="collapsed[item.key]"
           @click="handleDashboardTreeClick(item)"
+          @toggle="handleDashboardTreeToggle(item)"
           @delete="showDeleteConfirmation"
         />
       </template>
@@ -338,6 +339,11 @@ export default {
     handleDashboardTreeClick(item: any) {
       if (this.isMobile) (this.$refs.mobileTree as any)?.openItem(item)
       else this.clickAction(item)
+    },
+    handleDashboardTreeToggle(item: any) {
+      // Mobile hides the chevrons and drills through the tree instead.
+      if (this.isMobile) (this.$refs.mobileTree as any)?.openItem(item)
+      else this.toggleCollapse(item.key)
     },
   },
   components: {

@@ -260,7 +260,7 @@ export default {
         Object.values(editorStore.editors),
         // MobileTreeList owns disclosure on mobile and needs the complete flat
         // tree to calculate counts and navigate without expanding desktop rows.
-        isMobile || searchQuery.value ? {} : collapsed.value,
+        isMobile.value || searchQuery.value ? {} : collapsed.value,
         hiddenTags.value,
       )
       if (!searchQuery.value) return list
