@@ -3,7 +3,9 @@ mypy
 ruff
 types-click-default-group
 types-requests
-mcp[cli]
+# mcp 2.0 removed mcp.server.fastmcp (now mcp.server.mcpserver); mcp_server.py
+# still targets the 1.x FastMCP API, so hold the major until it is ported.
+mcp[cli]>=1.12,<2
 pytrilogy>=0.3.289
 fastapi
 click-default-group

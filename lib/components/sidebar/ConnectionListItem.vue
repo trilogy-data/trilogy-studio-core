@@ -492,7 +492,7 @@ export default {
       }
 
       const items: ContextMenuItem[] = []
-      if (isMobile) {
+      if (isMobile.value) {
         items.push({ id: 'query-history', label: 'Query history', icon: 'mdi-history' })
       }
       items.push(

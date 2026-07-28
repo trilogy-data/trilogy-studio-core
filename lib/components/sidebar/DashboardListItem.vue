@@ -178,7 +178,10 @@ export default {
       this.$emit('click', this.item)
     },
     handleToggle() {
-      this.$emit('click', this.item) // Maintain existing behavior
+      // The chevron must only open/close the row. Routing it through `click`
+      // navigated away instead, so a dashboard with investigations could never
+      // be collapsed from its chevron.
+      this.$emit('toggle', this.item)
     },
     handleDelete() {
       this.$emit('delete', this.item.dashboard)
