@@ -11,7 +11,7 @@ def test_create_model_connection():
     results = c.execute_query("""
 select
     origin.city,
-    count(id2) ->flight_count
+    count(id) ->flight_count
     order by flight_count desc limit 10;""").fetchall()
 
     assert results[0].origin_city == "CHICAGO"
@@ -32,7 +32,7 @@ def test_run_trilogy_query():
     results = run_trilogy_query(
         """select
     origin.city,
-    count(id2) ->flight_count
+    count(id) ->flight_count
     order by flight_count desc limit 10;""",
         "test_duckdb_faa",
     )
