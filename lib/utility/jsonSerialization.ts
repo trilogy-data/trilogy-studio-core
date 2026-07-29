@@ -1,8 +1,6 @@
 type SerializablePrimitive = string | number | boolean | null
 type SerializableValue =
-  | SerializablePrimitive
-  | SerializableValue[]
-  | { [key: string]: SerializableValue }
+  SerializablePrimitive | SerializableValue[] | { [key: string]: SerializableValue }
 
 function normalizeBigInt(value: bigint): string | number {
   const asNumber = Number(value)

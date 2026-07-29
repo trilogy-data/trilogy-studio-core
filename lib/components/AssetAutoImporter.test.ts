@@ -123,7 +123,10 @@ vi.mock('../stores/useScreenNavigation', () => ({
 }))
 
 vi.mock('../models/helpers', () => ({
-  ModelImportService: vi.fn(() => mockModelImportService),
+  // Must be a `function` (not an arrow) so vitest treats the mock as constructable
+  ModelImportService: vi.fn(function () {
+    return mockModelImportService
+  }),
 }))
 
 vi.mock('../remotes/remoteStoreSync', () => ({

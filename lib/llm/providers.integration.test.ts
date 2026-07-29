@@ -30,7 +30,7 @@ describe.skipIf(!ANTHROPIC_KEY)('Anthropic Provider Integration', () => {
   let provider: AnthropicProvider
 
   beforeAll(() => {
-    provider = new AnthropicProvider('test-anthropic', ANTHROPIC_KEY!, 'claude-sonnet-4-20250514')
+    provider = new AnthropicProvider('test-anthropic', ANTHROPIC_KEY!, 'claude-haiku-4-5')
   })
 
   it('should connect and fetch models', async () => {

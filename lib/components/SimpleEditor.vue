@@ -91,8 +91,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType, inject } from 'vue'
-import { KeyMod, KeyCode, Range } from 'monaco-editor'
-import { editor } from 'monaco-editor/esm/vs/editor/editor.api'
+import { KeyMod, KeyCode, Range, editor } from 'monaco-editor'
 import {
   configureEditorTheme,
   createMonacoEditor,

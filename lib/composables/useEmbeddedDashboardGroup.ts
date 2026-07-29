@@ -148,8 +148,7 @@ export function useEmbeddedDashboardGroup(options: UseEmbeddedDashboardGroupOpti
     const priority = itemOptions.priority ?? 0
     ensureLayout(itemOptions.itemId, priority)
     const existing = dashboard.gridItems[itemOptions.itemId] as unknown as
-      | EmbeddedDashboardGroupItemState
-      | undefined
+      EmbeddedDashboardGroupItemState | undefined
     if (!existing) {
       dashboard.gridItems[itemOptions.itemId] = createItemState(itemOptions)
       return
@@ -213,8 +212,7 @@ export function useEmbeddedDashboardGroup(options: UseEmbeddedDashboardGroupOpti
     }
 
     const item = dashboard.gridItems[itemId] as unknown as
-      | EmbeddedDashboardGroupItemState
-      | undefined
+      EmbeddedDashboardGroupItemState | undefined
     if (!item) {
       return {
         type: CELL_TYPES.CHART,
@@ -257,8 +255,7 @@ export function useEmbeddedDashboardGroup(options: UseEmbeddedDashboardGroupOpti
     }
 
     const item = dashboard.gridItems[itemId] as unknown as
-      | EmbeddedDashboardGroupItemState
-      | undefined
+      EmbeddedDashboardGroupItemState | undefined
     if (!item) {
       return
     }

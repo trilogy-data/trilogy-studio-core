@@ -86,8 +86,7 @@ export default defineComponent({
   setup() {
     const storageSources = inject<AbstractStorage[]>('storageSources', [])
     const local = (storageSources || []).find((s) => s instanceof LocalStorage) as
-      | LocalStorage
-      | undefined
+      LocalStorage | undefined
 
     const rows = ref<UsageRow[]>([])
     const loading = ref(false)

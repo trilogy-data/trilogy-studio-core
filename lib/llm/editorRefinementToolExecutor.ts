@@ -22,7 +22,8 @@ export interface QueryExecutionResult {
   success: boolean
   results?: {
     headers: string[]
-    data: any[][]
+    // Rows are column-name keyed objects (see Row in editors/results), not positional arrays
+    data: any[]
   }
   error?: string
   executionTime?: number

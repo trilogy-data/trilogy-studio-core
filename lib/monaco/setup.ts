@@ -1,8 +1,7 @@
 //@ts-ignore
 
-import { Range } from 'monaco-editor'
+import { Range, languages } from 'monaco-editor'
 import { dataTypes } from '../language'
-import { languages } from 'monaco-editor/esm/vs/editor/editor.api'
 import useEditorStore from '../stores/editorStore'
 export function configureTrilogy() {
   languages.register({ id: 'trilogy' })

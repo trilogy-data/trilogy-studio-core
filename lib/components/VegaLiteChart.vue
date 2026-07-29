@@ -355,13 +355,7 @@ export default defineComponent({
 
     const filteredColumnsInternal = (
       type:
-        | 'numeric'
-        | 'categorical'
-        | 'temporal'
-        | 'latitude'
-        | 'longitude'
-        | 'geographic'
-        | 'all',
+        'numeric' | 'categorical' | 'temporal' | 'latitude' | 'longitude' | 'geographic' | 'all',
     ) => {
       return filteredColumns(type, props.columns)
     }

@@ -1,5 +1,4 @@
-import { KeyMod, KeyCode, type IRange } from 'monaco-editor'
-import { editor } from 'monaco-editor/esm/vs/editor/editor.api'
+import { KeyMod, KeyCode, type IRange, editor } from 'monaco-editor'
 
 /**
  * Configure Monaco editor themes

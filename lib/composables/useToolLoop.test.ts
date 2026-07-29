@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { useToolLoop, type ToolExecutor } from './useToolLoop'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
 import type { ToolCallResult } from '../llm/sharedToolHelpers'
@@ -11,7 +11,7 @@ type MockLLMStore = {
 describe('useToolLoop', () => {
   let mockLLMStore: MockLLMStore
   let mockToolExecutor: ToolExecutor
-  let executeToolCallSpy: ReturnType<typeof vi.fn>
+  let executeToolCallSpy: Mock<ToolExecutor['executeToolCall']>
 
   beforeEach(() => {
     // Create mock LLM store
@@ -20,7 +20,7 @@ describe('useToolLoop', () => {
     }
 
     // Create mock tool executor
-    executeToolCallSpy = vi.fn()
+    executeToolCallSpy = vi.fn<ToolExecutor['executeToolCall']>()
     mockToolExecutor = {
       executeToolCall: executeToolCallSpy,
     }
@@ -337,6 +337,7 @@ describe('useToolLoop', () => {
 
     it('should add artifacts from tool results', async () => {
       const mockArtifact = {
+        id: 'art-test-1',
         type: 'results' as const,
         data: {
           headers: ['id', 'name'],

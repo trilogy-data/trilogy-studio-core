@@ -126,8 +126,7 @@ export default {
     }
 
     const remoteStorage = storageSources.find((source) => source.type === 'remote') as
-      | RemoteStoreStorage
-      | undefined
+      RemoteStoreStorage | undefined
 
     const collapsed = ref<Record<string, boolean>>({})
     const hiddenTags = ref<Set<string>>(new Set([]))

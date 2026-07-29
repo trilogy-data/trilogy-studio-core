@@ -333,8 +333,7 @@ export default defineComponent({
     width: 100%;
     max-width: none;
     min-height: 100dvh;
-    padding: calc(20px + env(safe-area-inset-top)) 18px
-      calc(20px + env(safe-area-inset-bottom));
+    padding: calc(20px + env(safe-area-inset-top)) 18px calc(20px + env(safe-area-inset-bottom));
     overflow-y: auto;
     border: none;
     border-radius: 0;

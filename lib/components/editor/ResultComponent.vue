@@ -209,7 +209,7 @@ export default defineComponent({
         results: result.results
           ? {
               headers,
-              data: result.results.data as any[][],
+              data: result.results.data as any[],
             }
           : undefined,
         error: result.error,

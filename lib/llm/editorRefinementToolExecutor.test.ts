@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { EditorRefinementToolExecutor, type EditorContext } from './editorRefinementToolExecutor'
 import type QueryExecutionService from '../stores/queryExecutionService'
 import type { ConnectionStoreType } from '../stores/connectionStore'
@@ -22,17 +22,17 @@ describe('EditorRefinementToolExecutor', () => {
   let mockQueryExecutionService: MockQueryExecutionService
   let mockConnectionStore: MockConnectionStore
   let mockEditorContext: EditorContext
-  let onEditorContentChangeSpy: ReturnType<typeof vi.fn>
-  let onChartConfigChangeSpy: ReturnType<typeof vi.fn>
-  let onFinishSpy: ReturnType<typeof vi.fn>
-  let onRunActiveEditorQuerySpy: ReturnType<typeof vi.fn>
+  let onEditorContentChangeSpy: Mock<EditorContext['onEditorContentChange']>
+  let onChartConfigChangeSpy: Mock<EditorContext['onChartConfigChange']>
+  let onFinishSpy: Mock<EditorContext['onFinish']>
+  let onRunActiveEditorQuerySpy: Mock<NonNullable<EditorContext['onRunActiveEditorQuery']>>
 
   beforeEach(() => {
     // Reset spies
-    onEditorContentChangeSpy = vi.fn()
-    onChartConfigChangeSpy = vi.fn()
-    onFinishSpy = vi.fn()
-    onRunActiveEditorQuerySpy = vi.fn()
+    onEditorContentChangeSpy = vi.fn<EditorContext['onEditorContentChange']>()
+    onChartConfigChangeSpy = vi.fn<EditorContext['onChartConfigChange']>()
+    onFinishSpy = vi.fn<EditorContext['onFinish']>()
+    onRunActiveEditorQuerySpy = vi.fn<NonNullable<EditorContext['onRunActiveEditorQuery']>>()
 
     // Create mock services
     mockQueryExecutionService = {
@@ -619,12 +619,8 @@ describe('EditorRefinementToolExecutor', () => {
       onRunActiveEditorQuerySpy.mockResolvedValue({
         success: true,
         results: {
-          headers: { id: { name: 'id', type: 'int' }, v: { name: 'v', type: 'string' } },
+          headers: ['id', 'v'],
           data: rows,
-          toJSON: () => ({
-            headers: { id: { name: 'id', type: 'int' }, v: { name: 'v', type: 'string' } },
-            data: rows,
-          }),
         },
         resultSize: rowCount,
         columnCount: 2,

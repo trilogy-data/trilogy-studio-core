@@ -5,7 +5,7 @@
       <div class="confirmation-overlay" data-testid="tutorial-popup-overlay">
         <div
           class="confirmation-dialog"
-          ref="editorElement"
+          :ref="(el) => (editorElement = el as HTMLElement | null)"
           :style="dialogStyle"
           data-testid="tutorial-popup-dialog"
         >

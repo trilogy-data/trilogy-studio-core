@@ -5,8 +5,9 @@ import {
   type IDisposable,
   Position,
   type CancellationToken,
+  editor,
+  languages,
 } from 'monaco-editor'
-import { editor, languages } from 'monaco-editor/esm/vs/editor/editor.api'
 import {
   getMonacoLanguageForEditorType,
   supportsEditorAssistant,
