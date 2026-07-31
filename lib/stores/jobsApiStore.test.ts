@@ -169,4 +169,178 @@ describe('jobsApiStore', () => {
     await vi.advanceTimersByTimeAsync(3000)
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
+
+  describe('state', () => {
+    const SNAPSHOT = {
+      schema_version: 1,
+      snapshot_ts: '2026-07-31T17:05:53.630612+00:00',
+      run_id: null,
+      project: null,
+      target: '.',
+      dialect: 'duck_db',
+      assets: [],
+      summary: { total: 6, managed: 1, stale: 0, fresh: 1, unknown: 5 },
+    }
+
+    it('reads the cached snapshot by default and stores it per target', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        jsonResponse(SNAPSHOT, {
+          status: 200,
+          headers: {
+            'X-Trilogy-Cached': 'true',
+            'X-Trilogy-Computed-At': '2026-07-31T18:17:53.055282+00:00',
+          },
+        }),
+      )
+      vi.stubGlobal('fetch', fetchMock)
+
+      const communityStore = useCommunityApiStore()
+      const jobsStore = useJobsApiStore()
+      communityStore.stores = [TEST_STORE]
+
+      await jobsStore.fetchStateForTarget(TEST_STORE.id, '.')
+
+      const requestedUrl = fetchMock.mock.calls[0][0] as string
+      expect(requestedUrl).toContain('/state?')
+      expect(requestedUrl).toContain('target=.')
+      // Unforced reads must not carry refresh — that is what keeps the server
+      // on its cache instead of re-probing the warehouse.
+      expect(requestedUrl).not.toContain('refresh')
+
+      expect(jobsStore.getState(TEST_STORE.id, '.')?.summary.total).toBe(6)
+      expect(jobsStore.getStateMeta(TEST_STORE.id, '.')).toEqual({
+        cached: true,
+        computedAt: '2026-07-31T18:17:53.055282+00:00',
+      })
+      expect(jobsStore.isStateLoading(TEST_STORE.id, '.')).toBe(false)
+      expect(jobsStore.getStateError(TEST_STORE.id, '.')).toBe('')
+    })
+
+    it('forces a warehouse re-probe when asked', async () => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValue(
+          jsonResponse(SNAPSHOT, { status: 200, headers: { 'X-Trilogy-Cached': 'false' } }),
+        )
+      vi.stubGlobal('fetch', fetchMock)
+
+      const communityStore = useCommunityApiStore()
+      const jobsStore = useJobsApiStore()
+      communityStore.stores = [TEST_STORE]
+
+      await jobsStore.fetchStateForTarget(TEST_STORE.id, '.', true)
+
+      expect(fetchMock.mock.calls[0][0] as string).toContain('refresh=true')
+      expect(jobsStore.getStateMeta(TEST_STORE.id, '.')?.cached).toBe(false)
+    })
+
+    it('leaves cache provenance null on a server without the headers', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse(SNAPSHOT, { status: 200 }))
+      vi.stubGlobal('fetch', fetchMock)
+
+      const communityStore = useCommunityApiStore()
+      const jobsStore = useJobsApiStore()
+      communityStore.stores = [TEST_STORE]
+
+      await jobsStore.fetchStateForTarget(TEST_STORE.id, '.')
+
+      expect(jobsStore.getStateMeta(TEST_STORE.id, '.')).toEqual({
+        cached: null,
+        computedAt: null,
+      })
+    })
+
+    it('keeps a failed probe scoped to the target instead of failing the store', async () => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValue(
+          jsonResponse({ detail: 'Invalid or missing X-Trilogy-Token header' }, { status: 401 }),
+        )
+      vi.stubGlobal('fetch', fetchMock)
+
+      const communityStore = useCommunityApiStore()
+      const jobsStore = useJobsApiStore()
+      communityStore.stores = [TEST_STORE]
+      jobsStore.storeStatus[TEST_STORE.id] = 'connected'
+
+      await jobsStore.fetchStateForTarget(TEST_STORE.id, 'models')
+
+      expect(jobsStore.getStateError(TEST_STORE.id, 'models')).toContain('Authentication required')
+      expect(jobsStore.getState(TEST_STORE.id, 'models')).toBeNull()
+      // The store itself is still reachable — only this probe failed.
+      expect(jobsStore.getStoreStatus(TEST_STORE.id)).toBe('connected')
+      expect(jobsStore.errors[TEST_STORE.id]).toBeUndefined()
+    })
+
+    it('explains a directory rejection from a pre-0.3.306 server', async () => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValue(
+          jsonResponse({ detail: 'Target must be a file, not a directory' }, { status: 400 }),
+        )
+      vi.stubGlobal('fetch', fetchMock)
+
+      const communityStore = useCommunityApiStore()
+      const jobsStore = useJobsApiStore()
+      communityStore.stores = [TEST_STORE]
+
+      await jobsStore.fetchStateForTarget(TEST_STORE.id, '.')
+
+      expect(jobsStore.getStateError(TEST_STORE.id, '.')).toContain('0.3.306')
+    })
+
+    it('does not issue a second probe while one is in flight', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse(SNAPSHOT, { status: 200 }))
+      vi.stubGlobal('fetch', fetchMock)
+
+      const communityStore = useCommunityApiStore()
+      const jobsStore = useJobsApiStore()
+      communityStore.stores = [TEST_STORE]
+
+      await Promise.all([
+        jobsStore.fetchStateForTarget(TEST_STORE.id, '.'),
+        jobsStore.fetchStateForTarget(TEST_STORE.id, '.'),
+      ])
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('re-probes only loaded snapshots that cover a finished job target', async () => {
+      const jobsStore = useJobsApiStore()
+      const communityStore = useCommunityApiStore()
+      communityStore.stores = [TEST_STORE]
+
+      // Root is loaded; a sibling directory is not.
+      jobsStore.stateByTarget[`${TEST_STORE.id}::.`] = {
+        snapshot: { ...SNAPSHOT },
+        cached: true,
+        computedAt: null,
+      }
+      const fetchStateSpy = vi
+        .spyOn(jobsStore, 'fetchStateForTarget')
+        .mockResolvedValue(undefined as void)
+
+      jobsStore.refreshLoadedStateForTarget(TEST_STORE.id, 'models/daily.preql')
+
+      expect(fetchStateSpy).toHaveBeenCalledTimes(1)
+      expect(fetchStateSpy).toHaveBeenCalledWith(TEST_STORE.id, '.')
+    })
+
+    it('purges state when the store is removed', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse(SNAPSHOT, { status: 200 }))
+      vi.stubGlobal('fetch', fetchMock)
+
+      const communityStore = useCommunityApiStore()
+      const jobsStore = useJobsApiStore()
+      communityStore.stores = [TEST_STORE]
+
+      await jobsStore.fetchStateForTarget(TEST_STORE.id, '.')
+      expect(jobsStore.getState(TEST_STORE.id, '.')).not.toBeNull()
+
+      jobsStore.clearStoreData(TEST_STORE.id)
+
+      expect(jobsStore.getState(TEST_STORE.id, '.')).toBeNull()
+      expect(jobsStore.stateByTarget).toEqual({})
+    })
+  })
 })

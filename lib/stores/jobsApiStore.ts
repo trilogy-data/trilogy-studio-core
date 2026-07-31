@@ -6,8 +6,15 @@ import {
   cancelStoreJob,
   fetchStoreFiles,
   fetchStoreJob,
+  fetchStoreState,
   submitStoreJob,
 } from '../remotes/jobsService'
+import {
+  buildStateKey,
+  parseStateKey,
+  stateTargetCovers,
+  type StateSnapshot,
+} from '../remotes/state'
 import useCommunityApiStore, { type StoreStatus } from './communityApiStore'
 
 const pollers = new Map<string, ReturnType<typeof setInterval>>()
@@ -22,6 +29,18 @@ interface JobsApiState {
   submittingByTarget: Record<string, boolean>
   pollingByJob: Record<string, boolean>
   stoppingByJob: Record<string, boolean>
+  // Snapshots are deliberately not persisted here: the server keeps its own
+  // on-disk cache that survives restarts, so re-reading it is cheap and always
+  // more current than anything we could have stored.
+  stateByTarget: Record<string, StoredState>
+  stateLoadingByTarget: Record<string, boolean>
+  stateErrorsByTarget: Record<string, string>
+}
+
+interface StoredState {
+  snapshot: StateSnapshot
+  cached: boolean | null
+  computedAt: string | null
 }
 
 const toSubmittingKey = (storeId: string, target: string, operation: 'run' | 'refresh'): string =>
@@ -42,6 +61,25 @@ const normalizeLoadedJob = (job: LocalStoreJob): LocalStoreJob => {
   }
 }
 
+const describeStateError = (error: unknown): string => {
+  const message = error instanceof Error ? error.message : 'Failed to fetch state'
+
+  if (!(error instanceof JobsServiceError)) {
+    return message
+  }
+
+  if (error.status === 401) {
+    return 'Authentication required. Set this store’s token to read state.'
+  }
+
+  // 0.3.305 and earlier accept file targets only; directory state landed in 306.
+  if (error.status === 400 && /directory/i.test(message)) {
+    return `${message} Directory state requires a Trilogy server on 0.3.306 or newer.`
+  }
+
+  return message
+}
+
 const sortJobs = (jobs: LocalStoreJob[]): LocalStoreJob[] =>
   [...jobs].sort((left, right) => right.submittedAt - left.submittedAt)
 
@@ -55,6 +93,9 @@ const useJobsApiStore = defineStore('jobsApi', {
     submittingByTarget: {},
     pollingByJob: {},
     stoppingByJob: {},
+    stateByTarget: {},
+    stateLoadingByTarget: {},
+    stateErrorsByTarget: {},
   }),
 
   actions: {
@@ -99,6 +140,23 @@ const useJobsApiStore = defineStore('jobsApi', {
       return !!this.submittingByTarget[toSubmittingKey(storeId, target, operation)]
     },
 
+    getState(storeId: string, target: string): StateSnapshot | null {
+      return this.stateByTarget[buildStateKey(storeId, target)]?.snapshot || null
+    },
+
+    getStateMeta(storeId: string, target: string): Omit<StoredState, 'snapshot'> | null {
+      const stored = this.stateByTarget[buildStateKey(storeId, target)]
+      return stored ? { cached: stored.cached, computedAt: stored.computedAt } : null
+    },
+
+    isStateLoading(storeId: string, target: string): boolean {
+      return !!this.stateLoadingByTarget[buildStateKey(storeId, target)]
+    },
+
+    getStateError(storeId: string, target: string): string {
+      return this.stateErrorsByTarget[buildStateKey(storeId, target)] || ''
+    },
+
     isPollingJob(storeId: string, jobId: string): boolean {
       return !!this.pollingByJob[toPollingKey(storeId, jobId)]
     },
@@ -127,7 +185,88 @@ const useJobsApiStore = defineStore('jobsApi', {
       delete this.errors[storeId]
       delete this.storeStatus[storeId]
       delete this.loadingByStore[storeId]
+      this.clearStateForStore(storeId)
       this.saveJobsToStorage()
+    },
+
+    clearStateForStore(storeId: string): void {
+      const belongsToStore = (key: string): boolean => parseStateKey(key)?.storeId === storeId
+
+      const purge = (record: Record<string, unknown>): void => {
+        Object.keys(record)
+          .filter(belongsToStore)
+          .forEach((key) => delete record[key])
+      }
+
+      purge(this.stateByTarget)
+      purge(this.stateLoadingByTarget)
+      purge(this.stateErrorsByTarget)
+    },
+
+    clearStateError(storeId: string, target: string): void {
+      delete this.stateErrorsByTarget[buildStateKey(storeId, target)]
+    },
+
+    /**
+     * Re-read already-loaded snapshots that cover `target` after a job
+     * finished. Only targets the user has already opened are refreshed —
+     * reading an unopened target could miss the server cache and spend
+     * warehouse queries nobody asked for.
+     *
+     * Deliberately unforced: the server drops its cached snapshot when a
+     * run/refresh job finishes, so a plain read already returns recomputed
+     * state and forcing here would probe the warehouse twice.
+     */
+    refreshLoadedStateForTarget(storeId: string, target: string): void {
+      Object.keys(this.stateByTarget).forEach((key) => {
+        const parsed = parseStateKey(key)
+        if (!parsed || parsed.storeId !== storeId) {
+          return
+        }
+
+        if (stateTargetCovers(parsed.target, target)) {
+          void this.fetchStateForTarget(storeId, parsed.target)
+        }
+      })
+    },
+
+    /**
+     * Read `/state` for a target.
+     *
+     * The server serves a cached snapshot unless `force` is set, in which case
+     * it re-probes the warehouse — seconds of billed queries. Either way this
+     * only runs from an explicit user action or after a job finished, never on
+     * navigation: a cache miss still computes.
+     *
+     * Errors stay scoped to the target — a failed probe must not mark the
+     * whole store as failed.
+     */
+    async fetchStateForTarget(storeId: string, target: string, force = false): Promise<void> {
+      const store = this.getGenericStore(storeId)
+      if (!store) {
+        return
+      }
+
+      const stateKey = buildStateKey(storeId, target)
+      if (this.stateLoadingByTarget[stateKey]) {
+        return
+      }
+
+      this.stateLoadingByTarget[stateKey] = true
+      delete this.stateErrorsByTarget[stateKey]
+
+      try {
+        const result = await fetchStoreState(store, target, force)
+        this.stateByTarget[stateKey] = {
+          snapshot: result.snapshot,
+          cached: result.cached,
+          computedAt: result.computedAt,
+        }
+      } catch (error) {
+        this.stateErrorsByTarget[stateKey] = describeStateError(error)
+      } finally {
+        delete this.stateLoadingByTarget[stateKey]
+      }
     },
 
     async initialize(): Promise<void> {
@@ -386,6 +525,7 @@ const useJobsApiStore = defineStore('jobsApi', {
         if (localJob.status !== 'running') {
           this.stopPolling(storeId, jobId)
           void this.fetchFilesForStore(storeId)
+          this.refreshLoadedStateForTarget(storeId, localJob.target)
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : `Failed to poll job ${jobId}`
