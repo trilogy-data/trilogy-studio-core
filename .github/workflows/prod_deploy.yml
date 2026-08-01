@@ -3,9 +3,12 @@ on:
   push:
     branches:
       - 'main'
+    tags:
+      - 'v*'
 jobs:
   setup-build-deploy:
     name: Deploy Production
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     # Add "id-token" with the intended permissions.
@@ -91,3 +94,69 @@ jobs:
             name: playwright-report-production
             path: playwright-report/
             retention-days: 30
+
+  # Publishes the studio bundle so `trilogy serve` can host it from loopback.
+  # A page served from http://localhost:<port> is in the same address space as
+  # the store it talks to, which sidesteps the Local Network Access permission
+  # that blocks the hosted trilogydata.dev deep links.
+  release-studio:
+    name: Publish Studio Bundle
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: 'write'
+    steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - uses: pnpm/action-setup@v4
+          with:
+            version: 10
+
+        - name: Set up Node
+          uses: actions/setup-node@v4
+          with:
+            node-version: 23
+            cache: 'pnpm'
+
+        - name: Set up Python
+          uses: actions/setup-python@v5
+          with:
+            python-version: '3.13'
+            cache: 'pip'
+            cache-dependency-path: pyserver/requirements.txt
+
+        - name: Install backend dependencies for AI guidance
+          run: python -m pip install -r pyserver/requirements.txt
+
+        - name: Install dependencies
+          run: pnpm install --frozen-lockfile
+
+        - name: Run Tests
+          run: pnpm run test
+
+        - name: Build
+          run: pnpm run build
+
+        # Asset names are deliberately version-free and stable: that's what makes
+        # https://github.com/<owner>/<repo>/releases/latest/download/<asset> work
+        # without an api.github.com call, so serve never hits the 60/hour
+        # unauthenticated rate limit. The version lives inside manifest.json.
+        - name: Package bundle
+          env:
+            STUDIO_VERSION: ${{ github.ref_name }}
+          run: |
+            STUDIO_VERSION="${STUDIO_VERSION#v}"
+            export STUDIO_VERSION
+            tar -czf trilogy-studio.tgz -C dist .
+            node scripts/build-release-manifest.mjs trilogy-studio.tgz manifest.json
+            sha256sum trilogy-studio.tgz > trilogy-studio.tgz.sha256
+
+        - name: Publish release
+          uses: softprops/action-gh-release@v2
+          with:
+            files: |
+              trilogy-studio.tgz
+              trilogy-studio.tgz.sha256
+              manifest.json

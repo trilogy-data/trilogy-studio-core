@@ -1,5 +1,7 @@
 # Remote Store Contract
 
+**Contract version: 1.** Published studio bundles declare the version they speak as `contractVersion` in the release manifest (see `scripts/build-release-manifest.mjs`), so a host like `trilogy serve` can refuse a bundle it cannot talk to. Bump both on any breaking change below.
+
 A remote store is an HTTP service that a Trilogy Studio client can register as a `GenericModelStore`. The store hosts the editors, model, and runtime connection config for one logical Trilogy project. The client treats it as a single unit: registering the store makes the project's contents available, and editor edits made in the client are written back to it.
 
 The authoritative implementation of this contract is `trilogy serve` (from the `pytrilogy` package); this document describes what the server emits and what the client must do with it. The studio e2e suite exercises it via fixtures under `e2e/fixtures/trilogy-serve-stores/`.
