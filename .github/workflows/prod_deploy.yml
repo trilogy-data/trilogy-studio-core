@@ -3,12 +3,9 @@ on:
   push:
     branches:
       - 'main'
-    tags:
-      - 'v*'
 jobs:
   setup-build-deploy:
     name: Deploy Production
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     # Add "id-token" with the intended permissions.
@@ -95,13 +92,48 @@ jobs:
             path: playwright-report/
             retention-days: 30
 
+  # The studio bundle version is package.json's `version`, so releasing is just
+  # a version bump in a PR — no separate tagging step after merge. This job is
+  # deliberately cheap: it decides whether anything needs publishing before the
+  # release job spends time on a full build.
+  check-studio-version:
+    name: Check Studio Version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+      needs_release: ${{ steps.check.outputs.needed }}
+    steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Read version from package.json
+          id: version
+          run: echo "value=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+        - name: Check for an existing release
+          id: check
+          env:
+            GH_TOKEN: ${{ github.token }}
+            VERSION: ${{ steps.version.outputs.value }}
+          run: |
+            if gh release view "v${VERSION}" >/dev/null 2>&1; then
+              echo "v${VERSION} is already released; nothing to publish."
+              echo "needed=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "v${VERSION} is not released yet; will publish."
+              echo "needed=true" >> "$GITHUB_OUTPUT"
+            fi
+
   # Publishes the studio bundle so `trilogy serve` can host it from loopback.
   # A page served from http://localhost:<port> is in the same address space as
   # the store it talks to, which sidesteps the Local Network Access permission
   # that blocks the hosted trilogydata.dev deep links.
   release-studio:
     name: Publish Studio Bundle
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: check-studio-version
+    if: needs.check-studio-version.outputs.needs_release == 'true'
     runs-on: ubuntu-latest
     environment: production
     permissions:
@@ -145,10 +177,8 @@ jobs:
         # unauthenticated rate limit. The version lives inside manifest.json.
         - name: Package bundle
           env:
-            STUDIO_VERSION: ${{ github.ref_name }}
+            STUDIO_VERSION: ${{ needs.check-studio-version.outputs.version }}
           run: |
-            STUDIO_VERSION="${STUDIO_VERSION#v}"
-            export STUDIO_VERSION
             tar -czf trilogy-studio.tgz -C dist .
             node scripts/build-release-manifest.mjs trilogy-studio.tgz manifest.json
             sha256sum trilogy-studio.tgz > trilogy-studio.tgz.sha256
@@ -156,6 +186,8 @@ jobs:
         - name: Publish release
           uses: softprops/action-gh-release@v2
           with:
+            tag_name: v${{ needs.check-studio-version.outputs.version }}
+            name: Studio v${{ needs.check-studio-version.outputs.version }}
             files: |
               trilogy-studio.tgz
               trilogy-studio.tgz.sha256
