@@ -1,4 +1,5 @@
-import { test, expect, type Page, type Locator } from '@playwright/test'
+import { test, expect } from './console-capture'
+import type { Page, Locator } from '@playwright/test'
 import {
   localConnectionId,
   openSidebarScreen,

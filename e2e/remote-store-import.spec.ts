@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './console-capture'
 import { spawn, type ChildProcess } from 'child_process'
 import * as fs from 'fs'
 import * as net from 'net'

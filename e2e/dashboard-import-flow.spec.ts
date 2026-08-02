@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './console-capture'
 import { cacheDuckDBCdn, openSidebarScreen } from './test-helpers.js'
 
 // This spec doesn't call prepareTestPage, so wire the DuckDB CDN cache directly.

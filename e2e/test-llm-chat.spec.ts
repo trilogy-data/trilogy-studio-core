@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './console-capture'
 import { setupOpenAIMocks, createCompletionHandler } from './mock-openai'
 import { cacheDuckDBCdn, drillMobileTree, openSidebarScreen } from './test-helpers.js'
 

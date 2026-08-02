@@ -1,5 +1,5 @@
 // tests/example.spec.js
-import { test, expect } from '@playwright/test'
+import { test, expect } from './console-capture'
 import {
   cacheDuckDBCdn,
   createEditorFromConnectionList,

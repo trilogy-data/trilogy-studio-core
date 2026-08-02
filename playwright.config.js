@@ -25,7 +25,11 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  // In CI the HTML report is a downloadable artifact — fine for digging, useless
+  // for glancing at a red job. `list` echoes test stdout (including the browser
+  // console dump from e2e/console-capture.ts) straight into the Actions log, so
+  // an app-shell crash is visible without downloading anything.
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'html',
   use: {
     baseURL: getBaseUrl(),
     trace: 'on-first-retry',

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './console-capture'
 import {
   CONST_GPT_MODELS,
   setupOpenAIMocks,

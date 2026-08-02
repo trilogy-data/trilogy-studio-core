@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './console-capture'
 import { prepareTestPage } from './test-helpers.js'
 
 test.beforeEach(async ({ page }) => {
