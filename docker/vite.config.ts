@@ -30,9 +30,23 @@ export default defineConfig({
     // nodePolyfills({ include: ['events'] }),
     dts({ include: ['lib'] }),
     // nodePolyfills({ include: ['events', 'dns', 'stream', 'crypto'] }),
-    nodePolyfills({ include: ['crypto', 'stream'] }),
+    nodePolyfills({ include: ['crypto', 'stream'], exclude: ['prismjs'] }),
     prism({
-      languages: ['sql'],
+      // Keep this in sync with the root vite.config.ts: `languages` MUST stay
+      // empty. babel-plugin-prismjs rewrites every `import Prism from 'prismjs'`
+      // into a core import plus an eager, static side-effect import of each
+      // language listed here, in every file that imports Prism.
+      //
+      // prismjs core is CommonJS, so it gets wrapped in a lazy factory while the
+      // injected language import is plain ESM that evaluates eagerly. The
+      // language component is a bare script that reads a global `Prism` the core
+      // hasn't defined yet, so it throws `ReferenceError: Prism is not defined`
+      // at module scope — which aborts main.ts before Vue mounts and leaves the
+      // whole app stuck on the loading screen.
+      //
+      // Languages are loaded dynamically, after the core is guaranteed
+      // evaluated, by ensurePrismLanguagesReady() in lib/utility/prism.ts.
+      languages: [],
       plugins: ['line-numbers'],
       theme: 'default',
       css: true,

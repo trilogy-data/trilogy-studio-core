@@ -1,4 +1,5 @@
-import { test, expect, type Page, type Locator } from '@playwright/test'
+import { test, expect } from './console-capture'
+import type { Page, Locator } from '@playwright/test'
 import {
   localConnectionId,
   openSidebarScreen,
@@ -45,7 +46,7 @@ async function expectChevronToggles(chevron: Locator, child: Locator) {
  */
 async function gotoStudio(page: Page) {
   await page.goto('#skipTips=true')
-  await expect(page.getByTestId('sidebar-icons')).toBeVisible({ timeout: 60000 })
+  await expect(page.getByTestId('sidebar-icons')).toBeVisible({ timeout: 30000 })
 }
 
 async function createDuckdbConnection(page: Page) {

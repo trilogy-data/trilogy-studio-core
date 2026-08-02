@@ -14,6 +14,23 @@ export interface RemoteEditorIntent {
   remotePath: string
 }
 
+// Editors backing a remote store path, newest-id-scheme first.
+//
+// Match on (storage, remoteStoreId, remotePath) rather than rebuilding the id:
+// editorStore.newEditor appends `#1` suffixes on collision and older sessions
+// used different id schemes, so a reconstructed id is not reliable.
+export const findRemoteEditors = (
+  editors: Record<string, Editor>,
+  remoteStoreId: string,
+  remotePath: string,
+): Editor[] =>
+  Object.values(editors).filter(
+    (existing) =>
+      existing.storage === 'remote' &&
+      existing.remoteStoreId === remoteStoreId &&
+      existing.remotePath === remotePath,
+  )
+
 // Reconcile a desired remote-editor state against the editor store.
 // If an editor matching (storage='remote', remoteStoreId, remotePath) is
 // already present, reuse its id (so outside references — dashboards, tabs —
@@ -25,12 +42,7 @@ export const reconcileRemoteEditor = (
   editorStore: EditorStoreType,
   intent: RemoteEditorIntent,
 ): Editor => {
-  const matches = Object.values(editorStore.editors).filter(
-    (existing) =>
-      existing.storage === 'remote' &&
-      existing.remoteStoreId === intent.remoteStoreId &&
-      existing.remotePath === intent.remotePath,
-  )
+  const matches = findRemoteEditors(editorStore.editors, intent.remoteStoreId, intent.remotePath)
 
   if (matches.length === 0) {
     const editor = reactive(

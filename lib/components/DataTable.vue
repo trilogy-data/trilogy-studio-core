@@ -423,6 +423,11 @@ export default {
       pendingRebuild: false,
       visibilityObserver: null as ResizeObserver | null,
       redrawFrame: 0,
+      // Size the current table was last laid out at. Without it the observer
+      // redraws on every notification, and a redraw re-measures columns and
+      // resizes the subtree it is observing — so the table drives its own
+      // observer in a loop that never settles, rebuilding every row each pass.
+      lastDrawnSize: null as { width: number; height: number } | null,
     }
   },
   props: {
@@ -546,9 +551,46 @@ export default {
             this.pendingRebuild = false
             this.create()
           } else if (this.tabulator) {
-            // We were built or last drawn at a different size — most importantly
-            // at 0x0 while hidden. Force a full re-render at the real size.
-            this.tabulator.redraw(true)
+            // Check the element Tabulator itself will read, not $refs.
+            // updateTable() destroys and rebuilds the table, and destroy() nulls
+            // the instance's `element`; a rAF queued before that lands on the
+            // dead instance and Tabulator's redraw reads offsetWidth straight
+            // off the null, throwing out of a callback nothing can catch.
+            // isVisible() can't see this — it measures $refs.root, a different
+            // element that is still perfectly laid out.
+            const owned = (this.tabulator as unknown as { element?: HTMLElement | null }).element
+            if (!owned || !owned.isConnected) return
+            // Only when the container is genuinely a different size than what we
+            // drew — most importantly when it was 0x0 while hidden. Everything
+            // else is the table reacting to its own redraw, and answering that
+            // keeps the loop alive: rows are torn down and rebuilt every frame,
+            // so anything holding a cell (a click, a highlight) is racing a node
+            // that is about to be replaced.
+            const root = this.$refs.root as HTMLElement | undefined
+            if (!root) return
+            const size = { width: root.offsetWidth, height: root.offsetHeight }
+            if (
+              this.lastDrawnSize &&
+              this.lastDrawnSize.width === size.width &&
+              this.lastDrawnSize.height === size.height
+            ) {
+              return
+            }
+            this.lastDrawnSize = size
+            // Force a full re-render at the real size.
+            //
+            // Still guarded: updateTable() destroys and rebuilds on every
+            // results change, and a redraw racing that teardown trips a null
+            // read deep inside Tabulator's own row/column managers — past the
+            // instance element checked above, so there is nothing further we
+            // can test for. This is a layout refresh of a table that is being
+            // replaced anyway, so dropping it is correct; letting it escape
+            // would be an uncaught exception from a rAF callback.
+            try {
+              this.tabulator.redraw(true)
+            } catch {
+              // Table is mid-teardown; the rebuild that follows redraws it.
+            }
           }
         })
       })
@@ -650,7 +692,12 @@ export default {
     },
 
     create() {
-      let target = this.$refs.tabulator as HTMLElement
+      let target = this.$refs.tabulator as HTMLElement | undefined
+      // Same detached-element hazard as the redraw path above: create() is
+      // gated on $refs.root being visible, which says nothing about whether
+      // Tabulator's own element is present. Constructing against a missing one
+      // throws out of a rAF callback, where nothing can catch it.
+      if (!target) return
       let layout: 'fitDataFill' | 'fitData' = this.fitParent ? 'fitDataFill' : 'fitData'
       // check if any column is of type ARRAY or STRUCT, if so, use fitData
       let rowHeight = 25 as number | undefined
@@ -730,6 +777,9 @@ export default {
 
       // @ts-ignore
       this.tabulator = shallowRef(tab)
+      // Baseline for the observer: this is the size we just built at.
+      const root = this.$refs.root as HTMLElement | undefined
+      this.lastDrawnSize = root ? { width: root.offsetWidth, height: root.offsetHeight } : null
       this.updateTableTheme()
     },
 

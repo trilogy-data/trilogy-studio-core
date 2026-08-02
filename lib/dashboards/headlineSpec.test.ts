@@ -8,14 +8,11 @@ interface MockedFormatting {
 }
 
 // Mock the essential helper functions
-vi.mock(
-  './formatting',
-  (): MockedFormatting => ({
-    snakeCaseToCapitalizedWords: vi.fn((str: string): string =>
-      str.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
-    ),
-  }),
-)
+vi.mock('./formatting', (): MockedFormatting => ({
+  snakeCaseToCapitalizedWords: vi.fn((str: string): string =>
+    str.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+  ),
+}))
 
 // Type for the theme parameter
 type Theme = 'light' | 'dark'

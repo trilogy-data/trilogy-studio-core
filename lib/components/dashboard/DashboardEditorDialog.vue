@@ -33,7 +33,11 @@ const { editorElement, dialogStyle, startResize } = useResizableDialog(() => emi
 
 <template>
   <div class="editor-overlay">
-    <div ref="editorElement" class="content-editor" :style="dialogStyle">
+    <div
+      :ref="(el) => (editorElement = el as HTMLElement | null)"
+      class="content-editor"
+      :style="dialogStyle"
+    >
       <slot />
 
       <div class="editor-actions">

@@ -1,6 +1,11 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './console-capture'
 import { setupOpenAIMocks, createCompletionHandler } from './mock-openai'
-import { drillMobileTree, openSidebarScreen } from './test-helpers.js'
+import { cacheDuckDBCdn, drillMobileTree, openSidebarScreen } from './test-helpers.js'
+
+// This spec doesn't call prepareTestPage, so wire the DuckDB CDN cache directly.
+test.beforeEach(async ({ page }) => {
+  await cacheDuckDBCdn(page)
+})
 
 /**
  * Helper function to set up an LLM connection for tests

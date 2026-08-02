@@ -329,14 +329,7 @@ const hasContent = computed(() => {
 })
 
 type BlockKind =
-  | 'memo'
-  | 'claim'
-  | 'evidence'
-  | 'table'
-  | 'markdown'
-  | 'section'
-  | 'appendix'
-  | 'unknown'
+  'memo' | 'claim' | 'evidence' | 'table' | 'markdown' | 'section' | 'appendix' | 'unknown'
 
 interface ReportBlock {
   layout: LayoutItem

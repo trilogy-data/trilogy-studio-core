@@ -41,7 +41,8 @@ export const modelReference = new Article(
       New properties can be added to existing concepts using the \`property\` keyword:`,
       'subsection', // Using 'subsection' type
     ),
-    new Paragraph( // Code Example for Properties
+    new Paragraph(
+      // Code Example for Properties
       'Properties Example', // Title for the code block (can be descriptive)
       `property order.customer.nation.region.id.headquarters string;
 // This adds a 'headquarters' property of type string
@@ -61,7 +62,8 @@ property <order.customer.nation.region.id,date.year>.point_in_time_hq string;
       'subsection',
       null,
     ),
-    new Paragraph( // Code Example for Types and Traits
+    new Paragraph(
+      // Code Example for Types and Traits
       'Types and Traits Example',
       `import std.geography; // Import traits like us_state_short
 
@@ -81,7 +83,8 @@ auto item_price <- 19.99::number::usd;`,
       'subsection',
       null,
     ),
-    new Paragraph( // Code Example for Datasource (DB)
+    new Paragraph(
+      // Code Example for Datasource (DB)
       'Datasource Example (Database)',
       `import lineitem; // Assume lineitem provides base concepts like order.id etc.
 
@@ -105,7 +108,8 @@ address tbl_headquarters;
       null, // Use null type for the description part
       null,
     ),
-    new Paragraph( // Code Example for Datasource (Inline)
+    new Paragraph(
+      // Code Example for Datasource (Inline)
       'Datasource Example (Inline Query)',
       `datasource region_headquarters_inline (
     region_id: order.customer.nation.region.id,
@@ -140,7 +144,8 @@ select 4 as region_id, 'HQ4' as headquarters
       'subsection',
       null,
     ),
-    new Paragraph( // Code Example for Imports
+    new Paragraph(
+      // Code Example for Imports
       'Imports Example',
       `// Import concepts/properties defined in the 'lineitem' editor source
 import lineitem;
@@ -164,7 +169,8 @@ import customer_details as cust;
       'subsection',
       null,
     ),
-    new Paragraph( // Code Example for Constants
+    new Paragraph(
+      // Code Example for Constants
       'Constants Example',
       `const pi <- 3.14;
 const company_founding_year <- 2023;
@@ -179,7 +185,8 @@ select pi * 2 as circumference_ratio;`,
       'subsection',
       null,
     ),
-    new Paragraph( // Tip paragraph
+    new Paragraph(
+      // Tip paragraph
       'Tip: Generating Models',
       'You can quickly create a basic model source from a database table. When browsing tables in a connection, use the "Create model from table" action. This generates an editor with properties mapped to columns and a basic datasource.',
       'tip', // Use 'tip' type
@@ -197,7 +204,8 @@ select pi * 2 as circumference_ratio;`,
       'subsection',
       null,
     ),
-    new Paragraph( // Tip paragraph
+    new Paragraph(
+      // Tip paragraph
       'Tip: Standard Library',
       'Review the documentation for the standard library (`std`) to discover always-available functions and traits you can use in your models and queries.',
       'tip', // Use 'tip' type

@@ -1,10 +1,16 @@
 // tests/example.spec.js
-import { test, expect } from '@playwright/test'
+import { test, expect } from './console-capture'
 import {
+  cacheDuckDBCdn,
   createEditorFromConnectionList,
   drillMobileTree,
   openSidebarScreen,
 } from './test-helpers.js'
+
+// This spec doesn't call prepareTestPage, so wire the DuckDB CDN cache directly.
+test.beforeEach(async ({ page }) => {
+  await cacheDuckDBCdn(page)
+})
 
 test('user settings', async ({ page, isMobile }) => {
   const requestPromise = page.waitForRequest((request) => {

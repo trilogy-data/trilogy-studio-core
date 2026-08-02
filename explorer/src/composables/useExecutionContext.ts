@@ -221,8 +221,7 @@ export function useExecutionContext(prefix = 'explorer:'): ExecutionContext {
       for (const project of Object.values(projectStore.projects)) {
         if (project.deleted || !project.dataConnectionId || !project.directoryPath) continue
         const conn = connectionStore.connections[project.dataConnectionId] as
-          | { type?: string }
-          | undefined
+          { type?: string } | undefined
         out.push({
           connectionId: project.dataConnectionId,
           directory: project.directoryPath,
@@ -236,8 +235,7 @@ export function useExecutionContext(prefix = 'explorer:'): ExecutionContext {
       console.log(`[setWorkingDirectory:watcher] entries=`, entries)
       for (const { connectionId, directory } of entries) {
         const conn = connectionStore.connections[connectionId] as
-          | { setWorkingDirectory?: (directory: string) => Promise<void> }
-          | undefined
+          { setWorkingDirectory?: (directory: string) => Promise<void> } | undefined
         if (!conn) {
           console.log(`[setWorkingDirectory:watcher] no connection for id=${connectionId}`)
           continue

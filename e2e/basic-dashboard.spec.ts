@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './console-capture'
 import {
   drillMobileTree,
   localConnectionId,
@@ -6,6 +6,7 @@ import {
   openSidebarScreen,
   prepareTestPage,
   refreshConnection,
+  replaceEditorContent,
   runEditorQueryAndExpectCount,
   waitForConnectionReady,
 } from './test-helpers.js'
@@ -111,7 +112,13 @@ function isMapDataPixel(color) {
   return color.a > 0 && brightness > 20 && brightness < 245 && maxChannel - minChannel >= 20
 }
 
-test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => {
+// The heavyweight of the suite: DuckDB WASM boot, the FAA dataset query, pixel
+// sampling, and a cross-filter round trip. Measured at 36s (chromium) / 28s
+// (firefox) locally, so it needs more than the 60s default once CI's slower
+// runners are in play. Carrying the override here beats making every other test
+// wait 120s to accommodate this one.
+test('test-create-dashboard-and-pixels', async ({ page, isMobile }) => {
+  test.setTimeout(120000)
   await page.goto('#skipTips=true')
 
   await openSidebarScreen(page, 'community-models', isMobile)
@@ -183,14 +190,8 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   await openDashboardItemEditor(page, 0)
 
   // set content
-  await page.getByTestId('simple-editor-content').click()
-  if (browser.browserType().name() === 'webkit') {
-    await page.getByTestId('simple-editor-content').click({ clickCount: 3 })
-  } else {
-    await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
-  }
-
-  await page.keyboard.type(
+  await replaceEditorContent(
+    page,
     "where flight_date = '2025-01-01'::date \nselect\n    origin.state,\n    count,\norder by count desc;",
   )
   await page.getByTestId('editor-run-button').click()
@@ -199,14 +200,14 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   // Firefox the FAA query runs slowly enough that two concurrent renders blow
   // through the chart waitFor timeout below (the editor's render aborts the
   // chart's first render and the second has to start over).
-  await page.getByTestId('simple-editor-results').waitFor({ state: 'visible', timeout: 90000 })
+  await page.getByTestId('simple-editor-results').waitFor({ state: 'visible', timeout: 45000 })
 
   // save it
   await page.getByTestId('save-dashboard-chart').click()
 
   // toggle it
   const firstChartCanvas = page.locator(vegaSelector).first()
-  await firstChartCanvas.waitFor({ state: 'visible', timeout: 90000 })
+  await firstChartCanvas.waitFor({ state: 'visible', timeout: 45000 })
   await firstChartCanvas.hover({ force: true })
   const firstDashboardItem = page.getByTestId('dashboard-component-0')
   await firstDashboardItem.hover({ force: true })
@@ -409,14 +410,8 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   await openDashboardItemEditor(page, 1)
 
   // set content
-  await page.getByTestId('simple-editor-content').click()
-  if (browser.browserType().name() === 'webkit') {
-    await page.getByTestId('simple-editor-content').click({ clickCount: 3 })
-  } else {
-    await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
-  }
-
-  await page.keyboard.type(
+  await replaceEditorContent(
+    page,
     "where flight_date = '2025-01-01'::date  select\n    origin.state,\n    count,\norder by count desc;",
   )
   await page.getByTestId('editor-run-button').click()
@@ -633,9 +628,7 @@ select rows;
   await openDashboardItemEditor(page, 0)
 
   // Set content using the custom editor query
-  await page.getByTestId('simple-editor-content').click()
-  await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
-  await page.keyboard.type('select rows;') // Reference the custom editor
+  await replaceEditorContent(page, 'select rows;') // Reference the custom editor
   await page.getByTestId('editor-run-button').click()
 
   // Save the dashboard item
@@ -651,9 +644,7 @@ select rows;
   await openDashboardItemEditor(page, 1)
 
   // Set content for table
-  await page.getByTestId('simple-editor-content').click()
-  await page.getByTestId('simple-editor-content').press('ControlOrMeta+a')
-  await page.keyboard.type('select rows;')
+  await replaceEditorContent(page, 'select rows;')
 
   // Save the table
   await page.getByTestId('save-dashboard-chart').click()
@@ -662,12 +653,25 @@ select rows;
   await expect(page.getByTestId('dashboard-component-0')).toBeVisible()
   await expect(page.getByTestId('dashboard-component-1')).toBeVisible()
 
-  await page.getByRole('gridcell', { name: '2' }).click({ force: true })
-  await page.getByRole('gridcell', { name: '2' }).click({ force: true })
+  // Cross-filter on, then off. Scoped to the table item so this can't drift onto
+  // another grid. The click has to be forced — in edit mode the item sits under
+  // `.content-edit-overlay`, which intercepts pointer events — but forcing also
+  // skips the actionability wait, and Tabulator rebuilds its rows during the
+  // redraw that follows the save. A forced click that resolves mid-rebuild gets
+  // a node with no box and fails as "Element is not visible" while the table is
+  // plainly on screen. Assert visibility first so the retry loop waits out the
+  // rebuild, then force through the overlay.
+  const rowCell = page
+    .getByTestId('dashboard-component-1')
+    .getByRole('gridcell', { name: '2', exact: true })
+  await expect(rowCell).toBeVisible()
+  await rowCell.click({ force: true })
+  await expect(rowCell).toBeVisible()
+  await rowCell.click({ force: true })
   console.log('✓ Custom editor dashboard creation test passed')
 })
 
-test('test-drilldown', async ({ page, isMobile, browser }) => {
+test('test-drilldown', async ({ page, isMobile }) => {
   await page.goto('#skipTips=true')
   // Setup connection
   await openSidebarScreen(page, 'connections', isMobile)
@@ -745,15 +749,7 @@ select rows;
   await openDashboardItemEditor(page, 0)
 
   // Set content using the custom editor query
-  await page.getByTestId('simple-editor-content').click({ clickCount: 3 })
-  console.log(browser.browserType().name())
-  if (browser.browserType().name() === 'chromium') {
-    await page.keyboard.press('Control+A')
-  }
-  //
-  // 3. Delete the selected content
-  await page.keyboard.press('Delete')
-  await page.keyboard.type('select alt_labels, sum(rows) as value;') // Reference the custom editor
+  await replaceEditorContent(page, 'select alt_labels, sum(rows) as value;') // Reference the custom editor
   await page.getByTestId('editor-run-button').click()
 
   // Save the dashboard item

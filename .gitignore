@@ -49,3 +49,5 @@ rsa_key*
 .playwright-mcp
 
 .preql_cache.json
+# Playwright DuckDB CDN response cache (see e2e/test-helpers.js)
+.duckdb-cdn-cache/

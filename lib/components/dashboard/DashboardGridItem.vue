@@ -240,7 +240,9 @@ const mobileFilterGroups = computed(() => {
 })
 
 const activeMobileFilters = computed(
-  () => mobileFilterGroups.value.find((group) => group.type === activeMobileFilterGroup.value)?.filters || [],
+  () =>
+    mobileFilterGroups.value.find((group) => group.type === activeMobileFilterGroup.value)
+      ?.filters || [],
 )
 
 async function openMobileFilterPopover(event: MouseEvent, type: 'global' | 'cross') {
@@ -461,36 +463,36 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
         <div v-if="supportsFilters && filterCount > 0" class="header-filters no-drag">
           <div class="desktop-header-filters">
             <Tooltip
-            v-for="(filter, index) in visibleHeaderFilters"
-            :key="`${filter.source}-${filter.value}-${index}`"
-            :content="resolveFilterValue(filter.value, filter.parameters)"
-            position="bottom"
-          >
-            <div class="header-filter-chip">
-              <span class="filter-content">
-                <span class="filter-source"
-                  >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp;</span
+              v-for="(filter, index) in visibleHeaderFilters"
+              :key="`${filter.source}-${filter.value}-${index}`"
+              :content="resolveFilterValue(filter.value, filter.parameters)"
+              position="bottom"
+            >
+              <div class="header-filter-chip">
+                <span class="filter-content">
+                  <span class="filter-source"
+                    >{{ filter.source === 'global' ? filter.source : 'cross' }}:&nbsp;</span
+                  >
+                  <span class="filter-value">{{
+                    resolveFilterValue(filter.value, filter.parameters)
+                  }}</span>
+                </span>
+                <button
+                  class="filter-copy-btn"
+                  @click.stop="copyFilterValue(filter.value, filter.parameters)"
+                  title="Copy filter value"
                 >
-                <span class="filter-value">{{
-                  resolveFilterValue(filter.value, filter.parameters)
-                }}</span>
-              </span>
-              <button
-                class="filter-copy-btn"
-                @click.stop="copyFilterValue(filter.value, filter.parameters)"
-                title="Copy filter value"
-              >
-                ⎘
-              </button>
-              <button
-                v-if="editMode && filter.source !== 'global'"
-                class="filter-remove-btn"
-                @click="removeFilter(filter.source)"
-                :title="`Remove ${filter.source} filter`"
-              >
-                x
-              </button>
-            </div>
+                  ⎘
+                </button>
+                <button
+                  v-if="editMode && filter.source !== 'global'"
+                  class="filter-remove-btn"
+                  @click="removeFilter(filter.source)"
+                  :title="`Remove ${filter.source} filter`"
+                >
+                  x
+                </button>
+              </div>
             </Tooltip>
 
             <Tooltip

@@ -1,5 +1,6 @@
 import type { GenericModelStore } from './models'
 import type { RemoteJobResponse, StoreFilesResponse } from './jobs'
+import { toStateTarget, type StateSnapshot } from './state'
 
 export class JobsServiceError extends Error {
   status: number
@@ -161,6 +162,50 @@ export const deleteStoreFile = async (store: GenericModelStore, path: string): P
   }
 
   await ensureOk(response, `Failed to delete ${path}`)
+}
+
+export interface StateSnapshotResult {
+  snapshot: StateSnapshot
+  // From X-Trilogy-Cached / X-Trilogy-Computed-At, which the server marks
+  // Access-Control-Expose-Headers so a cross-origin studio can read them.
+  // Null when a server predates those headers.
+  cached: boolean | null
+  computedAt: string | null
+}
+
+// `target` is a query param here, not a path segment — encodePath would strip
+// the `.` used to address the store root. Requires server 0.3.306+; older
+// servers reject directory targets with a 400.
+//
+// The server serves from an on-disk cache by default and re-probes the
+// warehouse only when `refresh` is set, so `force` is the difference between
+// a fast read and seconds of billed queries.
+export const fetchStoreState = async (
+  store: GenericModelStore,
+  target: string,
+  force = false,
+): Promise<StateSnapshotResult> => {
+  const params = new URLSearchParams({ target: toStateTarget(target) })
+  if (force) {
+    params.set('refresh', 'true')
+  }
+
+  const response = await fetch(
+    `${store.baseUrl}/state?${params.toString()}`,
+    buildAuthRequest(store.token, {
+      method: 'GET',
+    }),
+  )
+
+  await ensureOk(response, `Failed to fetch state for ${toStateTarget(target)}`)
+
+  const cachedHeader = response.headers.get('X-Trilogy-Cached')
+
+  return {
+    snapshot: await response.json(),
+    cached: cachedHeader === null ? null : cachedHeader.toLowerCase() === 'true',
+    computedAt: response.headers.get('X-Trilogy-Computed-At'),
+  }
 }
 
 export const submitStoreJob = async (

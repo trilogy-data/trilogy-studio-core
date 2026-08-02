@@ -6,17 +6,18 @@ jobs:
   lib-tests:
     name: Library Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v6
         with:
-          version: 9
+          version: 10
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: 'pnpm'
@@ -42,9 +43,10 @@ jobs:
   explorer-rust-tests:
     name: Explorer Rust Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -67,19 +69,25 @@ jobs:
   integration-tests-local:
     name: Integration Tests (Local)
     runs-on: ubuntu-latest
+    # Without this the job inherits GitHub's 6 hour default, so a hung
+    # Playwright worker burns a runner all afternoon instead of failing.
+    # Playwright's own globalTimeout (50 min) fires first and still uploads a
+    # report; this is the backstop for a hang outside the test runner, so it
+    # has to sit above that.
+    timeout-minutes: 65
     env:
       ALLOWED_ORIGINS: dev
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v6
         with:
-          version: 9
+          version: 10
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: 'pnpm'
@@ -88,7 +96,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
 
@@ -135,6 +143,17 @@ jobs:
           fi
         shell: /usr/bin/bash -e {0}
 
+      # DuckDB's worker and 8MB wasm are fetched from jsDelivr at runtime, the
+      # same as production. e2e/test-helpers.js caches those responses to disk;
+      # persisting the directory means even the first test is a local read
+      # rather than an unbounded CDN fetch on a throttled runner.
+      - name: Cache DuckDB CDN assets
+        uses: actions/cache@v5
+        with:
+          path: .duckdb-cdn-cache
+          key: duckdb-cdn-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: duckdb-cdn-
+
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps
 
@@ -152,7 +171,7 @@ jobs:
             kill $SERVER_PID || true
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: playwright-report-local
@@ -162,19 +181,20 @@ jobs:
   integration-tests-docker:
     name: Integration Tests (Docker)
     runs-on: ubuntu-latest
+    timeout-minutes: 65
     env:
       ALLOWED_ORIGINS: dev
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v6
         with:
-          version: 9
+          version: 10
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: 'pnpm'
@@ -183,7 +203,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
 
@@ -246,7 +266,7 @@ jobs:
             docker rm $CONTAINER_ID || true
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: playwright-report-docker

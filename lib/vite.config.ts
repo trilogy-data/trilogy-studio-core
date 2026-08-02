@@ -9,7 +9,7 @@ export default defineConfig({
     dts({
       insertTypesEntry: true,
       exclude: ['**/*.test.ts', '**/*.spec.ts'],
-      rollupTypes: false,
+      bundleTypes: false,
     }),
     nodePolyfills({ include: ['crypto', 'stream'] }) as PluginOption,
   ],

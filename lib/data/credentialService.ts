@@ -51,7 +51,7 @@ export class CredentialManager {
   }
 
   // --- Private Crypto Methods ---
-  private async deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
+  private async deriveKey(password: string, salt: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
     const encoder = new TextEncoder()
     const passwordData = encoder.encode(password)
 

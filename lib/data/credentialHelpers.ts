@@ -19,10 +19,13 @@ export const SALT_LENGTH_BYTES = 16
 export const IV_LENGTH_BYTES = 12
 export const CREDENTIAL_PREFIX = 'trilogy_studio_' // Keep consistent prefix if needed
 
-export function arrayBufferToBase64(buffer: ArrayBuffer): string {
+export function arrayBufferToBase64(buffer: ArrayBuffer | ArrayBufferView): string {
   // Consider using a library or more robust conversion if facing issues
   // For modern environments, Buffer API might be available if not strictly browser-only
-  const bytes = new Uint8Array(buffer)
+  const bytes =
+    buffer instanceof ArrayBuffer
+      ? new Uint8Array(buffer)
+      : new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
   let binary = ''
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i])
@@ -30,7 +33,7 @@ export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary)
 }
 
-export function base64ToArrayBuffer(base64: string): Uint8Array {
+export function base64ToArrayBuffer(base64: string): Uint8Array<ArrayBuffer> {
   // Consider using a library or more robust conversion
   const binaryString = atob(base64)
   const bytes = new Uint8Array(binaryString.length)

@@ -35,7 +35,9 @@
   >
     <p
       class="error-message"
-      :data-testid="effectiveTestId ? `${effectiveTestId}-error-message` : 'loading-button-error-message'"
+      :data-testid="
+        effectiveTestId ? `${effectiveTestId}-error-message` : 'loading-button-error-message'
+      "
     >
       {{ errorMessage }}
     </p>
@@ -43,7 +45,9 @@
       <button
         type="button"
         class="okay-button"
-        :data-testid="effectiveTestId ? `${effectiveTestId}-error-okay` : 'loading-button-error-okay'"
+        :data-testid="
+          effectiveTestId ? `${effectiveTestId}-error-okay` : 'loading-button-error-okay'
+        "
         @click="dismissError"
       >
         Okay
@@ -51,7 +55,9 @@
       <button
         type="button"
         class="retry-button"
-        :data-testid="effectiveTestId ? `${effectiveTestId}-error-retry` : 'loading-button-error-retry'"
+        :data-testid="
+          effectiveTestId ? `${effectiveTestId}-error-retry` : 'loading-button-error-retry'
+        "
         @click="retryAction"
       >
         Retry

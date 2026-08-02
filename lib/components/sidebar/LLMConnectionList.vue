@@ -165,7 +165,7 @@ export default {
       }
 
       await llmConnectionStore.connections[connection.name].setApiKey(apiKey)
-      llmConnectionStore.resetConnection(connection.name)
+      llmConnectionStore.resetConnectionInBackground(connection.name)
       await saveConnections()
     }
 
@@ -175,7 +175,7 @@ export default {
       }
 
       llmConnectionStore.connections[connection.name].setModel(model)
-      llmConnectionStore.resetConnection(connection.name)
+      llmConnectionStore.resetConnectionInBackground(connection.name)
       saveConnections()
     }
 

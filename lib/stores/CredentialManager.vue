@@ -198,8 +198,7 @@ input {
     flex-direction: column;
     width: 100%;
     height: var(--mobile-viewport-height, 100dvh);
-    padding: calc(20px + env(safe-area-inset-top)) 18px
-      calc(12px + env(safe-area-inset-bottom));
+    padding: calc(20px + env(safe-area-inset-top)) 18px calc(12px + env(safe-area-inset-bottom));
     border-radius: 0;
     box-shadow: none;
     overflow: hidden;

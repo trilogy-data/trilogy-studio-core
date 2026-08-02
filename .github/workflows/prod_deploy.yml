@@ -7,6 +7,9 @@ jobs:
   setup-build-deploy:
     name: Deploy Production
     runs-on: ubuntu-latest
+    # Covers build, FTP upload, the deployment poll, and the production
+    # Playwright run — all of which can stall on a remote that never answers.
+    timeout-minutes: 60
     environment: production
     # Add "id-token" with the intended permissions.
     permissions:
@@ -15,20 +18,20 @@ jobs:
     steps:
         # Setup gcloud CLI
         - name: Checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v6
         
-        - uses: pnpm/action-setup@v4
+        - uses: pnpm/action-setup@v6
           with:
             version: 10
         
         - name: Set up Node
-          uses: actions/setup-node@v4
+          uses: actions/setup-node@v6
           with:
             node-version: 23
             cache: 'pnpm'
 
         - name: Set up Python
-          uses: actions/setup-python@v5
+          uses: actions/setup-python@v6
           with:
             python-version: '3.13'
             cache: 'pip'
@@ -46,9 +49,19 @@ jobs:
         - name: Build
           run: pnpm run build
           env:
-            PUBLIC_URL: https://trilogydata.dev/trilogy-studio-core/        
+            PUBLIC_URL: https://trilogydata.dev/trilogy-studio-core/
+        # Handed to release-studio so a release republishes this exact build
+        # rather than rebuilding it. Short retention — it is a build cache, not
+        # a deliverable; the deliverable is the release asset.
+        - name: Upload studio bundle for release
+          uses: actions/upload-artifact@v6
+          with:
+            name: studio-dist
+            path: dist/
+            retention-days: 1
+
         - name: Upload
-          uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+          uses: SamKirkland/FTP-Deploy-Action@v4.4.0
           with:
               server: ${{ secrets.FTP_SERVER }}
               username: ${{ secrets.FTP_USER }}
@@ -85,9 +98,99 @@ jobs:
           env:
             TEST_ENV: 'prod'
         - name: Upload Playwright test results
-          uses: actions/upload-artifact@v4
+          uses: actions/upload-artifact@v6
           if: always()
           with:
             name: playwright-report-production
             path: playwright-report/
             retention-days: 30
+
+  # The studio bundle version is package.json's `version`, so releasing is just
+  # a version bump in a PR — no separate tagging step after merge. This job is
+  # deliberately cheap: it decides whether anything needs publishing before the
+  # release job spends time on a full build.
+  check-studio-version:
+    name: Check Studio Version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: 'read'
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+      needs_release: ${{ steps.check.outputs.needed }}
+    steps:
+        - name: Checkout
+          uses: actions/checkout@v6
+
+        - name: Read version from package.json
+          id: version
+          run: echo "value=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+        - name: Check for an existing release
+          id: check
+          env:
+            GH_TOKEN: ${{ github.token }}
+            VERSION: ${{ steps.version.outputs.value }}
+          run: |
+            if gh release view "v${VERSION}" >/dev/null 2>&1; then
+              echo "v${VERSION} is already released; nothing to publish."
+              echo "needed=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "v${VERSION} is not released yet; will publish."
+              echo "needed=true" >> "$GITHUB_OUTPUT"
+            fi
+
+  # Publishes the studio bundle so `trilogy serve` can host it from loopback.
+  # A page served from http://localhost:<port> is in the same address space as
+  # the store it talks to, which sidesteps the Local Network Access permission
+  # that blocks the hosted trilogydata.dev deep links.
+  # Reuses the artifact from setup-build-deploy rather than rebuilding, so the
+  # released bundle is byte-identical to the one deployed to trilogydata.dev and
+  # verified by the production Playwright run. A red deploy blocks the release.
+  release-studio:
+    name: Publish Studio Bundle
+    needs: [check-studio-version, setup-build-deploy]
+    if: needs.check-studio-version.outputs.needs_release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: 'write'
+    steps:
+        # Checkout is still needed for scripts/build-release-manifest.mjs and the
+        # vite.config.ts it reads `base` from — but no install or build.
+        - name: Checkout
+          uses: actions/checkout@v6
+
+        - name: Set up Node
+          uses: actions/setup-node@v6
+          with:
+            node-version: 23
+
+        - name: Download studio bundle
+          uses: actions/download-artifact@v7
+          with:
+            name: studio-dist
+            path: dist
+
+        # Asset names are deliberately version-free and stable: that's what makes
+        # https://github.com/<owner>/<repo>/releases/latest/download/<asset> work
+        # without an api.github.com call, so serve never hits the 60/hour
+        # unauthenticated rate limit. The version lives inside manifest.json.
+        - name: Package bundle
+          env:
+            STUDIO_VERSION: ${{ needs.check-studio-version.outputs.version }}
+          run: |
+            tar -czf trilogy-studio.tgz -C dist .
+            node scripts/build-release-manifest.mjs trilogy-studio.tgz manifest.json
+            sha256sum trilogy-studio.tgz > trilogy-studio.tgz.sha256
+
+        - name: Publish release
+          uses: softprops/action-gh-release@v3
+          with:
+            tag_name: v${{ needs.check-studio-version.outputs.version }}
+            name: Studio v${{ needs.check-studio-version.outputs.version }}
+            files: |
+              trilogy-studio.tgz
+              trilogy-studio.tgz.sha256
+              manifest.json

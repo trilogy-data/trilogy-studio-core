@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from './console-capture'
+import type { Page } from '@playwright/test'
 import {
   createEditorFromConnectionList,
   drillMobileTree,
@@ -109,7 +110,7 @@ select
   await runEditorQueryAndWait(page)
 
   await expect(page.getByRole('gridcell', { name: 'CA' })).toContainText('CA', {
-    timeout: 60000,
+    timeout: 30000,
   })
 
   // Step 5: Import from lineitem

@@ -91,8 +91,7 @@ const useEditorStore = defineStore('editors', {
     ) {
       const connectionStore = useConnectionStore()
       const connectionRef = connectionStore.connectionByName(connection) as
-        | { storage?: string; remoteStoreId?: string | null }
-        | undefined
+        { storage?: string; remoteStoreId?: string | null } | undefined
       const storage = options.storage || connectionRef?.storage || 'local'
       const remoteStoreId =
         options.remoteStoreId ||

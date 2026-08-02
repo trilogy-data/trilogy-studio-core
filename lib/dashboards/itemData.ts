@@ -49,7 +49,10 @@ export function buildRootContent(
 
 function isMarkdownData(obj: any): obj is MarkdownData {
   return (
-    obj && typeof obj === 'object' && typeof obj.markdown === 'string' && typeof obj.query === 'string'
+    obj &&
+    typeof obj === 'object' &&
+    typeof obj.markdown === 'string' &&
+    typeof obj.query === 'string'
   )
 }
 function isMemoLike(obj: any): obj is MemoData {

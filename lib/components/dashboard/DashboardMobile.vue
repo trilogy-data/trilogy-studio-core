@@ -277,8 +277,7 @@ function scrollDownOne() {
         :data-i="item.i"
         class="mobile-item"
         :class="{
-          'mobile-item-filter':
-            getItemData(item.i, dashboard.id).type === CELL_TYPES.FILTER,
+          'mobile-item-filter': getItemData(item.i, dashboard.id).type === CELL_TYPES.FILTER,
         }"
         :style="{
           height: calculateMobileHeight(item),
@@ -384,7 +383,6 @@ function scrollDownOne() {
   min-height: 120px;
 }
 
-
 .dashboard-not-found {
   display: flex;
   flex-direction: column;
@@ -411,5 +409,4 @@ function scrollDownOne() {
   padding: 20px;
   flex: 1;
 }
-
 </style>

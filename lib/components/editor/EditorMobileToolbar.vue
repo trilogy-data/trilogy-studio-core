@@ -38,6 +38,8 @@ const emit = defineEmits(['save', 'validate', 'format', 'run', 'cancel', 'toggle
 }
 
 @media screen and (max-width: 520px) {
-  .mobile-editor-toolbar { padding: 5px 4px; }
+  .mobile-editor-toolbar {
+    padding: 5px 4px;
+  }
 }
 </style>

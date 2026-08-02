@@ -1,7 +1,93 @@
 import { expect } from '@playwright/test'
+import * as crypto from 'crypto'
+import * as fs from 'fs'
+import * as path from 'path'
+import { fileURLToPath } from 'url'
 import { getResolverUrl } from './test-env.js'
 
 export { getResolverUrl }
+
+// Production loads DuckDB's worker + 8MB wasm from jsDelivr (see the
+// VITE_DUCKDB_BUNDLED define in vite.config.ts), so the suite exercises that
+// same path rather than a bundled build we don't ship. Playwright contexts are
+// incognito and share no HTTP cache, so without this every test that opens a
+// DuckDB connection re-downloads the wasm — ~2.3s per connection on a fast
+// network, and unbounded on a throttled CI runner.
+//
+// First request goes to jsDelivr for real; the response is written to disk and
+// replayed for every later request. Cache lives in the repo so CI can persist
+// it with actions/cache keyed on the duckdb-wasm version.
+const CDN_CACHE_DIR = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '.duckdb-cdn-cache',
+)
+
+export async function cacheDuckDBCdn(page) {
+  await page.route('**cdn.jsdelivr.net/npm/@duckdb/**', async (route) => {
+    const url = route.request().url()
+    const key = crypto.createHash('sha1').update(url).digest('hex')
+    const bodyPath = path.join(CDN_CACHE_DIR, key)
+    const metaPath = `${bodyPath}.json`
+
+    if (fs.existsSync(bodyPath) && fs.existsSync(metaPath)) {
+      const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'))
+      await route.fulfill({
+        status: 200,
+        headers: meta.headers,
+        body: fs.readFileSync(bodyPath),
+      })
+      return
+    }
+
+    // Cache miss: fetch for real, but bounded. An unbounded CDN call here is
+    // the failure mode this whole helper exists to prevent — it would just be
+    // once per run instead of once per test. If jsDelivr stalls or fails, fall
+    // back to the identical bytes pnpm already installed, so the suite cannot
+    // hang on a third party.
+    let response
+    let body
+    try {
+      response = await route.fetch({ timeout: 30000 })
+      body = await response.body()
+    } catch {
+      const file = url.split('/dist/').pop()
+      const local = path.join(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '..',
+        'node_modules',
+        '@duckdb',
+        'duckdb-wasm',
+        'dist',
+        file,
+      )
+      if (!fs.existsSync(local)) {
+        throw new Error(`DuckDB CDN unreachable and no local copy at ${local}`)
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: file.endsWith('.wasm') ? 'application/wasm' : 'text/javascript',
+        body: fs.readFileSync(local),
+      })
+      return
+    }
+
+    try {
+      fs.mkdirSync(CDN_CACHE_DIR, { recursive: true })
+      // Write-then-rename so parallel workers can't observe a partial file.
+      const stamp = `${process.pid}-${crypto.randomBytes(4).toString('hex')}`
+      fs.writeFileSync(`${bodyPath}.${stamp}.tmp`, body)
+      fs.renameSync(`${bodyPath}.${stamp}.tmp`, bodyPath)
+      fs.writeFileSync(`${metaPath}.${stamp}.tmp`, JSON.stringify({ headers: response.headers() }))
+      fs.renameSync(`${metaPath}.${stamp}.tmp`, metaPath)
+    } catch {
+      // A cache write failure must never fail the test — we already have the
+      // bytes and can serve this request regardless.
+    }
+
+    await route.fulfill({ response, body })
+  })
+}
 
 // Mirrors lib/connections/base.ts computeConnectionId for the local storage
 // path used by every Playwright fixture. Connection rows now key their test
@@ -21,6 +107,7 @@ export function remoteConnectionId(storeId, name) {
 const SIDEBAR_SHELL_TIMEOUT = 10000
 
 export async function prepareTestPage(page) {
+  await cacheDuckDBCdn(page)
   const resolverUrl = getResolverUrl()
 
   await page.addInitScript((url) => {
@@ -313,6 +400,38 @@ export async function runEditorQueryAndExpectCount(page, expectedCount, timeout 
   await expect(page.getByTestId('query-results-length')).toContainText(String(expectedCount), {
     timeout,
   })
+}
+
+/**
+ * Replace everything in a monaco editor with `text`.
+ *
+ * Monaco decides whether "select all" is Cmd+A or Ctrl+A from the *browser's*
+ * user agent; Playwright resolves `ControlOrMeta` from the *host* OS. The webkit
+ * and Mobile Safari projects run a macOS user agent on a Linux runner, so
+ * `ControlOrMeta+a` sends Ctrl+A to a monaco that is in Mac mode — where Ctrl+A
+ * means "move the cursor to the start of the line", not "select all". Nothing
+ * throws and no locator times out: the typed text is simply inserted in front of
+ * the old content, and the editor saves the two queries glued together. That
+ * still returns rows, just not the ones the test is asserting on, so the failure
+ * surfaces somewhere else entirely (a cell that isn't clickable, a chart of the
+ * wrong data).
+ *
+ * Ask monaco which mode it is in — it puts `mac` on the editor root — send the
+ * chord it is actually listening for, and assert the editor really is empty
+ * before typing so a future divergence fails here instead.
+ */
+export async function replaceEditorContent(page, text, testId = 'simple-editor-content') {
+  const container = page.getByTestId(testId)
+  const monaco = container.locator('.monaco-editor').first()
+  await expect(monaco).toBeVisible()
+  await container.click()
+
+  const isMacMode = await monaco.evaluate((el) => el.classList.contains('mac'))
+  await page.keyboard.press(isMacMode ? 'Meta+a' : 'Control+a')
+  await page.keyboard.press('Delete')
+  await expect(container.locator('.view-lines')).toHaveText(/^\s*$/)
+
+  await page.keyboard.type(text)
 }
 
 export async function openDashboardItemEditor(page, itemId) {

@@ -94,21 +94,53 @@ const cancelEditing = (): void => {
   border-bottom: 1px solid var(--border-light);
   background: var(--query-window-bg);
 }
-.menu-left { display: flex; align-items: center; min-width: 0; flex: 1 1 auto; }
-.menu-title {
-  display: flex; align-items: center; width: 100%; padding: 0.25rem 0; overflow: hidden;
-  cursor: pointer; white-space: nowrap; text-overflow: ellipsis; font-weight: 500;
+.menu-left {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1 1 auto;
 }
-.editable-text { display: flex; align-items: center; gap: 0.4rem; min-width: 0; overflow: hidden; }
-.edit-indicator { flex-shrink: 0; opacity: 0; font-size: 13px; transition: opacity 0.2s ease; }
-.menu-title:hover .edit-indicator { opacity: 1; }
+.menu-title {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.25rem 0;
+  overflow: hidden;
+  cursor: pointer;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+.editable-text {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  overflow: hidden;
+}
+.edit-indicator {
+  flex-shrink: 0;
+  opacity: 0;
+  font-size: 13px;
+  transition: opacity 0.2s ease;
+}
+.menu-title:hover .edit-indicator {
+  opacity: 1;
+}
 .name-input {
-  width: auto; min-width: 100%; padding: 0.3rem 0.6rem; border: 1px solid var(--border);
-  border-radius: 8px; background: var(--bg-color); color: var(--text-color);
-  font: inherit; font-weight: 500;
+  width: auto;
+  min-width: 100%;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font: inherit;
+  font-weight: 500;
 }
 .name-input:focus {
-  outline: none; border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.45);
+  outline: none;
+  border-color: rgba(var(--special-text-rgb, 37, 99, 235), 0.45);
   box-shadow: 0 0 0 3px rgba(var(--special-text-rgb, 37, 99, 235), 0.08);
 }
 </style>

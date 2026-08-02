@@ -437,7 +437,7 @@ for (let source of props.storageSources) {
         props.llmConnectionStore.addConnection(llmConnection, false)
         if (llmConnection.isDefault) {
           props.llmConnectionStore.activeConnection = llmConnection.name
-          props.llmConnectionStore.resetConnection(llmConnection.name)
+          props.llmConnectionStore.resetConnectionInBackground(llmConnection.name)
         }
       }
     })(),
