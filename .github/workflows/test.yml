@@ -6,6 +6,7 @@ jobs:
   lib-tests:
     name: Library Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,6 +43,7 @@ jobs:
   explorer-rust-tests:
     name: Explorer Rust Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -67,6 +69,11 @@ jobs:
   integration-tests-local:
     name: Integration Tests (Local)
     runs-on: ubuntu-latest
+    # Baseline is ~24 minutes. Without this the job inherits GitHub's 6 hour
+    # default, so a hung Playwright worker burns a runner all afternoon instead
+    # of failing. Playwright's own globalTimeout fires first and still uploads
+    # a report; this is the backstop for a hang outside the test runner.
+    timeout-minutes: 45
     env:
       ALLOWED_ORIGINS: dev
     steps:
@@ -162,6 +169,7 @@ jobs:
   integration-tests-docker:
     name: Integration Tests (Docker)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     env:
       ALLOWED_ORIGINS: dev
     steps:
