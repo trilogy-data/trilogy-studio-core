@@ -116,11 +116,22 @@ remoteStoreImportDescribe('Remote Store Auto Import', () => {
     })
 
     await new Promise<void>((resolve, reject) => {
+      // `settled` stops the poll chain on the timeout path too. Without it a
+      // server that never starts rejects at 10s but leaves the recursive
+      // setTimeout running, holding the event loop open so the Playwright
+      // worker never exits — a clean failure becomes an indefinite hang.
+      let settled = false
+
       const timeout = setTimeout(() => {
+        settled = true
         reject(new Error('Remote store server failed to start within 10 seconds'))
       }, 10000)
 
       const checkServer = async () => {
+        if (settled) {
+          return
+        }
+
         try {
           const response = await fetch(`${remoteStoreUrl}/index.json`, {
             headers: {
@@ -129,6 +140,7 @@ remoteStoreImportDescribe('Remote Store Auto Import', () => {
           })
 
           if (response.ok) {
+            settled = true
             clearTimeout(timeout)
             resolve()
             return
@@ -137,7 +149,9 @@ remoteStoreImportDescribe('Remote Store Auto Import', () => {
           // Server not ready yet.
         }
 
-        setTimeout(checkServer, 100)
+        if (!settled) {
+          setTimeout(checkServer, 100)
+        }
       }
 
       checkServer()
