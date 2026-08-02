@@ -80,8 +80,9 @@ describe('RemoteStoreStorage', () => {
     }
     const communityStore = { stores: [store] } as any
 
-    // Wire value matches pytrilogy `Dialects.DUCK_DB` — the client remaps
-    // this to an in-browser DuckDBConnection.
+    // Pre-contract wire value (raw pytrilogy `Dialects.DUCK_DB`) still emitted
+    // by a server older than contract v1 — the client remaps it to an
+    // in-browser DuckDBConnection just like the contract's `duckdb`.
     vi.mocked(fetchGenericStoreIndex).mockResolvedValue({
       name: 'urban_forest',
       connection: { type: 'duck_db', options: {} },
@@ -102,6 +103,38 @@ describe('RemoteStoreStorage', () => {
     expect(conn.model).toBe('urban_forest')
     expect(conn.id).toBe('remote:remote-store:urban_forest-connection')
     // fetchFromStore should NOT be consulted when a runtime connection is advertised.
+    expect(fetchFromStore).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['duckdb', 'duckdb'],
+    ['motherduck', 'motherduck'],
+    ['sqlite', 'sqlite'],
+  ])('constructs a %s runtime from the contract connection type', async (wire, expected) => {
+    const store = {
+      type: 'generic' as const,
+      id: 'remote-store',
+      name: 'urban_forest',
+      baseUrl: 'http://localhost:8100',
+    }
+    const communityStore = { stores: [store] } as any
+
+    vi.mocked(fetchGenericStoreIndex).mockResolvedValue({
+      name: 'urban_forest',
+      connection: { type: wire, options: {} },
+      models: [],
+    } as any)
+    vi.mocked(fetchStoreFiles).mockResolvedValue({
+      directories: [{ directory: '', files: ['core.preql'] }],
+    })
+    vi.mocked(fetchStoreFileContent).mockResolvedValue('datasource core;')
+
+    const storage = new RemoteStoreStorage(communityStore)
+    const snapshot = await storage.loadStore(store.id)
+
+    const conn = Object.values(snapshot.connections)[0]
+    expect(conn.type).toBe(expected)
+    expect(conn.storage).toBe('remote')
     expect(fetchFromStore).not.toHaveBeenCalled()
   })
 

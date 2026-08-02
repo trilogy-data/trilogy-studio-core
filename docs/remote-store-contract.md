@@ -183,5 +183,6 @@ The counter-offer surfaces a few places where the current client needs to change
 ## Migration / backward compatibility
 
 - Stores that don't serve `connection` on `/index.json` remain usable as read-only browse targets (`RemoteProjectConnection`). No silent DuckDB fabrication.
+- **Pre-contract `connection.type` spellings.** A server older than contract v1 emitted raw pytrilogy `Dialects` values — `duck_db` rather than `duckdb`, and a type for every engine including ones the client can't construct (`postgres`, `presto`, …). pytrilogy and the studio release independently, so the client still accepts `duck_db`; the unconstructable engines already land in the browse-only fallback, which is where a conforming server puts them by omitting `connection` outright.
 - Stores that haven't switched to literal-slash path encoding: client requires the new encoding. Servers on the old scheme need to update before the client can read them.
 

@@ -12,6 +12,7 @@ import type Connection from '../connections/base'
 import {
   DuckDBConnection,
   BigQueryOauthConnection,
+  MotherDuckConnection,
   SnowflakeJwtConnection,
   SQLiteConnection,
   RemoteProjectConnection,
@@ -94,17 +95,24 @@ export default class RemoteStoreStorage extends AbstractStorage {
     const options = spec?.options || {}
     let connection: Connection
 
-    // Wire values are pytrilogy `Dialects` enum members. Remap to the
-    // client's in-process connection constructors. Dialects the client can't
-    // construct (postgres/presto/trino/sql_server/dataframe) fall through to
-    // the browse-only default. MotherDuck isn't a Dialects value; it's only
-    // reachable via client-local connection setup, not remote advertisement.
+    // Wire values are the client runtime names from
+    // docs/remote-store-contract.md. `duck_db` is the pre-contract spelling a
+    // server older than contract v1 still emits — kept because pytrilogy and
+    // the studio release independently. A type with no constructor here
+    // (postgres/presto/trino/sql_server/dataframe) falls through to
+    // browse-only; a conforming server omits `connection` for those anyway.
     switch (spec?.type) {
+      case 'duckdb':
       case 'duck_db':
         connection = new DuckDBConnection(connectionName, modelName)
         break
       case 'sqlite':
         connection = new SQLiteConnection(connectionName, modelName)
+        break
+      case 'motherduck':
+        // The token is a secret, so it never rides on /index.json — the user
+        // supplies it through credential storage before the first query.
+        connection = new MotherDuckConnection(connectionName, '', modelName)
         break
       case 'bigquery':
         // Per docs/remote-store-contract.md: the server emits the coarse

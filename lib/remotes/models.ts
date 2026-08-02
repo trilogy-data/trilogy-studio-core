@@ -50,17 +50,24 @@ export interface ModelFile {
 }
 
 // Runtime connection type advertised by a remote store via /index.json.
-// Mirrors the contract in docs/remote-store-contract.md — the server emits
-// a coarse `type` (a `Dialects` enum value from pytrilogy, e.g. `duck_db`)
-// plus a bag of non-secret options. Tokens / passwords / private keys are
-// never transmitted here; they live in per-user client credential storage.
-// The client remaps these onto its own runtime constructors; see
-// `buildRuntimeConnection` in `lib/data/remoteStoreStorage.ts`.
+// Mirrors the contract in docs/remote-store-contract.md — the server emits a
+// coarse client-runtime `type` plus a bag of non-secret options. Tokens /
+// passwords / private keys are never transmitted here; they live in per-user
+// client credential storage. The client remaps these onto its own runtime
+// constructors; see `buildRuntimeConnection` in
+// `lib/data/remoteStoreStorage.ts`.
+//
+// `duck_db` and the engines below it are pre-contract spellings from a server
+// older than contract v1, which emitted raw pytrilogy `Dialects` values. A
+// conforming server emits only the first five and omits `connection` entirely
+// for an engine the client cannot construct.
 export type RemoteConnectionType =
-  | 'duck_db'
+  | 'duckdb'
   | 'bigquery'
   | 'snowflake'
+  | 'motherduck'
   | 'sqlite'
+  | 'duck_db'
   | 'postgres'
   | 'presto'
   | 'trino'

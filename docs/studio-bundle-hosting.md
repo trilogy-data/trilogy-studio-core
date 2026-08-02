@@ -39,7 +39,7 @@ The `releases/latest/download/` form resolves via redirect without touching `api
 - **`basePath`** — where the bundle must be mounted. Non-negotiable, see below.
 - **`tarball.sha256`** — verify before extracting.
 
-The tarball is ~22M gzipped and expands to ~93M, most of it two DuckDB wasm builds. Only one is fetched by any given browser, lazily, on first DuckDB connection — but both must be present on disk.
+The tarball holds the app only. DuckDB wasm is **not** in it: this build compiles out the `VITE_DUCKDB_BUNDLED` branch (`lib/connections/duckdb.ts`) and fetches the wasm from jsDelivr at first DuckDB connection, exactly as trilogydata.dev does. Vite still emits the two wasm files into `dist/` for the dead branch, so the release step excludes them (`--exclude='*.wasm'`) along with the `stats.html` size report — ~71M of a ~93M `dist/` that nothing ever requests. A serve host does not need to hold them.
 
 ## What serve implements
 

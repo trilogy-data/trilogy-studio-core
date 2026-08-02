@@ -57,6 +57,17 @@ test.describe('getBaseUrl', () => {
     expect(getBaseUrl({ TEST_ENV: 'docker' })).toBe(DOCKER_BASE_URL)
   })
 
+  // Production serves the studio out of a subdirectory whose parent is a
+  // different site. Drop the trailing slash and every relative navigation
+  // silently resolves one level up, onto the docs homepage — which returns 200,
+  // so nothing fails loudly; the specs just stop testing the studio.
+  test('prod base URL keeps relative navigation inside the studio', () => {
+    const base = getBaseUrl({ TEST_ENV: 'prod' })
+    expect(base.endsWith('/')).toBe(true)
+    expect(new URL('./', base).href).toBe(base)
+    expect(new URL('#skipTips=true', base).href).toBe(`${base}#skipTips=true`)
+  })
+
   test('local points to localhost:5173', () => {
     expect(getBaseUrl({ TEST_ENV: 'local' })).toBe(LOCAL_BASE_URL)
     expect(getBaseUrl({})).toBe(LOCAL_BASE_URL)

@@ -89,6 +89,77 @@ export async function cacheDuckDBCdn(page) {
   })
 }
 
+// The same argument as cacheDuckDBCdn, applied to the studio's own bundle.
+//
+// Against production the suite makes ~280 navigations, and each one is a cold
+// context that re-downloads the same few dozen hashed chunks — order 10k
+// requests to trilogydata.dev, a shared host, inside twenty minutes. It answers
+// a browser-shaped burst like that by cutting the client off: measured locally,
+// eleven page loads (~550 asset requests) was the whole budget, after which
+// every navigation returned `403 Forbidden`. In CI that shows up as a run of
+// consecutive tests all dying on "sidebar-icon-… not visible" — the app never
+// booted because its chunks were refused, and the locator timeout is the last
+// symptom rather than the cause.
+//
+// Asset filenames are content-hashed, so the second fetch of one cannot tell us
+// anything the first didn't. The first request per URL goes to the deployed site
+// for real — that is what proves the chunk shipped — and every later request
+// replays it. HTML, the resolver, and everything else still go out on every
+// test, so the run is still exercising the real deployment.
+//
+// Local and docker runs are untouched: they talk to a server we started.
+const deployedAssetCache = new Map()
+// 403/429/5xx here mean the host is shedding load, not that the asset is
+// missing — a genuinely absent chunk answers 404 and fails on the first try.
+const THROTTLED_STATUSES = [403, 429, 500, 502, 503, 504]
+
+export async function cacheDeployedAssets(page, env = process.env) {
+  if ((env.TEST_ENV || '') !== 'prod') return
+
+  await page.route('**/trilogy-studio-core/assets/**', async (route) => {
+    const url = route.request().url()
+    const cached = deployedAssetCache.get(url)
+    if (cached) {
+      await route.fulfill(cached).catch(() => {})
+      return
+    }
+
+    try {
+      let response = await route.fetch()
+      for (
+        let attempt = 0;
+        attempt < 2 && THROTTLED_STATUSES.includes(response.status());
+        attempt++
+      ) {
+        // Say so rather than papering over it — if this is loud, the cache is
+        // not keeping the run under the host's limit and the run needs to get
+        // smaller.
+        console.warn(`[assets] host returned ${response.status()} for ${url}, retrying`)
+        await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)))
+        response = await route.fetch()
+      }
+
+      // route.fetch() hands back a decoded body, so replaying the upstream
+      // content-encoding/length would have the browser decode it a second time.
+      const headers = { ...response.headers() }
+      delete headers['content-encoding']
+      delete headers['content-length']
+
+      const entry = { status: response.status(), headers, body: await response.body() }
+      if (entry.status === 200) deployedAssetCache.set(url, entry)
+      await route.fulfill(entry)
+    } catch {
+      // A request can still be in flight when its test ends, and Playwright
+      // disposes the API response out from under the handler ("Response has
+      // been disposed"). Left unhandled that surfaces as a route-handler error
+      // against whichever test runs next — a failure with no relationship to
+      // the test it is reported on. Hand the request back to the browser and
+      // let it end however it was always going to.
+      await route.continue().catch(() => {})
+    }
+  })
+}
+
 // Mirrors lib/connections/base.ts computeConnectionId for the local storage
 // path used by every Playwright fixture. Connection rows now key their test
 // ids off the deterministic connection id rather than the display name so two

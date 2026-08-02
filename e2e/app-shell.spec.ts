@@ -20,7 +20,11 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('app shell boots without a fatal browser error', async ({ page, diagnostics }) => {
-  await page.goto('/')
+  // './', not '/'. A leading slash is origin-absolute, and in production the
+  // origin root is the trilogydata.dev docs site — so this spec, whose entire
+  // job is to catch a studio that failed to boot, was asserting against VuePress
+  // (no #loading-screen, a populated #app, and its 503s reported as ours).
+  await page.goto('./')
 
   // Don't let the assertion be the thing that times out — poll ourselves so a
   // failure carries the browser errors rather than a bare locator message.
@@ -57,7 +61,11 @@ test('app shell boots without a fatal browser error', async ({ page, diagnostics
 })
 
 test('no browser console errors during a cold load', async ({ page, diagnostics }) => {
-  await page.goto('/')
+  // './', not '/'. A leading slash is origin-absolute, and in production the
+  // origin root is the trilogydata.dev docs site — so this spec, whose entire
+  // job is to catch a studio that failed to boot, was asserting against VuePress
+  // (no #loading-screen, a populated #app, and its 503s reported as ours).
+  await page.goto('./')
   await expect(page.locator('#loading-screen')).toHaveCount(0, { timeout: BOOT_TIMEOUT })
 
   // Give async work kicked off at mount (monaco config, connection restore,
