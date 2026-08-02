@@ -6,7 +6,16 @@ const DOCKER_RESOLVER = '/api'
 
 const LOCAL_BASE_URL = 'http://localhost:5173'
 const DOCKER_BASE_URL = 'http://localhost:8080'
-const PROD_BASE_URL = 'https://trilogydata.dev/trilogy-studio-core'
+// The trailing slash is load-bearing, and only here. Locally and in docker the
+// studio is the whole origin, so the base path is cosmetic; in production it is
+// a subdirectory of trilogydata.dev, whose root is a completely different site
+// (the VuePress docs). Without the slash the host answers every navigation with
+// `301 -> http://trilogydata.dev/trilogy-studio-core/` and then a second 301
+// back to https, so each of the ~280 navigations in the prod suite costs three
+// round trips and one plaintext hop. It also makes any relative URL resolve
+// against the origin root — `./` lands on the docs homepage rather than the
+// studio. Keep it; e2e/test-helpers.spec.js pins it.
+const PROD_BASE_URL = 'https://trilogydata.dev/trilogy-studio-core/'
 
 /**
  * Resolve the trilogy backend URL based on environment.
