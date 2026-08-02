@@ -111,7 +111,13 @@ function isMapDataPixel(color) {
   return color.a > 0 && brightness > 20 && brightness < 245 && maxChannel - minChannel >= 20
 }
 
+// The heavyweight of the suite: DuckDB WASM boot, the FAA dataset query, pixel
+// sampling, and a cross-filter round trip. Measured at 36s (chromium) / 28s
+// (firefox) locally, so it needs more than the 60s default once CI's slower
+// runners are in play. Carrying the override here beats making every other test
+// wait 120s to accommodate this one.
 test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => {
+  test.setTimeout(120000)
   await page.goto('#skipTips=true')
 
   await openSidebarScreen(page, 'community-models', isMobile)
@@ -199,14 +205,14 @@ test('test-create-dashboard-and-pixels', async ({ browser, page, isMobile }) => 
   // Firefox the FAA query runs slowly enough that two concurrent renders blow
   // through the chart waitFor timeout below (the editor's render aborts the
   // chart's first render and the second has to start over).
-  await page.getByTestId('simple-editor-results').waitFor({ state: 'visible', timeout: 90000 })
+  await page.getByTestId('simple-editor-results').waitFor({ state: 'visible', timeout: 45000 })
 
   // save it
   await page.getByTestId('save-dashboard-chart').click()
 
   // toggle it
   const firstChartCanvas = page.locator(vegaSelector).first()
-  await firstChartCanvas.waitFor({ state: 'visible', timeout: 90000 })
+  await firstChartCanvas.waitFor({ state: 'visible', timeout: 45000 })
   await firstChartCanvas.hover({ force: true })
   const firstDashboardItem = page.getByTestId('dashboard-component-0')
   await firstDashboardItem.hover({ force: true })

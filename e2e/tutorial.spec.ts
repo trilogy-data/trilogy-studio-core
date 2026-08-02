@@ -109,7 +109,7 @@ select
   await runEditorQueryAndWait(page)
 
   await expect(page.getByRole('gridcell', { name: 'CA' })).toContainText('CA', {
-    timeout: 60000,
+    timeout: 30000,
   })
 
   // Step 5: Import from lineitem

@@ -6,7 +6,7 @@ const usePreview = process.env.PLAYWRIGHT_USE_PREVIEW === 'true'
 
 export default defineConfig({
   testDir: './e2e',
-  timeout: 120000,
+  timeout: 60000,
   // 56 test blocks across 5 projects is 280 runs; at one worker with retries
   // that has no practical ceiling, so a single hung worker can run until the
   // GitHub job timeout. Abort the whole run instead — this fires before the
