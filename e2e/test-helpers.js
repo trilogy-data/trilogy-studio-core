@@ -402,6 +402,38 @@ export async function runEditorQueryAndExpectCount(page, expectedCount, timeout 
   })
 }
 
+/**
+ * Replace everything in a monaco editor with `text`.
+ *
+ * Monaco decides whether "select all" is Cmd+A or Ctrl+A from the *browser's*
+ * user agent; Playwright resolves `ControlOrMeta` from the *host* OS. The webkit
+ * and Mobile Safari projects run a macOS user agent on a Linux runner, so
+ * `ControlOrMeta+a` sends Ctrl+A to a monaco that is in Mac mode — where Ctrl+A
+ * means "move the cursor to the start of the line", not "select all". Nothing
+ * throws and no locator times out: the typed text is simply inserted in front of
+ * the old content, and the editor saves the two queries glued together. That
+ * still returns rows, just not the ones the test is asserting on, so the failure
+ * surfaces somewhere else entirely (a cell that isn't clickable, a chart of the
+ * wrong data).
+ *
+ * Ask monaco which mode it is in — it puts `mac` on the editor root — send the
+ * chord it is actually listening for, and assert the editor really is empty
+ * before typing so a future divergence fails here instead.
+ */
+export async function replaceEditorContent(page, text, testId = 'simple-editor-content') {
+  const container = page.getByTestId(testId)
+  const monaco = container.locator('.monaco-editor').first()
+  await expect(monaco).toBeVisible()
+  await container.click()
+
+  const isMacMode = await monaco.evaluate((el) => el.classList.contains('mac'))
+  await page.keyboard.press(isMacMode ? 'Meta+a' : 'Control+a')
+  await page.keyboard.press('Delete')
+  await expect(container.locator('.view-lines')).toHaveText(/^\s*$/)
+
+  await page.keyboard.type(text)
+}
+
 export async function openDashboardItemEditor(page, itemId) {
   const itemCard = page.getByTestId(`dashboard-component-${itemId}`)
   const editButton = page.getByTestId(`edit-dashboard-item-content-${itemId}`)

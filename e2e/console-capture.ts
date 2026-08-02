@@ -19,7 +19,7 @@ import type { Page, TestInfo } from '@playwright/test'
 
 export { expect }
 
-export type IssueKind = 'pageerror' | 'console' | 'requestfailed' | 'httperror'
+export type IssueKind = 'pageerror' | 'console' | 'requestfailed' | 'httperror' | 'notification'
 
 export interface BrowserIssue {
   kind: IssueKind
@@ -44,12 +44,34 @@ const SELF_INFLICTED_REQUEST_FAILURES = ['net::ERR_ABORTED', 'NS_BINDING_ABORTED
  * pageerror even though nothing went wrong — it is control flow, not a fault,
  * and it is raised inside monaco-editor where we have no seam to handle it.
  *
- * This is the only global exclusion, and it is deliberately keyed on the exact
- * sentinel rather than a message substring. Anything broader would start hiding
- * the real defects this capture exists to surface.
+ * Keyed on the exact sentinel rather than a message substring — as is the one
+ * other thing this file declines to treat as fatal (see below). Anything broader
+ * would start hiding the real defects this capture exists to surface.
  */
 function isCancellationSentinel(error: Error) {
   return error.name === 'Canceled' && error.message === 'Canceled'
+}
+
+/**
+ * ResizeObserver's "loop" messages are not exceptions. Nothing in the app threw
+ * them: the spec has the browser fire an `error` event on window when a resize
+ * callback changed layout again and the remaining notifications could not be
+ * delivered within the same frame. There is no stack, no aborted work, and the
+ * next frame delivers what was left — the observers here (charts, the results
+ * table, the split panes) all redraw to a size, so a second pass is the design.
+ *
+ * They still say something about layout churn, so they stay in the report as
+ * notifications; they just don't fail a test that otherwise passed. Matched on
+ * the two exact spec-defined texts so a genuine throw from a resize callback —
+ * which is a real bug, and arrives with a name and a stack — still counts.
+ */
+const RESIZE_OBSERVER_NOTIFICATIONS = [
+  'ResizeObserver loop completed with undelivered notifications.',
+  'ResizeObserver loop limit exceeded',
+]
+
+function isResizeObserverNotification(error: Error) {
+  return RESIZE_OBSERVER_NOTIFICATIONS.includes(error.message.trim())
 }
 
 function shortLocation(loc?: { url?: string; lineNumber?: number; columnNumber?: number }) {
@@ -71,7 +93,7 @@ export function attachConsoleCapture(page: Page): BrowserDiagnostics {
   page.on('pageerror', (error) => {
     if (isCancellationSentinel(error)) return
     issues.push({
-      kind: 'pageerror',
+      kind: isResizeObserverNotification(error) ? 'notification' : 'pageerror',
       text: error.stack || `${error.name}: ${error.message}`,
     })
   })
@@ -130,7 +152,8 @@ export function formatIssues(issues: BrowserIssue[]): string {
     section('Uncaught exceptions', byKind('pageerror')) +
     section('console.error', byKind('console')) +
     section('Failed requests', byKind('requestfailed')) +
-    section('HTTP >= 400', byKind('httperror'))
+    section('HTTP >= 400', byKind('httperror')) +
+    section('Browser notifications (non-fatal)', byKind('notification'))
   )
 }
 

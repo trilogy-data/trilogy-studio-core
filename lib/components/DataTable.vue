@@ -423,6 +423,11 @@ export default {
       pendingRebuild: false,
       visibilityObserver: null as ResizeObserver | null,
       redrawFrame: 0,
+      // Size the current table was last laid out at. Without it the observer
+      // redraws on every notification, and a redraw re-measures columns and
+      // resizes the subtree it is observing — so the table drives its own
+      // observer in a loop that never settles, rebuilding every row each pass.
+      lastDrawnSize: null as { width: number; height: number } | null,
     }
   },
   props: {
@@ -555,8 +560,24 @@ export default {
             // element that is still perfectly laid out.
             const owned = (this.tabulator as unknown as { element?: HTMLElement | null }).element
             if (!owned || !owned.isConnected) return
-            // We were built or last drawn at a different size — most importantly
-            // at 0x0 while hidden. Force a full re-render at the real size.
+            // Only when the container is genuinely a different size than what we
+            // drew — most importantly when it was 0x0 while hidden. Everything
+            // else is the table reacting to its own redraw, and answering that
+            // keeps the loop alive: rows are torn down and rebuilt every frame,
+            // so anything holding a cell (a click, a highlight) is racing a node
+            // that is about to be replaced.
+            const root = this.$refs.root as HTMLElement | undefined
+            if (!root) return
+            const size = { width: root.offsetWidth, height: root.offsetHeight }
+            if (
+              this.lastDrawnSize &&
+              this.lastDrawnSize.width === size.width &&
+              this.lastDrawnSize.height === size.height
+            ) {
+              return
+            }
+            this.lastDrawnSize = size
+            // Force a full re-render at the real size.
             //
             // Still guarded: updateTable() destroys and rebuilds on every
             // results change, and a redraw racing that teardown trips a null
@@ -756,6 +777,9 @@ export default {
 
       // @ts-ignore
       this.tabulator = shallowRef(tab)
+      // Baseline for the observer: this is the size we just built at.
+      const root = this.$refs.root as HTMLElement | undefined
+      this.lastDrawnSize = root ? { width: root.offsetWidth, height: root.offsetHeight } : null
       this.updateTableTheme()
     },
 

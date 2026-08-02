@@ -125,7 +125,7 @@ import DataTable from '../DataTable.vue'
 import { Results } from '../../editors/results'
 // import type {ChartConfig} from '../editors/results'
 import { ref, onMounted, onUpdated, inject, type PropType } from 'vue'
-import Prism from 'prismjs'
+import { Prism, ensurePrismLanguagesReady } from '../../utility/prism'
 import VegaLiteChart from '../VegaLiteChart.vue'
 import { getDefaultValueFromHash, pushHashToUrl, URL_HASH_KEYS } from '../../stores/urlStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
@@ -270,15 +270,19 @@ export default {
     }
 
     const codeBlock = ref<HTMLElement | null>(null)
-    const updateRefs = () => {
-      if (codeBlock.value) {
-        if (Array.isArray(codeBlock.value)) {
-          codeBlock.value.forEach((block) => {
-            if (block) Prism.highlightElement(block)
-          })
-        } else if (codeBlock.value) {
-          Prism.highlightElement(codeBlock.value)
-        }
+    // Language components are loaded on demand rather than statically injected
+    // at build time (see the prism plugin comment in vite.config.ts), so the sql
+    // grammar may not exist yet the first time this pane renders. Without the
+    // await, highlightElement silently leaves the generated SQL unstyled.
+    const updateRefs = async () => {
+      if (!codeBlock.value) return
+      await ensurePrismLanguagesReady(['sql'])
+      if (Array.isArray(codeBlock.value)) {
+        codeBlock.value.forEach((block) => {
+          if (block) Prism.highlightElement(block)
+        })
+      } else if (codeBlock.value) {
+        Prism.highlightElement(codeBlock.value)
       }
     }
     onMounted(() => {
