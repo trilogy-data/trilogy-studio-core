@@ -31,20 +31,26 @@ export interface BrowserDiagnostics {
   issues: BrowserIssue[]
   /** Uncaught exceptions only — the fatal class. */
   pageErrors: () => BrowserIssue[]
-  /** Uncaught exceptions the test hasn't declared as expected. */
-  unexpectedPageErrors: () => BrowserIssue[]
-  /**
-   * Declare that this test deliberately provokes an uncaught exception, so it
-   * doesn't trip FAIL_ON_PAGE_ERROR. Use the narrowest pattern that matches —
-   * a broad one silently swallows regressions for the rest of the test.
-   */
-  allowPageErrors: (...patterns: (RegExp | string)[]) => void
   format: () => string
 }
 
 // Requests Playwright itself aborts (route handlers, context teardown mid-flight)
 // are our own doing, not the app's. Everything else is worth seeing.
 const SELF_INFLICTED_REQUEST_FAILURES = ['net::ERR_ABORTED', 'NS_BINDING_ABORTED']
+
+/**
+ * Monaco signals cancellation by throwing a sentinel named `Canceled`, and
+ * disposing an editor cancels whatever it had in flight. That reaches us as a
+ * pageerror even though nothing went wrong — it is control flow, not a fault,
+ * and it is raised inside monaco-editor where we have no seam to handle it.
+ *
+ * This is the only global exclusion, and it is deliberately keyed on the exact
+ * sentinel rather than a message substring. Anything broader would start hiding
+ * the real defects this capture exists to surface.
+ */
+function isCancellationSentinel(error: Error) {
+  return error.name === 'Canceled' && error.message === 'Canceled'
+}
 
 function shortLocation(loc?: { url?: string; lineNumber?: number; columnNumber?: number }) {
   if (!loc?.url) return undefined
@@ -63,6 +69,7 @@ export function attachConsoleCapture(page: Page): BrowserDiagnostics {
   // Uncaught exceptions and unhandled promise rejections. This is the one that
   // kills the app shell.
   page.on('pageerror', (error) => {
+    if (isCancellationSentinel(error)) return
     issues.push({
       kind: 'pageerror',
       text: error.stack || `${error.name}: ${error.message}`,
@@ -101,20 +108,10 @@ export function attachConsoleCapture(page: Page): BrowserDiagnostics {
     })
   })
 
-  const allowed: (RegExp | string)[] = []
-  const isAllowed = (issue: BrowserIssue) =>
-    allowed.some((p) => (typeof p === 'string' ? issue.text.includes(p) : p.test(issue.text)))
-
-  const pageErrors = () => issues.filter((i) => i.kind === 'pageerror')
-
   return {
     issues,
-    pageErrors,
-    unexpectedPageErrors: () => pageErrors().filter((i) => !isAllowed(i)),
-    allowPageErrors: (...patterns: (RegExp | string)[]) => allowed.push(...patterns),
-    format: () =>
-      formatIssues(issues) +
-      (allowed.length > 0 ? `\n_Allowed by this test: ${allowed.join(', ')}_\n` : ''),
+    pageErrors: () => issues.filter((i) => i.kind === 'pageerror'),
+    format: () => formatIssues(issues),
   }
 }
 
@@ -189,15 +186,15 @@ export const test = base.extend<{ diagnostics: BrowserDiagnostics }>({
     // Only escalate a test that otherwise passed. If the body already failed,
     // that error is the one worth reading; the browser errors are attached to
     // the report either way, so nothing is lost by staying quiet here.
-    const unexpected = diagnostics.unexpectedPageErrors()
-    if (FAIL_ON_PAGE_ERROR && unexpected.length > 0 && testInfo.status === 'passed') {
+    const fatal = diagnostics.pageErrors()
+    if (FAIL_ON_PAGE_ERROR && fatal.length > 0 && testInfo.status === 'passed') {
       throw new Error(
-        `Test assertions passed, but ${unexpected.length} uncaught ` +
+        `Test assertions passed, but ${fatal.length} uncaught ` +
           `exception(s) occurred in the browser:\n\n` +
-          unexpected.map((i) => i.text).join('\n---\n') +
-          `\n\nIf this test provokes the error deliberately, declare it with ` +
-          `diagnostics.allowPageErrors(/pattern/). Otherwise set ` +
-          `FAIL_ON_PAGE_ERROR=false to downgrade all of these to report-only.`,
+          fatal.map((i) => i.text).join('\n---\n') +
+          `\n\nThere is deliberately no per-test opt-out: an uncaught exception ` +
+          `is a bug worth fixing at the source, even when the UI recovers. ` +
+          `FAIL_ON_PAGE_ERROR=false downgrades all of these to report-only.`,
       )
     }
   },

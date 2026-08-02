@@ -131,14 +131,7 @@ test.describe('LLM Connection Tests', () => {
   //   expect(responseText).toContain('mocked query generation');
   // });
 
-  test('should handle LLM errors gracefully', async ({ page, isMobile, diagnostics }) => {
-    // This test exists to provoke a failure, and the app currently surfaces it
-    // as an unhandled rejection out of llmStore.resetConnection rather than a
-    // handled error. The UI degrades correctly (asserted below), so the test is
-    // valid — but the rejection is a real leak worth fixing at the source; this
-    // allowance should be removed when it is.
-    diagnostics.allowPageErrors(/OpenAI API error: Invalid API key provided/)
-
+  test('should handle LLM errors gracefully', async ({ page, isMobile }) => {
     // Override the default mocks with one that simulates an error
     await page.unroute('https://api.openai.com/v1/models')
     await page.route('https://api.openai.com/v1/models', async (route) => {

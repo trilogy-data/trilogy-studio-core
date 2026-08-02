@@ -37,7 +37,23 @@ export default defineConfig({
     // nodePolyfills({ include: ['events', 'dns', 'stream', 'crypto'] }),
     nodePolyfills({ include: ['crypto', 'stream'], exclude: ['prismjs'] }),
     prism({
-      languages: ['sql'],
+      // `languages` MUST stay empty. babel-plugin-prismjs rewrites every
+      // `import Prism from 'prismjs'` into a core import plus an eager, static
+      // side-effect import of each language listed here — and it does that in
+      // every file that imports Prism (lib/utility/prism.ts, Results.vue, ...).
+      //
+      // prismjs core is CommonJS, so rolldown wraps it in a lazy __commonJS
+      // factory, while the injected language import is plain ESM that evaluates
+      // eagerly. The language component is a bare script that reads a global
+      // `Prism` the core hasn't defined yet, so it throws
+      // `ReferenceError: Prism is not defined` at module scope — an uncaught
+      // exception during boot that takes down the whole app shell. Whether it
+      // fires depends on chunk evaluation order, which is why CI hit it and
+      // local runs off the identical bundle did not.
+      //
+      // Languages are loaded dynamically, after the core is guaranteed
+      // evaluated, by ensurePrismLanguagesReady() in lib/utility/prism.ts.
+      languages: [],
       plugins: ['line-numbers'],
       theme: 'default',
       css: true,

@@ -546,9 +546,30 @@ export default {
             this.pendingRebuild = false
             this.create()
           } else if (this.tabulator) {
+            // Check the element Tabulator itself will read, not $refs.
+            // updateTable() destroys and rebuilds the table, and destroy() nulls
+            // the instance's `element`; a rAF queued before that lands on the
+            // dead instance and Tabulator's redraw reads offsetWidth straight
+            // off the null, throwing out of a callback nothing can catch.
+            // isVisible() can't see this — it measures $refs.root, a different
+            // element that is still perfectly laid out.
+            const owned = (this.tabulator as unknown as { element?: HTMLElement | null }).element
+            if (!owned || !owned.isConnected) return
             // We were built or last drawn at a different size — most importantly
             // at 0x0 while hidden. Force a full re-render at the real size.
-            this.tabulator.redraw(true)
+            //
+            // Still guarded: updateTable() destroys and rebuilds on every
+            // results change, and a redraw racing that teardown trips a null
+            // read deep inside Tabulator's own row/column managers — past the
+            // instance element checked above, so there is nothing further we
+            // can test for. This is a layout refresh of a table that is being
+            // replaced anyway, so dropping it is correct; letting it escape
+            // would be an uncaught exception from a rAF callback.
+            try {
+              this.tabulator.redraw(true)
+            } catch {
+              // Table is mid-teardown; the rebuild that follows redraws it.
+            }
           }
         })
       })
@@ -650,7 +671,12 @@ export default {
     },
 
     create() {
-      let target = this.$refs.tabulator as HTMLElement
+      let target = this.$refs.tabulator as HTMLElement | undefined
+      // Same detached-element hazard as the redraw path above: create() is
+      // gated on $refs.root being visible, which says nothing about whether
+      // Tabulator's own element is present. Constructing against a missing one
+      // throws out of a rAF callback, where nothing can catch it.
+      if (!target) return
       let layout: 'fitDataFill' | 'fitData' = this.fitParent ? 'fitDataFill' : 'fitData'
       // check if any column is of type ARRAY or STRUCT, if so, use fitData
       let rowHeight = 25 as number | undefined

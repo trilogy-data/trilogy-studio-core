@@ -97,6 +97,25 @@ const useLLMConnectionStore = defineStore('llmConnections', {
       }
     },
 
+    /**
+     * Revalidate a connection without waiting for the result.
+     *
+     * reset() records the failure on the provider itself — `error` is set and
+     * `connected` goes false — before it rethrows, and the sidebar status icon
+     * renders from exactly that state via connectionStateToStatus(). So a
+     * caller that isn't awaiting has nothing left to do with the rejection.
+     *
+     * Use this rather than dropping the promise on the floor: an unhandled
+     * rejection from a bad API key is a real fault (it fires window.onerror,
+     * and reaches users as a browser-level error) even though the UI recovers.
+     * Callers that need to surface the error to the user should await
+     * resetConnection() in a try/catch instead — see refreshId() in
+     * LLMConnectionList.vue.
+     */
+    resetConnectionInBackground(name: string) {
+      this.resetConnection(name).catch(() => {})
+    },
+
     connectionStateToStatus(connection: LLMProvider | null) {
       if (!connection) {
         return 'disabled'
@@ -159,7 +178,7 @@ const useLLMConnectionStore = defineStore('llmConnections', {
         throw new Error(`LLM provider type "${type}" not found.`)
       }
       this.addConnection(connection)
-      this.resetConnection(name)
+      this.resetConnectionInBackground(name)
       return connection
     },
 
