@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { openSidebarScreen } from './test-helpers.js'
+import { cacheDuckDBCdn, openSidebarScreen } from './test-helpers.js'
+
+// This spec doesn't call prepareTestPage, so wire the DuckDB CDN cache directly.
+test.beforeEach(async ({ page }) => {
+  await cacheDuckDBCdn(page)
+})
 
 test('test-autoimport-iris-data-dashboard', async ({ page, isMobile }) => {
   // Navigate to the URL with all the autoimport parameters

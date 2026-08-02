@@ -17,6 +17,11 @@ export default defineConfig({
     },
   },
   define: {
+    // 'false' routes DuckDB through jsDelivr at runtime, which is deliberate:
+    // our static host is too slow to serve the 73MB of wasm itself. The e2e
+    // suite exercises this same path and caches the CDN response to disk (see
+    // cacheDuckDBCdn in e2e/test-helpers.js) so a throttled runner can't turn
+    // an 8MB fetch per connection into a hang.
     'import.meta.env.VITE_DUCKDB_BUNDLED': JSON.stringify('false'),
     'import.meta.env.VITE_DISABLE_TIPS_DEFAULT': JSON.stringify('false'),
   },

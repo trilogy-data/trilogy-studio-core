@@ -143,6 +143,17 @@ jobs:
           fi
         shell: /usr/bin/bash -e {0}
 
+      # DuckDB's worker and 8MB wasm are fetched from jsDelivr at runtime, the
+      # same as production. e2e/test-helpers.js caches those responses to disk;
+      # persisting the directory means even the first test is a local read
+      # rather than an unbounded CDN fetch on a throttled runner.
+      - name: Cache DuckDB CDN assets
+        uses: actions/cache@v4
+        with:
+          path: .duckdb-cdn-cache
+          key: duckdb-cdn-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: duckdb-cdn-
+
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps
 
