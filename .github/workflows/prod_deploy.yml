@@ -18,20 +18,20 @@ jobs:
     steps:
         # Setup gcloud CLI
         - name: Checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v6
         
-        - uses: pnpm/action-setup@v4
+        - uses: pnpm/action-setup@v6
           with:
             version: 10
         
         - name: Set up Node
-          uses: actions/setup-node@v4
+          uses: actions/setup-node@v6
           with:
             node-version: 23
             cache: 'pnpm'
 
         - name: Set up Python
-          uses: actions/setup-python@v5
+          uses: actions/setup-python@v6
           with:
             python-version: '3.13'
             cache: 'pip'
@@ -54,14 +54,14 @@ jobs:
         # rather than rebuilding it. Short retention — it is a build cache, not
         # a deliverable; the deliverable is the release asset.
         - name: Upload studio bundle for release
-          uses: actions/upload-artifact@v4
+          uses: actions/upload-artifact@v6
           with:
             name: studio-dist
             path: dist/
             retention-days: 1
 
         - name: Upload
-          uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+          uses: SamKirkland/FTP-Deploy-Action@v4.4.0
           with:
               server: ${{ secrets.FTP_SERVER }}
               username: ${{ secrets.FTP_USER }}
@@ -98,7 +98,7 @@ jobs:
           env:
             TEST_ENV: 'prod'
         - name: Upload Playwright test results
-          uses: actions/upload-artifact@v4
+          uses: actions/upload-artifact@v6
           if: always()
           with:
             name: playwright-report-production
@@ -120,7 +120,7 @@ jobs:
       needs_release: ${{ steps.check.outputs.needed }}
     steps:
         - name: Checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v6
 
         - name: Read version from package.json
           id: version
@@ -160,15 +160,15 @@ jobs:
         # Checkout is still needed for scripts/build-release-manifest.mjs and the
         # vite.config.ts it reads `base` from — but no install or build.
         - name: Checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v6
 
         - name: Set up Node
-          uses: actions/setup-node@v4
+          uses: actions/setup-node@v6
           with:
             node-version: 23
 
         - name: Download studio bundle
-          uses: actions/download-artifact@v4
+          uses: actions/download-artifact@v7
           with:
             name: studio-dist
             path: dist
@@ -186,7 +186,7 @@ jobs:
             sha256sum trilogy-studio.tgz > trilogy-studio.tgz.sha256
 
         - name: Publish release
-          uses: softprops/action-gh-release@v2
+          uses: softprops/action-gh-release@v3
           with:
             tag_name: v${{ needs.check-studio-version.outputs.version }}
             name: Studio v${{ needs.check-studio-version.outputs.version }}

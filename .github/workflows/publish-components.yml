@@ -15,21 +15,21 @@ jobs:
 
     steps:
       # 1. Checkout code
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       # 2. Setup PNPM
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
 
       # 3. Setup Node with OIDC for NPM
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
           cache: 'pip'

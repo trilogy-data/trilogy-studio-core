@@ -31,6 +31,14 @@ export interface BrowserDiagnostics {
   issues: BrowserIssue[]
   /** Uncaught exceptions only — the fatal class. */
   pageErrors: () => BrowserIssue[]
+  /** Uncaught exceptions the test hasn't declared as expected. */
+  unexpectedPageErrors: () => BrowserIssue[]
+  /**
+   * Declare that this test deliberately provokes an uncaught exception, so it
+   * doesn't trip FAIL_ON_PAGE_ERROR. Use the narrowest pattern that matches —
+   * a broad one silently swallows regressions for the rest of the test.
+   */
+  allowPageErrors: (...patterns: (RegExp | string)[]) => void
   format: () => string
 }
 
@@ -93,10 +101,20 @@ export function attachConsoleCapture(page: Page): BrowserDiagnostics {
     })
   })
 
+  const allowed: (RegExp | string)[] = []
+  const isAllowed = (issue: BrowserIssue) =>
+    allowed.some((p) => (typeof p === 'string' ? issue.text.includes(p) : p.test(issue.text)))
+
+  const pageErrors = () => issues.filter((i) => i.kind === 'pageerror')
+
   return {
     issues,
-    pageErrors: () => issues.filter((i) => i.kind === 'pageerror'),
-    format: () => formatIssues(issues),
+    pageErrors,
+    unexpectedPageErrors: () => pageErrors().filter((i) => !isAllowed(i)),
+    allowPageErrors: (...patterns: (RegExp | string)[]) => allowed.push(...patterns),
+    format: () =>
+      formatIssues(issues) +
+      (allowed.length > 0 ? `\n_Allowed by this test: ${allowed.join(', ')}_\n` : ''),
   }
 }
 
@@ -142,11 +160,19 @@ export async function reportDiagnostics(diagnostics: BrowserDiagnostics, testInf
 }
 
 /**
- * Set FAIL_ON_PAGE_ERROR=true to turn any uncaught browser exception into a
- * test failure. Off by default so enabling capture doesn't reclassify existing
- * runs; turn it on once the suite is known clean to keep it that way.
+ * An uncaught exception in the page fails the test, even if every assertion
+ * passed. A test that "passes" while the app threw is not a passing test — it
+ * just didn't happen to look at the broken thing.
+ *
+ * Set FAIL_ON_PAGE_ERROR=false to downgrade this to report-only, which is worth
+ * doing if you need to see how far the suite gets rather than where it first
+ * breaks.
+ *
+ * Note this is deliberately scoped to `pageerror` (uncaught exceptions and
+ * unhandled rejections) and NOT to console.error — this app uses console.error
+ * for recoverable conditions, so failing on it would be noise.
  */
-const FAIL_ON_PAGE_ERROR = process.env.FAIL_ON_PAGE_ERROR === 'true'
+const FAIL_ON_PAGE_ERROR = process.env.FAIL_ON_PAGE_ERROR !== 'false'
 
 export const test = base.extend<{ diagnostics: BrowserDiagnostics }>({
   page: async ({ page }, use, testInfo) => {
@@ -157,16 +183,22 @@ export const test = base.extend<{ diagnostics: BrowserDiagnostics }>({
 
     await reportDiagnostics(diagnostics, testInfo)
 
-    if (FAIL_ON_PAGE_ERROR && diagnostics.pageErrors().length > 0 && testInfo.status === 'passed') {
-      testInfo.status = 'failed'
-      testInfo.error = {
-        message:
-          'Uncaught exception(s) in the browser:\n' +
-          diagnostics
-            .pageErrors()
-            .map((i) => i.text)
-            .join('\n---\n'),
-      }
+    // Throwing from fixture teardown is what actually fails a test — assigning
+    // to testInfo.status is not a supported way to do it and silently no-ops.
+    //
+    // Only escalate a test that otherwise passed. If the body already failed,
+    // that error is the one worth reading; the browser errors are attached to
+    // the report either way, so nothing is lost by staying quiet here.
+    const unexpected = diagnostics.unexpectedPageErrors()
+    if (FAIL_ON_PAGE_ERROR && unexpected.length > 0 && testInfo.status === 'passed') {
+      throw new Error(
+        `Test assertions passed, but ${unexpected.length} uncaught ` +
+          `exception(s) occurred in the browser:\n\n` +
+          unexpected.map((i) => i.text).join('\n---\n') +
+          `\n\nIf this test provokes the error deliberately, declare it with ` +
+          `diagnostics.allowPageErrors(/pattern/). Otherwise set ` +
+          `FAIL_ON_PAGE_ERROR=false to downgrade all of these to report-only.`,
+      )
     }
   },
 
