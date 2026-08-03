@@ -5,10 +5,10 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, nextTick, onMounted, ref, watch, type PropType } from 'vue'
+import { defineComponent, computed, ref, type PropType } from 'vue'
 import type { Results } from '../editors/results'
 import { renderMarkdown } from '../utility/markdownRenderer'
-import { Prism, ensurePrismLanguagesReady } from '../utility/prism'
+import { usePrismHighlight } from '../composables/usePrismHighlight'
 
 export default defineComponent({
   name: 'MarkdownRenderer',
@@ -33,67 +33,46 @@ export default defineComponent({
       return renderMarkdown(props.markdown, props.results, props.loading)
     })
 
-    const wireMarkdownCodeBlocks = async () => {
-      await nextTick()
+    const wireCopyButtons = (root: HTMLElement) => {
+      root.querySelectorAll<HTMLButtonElement>('.markdown-copy-button').forEach((button) => {
+        if (button.dataset.bound === 'true') {
+          return
+        }
 
-      if (!markdownRoot.value) {
-        return
-      }
-
-      const languages = Array.from(
-        markdownRoot.value.querySelectorAll<HTMLElement>('pre code[class*="language-"]'),
-      ).map((block) =>
-        Array.from(block.classList)
-          .find((className) => className.startsWith('language-'))
-          ?.replace('language-', ''),
-      )
-
-      await ensurePrismLanguagesReady(languages)
-
-      markdownRoot.value.querySelectorAll('pre code[class*="language-"]').forEach((block) => {
-        Prism.highlightElement(block as HTMLElement)
-      })
-
-      markdownRoot.value
-        .querySelectorAll<HTMLButtonElement>('.markdown-copy-button')
-        .forEach((button) => {
-          if (button.dataset.bound === 'true') {
+        button.dataset.bound = 'true'
+        button.addEventListener('click', async () => {
+          const container = button.closest<HTMLElement>('.md-code-container')
+          const content = container?.dataset.content ?? ''
+          if (!content) {
             return
           }
 
-          button.dataset.bound = 'true'
-          button.addEventListener('click', async () => {
-            const container = button.closest<HTMLElement>('.md-code-container')
-            const content = container?.dataset.content ?? ''
-            if (!content) {
-              return
+          try {
+            await navigator.clipboard.writeText(content)
+            const copyIcon = button.querySelector<HTMLElement>('.copy-icon')
+            const checkIcon = button.querySelector<HTMLElement>('.check-icon')
+            if (copyIcon && checkIcon) {
+              copyIcon.style.display = 'none'
+              checkIcon.style.display = 'block'
+              window.setTimeout(() => {
+                copyIcon.style.display = 'block'
+                checkIcon.style.display = 'none'
+              }, 1500)
             }
-
-            try {
-              await navigator.clipboard.writeText(content)
-              const copyIcon = button.querySelector<HTMLElement>('.copy-icon')
-              const checkIcon = button.querySelector<HTMLElement>('.check-icon')
-              if (copyIcon && checkIcon) {
-                copyIcon.style.display = 'none'
-                checkIcon.style.display = 'block'
-                window.setTimeout(() => {
-                  copyIcon.style.display = 'block'
-                  checkIcon.style.display = 'none'
-                }, 1500)
-              }
-            } catch (error) {
-              console.error('Failed to copy markdown code block:', error)
-            }
-          })
+          } catch (error) {
+            console.error('Failed to copy markdown code block:', error)
+          }
         })
+      })
     }
 
-    onMounted(() => {
-      void wireMarkdownCodeBlocks()
-    })
-
-    watch(renderedMarkdown, () => {
-      void wireMarkdownCodeBlocks()
+    // Streaming re-renders this on every chunk, so many passes can be in flight
+    // at once; the composable handles superseding them and surviving an unmount
+    // mid-load.
+    usePrismHighlight(markdownRoot, {
+      selector: 'pre code[class*="language-"]',
+      onHighlighted: wireCopyButtons,
+      watchSources: [renderedMarkdown],
     })
 
     return {
