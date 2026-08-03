@@ -1,4 +1,5 @@
 import Prism from 'prismjs'
+import { registerTrilogy } from '@trilogy-data/prism-trilogy'
 
 // Languages whose grammar has actually been imported. Tracked per language
 // rather than as a single "ready" promise: callers request different sets at
@@ -12,12 +13,12 @@ const loadedLanguages = new Set<string>()
 // serialized onto one chain rather than run concurrently.
 let loadQueue: Promise<void> = Promise.resolve()
 
-// Only these can actually be imported. 'trilogy' is derived from sql in
-// defineTrilogyLanguage, and 'text' has no grammar, so both drop out here.
+// Only these can actually be imported. 'trilogy' is registered synchronously
+// from @trilogy-data/prism-trilogy (it is plain data, with no import to await),
+// and 'text' has no grammar, so both drop out here.
 const LOAD_ORDER = ['markup', 'javascript', 'typescript', 'python', 'sql', 'json', 'markdown']
 
 const IMPLIED_LANGUAGES: Record<string, string[]> = {
-  trilogy: ['sql'],
   typescript: ['javascript'],
   json: ['javascript'],
   markdown: ['markup'],
@@ -44,34 +45,18 @@ export function normalizePrismLanguage(language: string | null | undefined): str
   }
 }
 
-function defineTrilogyLanguage() {
-  if (!Prism.languages.trilogy && Prism.languages.sql) {
-    Prism.languages.trilogy = {
-      ...Prism.languages.sql,
-      keyword: [
-        ...(Array.isArray(Prism.languages.sql.keyword)
-          ? Prism.languages.sql.keyword
-          : Prism.languages.sql.keyword
-            ? [Prism.languages.sql.keyword]
-            : []),
-        /\b(?:DATASOURCE)\b/i,
-        /\b(?:GRAIN)\b/i,
-        /\b(?:ADDRESS)\b/i,
-        /\b(?:DEF)\b/i,
-        /\b(?:IMPORT)\b/i,
-        /\b(?:MERGE)\b/i,
-        /\b(?:HAVING_CLAUSE)\b/i,
-        /\b(?:WHERE_CLAUSE)\b/i,
-        /\b(?:SELECT_LIST)\b/i,
-        /\b(?:ORDER_BY)\b/i,
-        /\b(?:SELECT_STATEMENT)\b/i,
-        /\b(?:SELECT_ITEM)\b/i,
-        /\b(?:ALIGN_CLAUSE)\b/i,
-        /\b(?:ALIGN_ITEM)\b/i,
-        /\b(?:IDENTIFIER)\b/i,
-      ],
-    }
+// Registration is idempotent and synchronous, but it must not run at module
+// scope: prismjs core is CommonJS and gets wrapped in a lazy factory, so
+// touching Prism.languages during module evaluation reintroduces the boot-order
+// hazard documented in vite.config.ts.
+let trilogyRegistered = false
+
+function ensureTrilogyRegistered() {
+  if (trilogyRegistered) {
+    return
   }
+  registerTrilogy(Prism)
+  trilogyRegistered = true
 }
 
 async function loadPrismLanguage(language: string) {
@@ -138,15 +123,16 @@ async function loadPrismLanguage(language: string) {
 
 /**
  * Expand a caller's requested languages into the loadable set they imply, in
- * dependency order. sql is always included because the trilogy grammar is
- * derived from it and every surface in the app can show trilogy.
+ * dependency order.
+ *
+ * Trilogy no longer drags `sql` in behind it: the grammar used to be derived
+ * from `Prism.languages.sql` at runtime, so every surface that could show
+ * Trilogy paid for prism-sql whether or not it rendered any SQL.
  */
 function resolveLoadableLanguages(requestedLanguages: Array<string | null | undefined>): string[] {
   const normalized = new Set(
     requestedLanguages.map((language) => normalizePrismLanguage(language)).filter(Boolean),
   )
-
-  normalized.add('sql')
 
   for (const language of Array.from(normalized)) {
     for (const implied of IMPLIED_LANGUAGES[language] ?? []) {
@@ -160,6 +146,8 @@ function resolveLoadableLanguages(requestedLanguages: Array<string | null | unde
 export async function ensurePrismLanguagesReady(
   requestedLanguages: Array<string | null | undefined> = [],
 ) {
+  ensureTrilogyRegistered()
+
   const wanted = resolveLoadableLanguages(requestedLanguages)
 
   if (wanted.every((language) => loadedLanguages.has(language))) {
@@ -176,8 +164,6 @@ export async function ensurePrismLanguagesReady(
       // caller rather than being cached as done.
       loadedLanguages.add(language)
     }
-
-    defineTrilogyLanguage()
   })
 
   // The chain must survive a failed load, or every later request queues behind

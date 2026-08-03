@@ -28,7 +28,16 @@ export default defineConfig({
       fileName: (_, entryName) => `${entryName}.js`,
     },
     rollupOptions: {
-      external: ['vue', 'pinia', '@motherduck/wasm-client', 'sql.js'],
+      // prismjs is external because Prism keeps its grammars on a module-level
+      // singleton: a bundled second copy would receive the trilogy grammar
+      // while the host app highlights with its own, which shows up as silently
+      // unhighlighted code rather than an error.
+      // @trilogy-data/prism-trilogy is deliberately NOT external -- it is a few
+      // kB of stateless data, so bundling it spares consumers an extra install.
+      // The regex form also covers the `prismjs/components/prism-*` subpaths
+      // that ensurePrismLanguagesReady() imports dynamically; a bare 'prismjs'
+      // string only matches the exact specifier.
+      external: [/^prismjs(\/.*)?$/, 'vue', 'pinia', '@motherduck/wasm-client', 'sql.js'],
       output: {
         globals: {
           vue: 'Vue',

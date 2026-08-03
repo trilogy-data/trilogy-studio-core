@@ -36,12 +36,23 @@ RUN corepack enable pnpm && corepack prepare pnpm@10 --activate
 
 COPY package.json pnpm-lock.yaml ./
 COPY lib/package.json ./lib/package.json
+# @trilogy-data/prism-trilogy is a linked, build-time-only dependency of both
+# the root app and lib, so the directory has to exist before the root install
+# can resolve the link. Manifests are copied with the others so this install
+# layer caches independently of edits to the grammar source below.
+COPY prism-trilogy/package.json prism-trilogy/pnpm-lock.yaml ./prism-trilogy/
 
 RUN pnpm install --frozen-lockfile --prod=false
+RUN pnpm -C prism-trilogy install --frozen-lockfile
 
 # Copy the rest of the source code
 COPY ./src ./src
 COPY ./lib ./lib
+# Grammar sources only. There is no .dockerignore, so copying the directory
+# wholesale would drop a host node_modules (with host-platform binaries) on top
+# of the one just installed above.
+COPY ./prism-trilogy/src ./prism-trilogy/src
+COPY ./prism-trilogy/tsconfig.json ./prism-trilogy/vite.config.ts ./prism-trilogy/vite.config.component.ts ./prism-trilogy/
 COPY --from=backend-builder /tmp/trilogySyntax.generated.ts ./lib/llm/data/trilogySyntax.generated.ts
 COPY ./public ./public
 COPY ./docker/index.html index.html

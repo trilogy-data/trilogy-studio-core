@@ -138,6 +138,38 @@ describe('RemoteStoreStorage', () => {
     expect(fetchFromStore).not.toHaveBeenCalled()
   })
 
+  it('carries the advertised BigQuery project onto the OAuth runtime connection', async () => {
+    const store = {
+      type: 'generic' as const,
+      id: 'remote-store',
+      name: 'urban_forest',
+      baseUrl: 'http://localhost:8100',
+    }
+    const communityStore = { stores: [store] } as any
+
+    // What `trilogy serve` emits for a project whose trilogy.toml declares
+    // `[engine] dialect = "bigquery"` + `[engine.config] project = ...`.
+    vi.mocked(fetchGenericStoreIndex).mockResolvedValue({
+      name: 'urban_forest',
+      connection: { type: 'bigquery', options: { projectId: 'preqldata' } },
+      models: [],
+    } as any)
+    vi.mocked(fetchStoreFiles).mockResolvedValue({
+      directories: [{ directory: '', files: ['core.preql'] }],
+    })
+    vi.mocked(fetchStoreFileContent).mockResolvedValue('datasource core;')
+
+    const storage = new RemoteStoreStorage(communityStore)
+    const snapshot = await storage.loadStore(store.id)
+
+    const conn = Object.values(snapshot.connections)[0] as any
+    expect(conn.type).toBe('bigquery-oauth')
+    expect(conn.projectId).toBe('preqldata')
+    expect(conn.storage).toBe('remote')
+    expect(conn.model).toBe('urban_forest')
+    expect(fetchFromStore).not.toHaveBeenCalled()
+  })
+
   it('tags editors listed in index.json startup_scripts with STARTUP_SCRIPT', async () => {
     const store = {
       type: 'generic' as const,

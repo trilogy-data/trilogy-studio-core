@@ -48,7 +48,12 @@ jobs:
       
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      
+
+      # Linked dependency of ./lib -- its dist has to exist before anything
+      # that imports the Prism grammar can run.
+      - name: Build Trilogy grammar package
+        run: pnpm run build:grammar
+
       - name: Run Tests
         run: pnpm run test
       
