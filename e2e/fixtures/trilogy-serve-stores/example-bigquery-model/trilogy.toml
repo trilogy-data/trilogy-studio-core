@@ -1,2 +1,11 @@
 [project]
 name = "Example BigQuery Model"
+
+# Exercises the engine-derived connection path: no [serve.connection] block, so
+# /index.json advertises {type: "bigquery", options: {projectId: "preqldata"}}
+# from [engine.config]. See docs/remote-store-contract.md.
+[engine]
+dialect = "bigquery"
+
+[engine.config]
+project = "preqldata"

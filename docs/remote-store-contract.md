@@ -49,6 +49,39 @@ Fields:
     - `snowflake` → `{ account, username, warehouse?, role?, database?, schema? }` (no `privateKey` — that's a secret)
     - `motherduck` → `{}` (token is a secret, supplied per-user)
   - **Never** includes secrets — tokens, passwords, private keys stay in the client's per-user credential storage.
+
+#### How the server fills `connection`
+
+Two sources, in precedence order:
+
+1. **Explicit `[serve.connection]` in `trilogy.toml`** — authoritative for both `type` and `options`. Whatever it declares (after the allow-list filter above) is the entire advertised set, so it is also how a store publishes *less* than its engine implies: `[serve.connection]` with `type = "bigquery"` and no `options` advertises the type alone.
+2. **Otherwise the serving engine** — `type` comes from `[engine] dialect` (or the `trilogy serve <path> <engine>` argument), and `options` are projected from the non-secret fields of `[engine.config]`. This is what makes an ordinary project config work with no serve-specific block:
+
+   ```toml
+   [engine]
+   dialect = "bigquery"
+
+   [engine.config]
+   project = "preqldata"
+   staging_dataset = "scratch"   # server-side only, not advertised
+   ```
+
+   →
+
+   ```jsonc
+   "connection": { "type": "bigquery", "options": { "projectId": "preqldata" } }
+   ```
+
+   The projection is deliberately narrow — only fields the client needs to construct the same connection, and only ones that are never credentials:
+
+   | Store type | `[engine.config]` field → wire option |
+   |------------|----------------------------------------|
+   | `bigquery` | `project` → `projectId`                |
+   | `snowflake`| `account`, `username`, `database`, `schema` (identity mapping; `password` never travels) |
+   | `duckdb` / `sqlite` | *(nothing — `path` is a file on the server's disk, and the client opens its own database)* |
+   | `motherduck` | *(nothing — the token is a secret)* |
+
+   `[engine.config]` is env-interpolated before this projection, so `project = "${env:GCP_PROJECT}"` is advertised **resolved**. That is the point for a project id; a store that needs to withhold it declares `[serve.connection]` explicitly. `[engine.config]` is only consulted when it describes the engine actually being served — an explicit `trilogy serve <path> <engine>` that disagrees with `[engine] dialect` drops it, since its fields then belong to a different database.
 - **`models`** *(array)* — list of model manifests the store publishes, each with `name` + absolute `url` to a `ModelFile` JSON. Used by the community-model browser for discovery. The remote-backed editor load/save path does not require this; may be empty.
 - **`startup_scripts`** *(array of strings, optional, defaults to `[]`)* — posix paths (relative to the store root, no leading `/`) of editor files that should run when the runtime connection resets. Populated by the server from `trilogy.toml`'s `[setup]` section (`sql` + `trilogy` keys). Each entry must be a path that also appears in `/files`; entries that resolve outside the served directory are dropped server-side. On the client, editors whose `remotePath` matches an entry receive `EditorTag.STARTUP_SCRIPT` at load time.
 
@@ -184,5 +217,6 @@ The counter-offer surfaces a few places where the current client needs to change
 
 - Stores that don't serve `connection` on `/index.json` remain usable as read-only browse targets (`RemoteProjectConnection`). No silent DuckDB fabrication.
 - **Pre-contract `connection.type` spellings.** A server older than contract v1 emitted raw pytrilogy `Dialects` values — `duck_db` rather than `duckdb`, and a type for every engine including ones the client can't construct (`postgres`, `presto`, …). pytrilogy and the studio release independently, so the client still accepts `duck_db`; the unconstructable engines already land in the browse-only fallback, which is where a conforming server puts them by omitting `connection` outright.
+- **Engine-derived `connection.options`** are additive within contract v1 — no version bump. A server predating them advertises the right `type` with `options: {}`, which the client already tolerates (a BigQuery store lands with an empty `projectId` and the user must set it themselves). Nothing on the client changes; it reads `options` the same way either way.
 - Stores that haven't switched to literal-slash path encoding: client requires the new encoding. Servers on the old scheme need to update before the client can read them.
 
