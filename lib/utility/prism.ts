@@ -1,6 +1,27 @@
 import Prism from 'prismjs'
 
-let prismLanguagesReadyPromise: Promise<void> | null = null
+// Languages whose grammar has actually been imported. Tracked per language
+// rather than as a single "ready" promise: callers request different sets at
+// different times (a SQL results pane on mount, a python block in a chat
+// message ten seconds later), and a one-shot promise would resolve instantly
+// for the second caller without ever loading what it asked for.
+const loadedLanguages = new Set<string>()
+
+// Grammar imports mutate the shared Prism.languages global and have ordering
+// dependencies (typescript needs javascript, which needs clike), so loads are
+// serialized onto one chain rather than run concurrently.
+let loadQueue: Promise<void> = Promise.resolve()
+
+// Only these can actually be imported. 'trilogy' is derived from sql in
+// defineTrilogyLanguage, and 'text' has no grammar, so both drop out here.
+const LOAD_ORDER = ['markup', 'javascript', 'typescript', 'python', 'sql', 'json', 'markdown']
+
+const IMPLIED_LANGUAGES: Record<string, string[]> = {
+  trilogy: ['sql'],
+  typescript: ['javascript'],
+  json: ['javascript'],
+  markdown: ['markup'],
+}
 
 export function normalizePrismLanguage(language: string | null | undefined): string {
   const normalized = (language || '').trim().toLowerCase()
@@ -115,54 +136,55 @@ async function loadPrismLanguage(language: string) {
   }
 }
 
+/**
+ * Expand a caller's requested languages into the loadable set they imply, in
+ * dependency order. sql is always included because the trilogy grammar is
+ * derived from it and every surface in the app can show trilogy.
+ */
+function resolveLoadableLanguages(requestedLanguages: Array<string | null | undefined>): string[] {
+  const normalized = new Set(
+    requestedLanguages.map((language) => normalizePrismLanguage(language)).filter(Boolean),
+  )
+
+  normalized.add('sql')
+
+  for (const language of Array.from(normalized)) {
+    for (const implied of IMPLIED_LANGUAGES[language] ?? []) {
+      normalized.add(implied)
+    }
+  }
+
+  return LOAD_ORDER.filter((language) => normalized.has(language))
+}
+
 export async function ensurePrismLanguagesReady(
   requestedLanguages: Array<string | null | undefined> = [],
 ) {
-  if (!prismLanguagesReadyPromise) {
-    prismLanguagesReadyPromise = (async () => {
-      const normalized = new Set(
-        requestedLanguages.map((language) => normalizePrismLanguage(language)).filter(Boolean),
-      )
+  const wanted = resolveLoadableLanguages(requestedLanguages)
 
-      normalized.add('sql')
-
-      if (normalized.has('trilogy')) {
-        normalized.add('sql')
-      }
-      if (normalized.has('typescript')) {
-        normalized.add('javascript')
-      }
-      if (normalized.has('json')) {
-        normalized.add('javascript')
-      }
-      if (normalized.has('markdown')) {
-        normalized.add('markup')
-      }
-
-      const preferredOrder = [
-        'markup',
-        'javascript',
-        'typescript',
-        'python',
-        'sql',
-        'json',
-        'markdown',
-      ]
-
-      for (const language of preferredOrder) {
-        if (normalized.has(language)) {
-          await loadPrismLanguage(language)
-        }
-      }
-
-      defineTrilogyLanguage()
-    })().catch((error) => {
-      prismLanguagesReadyPromise = null
-      throw error
-    })
+  if (wanted.every((language) => loadedLanguages.has(language))) {
+    return
   }
 
-  await prismLanguagesReadyPromise
+  const run = loadQueue.then(async () => {
+    for (const language of wanted) {
+      if (loadedLanguages.has(language)) {
+        continue
+      }
+      await loadPrismLanguage(language)
+      // Only recorded on success, so a failed import is retried by the next
+      // caller rather than being cached as done.
+      loadedLanguages.add(language)
+    }
+
+    defineTrilogyLanguage()
+  })
+
+  // The chain must survive a failed load, or every later request queues behind
+  // a rejected promise and rejects too.
+  loadQueue = run.catch(() => {})
+
+  await run
 }
 
 export { Prism }

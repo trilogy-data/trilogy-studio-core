@@ -36,8 +36,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onUpdated, type PropType } from 'vue'
-import { Prism, ensurePrismLanguagesReady, normalizePrismLanguage } from '../utility/prism'
+import { computed, defineComponent, ref, toRef, type PropType } from 'vue'
+import { normalizePrismLanguage } from '../utility/prism'
+import { usePrismHighlight, type PrismTarget } from '../composables/usePrismHighlight'
 
 export default defineComponent({
   name: 'CodeBlock',
@@ -57,10 +58,11 @@ export default defineComponent({
   },
   emits: ['on-copy'],
   setup(props, { emit }) {
-    const codeBlock = ref<HTMLElement | null>(null)
+    const codeBlock = ref<PrismTarget>(null)
     const copied = ref(false)
-    const codeClass = ref(`language-${normalizePrismLanguage(props.language)}`)
-    const languagesReady = ref(false)
+    // Computed, not a one-shot ref: Prism reads the grammar off this class, so
+    // a stale one would re-highlight a changed language with the old grammar.
+    const codeClass = computed(() => `language-${normalizePrismLanguage(props.language)}`)
 
     // Method to copy code to clipboard
     const copyCode = async () => {
@@ -83,32 +85,11 @@ export default defineComponent({
       }
     }
 
-    const updateRefs = async () => {
-      // Block until languages are ready
-      if (!languagesReady.value) {
-        await ensurePrismLanguagesReady([props.language])
-        languagesReady.value = true
-      }
-
-      if (codeBlock.value) {
-        if (Array.isArray(codeBlock.value)) {
-          codeBlock.value.forEach((block) => {
-            if (block) Prism.highlightElement(block)
-          })
-        } else if (codeBlock.value) {
-          Prism.highlightElement(codeBlock.value)
-        }
-      }
-    }
-
-    onMounted(async () => {
-      await ensurePrismLanguagesReady([props.language])
-      languagesReady.value = true
-      updateRefs()
-    })
-
-    onUpdated(() => {
-      updateRefs()
+    // Watches the rendered content rather than hooking onUpdated, which also
+    // fired for unrelated re-renders such as the copy button toggling.
+    usePrismHighlight(codeBlock, {
+      languages: () => [props.language],
+      watchSources: [toRef(props, 'content'), toRef(props, 'language')],
     })
 
     return {
