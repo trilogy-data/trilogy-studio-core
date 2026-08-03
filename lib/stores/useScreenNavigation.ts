@@ -588,11 +588,24 @@ const createNavigationStore = (): NavigationStore => {
       userSettingsStore.updateSetting('skipAllTips', true)
     }
 
-    if (importUrl && connectionType) {
-      // Check if we have new-style asset import params or legacy dashboard import
-      const assetType = getDefaultValueFromHash(URL_HASH_KEYS.ASSET_TYPE, '')
-      const assetName = getDefaultValueFromHash(URL_HASH_KEYS.ASSET_NAME, '')
+    // Check if we have new-style asset import params or legacy dashboard import
+    const assetType = getDefaultValueFromHash(URL_HASH_KEYS.ASSET_TYPE, '')
+    const assetName = getDefaultValueFromHash(URL_HASH_KEYS.ASSET_NAME, '')
+    const legacyDashboardName = getDefaultValueFromHash(URL_HASH_KEYS.DASHBOARD, '')
 
+    // Remote-backed deep links (see docs/studio-bundle-hosting.md) carry no
+    // `import` and no `connection` — the model and the runtime connection both
+    // come from the store's /index.json — so the manifest-era gate below would
+    // strand them on the welcome screen. Recognize them on `remote` + `store`
+    // + an asset to open instead.
+    const isRemoteImport =
+      ['true', '1', 'yes'].includes(
+        getDefaultValueFromHash(URL_HASH_KEYS.REMOTE, '').toLowerCase(),
+      ) &&
+      !!getDefaultValueFromHash(URL_HASH_KEYS.STORE, '') &&
+      !!(assetName || legacyDashboardName)
+
+    if ((importUrl && connectionType) || isRemoteImport) {
       if (assetType && assetName) {
         // New asset import format
         openTab('asset-import', null, 'asset-import')

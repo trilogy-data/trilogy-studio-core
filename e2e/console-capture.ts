@@ -16,7 +16,7 @@
 // (context.newPage(), a second browser context) need `attachConsoleCapture`.
 import { test as base, expect } from '@playwright/test'
 import type { Page, TestInfo } from '@playwright/test'
-import { cacheDeployedAssets } from './test-helpers.js'
+import { cacheDeployedAssets, cachePublicModels } from './test-helpers.js'
 
 export { expect }
 
@@ -204,6 +204,7 @@ export const test = base.extend<{ diagnostics: BrowserDiagnostics }>({
     // the one place a route can be installed for all of them — and the bundle
     // cache only works if nothing slips past it. No-op outside TEST_ENV=prod.
     await cacheDeployedAssets(page)
+    await cachePublicModels(page)
 
     await use(page)
 

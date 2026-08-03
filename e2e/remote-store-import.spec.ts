@@ -181,14 +181,15 @@ remoteStoreImportDescribe('Remote Store Auto Import', () => {
   })
 
   test('imports authenticated remote store files with nested paths', async ({ page, isMobile }) => {
+    // Deliberately the minimal remote deep link `trilogy serve` emits (see
+    // docs/studio-bundle-hosting.md): no `screen`, no `import`, no
+    // `connection`. The sibling test below covers the same flow with the
+    // legacy manifest params still attached.
     const autoImportUrl =
       `#skipTips=true` +
-      `&screen=asset-import` +
-      `&import=${encodeURIComponent(`${remoteStoreUrl}/models/${servedModelId}.json`)}` +
       `&assetType=trilogy` +
       `&assetName=core_local` +
       `&modelName=${encodeURIComponent(TEST_MODEL_NAME)}` +
-      `&connection=duckdb` +
       `&store=${encodeURIComponent(remoteStoreUrl)}` +
       `&storeId=${encodeURIComponent(TEST_STORE_ID)}` +
       `&remote=true` +

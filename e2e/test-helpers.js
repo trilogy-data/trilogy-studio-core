@@ -108,17 +108,21 @@ export async function cacheDuckDBCdn(page) {
 // test, so the run is still exercising the real deployment.
 //
 // Local and docker runs are untouched: they talk to a server we started.
-const deployedAssetCache = new Map()
-// 403/429/5xx here mean the host is shedding load, not that the asset is
-// missing — a genuinely absent chunk answers 404 and fails on the first try.
+// 403/429/5xx here mean the host is shedding load, not that the resource is
+// missing — something genuinely absent answers 404 and fails on the first try.
 const THROTTLED_STATUSES = [403, 429, 500, 502, 503, 504]
 
-export async function cacheDeployedAssets(page, env = process.env) {
-  if ((env.TEST_ENV || '') !== 'prod') return
+/**
+ * Route a URL pattern through a per-run replay cache: the first request for a
+ * given URL goes out for real, everything after it replays that response.
+ * `label` prefixes the warning printed when the host sheds a request.
+ */
+async function installReplayCache(page, pattern, label) {
+  const cache = new Map()
 
-  await page.route('**/trilogy-studio-core/assets/**', async (route) => {
+  await page.route(pattern, async (route) => {
     const url = route.request().url()
-    const cached = deployedAssetCache.get(url)
+    const cached = cache.get(url)
     if (cached) {
       await route.fulfill(cached).catch(() => {})
       return
@@ -134,7 +138,7 @@ export async function cacheDeployedAssets(page, env = process.env) {
         // Say so rather than papering over it — if this is loud, the cache is
         // not keeping the run under the host's limit and the run needs to get
         // smaller.
-        console.warn(`[assets] host returned ${response.status()} for ${url}, retrying`)
+        console.warn(`[${label}] host returned ${response.status()} for ${url}, retrying`)
         await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)))
         response = await route.fetch()
       }
@@ -146,7 +150,7 @@ export async function cacheDeployedAssets(page, env = process.env) {
       delete headers['content-length']
 
       const entry = { status: response.status(), headers, body: await response.body() }
-      if (entry.status === 200) deployedAssetCache.set(url, entry)
+      if (entry.status === 200) cache.set(url, entry)
       await route.fulfill(entry)
     } catch {
       // A request can still be in flight when its test ends, and Playwright
@@ -158,6 +162,26 @@ export async function cacheDeployedAssets(page, env = process.env) {
       await route.continue().catch(() => {})
     }
   })
+}
+
+export async function cacheDeployedAssets(page, env = process.env) {
+  if ((env.TEST_ENV || '') !== 'prod') return
+  await installReplayCache(page, '**/trilogy-studio-core/assets/**', 'assets')
+}
+
+// Same problem, different third party, and this one bites every environment
+// rather than just prod: the community model store is a GitHub Pages site, and
+// listing it fetches an index plus one JSON per model — a few dozen requests
+// per page that touches it, against a host we do not own. When GitHub Pages
+// starts refusing a CI runner it answers with an error page that carries no
+// Access-Control-Allow-Origin, so the browser reports it as
+// "Fetch API cannot load … due to access control checks" rather than as a
+// status, and the studio's fetch rejects.
+//
+// Caching keeps the run to one request per model per worker. The first fetch is
+// real, so a models repo that has genuinely broken still fails the run.
+export async function cachePublicModels(page) {
+  await installReplayCache(page, '**trilogy-data.github.io/**', 'public-models')
 }
 
 // Mirrors lib/connections/base.ts computeConnectionId for the local storage
