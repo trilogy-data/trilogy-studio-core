@@ -23,6 +23,18 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: ./lib/pnpm-lock.yaml
 
+      # The grammar package is a linked dependency of ./lib, so its dist must
+      # exist before the library can typecheck or run tests against it.
+      - name: Build Trilogy grammar package
+        working-directory: ./prism-trilogy
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Test Trilogy grammar package
+        working-directory: ./prism-trilogy
+        run: pnpm test
+
       - name: Install library dependencies
         working-directory: ./lib
         run: pnpm install --frozen-lockfile
@@ -118,6 +130,13 @@ jobs:
         run: |
           pip install pytest pytest-cov
           pytest --ignore=docs_src/ --cov=./
+
+      # Runs here rather than in the lib job because it needs pytrilogy's
+      # grammar file, and this is the job that installs the Python deps.
+      - name: Check highlighter vocabulary against the Trilogy grammar
+        run: |
+          pnpm run build:grammar
+          pnpm run check:trilogy-vocabulary
 
       - name: Ensure we can build frontend
         run: pnpm run build

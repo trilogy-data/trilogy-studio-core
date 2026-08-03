@@ -12,11 +12,13 @@
   "scripts": {
     "dev": "pnpm install ./lib -D && vite",
     "local": "node scripts/run_local.js",
-    "build": "pnpm sync:trilogy-ai && vue-tsc -b && pnpm format && vite build",
-    "build:frontend": "vue-tsc -b && vite build",
+    "build": "pnpm build:grammar && pnpm sync:trilogy-ai && vue-tsc -b && pnpm format && vite build",
+    "build:frontend": "pnpm build:grammar && vue-tsc -b && vite build",
     "build:lib": "pnpm -C lib build",
+    "build:grammar": "pnpm -C prism-trilogy install --frozen-lockfile && pnpm -C prism-trilogy build",
     "sync:trilogy-ai": "node scripts/generate-trilogy-ai-guidance.mjs",
     "check:trilogy-ai": "node scripts/generate-trilogy-ai-guidance.mjs --check",
+    "check:trilogy-vocabulary": "node scripts/check-trilogy-vocabulary.mjs --check",
     "preview": "vite preview",
     "test": "vitest",
     "typecheck": "vue-tsc --noEmit",
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
+    "@trilogy-data/prism-trilogy": "link:prism-trilogy",
     "@trilogy-data/trilogy-studio-components": "link:lib",
     "@types/gapi": "^0.0.47",
     "@types/luxon": "^3.7.2",

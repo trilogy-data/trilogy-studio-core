@@ -81,6 +81,9 @@ importers:
       '@playwright/test':
         specifier: ^1.61.1
         version: 1.61.1
+      '@trilogy-data/prism-trilogy':
+        specifier: link:prism-trilogy
+        version: link:prism-trilogy
       '@trilogy-data/trilogy-studio-components':
         specifier: link:lib
         version: link:lib

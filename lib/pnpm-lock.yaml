@@ -38,9 +38,6 @@ importers:
       monaco-editor:
         specifier: ^0.55.1
         version: 0.55.1
-      prismjs:
-        specifier: ^1.30.0
-        version: 1.30.0
       split.js:
         specifier: ^1.6.5
         version: 1.6.5
@@ -63,6 +60,9 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7(typescript@5.9.3)
     devDependencies:
+      '@trilogy-data/prism-trilogy':
+        specifier: link:../prism-trilogy
+        version: link:../prism-trilogy
       '@types/luxon':
         specifier: ^3.7.2
         version: 3.7.2
@@ -93,6 +93,9 @@ importers:
       prettier:
         specifier: ^3.9.5
         version: 3.9.5
+      prismjs:
+        specifier: ^1.30.0
+        version: 1.30.0
       typescript:
         specifier: ~5.9.3
         version: 5.9.3

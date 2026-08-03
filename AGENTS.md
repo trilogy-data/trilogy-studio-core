@@ -7,6 +7,20 @@ This should be reusable outside this package, via a published NPM package.
 
 Vue project.
 
+### /prism-trilogy
+/prism-trilogy is the standalone `@trilogy-data/prism-trilogy` package: the Prism grammar for
+Trilogy plus `src/vocabulary.ts`, the shared keyword/function/type lists.
+
+That vocabulary is the single source of truth for language words. The Monaco Monarch grammar
+(`lib/monaco/trilogyLanguage.ts`), the Prism registration (`lib/utility/prism.ts`) and the `::`
+autocomplete (`lib/language/constants.ts`) all read from it — do not add a word to any of those
+directly. `scripts/check-trilogy-vocabulary.mjs --check` diffs the vocabulary against pytrilogy's
+`trilogy/parsing/trilogy.lark` and fails CI on drift.
+
+It is a linked, build-time-only dependency of /lib (bundled into lib's dist, so it must be built
+first: `pnpm build:grammar`). It publishes to npm on its own version, via
+`.github/workflows/publish-prism-trilogy.yml`.
+
 ### /pyserver
 /pyserver contains backend server python code
 

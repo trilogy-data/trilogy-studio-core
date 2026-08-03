@@ -52,7 +52,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "pnpm sync:trilogy-ai && vite build",
+    "build": "pnpm build:grammar && pnpm sync:trilogy-ai && vite build",
+    "build:grammar": "pnpm -C ../prism-trilogy install --frozen-lockfile && pnpm -C ../prism-trilogy build",
     "sync:trilogy-ai": "node ../scripts/generate-trilogy-ai-guidance.mjs",
     "check:trilogy-ai": "node ../scripts/generate-trilogy-ai-guidance.mjs --check",
     "typecheck": "vue-tsc --noEmit",
@@ -60,9 +61,11 @@
   },
   "peerDependencies": {
     "pinia": "^2.0.0 || ^3.0.0 || ^4.0.0",
+    "prismjs": "^1.30.0",
     "vue": "^3.5.13"
   },
   "devDependencies": {
+    "@trilogy-data/prism-trilogy": "link:../prism-trilogy",
     "@types/luxon": "^3.7.2",
     "@types/prismjs": "^1.26.6",
     "@types/tabulator-tables": "^6.3.6",
@@ -73,6 +76,7 @@
     "jsdom": "^29.1.1",
     "pinia": "^4.0.1",
     "prettier": "^3.9.5",
+    "prismjs": "^1.30.0",
     "typescript": "~5.9.3",
     "vite": "^8.1.4",
     "vite-plugin-dts": "^5.0.3",
@@ -92,7 +96,6 @@
     "jose": "^6.2.3",
     "luxon": "^3.7.2",
     "monaco-editor": "^0.55.1",
-    "prismjs": "^1.30.0",
     "split.js": "^1.6.5",
     "sql.js": "^1.14.1",
     "tabulator-tables": "^6.5.2",

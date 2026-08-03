@@ -19,9 +19,10 @@ describe('ensurePrismLanguagesReady', () => {
     expect(Prism.languages.javascript).toBeTruthy()
   })
 
-  it('always defines the trilogy grammar, which is derived from sql', async () => {
+  it('registers the trilogy grammar', async () => {
     await ensurePrismLanguagesReady(['trilogy'])
     expect(Prism.languages.trilogy).toBeTruthy()
+    expect(Prism.languages.preql).toBeTruthy()
   })
 
   it('resolves concurrent requests for different languages', async () => {
