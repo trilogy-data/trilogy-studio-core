@@ -112,13 +112,60 @@ export async function cacheDuckDBCdn(page) {
 // missing — something genuinely absent answers 404 and fails on the first try.
 const THROTTLED_STATUSES = [403, 429, 500, 502, 503, 504]
 
+// Caches live at module scope, which in Playwright means one per worker process
+// rather than one per page. That distinction is the whole point: a cache scoped
+// to the `page` fixture is empty at the start of every test, so 280 tests each
+// re-fetched all ~40 chunks for real and the run still put order-10k requests on
+// the host — which is exactly what it refused in run 30774861685 (96 `[assets]
+// host returned 403` warnings, then seven tests failing on locators because
+// their chunks never arrived). Hoisting it here makes it one request per URL per
+// worker: a few dozen, not thousands.
+//
+// Bounded by what a build actually ships to the browser — the largest prod
+// chunks are the monaco workers (~7MB worst case) and duckdb's 8MB wasm does not
+// land here at all, since prod loads it from jsDelivr (cacheDuckDBCdn, above).
+const replayCaches = new Map()
+
+function replayCacheFor(label) {
+  let cache = replayCaches.get(label)
+  if (!cache) {
+    cache = new Map()
+    replayCaches.set(label, cache)
+  }
+  return cache
+}
+
 /**
- * Route a URL pattern through a per-run replay cache: the first request for a
+ * Fetch a routed request from the real host, retrying while it answers with a
+ * shedding-load status. Returns a fulfillable entry.
+ */
+async function fetchThroughHost(route, label) {
+  const url = route.request().url()
+  let response = await route.fetch()
+  for (let attempt = 0; attempt < 2 && THROTTLED_STATUSES.includes(response.status()); attempt++) {
+    // Say so rather than papering over it — if this is loud, the cache is not
+    // keeping the run under the host's limit and the run needs to get smaller.
+    console.warn(`[${label}] host returned ${response.status()} for ${url}, retrying`)
+    await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)))
+    response = await route.fetch()
+  }
+
+  // route.fetch() hands back a decoded body, so replaying the upstream
+  // content-encoding/length would have the browser decode it a second time.
+  const headers = { ...response.headers() }
+  delete headers['content-encoding']
+  delete headers['content-length']
+
+  return { status: response.status(), headers, body: await response.body() }
+}
+
+/**
+ * Route a URL pattern through a per-worker replay cache: the first request for a
  * given URL goes out for real, everything after it replays that response.
  * `label` prefixes the warning printed when the host sheds a request.
  */
 async function installReplayCache(page, pattern, label) {
-  const cache = new Map()
+  const cache = replayCacheFor(label)
 
   await page.route(pattern, async (route) => {
     const url = route.request().url()
@@ -129,27 +176,7 @@ async function installReplayCache(page, pattern, label) {
     }
 
     try {
-      let response = await route.fetch()
-      for (
-        let attempt = 0;
-        attempt < 2 && THROTTLED_STATUSES.includes(response.status());
-        attempt++
-      ) {
-        // Say so rather than papering over it — if this is loud, the cache is
-        // not keeping the run under the host's limit and the run needs to get
-        // smaller.
-        console.warn(`[${label}] host returned ${response.status()} for ${url}, retrying`)
-        await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)))
-        response = await route.fetch()
-      }
-
-      // route.fetch() hands back a decoded body, so replaying the upstream
-      // content-encoding/length would have the browser decode it a second time.
-      const headers = { ...response.headers() }
-      delete headers['content-encoding']
-      delete headers['content-length']
-
-      const entry = { status: response.status(), headers, body: await response.body() }
+      const entry = await fetchThroughHost(route, label)
       if (entry.status === 200) cache.set(url, entry)
       await route.fulfill(entry)
     } catch {
@@ -167,6 +194,38 @@ async function installReplayCache(page, pattern, label) {
 export async function cacheDeployedAssets(page, env = process.env) {
   if ((env.TEST_ENV || '') !== 'prod') return
   await installReplayCache(page, '**/trilogy-studio-core/assets/**', 'assets')
+}
+
+// The document is the one request the replay cache deliberately does not hold:
+// every test navigating for real is what keeps the suite honest about the
+// deployment. But that also leaves it as the one request with no protection when
+// the host starts shedding, and a 403 there is unrecoverable — the app has no
+// HTML, so the failure surfaces as `sidebar-icon-… not visible` with nothing in
+// the log to explain it (run 30774861685, `HTTP 403 https://…/trilogy-studio-core/`).
+//
+// So: still fetched for real every time, but a shed response is retried instead
+// of being handed to the browser as the page. Assets are handled by the cache
+// above and fall through to it.
+export async function retryShedNavigations(page, env = process.env) {
+  if ((env.TEST_ENV || '') !== 'prod') return
+
+  await page.route(
+    (url) =>
+      url.pathname.includes('/trilogy-studio-core/') &&
+      !url.pathname.includes('/trilogy-studio-core/assets/'),
+    async (route) => {
+      if (route.request().resourceType() !== 'document') {
+        await route.fallback()
+        return
+      }
+
+      try {
+        await route.fulfill(await fetchThroughHost(route, 'document'))
+      } catch {
+        await route.continue().catch(() => {})
+      }
+    },
+  )
 }
 
 // Same problem, different third party, and this one bites every environment
