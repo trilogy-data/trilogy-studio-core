@@ -11,7 +11,7 @@ import { ModelImportService } from '../models/helpers'
 import useScreenNavigation from '../stores/useScreenNavigation'
 import { getDefaultValueFromHash, removeHashFromUrl, URL_HASH_KEYS } from '../stores/urlStore'
 import ConfirmDialog from './ConfirmDialog.vue'
-import trilogyIcon from '../static/trilogy.png'
+import trilogyIcon from '../static/trilogy.webp'
 import {
   buildGenericStoreConnectionName,
   buildGenericStoreId,
