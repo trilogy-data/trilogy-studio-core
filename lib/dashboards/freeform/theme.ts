@@ -125,7 +125,8 @@ export interface BuildWidgetThemeOptions {
 /** Resolve the full theme payload pushed into a widget frame. */
 export function buildWidgetTheme(options: BuildWidgetThemeOptions): FreeformTheme {
   const { mode, element } = options
-  const computed = element && typeof getComputedStyle === 'function' ? getComputedStyle(element) : null
+  const computed =
+    element && typeof getComputedStyle === 'function' ? getComputedStyle(element) : null
 
   const read = (name: string): string => (computed?.getPropertyValue(name) || '').trim()
 

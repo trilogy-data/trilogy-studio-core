@@ -85,10 +85,7 @@ import type { CrossFilterChartMap, CrossFilterValueMap } from '../../dashboards/
 import { useDashboardItemShell } from './useDashboardItemShell'
 import { FreeformBridge } from '../../dashboards/freeform/bridge'
 import { buildFreeformSrcdoc, FREEFORM_SANDBOX } from '../../dashboards/freeform/buildSrcdoc'
-import {
-  buildFreeformState,
-  resolveFilterFieldAddresses,
-} from '../../dashboards/freeform/protocol'
+import { buildFreeformState, resolveFilterFieldAddresses } from '../../dashboards/freeform/protocol'
 import { FREEFORM_READY_TIMEOUT_MS, type GuestFilterMessage } from '../../dashboards/freeform/types'
 import { buildWidgetTheme } from '../../dashboards/freeform/theme'
 import { useResolvedThemeMode } from '../../embed/config'

@@ -58,12 +58,6 @@ const WIDGET_HTML = `<style>
   trilogy.ready();
 <\/script>`
 
-// Authoring a widget means driving the item-content editor dialog, which the
-// mobile shell reaches through a different (and much fiddlier) path. Widgets
-// themselves render and run on mobile — it is only this authoring flow that is
-// desktop-only here.
-test.skip(({ isMobile }) => !!isMobile, 'widget authoring dialog is exercised on desktop only')
-
 test.beforeEach(async ({ page }) => {
   await prepareTestPage(page)
 })
@@ -195,7 +189,10 @@ test('freeform widget renders, is sandboxed, and cross-filters the dashboard', a
   expect(['light', 'dark']).toContain(themeVars.mode)
 
   // Widget text actually inherits the contract rather than a hardcoded color.
-  const rowColor = await widget.locator('.row').first().evaluate((el) => getComputedStyle(el).color)
+  const rowColor = await widget
+    .locator('.row')
+    .first()
+    .evaluate((el) => getComputedStyle(el).color)
   expect(rowColor).toBeTruthy()
 
   // Add a table so we can observe the cross-filter landing somewhere else.
@@ -224,8 +221,13 @@ test('freeform widget renders, is sandboxed, and cross-filters the dashboard', a
   await expect(tableCell).toContainText('3')
 
   // The filter is attributed to a source, so it surfaces as a chip on the
-  // filtered item exactly like a chart-driven cross-filter would.
-  await expect(tableCell.locator('.header-filter-chip').first()).toBeVisible()
+  // filtered item exactly like a chart-driven cross-filter would. Both chip
+  // layouts are always in the DOM and CSS picks one, so filter to the rendered
+  // shape: desktop spells the value out, the narrow layout collapses it to a
+  // per-source count. The attribution is what both carry.
+  const filterChip = tableCell.locator('.header-filter-chip').filter({ visible: true }).first()
+  await expect(filterChip).toBeVisible()
+  await expect(filterChip).toContainText('cross')
 })
 
 test('a widget that never signals ready is reported as broken', async ({ page, isMobile }) => {

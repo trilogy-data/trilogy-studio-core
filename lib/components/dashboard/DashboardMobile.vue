@@ -5,6 +5,7 @@ import DashboardGridItem from './DashboardGridItem.vue'
 import DashboardAddItemModal from './DashboardAddItemModal.vue'
 import ChartEditor from './DashboardChartEditor.vue'
 import MarkdownEditor from './DashboardMarkdownEditor.vue'
+import FreeformEditor from './DashboardFreeformEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import DashboardCTA from './DashboardCTA.vue'
 import { useDashboard } from './useDashboard'
@@ -48,6 +49,7 @@ const {
   showAddItemModal,
   showQueryEditor,
   showMarkdownEditor,
+  showFreeformEditor,
   editingItem,
 
   // Methods
@@ -329,6 +331,17 @@ function scrollDownOne() {
         :imports="getItemData(editingItem.i, dashboard.id).imports || []"
         :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
         :content="getItemData(editingItem.i, dashboard.id).structured_content"
+        @save="saveContent"
+        @cancel="closeEditors"
+      />
+    </Teleport>
+
+    <Teleport to="body" v-if="showFreeformEditor && editingItem">
+      <FreeformEditor
+        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+        :imports="getItemData(editingItem.i, dashboard.id).imports || []"
+        :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
+        :content="getItemData(editingItem.i, dashboard.id).freeformData || null"
         @save="saveContent"
         @cancel="closeEditors"
       />
