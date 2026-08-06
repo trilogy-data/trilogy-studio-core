@@ -43,7 +43,6 @@ const {
   sortedLayout,
   editMode,
   selectedConnection,
-  filter,
   filterError,
   globalCompletion,
   showAddItemModal,
@@ -146,6 +145,12 @@ function calculateMobileHeight(item: any): number | string {
 
   if (itemData.type === CELL_TYPES.SECTION_HEADER) {
     return `${Math.max(item.h * 30 + 4, 36)}px`
+  }
+
+  // Freeform widgets author their own layout, so honour the height the item was
+  // given rather than deriving one from a chart aspect ratio.
+  if (itemData.type === CELL_TYPES.FREEFORM) {
+    return `${Math.max(item.h * 30, minHeight)}px`
   }
 
   if (itemData.type === CELL_TYPES.CHART) {
@@ -288,7 +293,6 @@ function scrollDownOne() {
           :dashboard-id="dashboard.id"
           :item="item"
           :edit-mode="editMode"
-          :filter="filter"
           :get-item-data="getItemData"
           :symbols="globalCompletion"
           :get-dashboard-query-executor="getDashboardQueryExecutor"

@@ -7,12 +7,14 @@ import DashboardFilter from './DashboardFilter.vue'
 import DashboardMemo from './DashboardMemo.vue'
 import DashboardClaim from './DashboardClaim.vue'
 import DashboardAppendixHeader from './DashboardAppendixHeader.vue'
+import DashboardFreeform from './DashboardFreeform.vue'
 import Tooltip from '../Tooltip.vue'
 import { useClickOutside } from '../../composables/useClickOutside'
 import {
   type GridItemDataResponse,
   type LayoutItem,
   CELL_TYPES,
+  type CellType,
   type DimensionClick,
 } from '../../dashboards/base'
 import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
@@ -165,6 +167,7 @@ function removeFilter(filterSource: string): void {
 
 const itemData = computed(() => props.getItemData(props.item.i, props.dashboardId))
 const isSectionHeader = computed(() => itemData.value.type === CELL_TYPES.SECTION_HEADER)
+const isFreeform = computed(() => itemData.value.type === CELL_TYPES.FREEFORM)
 
 const cellComponent = computed(() => {
   switch (itemData.value.type) {
@@ -182,6 +185,8 @@ const cellComponent = computed(() => {
       return DashboardClaim
     case CELL_TYPES.APPENDIX_HEADER:
       return DashboardAppendixHeader
+    case CELL_TYPES.FREEFORM:
+      return DashboardFreeform
     case CELL_TYPES.MARKDOWN:
     default:
       return DashboardMarkdown
@@ -204,16 +209,31 @@ const getPlaceholderText = computed(() => {
       return 'Claim'
     case CELL_TYPES.APPENDIX_HEADER:
       return 'Appendix'
+    case CELL_TYPES.FREEFORM:
+      return 'Widget Name'
     case CELL_TYPES.MARKDOWN:
     default:
       return 'Note Name'
   }
 })
 
-const supportsFilters = computed(() => {
-  //@ts-ignore
-  return [CELL_TYPES.CHART, CELL_TYPES.TABLE, CELL_TYPES.MARKDOWN].includes(itemData.value.type)
-})
+const FILTERABLE_TYPES: CellType[] = [
+  CELL_TYPES.CHART,
+  CELL_TYPES.TABLE,
+  CELL_TYPES.MARKDOWN,
+  CELL_TYPES.FREEFORM,
+]
+
+const CARD_STYLE_TYPES: CellType[] = [
+  CELL_TYPES.CHART,
+  CELL_TYPES.TABLE,
+  CELL_TYPES.FILTER,
+  CELL_TYPES.FREEFORM,
+]
+
+const supportsFilters = computed(() => FILTERABLE_TYPES.includes(itemData.value.type))
+
+const usesCardStyle = computed(() => CARD_STYLE_TYPES.includes(itemData.value.type))
 
 const filterCount = computed(() => {
   return itemData.value.filters ? itemData.value.filters.length : 0
@@ -368,10 +388,7 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
     class="grid-item-content"
     :data-testid="`dashboard-component-${item.i}`"
     :class="{
-      'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE, CELL_TYPES.FILTER].includes(
-        //@ts-ignore
-        itemData.type,
-      ),
+      'grid-item-chart-style': usesCardStyle,
       'grid-item-markdown-style': itemData.type === CELL_TYPES.MARKDOWN,
       'grid-item-section-header-style': isSectionHeader,
       'grid-item-edit-style': editMode,
@@ -460,6 +477,16 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
       </div>
 
       <div class="grid-item-header-right">
+        <Tooltip
+          v-if="isFreeform"
+          content="Custom code widget — runs in a sandboxed frame with no network or app access"
+          position="bottom"
+        >
+          <span class="widget-badge" data-testid="freeform-widget-badge">
+            <i class="mdi mdi-code-braces"></i>
+          </span>
+        </Tooltip>
+
         <div v-if="supportsFilters && filterCount > 0" class="header-filters no-drag">
           <div class="desktop-header-filters">
             <Tooltip
@@ -1058,6 +1085,23 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
 
 .icon {
   font-size: 15px;
+}
+
+.widget-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  border-radius: 6px;
+  color: var(--trilogy-embed-special-text, var(--special-text, #2563eb));
+  background: rgba(
+    var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)),
+    0.08
+  );
+  font-size: 12px;
+  flex-shrink: 0;
 }
 
 .header-filters {

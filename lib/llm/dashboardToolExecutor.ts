@@ -14,8 +14,10 @@ import type {
   MemoVerdict,
   ConfidenceLevel,
   DashboardLayoutType,
+  FreeformData,
 } from '../dashboards/base'
 import { CELL_TYPES, type CellType, type MarkdownData } from '../dashboards/base'
+import { MAX_FREEFORM_HTML_LENGTH } from '../dashboards/freeform/types'
 import { getProvenance, formatProvenance } from '../dashboards/provenance'
 import { buildDashboardStateSnapshot } from './dashboardAgentPrompt'
 import type { DashboardStoreType } from '../stores/dashboardStore'
@@ -27,6 +29,19 @@ import type { DashboardQueryExecutor } from '../dashboards/dashboardQueryExecuto
 import { truncateResultRows } from './toolLoopCore'
 import { validateChartConfigForData, formatChartConfigValidationError } from '../dashboards/helpers'
 import type { ChartConfig, Results } from '../editors/results'
+
+/** Bounds on agent-authored widget markup. Not a security control — the
+ *  sandbox and frame CSP are — just a guard against unbounded payloads landing
+ *  in localStorage and remote dashboard JSON. */
+function validateFreeformHtml(html: string): string | null {
+  if (!html || !html.trim()) {
+    return 'Freeform items require `html` — the widget markup. Author the query in `content` and the markup in `html`.'
+  }
+  if (html.length > MAX_FREEFORM_HTML_LENGTH) {
+    return `Widget html is ${html.length} characters; the limit is ${MAX_FREEFORM_HTML_LENGTH}. Simplify the widget or move logic into fewer, denser helpers.`
+  }
+  return null
+}
 
 type ChartAxisThresholds = Partial<Record<'xField' | 'yField', number>>
 
@@ -212,12 +227,17 @@ export class DashboardToolExecutor {
       const layout = layoutMap.get(id)
       const isStructured = typeof item.content === 'object' && item.content !== null
       const md = isStructured ? (item.content as MarkdownData) : null
-      const content = isStructured
-        ? md?.markdown?.substring(0, 120) || ''
-        : (item.content as string).substring(0, 120)
+      const freeform =
+        item.type === CELL_TYPES.FREEFORM && isStructured ? (item.content as FreeformData) : null
+      const content = freeform
+        ? `${freeform.html.length} chars of widget html`
+        : isStructured
+          ? md?.markdown?.substring(0, 120) || ''
+          : (item.content as string).substring(0, 120)
       const pos = layout ? `(x=${layout.x}, y=${layout.y}, w=${layout.w}, h=${layout.h})` : ''
-      const querySuffix = md?.query
-        ? `\n  Query: ${md.query.substring(0, 120)}${md.query.length >= 120 ? '...' : ''}`
+      const itemQuery = freeform?.query || md?.query
+      const querySuffix = itemQuery
+        ? `\n  Query: ${itemQuery.substring(0, 120)}${itemQuery.length >= 120 ? '...' : ''}`
         : ''
       return `- [${id}] ${item.type}: "${item.name}" ${pos}\n  Content: ${content}${content.length >= 120 ? '...' : ''}${querySuffix}`
     })
@@ -245,16 +265,28 @@ export class DashboardToolExecutor {
     // so the agent can update either independently via update_dashboard_item.
     const isStructured = typeof item.content === 'object' && item.content !== null
     const mdContent = isStructured ? (item.content as MarkdownData) : null
+    const freeformContent =
+      item.type === CELL_TYPES.FREEFORM && isStructured ? (item.content as FreeformData) : null
     const details: Record<string, any> = {
       id: itemId,
+      // Freeform mirrors the add/update contract: `content` is the query, `html`
+      // is the markup.
       type: item.type,
       name: item.name,
-      content: isStructured ? mdContent?.markdown || '' : item.content,
-      query: mdContent?.query || null,
+      content: freeformContent
+        ? freeformContent.query
+        : isStructured
+          ? mdContent?.markdown || ''
+          : item.content,
+      query: freeformContent?.query || mdContent?.query || null,
       chartConfig: item.chartConfig || null,
       position: layout ? { x: layout.x, y: layout.y, w: layout.w, h: layout.h } : null,
       loading: item.loading || false,
       error: item.error || null,
+    }
+
+    if (freeformContent) {
+      details.html = freeformContent.html
     }
 
     if (item.results) {
@@ -317,10 +349,10 @@ export class DashboardToolExecutor {
     if (!dashboard) return { success: false, error: 'Dashboard not found.' }
 
     const type = input.type as string
-    if (!type || !['chart', 'table', 'markdown', 'filter'].includes(type)) {
+    if (!type || !['chart', 'table', 'markdown', 'filter', 'freeform'].includes(type)) {
       return {
         success: false,
-        error: `Invalid item type: "${type}". Must be chart, table, markdown, or filter.`,
+        error: `Invalid item type: "${type}". Must be chart, table, markdown, filter, or freeform.`,
       }
     }
 
@@ -332,6 +364,16 @@ export class DashboardToolExecutor {
     const cellType = type as CellType
     const markdownQuery = typeof input.query === 'string' ? input.query : ''
     const hasMarkdownQuery = cellType === CELL_TYPES.MARKDOWN && markdownQuery.length > 0
+
+    // Freeform widgets keep the query in `content` (like chart/table) and the
+    // markup in `html` — the two are authored separately by design.
+    const isFreeform = cellType === CELL_TYPES.FREEFORM
+    const widgetHtml = typeof input.html === 'string' ? input.html : ''
+    if (isFreeform) {
+      const htmlError = validateFreeformHtml(widgetHtml)
+      if (htmlError) return { success: false, error: htmlError }
+    }
+
     const w = input.width || (cellType === CELL_TYPES.MARKDOWN ? 20 : 10)
     const h = input.height || (cellType === CELL_TYPES.MARKDOWN ? (hasMarkdownQuery ? 6 : 4) : 8)
     const name = input.name || type.charAt(0).toUpperCase() + type.slice(1)
@@ -359,6 +401,15 @@ export class DashboardToolExecutor {
       })
     }
 
+    // Freeform: collapse the separately-authored query + markup into the
+    // persisted FreeformData shape.
+    if (isFreeform) {
+      const freeformData: FreeformData = { html: widgetHtml, query: content }
+      this.deps.dashboardStore.updateMultipleItemProperties(this.deps.dashboardId, itemId, {
+        content: freeformData,
+      })
+    }
+
     // Set chart config if provided
     if (input.chartConfig && cellType === CELL_TYPES.CHART) {
       this.deps.dashboardStore.updateItemChartConfig(
@@ -368,13 +419,18 @@ export class DashboardToolExecutor {
       )
     }
 
-    // Trigger query execution for chart/table/markdown-with-query items
+    // Trigger query execution for chart/table/freeform/markdown-with-query items
     let queryId: string | undefined
-    if (cellType === CELL_TYPES.CHART || cellType === CELL_TYPES.TABLE || hasMarkdownQuery) {
+    if (
+      cellType === CELL_TYPES.CHART ||
+      cellType === CELL_TYPES.TABLE ||
+      isFreeform ||
+      hasMarkdownQuery
+    ) {
       queryId = this.deps.refreshItem(itemId)
     }
 
-    let message = `Added ${type} item "${name}" (ID: ${itemId}) at position (0, ${maxY}, ${w}x${h}).${hasMarkdownQuery ? ' Markdown is bound to query results for dynamic data.' : ''}`
+    let message = `Added ${type} item "${name}" (ID: ${itemId}) at position (0, ${maxY}, ${w}x${h}).${hasMarkdownQuery ? ' Markdown is bound to query results for dynamic data.' : ''}${isFreeform ? ' The widget receives this query’s rows via window.trilogy.' : ''}`
 
     // If a chartConfig was explicitly provided, validate it against query results
     if (input.chartConfig && cellType === CELL_TYPES.CHART && queryId) {
@@ -409,11 +465,29 @@ export class DashboardToolExecutor {
     const existingItem = dashboard.gridItems[itemId]
     const targetType = (input.type as CellType | undefined) || existingItem.type
     const isMarkdown = targetType === CELL_TYPES.MARKDOWN
+    const isFreeform = targetType === CELL_TYPES.FREEFORM
 
-    // For markdown items, content + query collapse into MarkdownData. Handle both
-    // together so the agent can update either field independently without losing
-    // the other.
-    if (isMarkdown && (input.content !== undefined || input.query !== undefined)) {
+    // Freeform: `content` is the query and `html` is the markup; either can be
+    // updated independently without clobbering the other.
+    if (isFreeform && (input.content !== undefined || input.html !== undefined)) {
+      const existing = existingItem.content as FreeformData | string
+      const existingHtml = typeof existing === 'string' ? '' : existing?.html || ''
+      const existingQuery = typeof existing === 'string' ? existing : existing?.query || ''
+      const nextHtml = input.html !== undefined ? (input.html as string) : existingHtml
+      const nextQuery = input.content !== undefined ? (input.content as string) : existingQuery
+
+      const htmlError = validateFreeformHtml(nextHtml)
+      if (htmlError) return { success: false, error: htmlError }
+
+      this.deps.dashboardStore.updateMultipleItemProperties(this.deps.dashboardId, itemId, {
+        content: { html: nextHtml, query: nextQuery } as FreeformData,
+      })
+      if (input.content !== undefined) updates.push('content')
+      if (input.html !== undefined) updates.push('html')
+      // For markdown items, content + query collapse into MarkdownData. Handle
+      // both together so the agent can update either field independently
+      // without losing the other.
+    } else if (isMarkdown && (input.content !== undefined || input.query !== undefined)) {
       const existingContent = existingItem.content
       const existingMarkdown =
         typeof existingContent === 'string'
@@ -466,6 +540,7 @@ export class DashboardToolExecutor {
     const itemHasQuery =
       item.type === CELL_TYPES.CHART ||
       item.type === CELL_TYPES.TABLE ||
+      item.type === CELL_TYPES.FREEFORM ||
       (item.type === CELL_TYPES.MARKDOWN &&
         typeof item.content === 'object' &&
         !!(item.content as MarkdownData).query)

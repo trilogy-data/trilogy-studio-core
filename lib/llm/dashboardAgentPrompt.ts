@@ -147,7 +147,7 @@ export function buildDashboardAgentSystemPrompt(options: DashboardAgentPromptOpt
 ${
   isReport
     ? `This is a REPORT, not a free-form dashboard. Reports render top-to-bottom as a single narrative column. Use the report tools (set_executive_memo, add_claim_section, add_appendix_header) to author structure; use add_dashboard_item only for evidence (charts, tables, markdown). The grid x/y/w/h still drives ordering — y determines vertical position; x and w are mostly cosmetic in report mode.`
-    : 'You have tools to add, update, remove, and reposition items on the dashboard grid. The grid is 20 columns wide. Items can be charts, tables, markdown blocks, or filters.'
+    : 'You have tools to add, update, remove, and reposition items on the dashboard grid. The grid is 20 columns wide. Items can be charts, tables, markdown blocks, filters, or freeform custom-HTML widgets.'
 }
 
 DASHBOARD STATE:
@@ -212,6 +212,8 @@ Example loop over top products:
 
 When the user asks for a "summary card", "KPI tile", "headline metric", or any narrative text that should reflect live data, prefer a markdown item with a query over hardcoded numbers.
 
+${buildFreeformGuidance()}
+
 VALIDATION BEFORE HANDOFF:
 - Once you believe the dashboard is complete, call capture_dashboard_screenshot to render it as a PNG and review the actual visual layout.
 - Look for: overlapping items, awkward sizing, empty regions, illegible charts, missing or unclear titles, and any other visual issues.
@@ -223,6 +225,103 @@ COMPLETING YOUR RESPONSE:
 - When you have finished addressing the user's request — and have validated the result via capture_dashboard_screenshot — call return_to_user with a brief summary.
 - Never end a turn with plain text only — you must always call a tool. return_to_user is always your final tool call.
 ${isReport ? buildReportGuidance() : ''}`
+}
+
+/**
+ * Guidance for authoring freeform ("custom widget") items. Kept in one block so
+ * the widget API contract has a single source of truth in the prompt — it must
+ * stay in sync with lib/dashboards/freeform/guestRuntime.ts.
+ */
+function buildFreeformGuidance(): string {
+  return `FREEFORM WIDGETS (custom HTML):
+When the built-in chart types genuinely cannot express what the user asked for — a bespoke layout, a custom interaction, a visual metaphor specific to their domain — add an item of type "freeform". Prefer a chart or table when one fits: they are themed, accessible, and maintained. Reach for a widget when they don't.
+
+Authoring a widget is TWO separate artifacts, passed as two fields:
+- \`content\`: the Trilogy query. Written exactly like a chart query, and subject to the same rules (full field paths, LIMIT, no GROUP BY). Global filters and cross-filters apply to it automatically.
+- \`html\`: the markup that renders the query's rows. You never write queries inside the widget — the widget cannot issue them.
+
+The widget runs inside a sandboxed iframe. Available to it:
+- \`trilogy.subscribe(fn)\` — fn is called immediately and on every change with \`{ status, columns, rows, rowCount, truncated, filters, error }\`. \`status\` is 'loading' | 'ready' | 'error'; \`columns\` is \`[{ name, type, address }]\`; \`rows\` is an array of plain objects keyed by column name.
+- \`trilogy.ready()\` — REQUIRED. Call it once the first render completes. A widget that never calls ready() is reported as broken after a few seconds.
+- \`trilogy.filters.eq(field, value)\` — cross-filter the rest of the dashboard, exactly like clicking a chart mark. Pass the column name as it appears in \`rows\` (e.g. \`'product.name'\`); the host resolves it to the underlying concept. A field the dashboard doesn't expose is ignored.
+- \`trilogy.filters.set(map)\` / \`.append(map)\` / \`.clear()\` — map is \`{ field: { op: 'eq' | 'in' | 'range' | 'is_null', value } }\`.
+- \`trilogy.refresh()\` — re-run the backing query.
+- \`trilogy.resize(px)\` — request a taller frame.
+- \`trilogy.theme\` — \`{ mode, vars }\` where mode is 'light' or 'dark'. See the theme contract below.
+
+THEME CONTRACT (read this before writing any CSS):
+NEVER hardcode a color, background, or font in a widget. The dashboard runs in light OR dark mode, the user can switch at any time, and a widget with baked-in colors is illegible in the other mode. Every color you need is already injected as a CSS variable on \`:root\` inside the frame, and they are re-pushed when the user switches mode:
+- \`--widget-bg\` — page background. The frame is transparent over the dashboard card by default; only set a background if you need a distinct surface.
+- \`--widget-surface\` — a raised/inset surface (cards, table headers, wells).
+- \`--widget-text\` — primary text. \`--widget-text-muted\` — secondary/labels/axis text.
+- \`--widget-border\` — borders and dividers. \`--widget-border-light\` — subtler dividers.
+- \`--widget-accent\` — accent/primary. \`--widget-accent-rgb\` — the same color as "r, g, b" for \`rgba(var(--widget-accent-rgb), 0.12)\` tints.
+- \`--widget-positive\` / \`--widget-negative\` — good/bad, up/down, profit/loss.
+- \`--widget-series-1\` … \`--widget-series-6\` — categorical palette for multi-series charts. Use these in order; do not invent your own.
+- \`--widget-font\`, \`--widget-font-size\` — already applied to \`body\`; inherit rather than restating.
+
+Rules:
+1. Use \`var(--widget-*)\` for EVERY color. No hex literals, no \`rgb()\` literals, no named colors, no \`background: white\`, no \`color: #333\`.
+2. For translucent fills use \`rgba(var(--widget-accent-rgb), 0.12)\` — never a hardcoded rgba.
+3. Do not set \`background\` on \`body\` or \`html\`. The frame is transparent so the widget sits on the dashboard card; painting your own background is what makes a widget look like a pasted-in rectangle.
+4. If you truly need a mode-specific value, branch on \`trilogy.theme.mode\` inside \`subscribe\` — do not assume dark.
+5. Test your reasoning against both modes before finishing: would every piece of text still be readable if the background flipped?
+
+Sandbox limits — code that violates these silently fails:
+- No network. \`fetch\`, XHR, WebSockets, and remote images are blocked. All data comes from the query.
+- No storage. \`localStorage\`, \`sessionStorage\`, and cookies are unavailable.
+- No access to the host page, no popups, no forms, no top-level navigation.
+- Libraries may be loaded from cdn.jsdelivr.net, unpkg.com, esm.sh, or cdnjs.cloudflare.com. Pin exact versions. Prefer plain DOM — it always works and loads instantly.
+
+Widget authoring rules:
+1. Handle every status. Render something sensible while \`status === 'loading'\` and when \`rows\` is empty; never assume data has arrived on first call.
+2. Read column names from \`columns\`, or use the names your own query selected — do not hardcode names you did not select.
+3. Build DOM with \`textContent\`/\`createElement\` rather than string concatenation into \`innerHTML\`. Row values are data you do not control, and a value containing markup will otherwise break the layout.
+4. Keep it self-contained: one \`<style>\`, one \`<script>\`, no build step.
+5. Call \`trilogy.ready()\` at the end of the initial render, not inside the subscribe callback's data branch.
+6. Every color comes from the theme contract above. A widget that hardcodes colors is a defect, not a style preference.
+
+Minimal shape:
+  content:
+    SELECT product.name, product.revenue ORDER BY product.revenue DESC LIMIT 10;
+  html:
+    <style>
+      .row { padding: 6px 8px; border-bottom: 1px solid var(--widget-border-light); cursor: pointer; }
+      .row:hover { background: rgba(var(--widget-accent-rgb), 0.08); }
+      .name { color: var(--widget-text); }
+      .value { color: var(--widget-text-muted); font-variant-numeric: tabular-nums; }
+      .empty { color: var(--widget-text-muted); padding: 12px; }
+    </style>
+    <div id="root"></div>
+    <script>
+      var root = document.getElementById('root');
+      trilogy.subscribe(function (state) {
+        if (!state.rows.length) {
+          root.innerHTML = '';
+          var empty = document.createElement('div');
+          empty.className = 'empty';
+          empty.textContent = state.status === 'loading' ? 'Loading…' : 'No data';
+          root.appendChild(empty);
+          return;
+        }
+        root.innerHTML = '';
+        state.rows.forEach(function (row) {
+          var el = document.createElement('div');
+          el.className = 'row';
+          var name = document.createElement('span');
+          name.className = 'name';
+          name.textContent = row['product.name'];
+          var value = document.createElement('span');
+          value.className = 'value';
+          value.textContent = ' — ' + row['product.revenue'];
+          el.appendChild(name);
+          el.appendChild(value);
+          el.onclick = function () { trilogy.filters.eq('product.name', row['product.name']); };
+          root.appendChild(el);
+        });
+      });
+      trilogy.ready();
+    <\/script>`
 }
 
 /**

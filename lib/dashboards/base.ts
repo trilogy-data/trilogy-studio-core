@@ -3,6 +3,8 @@ import type { ChartConfig } from '../editors/results'
 import type { Results } from '../editors/results'
 import { migrateChartConfig } from '../editors/results'
 import type { ContentInput } from '../stores/resolver'
+import type { FreeformData } from './freeform/types'
+import { DEFAULT_FREEFORM_HTML } from './freeform/template'
 import {
   applyCrossFilterOperationToGridItems,
   clearAllCrossFiltersFromGridItems,
@@ -47,6 +49,7 @@ export interface DashboardTypes {
     | 'memo'
     | 'claim'
     | 'appendix-header'
+    | 'freeform'
 }
 // export types for 'fullscreen' | 'editing' | 'published' | 'locked'
 export type DashboardState = 'fullscreen' | 'editing' | 'published' | 'locked'
@@ -115,7 +118,7 @@ export interface ClaimData {
 
 export interface GridItemData {
   type: DashboardTypes['CellType']
-  content: string | MarkdownData | MemoData | ClaimData
+  content: string | MarkdownData | MemoData | ClaimData | FreeformData
   drilldown?: string | MarkdownData | null | undefined
   name: string
   allowCrossFilter: boolean
@@ -141,6 +144,8 @@ export interface GridItemDataResponse {
   memoData?: MemoData
   /** Structured payload for claim cells. Set only when `type === 'claim'`. */
   claimData?: ClaimData
+  /** Structured payload for freeform cells. Set only when `type === 'freeform'`. */
+  freeformData?: FreeformData
   rootContent: ContentInput[]
   name: string
   allowCrossFilter: boolean
@@ -160,6 +165,11 @@ export interface GridItemDataResponse {
   loadStartTime?: number | null
   hasDrilldown: boolean
 }
+
+/** Freeform ("agentic") widget cell payload — author-supplied HTML rendered in
+ *  a sandboxed iframe, driven by `query` through the normal executor path.
+ *  Re-exported so cell content types stay discoverable from one place. */
+export type { FreeformData } from './freeform/types'
 
 export interface InvestigationMeta {
   chatMessageId?: string
@@ -199,7 +209,7 @@ export interface Dashboard {
 // Interface for batch updates to item properties
 export interface ItemPropertyUpdates {
   name?: string
-  content?: string | MarkdownData | MemoData | ClaimData
+  content?: string | MarkdownData | MemoData | ClaimData | FreeformData
   type?: DashboardTypes['CellType']
   allowCrossFilter?: boolean
   width?: number
@@ -232,6 +242,7 @@ export const CELL_TYPES = {
   MEMO: 'memo',
   CLAIM: 'claim',
   APPENDIX_HEADER: 'appendix-header',
+  FREEFORM: 'freeform',
 } as const
 
 export type CellType = (typeof CELL_TYPES)[keyof typeof CELL_TYPES]
@@ -258,6 +269,10 @@ export function isClaimData(c: unknown): c is ClaimData {
   return !!c && typeof c === 'object' && 'claim' in (c as object) && !('headline' in (c as object))
 }
 
+export function isFreeformData(c: unknown): c is FreeformData {
+  return !!c && typeof c === 'object' && typeof (c as FreeformData).html === 'string'
+}
+
 /** Pull a Trilogy query out of any item shape that may carry one. Memo, claim,
  *  and markdown all optionally embed a query for live data binding. Returns
  *  the raw query string for charts/tables (which store it in `content`). */
@@ -268,6 +283,9 @@ export function extractItemQuery(item: GridItemData): string | undefined {
       return c
     }
     return undefined
+  }
+  if (isFreeformData(c)) {
+    return c.query || undefined
   }
   if (isMemoData(c) || isClaimData(c) || isMarkdownData(c)) {
     return c.query || undefined
@@ -402,7 +420,7 @@ export class DashboardModel implements Dashboard {
     y = 0,
     w = 4,
     h: number | null = null,
-    content: string | MarkdownData | MemoData | ClaimData | null = null,
+    content: string | MarkdownData | MemoData | ClaimData | FreeformData | null = null,
     name: string | null,
   ): string {
     const itemId = this.nextId.toString()
@@ -420,6 +438,8 @@ export class DashboardModel implements Dashboard {
     } else if (type === CELL_TYPES.CLAIM) {
       defaultHeight = 4
       defaultWidth = 20 // Claims read better at full width even in grid mode
+    } else if (type === CELL_TYPES.FREEFORM) {
+      defaultHeight = 10
     }
     let yFinal = y
     yFinal = this.layout.reduce((maxY, item) => Math.max(maxY, item.y + item.h), 0)
@@ -446,6 +466,8 @@ export class DashboardModel implements Dashboard {
       defaultName = `Claim ${itemId}`
     } else if (type === CELL_TYPES.APPENDIX_HEADER) {
       defaultName = '### Appendix'
+    } else if (type === CELL_TYPES.FREEFORM) {
+      defaultName = `Widget ${itemId}`
     }
 
     let finalName = name || defaultName
@@ -453,7 +475,7 @@ export class DashboardModel implements Dashboard {
     // Default content based on type. The structured types (memo/claim) seed
     // empty placeholder objects so the agent's update_dashboard_item can patch
     // individual fields without first having to construct the whole shape.
-    let defaultContent: string | MarkdownData | MemoData | ClaimData =
+    let defaultContent: string | MarkdownData | MemoData | ClaimData | FreeformData =
       '# Markdown Cell\nEnter your markdown content here.'
     if (type === CELL_TYPES.CHART) {
       defaultContent = "SELECT unnest([1,2,3,4]) as value, 'example' as dim"
@@ -472,6 +494,11 @@ export class DashboardModel implements Dashboard {
       }
     } else if (type === CELL_TYPES.CLAIM) {
       defaultContent = { claim: '' }
+    } else if (type === CELL_TYPES.FREEFORM) {
+      defaultContent = {
+        html: DEFAULT_FREEFORM_HTML,
+        query: "SELECT unnest(['alpha','beta','gamma']) as dim, random() * 100 as value",
+      }
     }
 
     let finalContent = content !== null && content !== undefined ? content : defaultContent
@@ -524,7 +551,10 @@ export class DashboardModel implements Dashboard {
   }
 
   // Update an item's content
-  updateItemContent(itemId: string, content: string | MarkdownData | MemoData | ClaimData): void {
+  updateItemContent(
+    itemId: string,
+    content: string | MarkdownData | MemoData | ClaimData | FreeformData,
+  ): void {
     if (this.gridItems[itemId]) {
       this.gridItems[itemId] = {
         ...this.gridItems[itemId],
