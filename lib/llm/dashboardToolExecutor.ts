@@ -17,6 +17,16 @@ import type {
   FreeformData,
 } from '../dashboards/base'
 import { CELL_TYPES, type CellType, type MarkdownData } from '../dashboards/base'
+import {
+  describeDashboardTheme,
+  isSafeColor,
+  DASHBOARD_THEME_PRESETS,
+  DASHBOARD_CORNERS,
+  DASHBOARD_DENSITIES,
+  DASHBOARD_ELEVATIONS,
+  DASHBOARD_THEME_COLOR_OPTIONS,
+  type DashboardTheme,
+} from '../dashboards/theme'
 import { MAX_FREEFORM_HTML_LENGTH } from '../dashboards/freeform/types'
 import { getProvenance, formatProvenance } from '../dashboards/provenance'
 import { buildDashboardStateSnapshot } from './dashboardAgentPrompt'
@@ -152,6 +162,8 @@ export class DashboardToolExecutor {
         return this.updateDashboardInfo(toolInput)
       case 'set_dashboard_title':
         return this.updateDashboardInfo({ name: toolInput.title })
+      case 'set_dashboard_theme':
+        return this.setDashboardTheme(toolInput)
       case 'capture_dashboard_screenshot':
         return this.captureDashboardScreenshot()
       case 'run_trilogy_query':
@@ -660,6 +672,7 @@ export class DashboardToolExecutor {
       itemCount: Object.keys(dashboard.gridItems).length,
       imports: dashboard.imports,
       filter: dashboard.filter,
+      theme: describeDashboardTheme(dashboard.theme),
       createdAt: dashboard.createdAt,
       updatedAt: dashboard.updatedAt,
     }
@@ -693,6 +706,98 @@ export class DashboardToolExecutor {
     return {
       success: true,
       message: `Updated dashboard: ${updates.join(', ')}.`,
+    }
+  }
+
+  /**
+   * Patch the container theme.
+   *
+   * `DashboardModel.setTheme` sanitizes, which means it silently DROPS anything
+   * out of vocabulary. That is the right behaviour for deserializing stored
+   * JSON, but the wrong behaviour for a tool call: an agent that misspells a
+   * preset would get "theme updated" and no visible change, then re-issue the
+   * same call. So everything is validated here first and a bad value comes back
+   * as an error naming the accepted set.
+   */
+  private setDashboardTheme(input: Record<string, any>): ToolCallResult {
+    const dashboard = this.dashboard
+    if (!dashboard) return { success: false, error: 'Dashboard not found.' }
+
+    if (input.reset === true) {
+      this.deps.dashboardStore.setDashboardTheme(this.deps.dashboardId, null)
+      return {
+        success: true,
+        message: 'Dashboard theme cleared. It now inherits the app light/dark styling.',
+      }
+    }
+
+    // `undefined` is how a patch clears a field: the model spreads the patch
+    // over the current theme and then sanitizes, which drops undefined entries.
+    const patch: Record<string, unknown> = {}
+    const changes: string[] = []
+
+    const enumFields: Array<[string, readonly string[]]> = [
+      ['preset', DASHBOARD_THEME_PRESETS],
+      ['corners', DASHBOARD_CORNERS],
+      ['density', DASHBOARD_DENSITIES],
+      ['elevation', DASHBOARD_ELEVATIONS],
+    ]
+    for (const [field, allowed] of enumFields) {
+      const value = input[field]
+      if (value === undefined || value === null) continue
+      if (!allowed.includes(value)) {
+        return {
+          success: false,
+          error: `Invalid ${field} "${value}". Must be one of: ${allowed.join(', ')}.`,
+        }
+      }
+      patch[field] = value
+      changes.push(`${field}=${value}`)
+    }
+
+    if (input.mobileCards !== undefined && input.mobileCards !== null) {
+      if (typeof input.mobileCards !== 'boolean') {
+        return { success: false, error: 'mobileCards must be true or false.' }
+      }
+      patch.mobileCards = input.mobileCards
+      changes.push(`mobileCards=${input.mobileCards}`)
+    }
+
+    for (const color of DASHBOARD_THEME_COLOR_OPTIONS) {
+      const value = input[color.key]
+      if (value === undefined || value === null) continue
+      if (typeof value !== 'string') {
+        return { success: false, error: `${color.key} must be a color string.` }
+      }
+      if (value.trim() === '') {
+        patch[color.key] = undefined
+        changes.push(`${color.key} cleared`)
+        continue
+      }
+      if (!isSafeColor(value)) {
+        return {
+          success: false,
+          error: `Invalid ${color.key} "${value}". Use a hex string ("#101820"), rgb()/rgba()/hsl(), or a CSS color name.`,
+        }
+      }
+      patch[color.key] = value.trim()
+      changes.push(`${color.key}=${value.trim()}`)
+    }
+
+    if (changes.length === 0) {
+      return {
+        success: true,
+        message: `No theme changes provided. Current theme: ${describeDashboardTheme(dashboard.theme)}. Pass reset=true to clear it.`,
+      }
+    }
+
+    this.deps.dashboardStore.setDashboardTheme(this.deps.dashboardId, patch as DashboardTheme)
+
+    return {
+      success: true,
+      message: `Theme updated (${changes.join(', ')}). Full theme is now: ${describeDashboardTheme(
+        this.dashboard?.theme,
+      )}. Call capture_dashboard_screenshot to confirm it reads well — custom colors override the app palette, so check contrast rather than assuming it.`,
     }
   }
 

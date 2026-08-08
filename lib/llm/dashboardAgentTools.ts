@@ -4,6 +4,38 @@ import {
   connectDataConnectionTool,
 } from './sharedToolSchemas'
 import { RETURN_TO_USER_TOOL } from './chatAgentPrompt'
+import {
+  DASHBOARD_PRESET_OPTIONS,
+  DASHBOARD_CORNER_OPTIONS,
+  DASHBOARD_DENSITY_OPTIONS,
+  DASHBOARD_ELEVATION_OPTIONS,
+  DASHBOARD_THEME_COLOR_OPTIONS,
+  type DashboardThemeOption,
+} from '../dashboards/theme'
+
+/** Turn a theme vocabulary into an enum property whose description carries the
+ *  same per-value hints the settings picker shows, so the agent and the user
+ *  are choosing from one described vocabulary rather than two. */
+function themeEnumProperty<T extends string>(
+  options: readonly DashboardThemeOption<T>[],
+  lead: string,
+) {
+  return {
+    type: 'string',
+    enum: options.map((option) => option.value),
+    description: `${lead} ${options.map((option) => `"${option.value}": ${option.hint}`).join(' ')}`,
+  }
+}
+
+const themeColorProperties = Object.fromEntries(
+  DASHBOARD_THEME_COLOR_OPTIONS.map((color) => [
+    color.key,
+    {
+      type: 'string',
+      description: `${color.label} color — ${color.hint} Accepts a hex string ("#101820"), rgb()/rgba()/hsl(), or a CSS color name. Pass an empty string to clear it back to the inherited theme color. Omit to leave it as-is.`,
+    },
+  ]),
+)
 
 /**
  * Tool definitions for the dashboard chat agent.
@@ -227,6 +259,38 @@ export const DASHBOARD_TOOLS = [
         },
       },
       required: ['title'],
+    },
+  },
+  {
+    name: 'set_dashboard_theme',
+    description:
+      'Restyle the dashboard container: card corners, spacing density, elevation, and colors. This is presentation only — it changes no queries, items, or layout positions. Fields you omit are left as they are, so you can nudge one knob without restating the theme; start from a `preset` and override individual fields from there. Only call this when the user asks about the look (theme, colors, branding, "make it denser", "match our brand"), or when a screenshot shows a genuine presentation problem. Do NOT restyle a dashboard the user did not ask you to restyle. Pass reset=true to clear everything back to the app default. Verify with capture_dashboard_screenshot: colors here override the app light/dark palette, so a color that looks right in one mode can be unreadable in the other.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        preset: themeEnumProperty(
+          DASHBOARD_PRESET_OPTIONS,
+          'Baseline look. Sets corners, density, elevation, and border treatment together; the individual fields below override whatever it chose.',
+        ),
+        corners: themeEnumProperty(DASHBOARD_CORNER_OPTIONS, 'Card corner rounding.'),
+        density: themeEnumProperty(
+          DASHBOARD_DENSITY_OPTIONS,
+          'Gutter width and padding. Denser fits more panels per screen; spacious suits fewer, larger panels.',
+        ),
+        elevation: themeEnumProperty(DASHBOARD_ELEVATION_OPTIONS, 'Card drop shadow.'),
+        mobileCards: {
+          type: 'boolean',
+          description:
+            'Keep the card treatment on narrow viewports. Default false, which flattens panels to the page background below 768px — the right choice for most dashboards, since cards on a phone waste horizontal space.',
+        },
+        ...themeColorProperties,
+        reset: {
+          type: 'boolean',
+          description:
+            'Clear the entire theme and go back to the app default, which follows the user\'s light/dark setting. Use this when the user says "undo the styling" or "back to normal". When true, every other field is ignored.',
+        },
+      },
+      required: [],
     },
   },
   {

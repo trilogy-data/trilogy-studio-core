@@ -68,6 +68,56 @@ describe('buildWidgetTheme', () => {
   })
 })
 
+describe('dashboard container theme pickup', () => {
+  // The dashboard theme sets its variables on the dashboard root; widgets read
+  // computed values off their own cell, so inheritance is what carries them in.
+  // These assert the contract prefers the container tokens over the app-wide
+  // ones, so a themed card doesn't end up with a widget painted for the old one.
+  it('prefers the dashboard card tokens over the app-wide background', () => {
+    const el = hostElement({
+      '--dashboard-card-bg': 'rgb(1, 1, 1)',
+      '--dashboard-background': 'rgb(2, 2, 2)',
+      '--bg-color': 'rgb(3, 3, 3)',
+    })
+    expect(buildWidgetTheme({ mode: 'light', element: el }).vars['--widget-bg']).toBe(
+      'rgb(1, 1, 1)',
+    )
+  })
+
+  it('prefers the dashboard header tint for the surface color', () => {
+    const el = hostElement({
+      '--dashboard-header-bg': 'rgb(4, 4, 4)',
+      '--panel-header-bg': 'rgb(5, 5, 5)',
+    })
+    expect(buildWidgetTheme({ mode: 'light', element: el }).vars['--widget-surface']).toBe(
+      'rgb(4, 4, 4)',
+    )
+  })
+
+  it('prefers the dashboard border color', () => {
+    const el = hostElement({
+      '--dashboard-card-border-color': 'rgb(6, 6, 6)',
+      '--border': 'rgb(7, 7, 7)',
+    })
+    expect(buildWidgetTheme({ mode: 'light', element: el }).vars['--widget-border']).toBe(
+      'rgb(6, 6, 6)',
+    )
+  })
+
+  it('exposes the container corner radius so widget controls match the card', () => {
+    const el = hostElement({ '--dashboard-control-radius': '0px' })
+    expect(buildWidgetTheme({ mode: 'light', element: el }).vars['--widget-radius']).toBe('0px')
+    expect(buildWidgetTheme({ mode: 'light' }).vars['--widget-radius']).toBe('10px')
+  })
+
+  it('still resolves when no dashboard theme is set', () => {
+    const el = hostElement({ '--dashboard-background': 'rgb(2, 2, 2)' })
+    expect(buildWidgetTheme({ mode: 'light', element: el }).vars['--widget-bg']).toBe(
+      'rgb(2, 2, 2)',
+    )
+  })
+})
+
 describe('theme in the generated document', () => {
   it('writes the contract and color-scheme into :root', () => {
     const doc = buildFreeformSrcdoc({

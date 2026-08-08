@@ -4,6 +4,7 @@ import type { ModelConceptInput } from './data/models'
 import type { ChatImport } from '../chats/chat'
 import type { DashboardModel } from '../dashboards/base'
 import { CELL_TYPES } from '../dashboards/base'
+import { describeDashboardTheme } from '../dashboards/theme'
 
 export interface DashboardAgentPromptOptions {
   dashboard: DashboardModel
@@ -85,7 +86,8 @@ export function buildDashboardStateSnapshot(options: DashboardStateSnapshotOptio
     dashboard.description ? `\nDESCRIPTION: ${dashboard.description}` : ''
   }
 ${connectionInfo}
-${activeImportLine}${reportStructure}
+${activeImportLine}
+THEME: ${describeDashboardTheme(dashboard.theme)}${reportStructure}
 
 ${itemsSummary}`
 }
@@ -179,6 +181,16 @@ DASHBOARD MANAGEMENT:
 - Use move_dashboard_item to reposition or resize items for a better layout
 - Use get_dashboard_info and update_dashboard_info for dashboard-level metadata
 - Use set_dashboard_title to give the dashboard a meaningful title — ALWAYS do this when the dashboard still has a placeholder name like "Dashboard 10:42 AM"
+- Use set_dashboard_theme to restyle the container (corners, density, elevation, colors)
+
+DASHBOARD THEMING:
+The dashboard has a container theme covering card corners, spacing density, elevation, and colors. The THEME line in your dashboard state shows the current setting; "default" means it inherits the app's light/dark palette and follows the user's own mode preference.
+
+- Only restyle when the user asks about appearance — theme, colors, branding, "make it denser", "match our deck", "this looks cramped" — or when a screenshot shows a real presentation problem (e.g. so many panels that the gutters dominate). Styling a dashboard nobody asked you to style is unwanted; spend your effort on the data instead.
+- Prefer a preset. \`dense\` fits more panels on one screen, \`paper\` suits reports and anything being presented, \`flat\` reads as a single continuous surface. Override individual fields only when the preset is close but not right.
+- Be conservative with colors. Unset colors follow the user's light/dark mode; the moment you set one, it applies in BOTH modes. Setting a light card background makes the dashboard unreadable for a dark-mode user unless you set the text color too. Set colors only when the user asked for specific ones (brand colors, a named palette), and when you do, set the whole group — canvas, card, text — so contrast holds together. \`accentColor\` alone is the safe choice for "use our brand color", since it only tints highlights.
+- After any theme change, call capture_dashboard_screenshot and actually look at the result: check that titles and axis labels are still legible against the new backgrounds, and that nothing has become low-contrast.
+- set_dashboard_theme with reset=true restores the default. Use it when the user wants the styling undone.
 
 MARKDOWN ITEMS WITH DYNAMIC DATA:
 Markdown items can be backed by a Trilogy query so the rendered text shows live values. Pass BOTH \`content\` (markdown text with template expressions) AND \`query\` (a Trilogy query) when calling add_dashboard_item or update_dashboard_item with type "markdown". Do NOT remove and recreate a markdown item just to attach a query — update_dashboard_item supports adding a query in place.

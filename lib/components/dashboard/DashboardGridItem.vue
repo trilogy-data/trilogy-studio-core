@@ -697,11 +697,21 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   );
   position: relative;
   overflow-y: hidden;
-  background-color: var(--trilogy-embed-dashboard-background, var(--dashboard-background, #ffffff));
-  border-radius: 14px;
+  background-color: var(
+    --dashboard-card-bg,
+    var(--trilogy-embed-dashboard-background, var(--dashboard-background, #ffffff))
+  );
+  border-radius: var(--dashboard-card-radius, 14px);
   box-shadow:
-    inset 0 0 0 1px var(--trilogy-embed-border, var(--border-color, var(--border, #d6dde6))),
-    var(--trilogy-embed-surface-shadow, var(--surface-shadow, 0 1px 2px rgba(15, 23, 42, 0.08)));
+    inset 0 0 0 var(--dashboard-card-border-width, 1px)
+      var(
+        --dashboard-card-border-color,
+        var(--trilogy-embed-border, var(--border-color, var(--border, #d6dde6)))
+      ),
+    var(
+      --dashboard-card-shadow,
+      var(--trilogy-embed-surface-shadow, var(--surface-shadow, 0 1px 2px rgba(15, 23, 42, 0.08)))
+    );
 }
 
 .grid-item-section-header-style {
@@ -758,10 +768,17 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  min-height: 27px;
-  padding: 4px 12px 3px;
-  background-color: var(--trilogy-embed-panel-header-bg, var(--panel-header-bg, #f6f8fb));
-  border-bottom: 1px solid var(--trilogy-embed-border, var(--border-color, var(--border, #d6dde6)));
+  min-height: var(--dashboard-header-min-height, 27px);
+  padding: var(--dashboard-header-padding, 4px 12px 3px);
+  background-color: var(
+    --dashboard-header-bg,
+    var(--trilogy-embed-panel-header-bg, var(--panel-header-bg, #f6f8fb))
+  );
+  border-bottom: var(--dashboard-header-border-width, 1px) solid
+    var(
+      --dashboard-card-border-color,
+      var(--trilogy-embed-border, var(--border-color, var(--border, #d6dde6)))
+    );
   flex-shrink: 0;
 }
 
@@ -857,7 +874,7 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   gap: 6px;
   max-width: min(100%, 280px);
   padding: 8px;
-  border-radius: 14px;
+  border-radius: var(--dashboard-card-radius, 14px);
   background: color-mix(
     in srgb,
     var(--trilogy-embed-bg, var(--bg-color, #ffffff)) 92%,
@@ -993,7 +1010,7 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   outline: none;
   background-color: var(--trilogy-embed-bg, var(--bg-color, #ffffff));
   color: var(--trilogy-embed-text-color, var(--text-color, #1f2937));
-  border-radius: 10px;
+  border-radius: var(--dashboard-control-radius, 10px);
 }
 
 .section-header-input {
@@ -1045,7 +1062,7 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
     background-color 0.2s,
     border-color 0.2s,
     color 0.2s;
-  border-radius: 10px;
+  border-radius: var(--dashboard-control-radius, 10px);
 }
 
 .control-btn:hover {
@@ -1211,7 +1228,7 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
     var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)),
     0.08
   );
-  border-radius: 999px;
+  border-radius: var(--dashboard-chip-radius, 999px);
   box-shadow: inset 0 0 0 1px
     rgba(var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)), 0.18);
   color: var(--trilogy-embed-text-color, var(--text-color, #1f2937));
@@ -1286,11 +1303,14 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
 }
 
 @media (max-width: 768px) {
+  /* Narrow viewports historically dropped the card treatment entirely. The
+     defaults below reproduce that exactly; a dashboard theme with
+     `mobileCards` re-points these at the desktop card values instead. */
   .grid-item-chart-style,
   .grid-item-markdown-style {
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
+    border-radius: var(--dashboard-card-radius-mobile, 0px);
+    background: var(--dashboard-card-bg-mobile, transparent);
+    box-shadow: var(--dashboard-card-shadow-mobile, none);
   }
 
   .grid-item-chart-style .content-area,
@@ -1320,10 +1340,18 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   .grid-item-header {
     box-sizing: border-box;
     width: 100%;
-    padding: 3px 10px 2px;
-    min-height: 25px;
-    background: var(--trilogy-embed-panel-header-bg, var(--panel-header-bg, #f6f8fb));
+    padding: var(--dashboard-header-padding-mobile, 3px 10px 2px);
+    min-height: var(--dashboard-header-min-height-mobile, 25px);
+    background: var(
+      --dashboard-header-bg,
+      var(--trilogy-embed-panel-header-bg, var(--panel-header-bg, #f6f8fb))
+    );
     border: 0;
+    border-bottom: var(--dashboard-header-border-width-mobile, 0px) solid
+      var(
+        --dashboard-card-border-color,
+        var(--trilogy-embed-border, var(--border-color, var(--border, #d6dde6)))
+      );
     border-radius: 0;
   }
 

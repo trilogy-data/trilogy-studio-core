@@ -40,13 +40,15 @@ export const WIDGET_THEME_CONTRACT: readonly WidgetThemeVariable[] = [
     fallback: { light: '14px', dark: '14px' },
   },
   {
+    // A dashboard container theme repaints the card the widget sits on, so its
+    // token is checked ahead of the app-wide background.
     name: '--widget-bg',
-    sources: ['--dashboard-background', '--bg-color'],
+    sources: ['--dashboard-card-bg', '--dashboard-background', '--bg-color'],
     fallback: { light: '#ffffff', dark: '#121417' },
   },
   {
     name: '--widget-surface',
-    sources: ['--panel-header-bg', '--query-window-bg'],
+    sources: ['--dashboard-header-bg', '--panel-header-bg', '--query-window-bg'],
     fallback: { light: '#f6f8fb', dark: '#111318' },
   },
   {
@@ -61,8 +63,15 @@ export const WIDGET_THEME_CONTRACT: readonly WidgetThemeVariable[] = [
   },
   {
     name: '--widget-border',
-    sources: ['--border', '--border-color'],
+    sources: ['--dashboard-card-border-color', '--border', '--border-color'],
     fallback: { light: '#d6dde6', dark: '#2a2f37' },
+  },
+  {
+    // Corner radius for controls a widget draws itself, so its buttons and
+    // chips match the surrounding dashboard rather than inventing a rounding.
+    name: '--widget-radius',
+    sources: ['--dashboard-control-radius'],
+    fallback: { light: '10px', dark: '10px' },
   },
   {
     name: '--widget-border-light',
@@ -113,6 +122,13 @@ const FORWARDED_HOST_VARS = [
   '--dashboard-helper-text',
   '--panel-header-bg',
   '--delete-color',
+  // Dashboard container theme tokens, so a widget can match the card it sits on.
+  '--dashboard-card-bg',
+  '--dashboard-header-bg',
+  '--dashboard-card-border-color',
+  '--dashboard-card-radius',
+  '--dashboard-control-radius',
+  '--dashboard-chip-radius',
 ]
 
 export interface BuildWidgetThemeOptions {

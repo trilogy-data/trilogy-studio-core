@@ -132,6 +132,7 @@ function makeEmptyExecutor(): { executor: DashboardToolExecutor; dashboard: Dash
       dashboard.updateItemType(itemId, type),
     updateItemChartConfig: (_id: string, itemId: string, config: any) =>
       dashboard.updateItemChartConfig(itemId, config),
+    setDashboardTheme: (_id: string, theme: any) => dashboard.setTheme(theme),
   }
 
   const executor = new DashboardToolExecutor({
@@ -243,5 +244,99 @@ describe('DashboardToolExecutor freeform items', () => {
     expect(result.success).toBe(true)
     expect(result.message).toContain('SELECT 1;')
     expect(result.message).toContain('trilogy.ready()')
+  })
+})
+
+describe('DashboardToolExecutor set_dashboard_theme', () => {
+  it('applies enum knobs and reports the resulting theme back', async () => {
+    const { executor, dashboard } = makeEmptyExecutor()
+
+    const result = await executor.executeToolCall('set_dashboard_theme', {
+      preset: 'paper',
+      density: 'compact',
+    })
+
+    expect(result.success).toBe(true)
+    expect(dashboard.theme).toEqual({ preset: 'paper', density: 'compact' })
+    // The agent's only view of the styling between screenshots is this string.
+    expect(result.message).toContain('preset paper')
+    expect(result.message).toContain('density compact')
+  })
+
+  it('merges over the existing theme instead of replacing it', async () => {
+    const { executor, dashboard } = makeEmptyExecutor()
+    await executor.executeToolCall('set_dashboard_theme', { preset: 'dense' })
+
+    await executor.executeToolCall('set_dashboard_theme', { accentColor: '#2563eb' })
+
+    expect(dashboard.theme).toEqual({ preset: 'dense', accentColor: '#2563eb' })
+  })
+
+  it('rejects an out-of-vocabulary value rather than silently dropping it', async () => {
+    const { executor, dashboard } = makeEmptyExecutor()
+
+    const result = await executor.executeToolCall('set_dashboard_theme', { preset: 'brutalist' })
+
+    // Sanitization alone would report success and change nothing, which reads
+    // to the agent as "applied" and invites an identical retry.
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('Invalid preset "brutalist"')
+    expect(result.error).toContain('paper')
+    expect(dashboard.theme).toBeUndefined()
+  })
+
+  it('rejects a color that could reach the network', async () => {
+    const { executor, dashboard } = makeEmptyExecutor()
+
+    const result = await executor.executeToolCall('set_dashboard_theme', {
+      cardBackground: 'url(https://evil.example/pixel.png)',
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('Invalid cardBackground')
+    expect(dashboard.theme).toBeUndefined()
+  })
+
+  it('clears a single color when passed an empty string', async () => {
+    const { executor, dashboard } = makeEmptyExecutor()
+    await executor.executeToolCall('set_dashboard_theme', {
+      preset: 'flat',
+      cardBackground: '#101820',
+    })
+
+    const result = await executor.executeToolCall('set_dashboard_theme', { cardBackground: '' })
+
+    expect(result.success).toBe(true)
+    expect(dashboard.theme).toEqual({ preset: 'flat' })
+  })
+
+  it('clears the whole theme on reset', async () => {
+    const { executor, dashboard } = makeEmptyExecutor()
+    await executor.executeToolCall('set_dashboard_theme', { preset: 'paper' })
+
+    const result = await executor.executeToolCall('set_dashboard_theme', { reset: true })
+
+    expect(result.success).toBe(true)
+    expect(dashboard.theme).toBeUndefined()
+  })
+
+  it('reports the current theme when called with nothing to change', async () => {
+    const { executor } = makeEmptyExecutor()
+    await executor.executeToolCall('set_dashboard_theme', { preset: 'dense' })
+
+    const result = await executor.executeToolCall('set_dashboard_theme', {})
+
+    expect(result.success).toBe(true)
+    expect(result.message).toContain('No theme changes provided')
+    expect(result.message).toContain('preset dense')
+  })
+
+  it('surfaces the theme in get_dashboard_info', async () => {
+    const { executor } = makeEmptyExecutor()
+    await executor.executeToolCall('set_dashboard_theme', { preset: 'paper' })
+
+    const result = await executor.executeToolCall('get_dashboard_info', {})
+
+    expect(result.message).toContain('preset paper')
   })
 })

@@ -5,6 +5,7 @@ import { migrateChartConfig } from '../editors/results'
 import type { ContentInput } from '../stores/resolver'
 import type { FreeformData } from './freeform/types'
 import { DEFAULT_FREEFORM_HTML } from './freeform/template'
+import { sanitizeDashboardTheme, type DashboardTheme } from './theme'
 import {
   applyCrossFilterOperationToGridItems,
   clearAllCrossFiltersFromGridItems,
@@ -196,6 +197,10 @@ export interface Dashboard {
    *  blocks in a single narrative column with executive memo + claim sections.
    *  Defaults to 'grid' for back-compat with all existing serialized data. */
   layoutType?: DashboardLayoutType
+  /** Container styling (corners, density, elevation, colors). Undefined means
+   *  "inherit the app/embed theme", which is byte-identical to how dashboards
+   *  rendered before theming existed. See dashboards/theme.ts. */
+  theme?: DashboardTheme
   // Investigation tracking
   parentDashboardId?: string | null
   investigationName?: string
@@ -313,6 +318,7 @@ export class DashboardModel implements Dashboard {
   changed: boolean = false
   deleted: boolean = false
   layoutType: DashboardLayoutType = 'grid'
+  theme?: DashboardTheme
   // Investigation fields
   parentDashboardId?: string | null
   investigationName?: string
@@ -337,6 +343,7 @@ export class DashboardModel implements Dashboard {
     state = 'editing',
     description = '',
     layoutType = 'grid',
+    theme,
     parentDashboardId = null,
     investigationName,
     investigationCreatedFrom,
@@ -360,6 +367,7 @@ export class DashboardModel implements Dashboard {
     this.description = description
     this.changed = false
     this.layoutType = layoutType
+    this.theme = sanitizeDashboardTheme(theme)
     this.parentDashboardId = parentDashboardId
     this.investigationName = investigationName
     this.investigationCreatedFrom = investigationCreatedFrom
@@ -529,6 +537,17 @@ export class DashboardModel implements Dashboard {
   setLayoutType(layoutType: DashboardLayoutType): void {
     if (this.layoutType === layoutType) return
     this.layoutType = layoutType
+    this.updatedAt = new Date()
+    this.changed = true
+  }
+
+  /** Patch the container theme. Passing null clears it back to the inherited
+   *  app/embed styling; a partial object merges over what is already set, so a
+   *  caller can nudge one knob without restating the whole theme. */
+  setTheme(theme: DashboardTheme | null): void {
+    const next = theme === null ? undefined : sanitizeDashboardTheme({ ...this.theme, ...theme })
+    if (JSON.stringify(next ?? null) === JSON.stringify(this.theme ?? null)) return
+    this.theme = next
     this.updatedAt = new Date()
     this.changed = true
   }
@@ -1034,6 +1053,7 @@ export class DashboardModel implements Dashboard {
       state: this.state,
       description: this.description,
       layoutType: this.layoutType,
+      theme: this.theme,
       parentDashboardId: this.parentDashboardId,
       investigationName: this.investigationName,
       investigationCreatedFrom: this.investigationCreatedFrom,
@@ -1065,6 +1085,7 @@ export class DashboardModel implements Dashboard {
       updatedAt: new Date(data.updatedAt),
       gridItems,
       layoutType: data.layoutType || 'grid',
+      theme: sanitizeDashboardTheme(data.theme),
       parentDashboardId: data.parentDashboardId || null,
       investigationName: data.investigationName,
       investigationCreatedFrom: data.investigationCreatedFrom

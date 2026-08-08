@@ -16,6 +16,7 @@ import {
   CELL_TYPES,
   type DimensionClick,
 } from '../../dashboards/base'
+import type { DashboardTheme } from '../../dashboards/theme'
 import type { CompletionItem } from '../../stores/resolver'
 import type {
   DashboardImport,
@@ -336,6 +337,12 @@ export function useDashboard(
     dashboardStore.updateDashboardTitle(dashboard.value.id, newTitle)
   }
 
+  /** Merge a partial container theme, or clear it entirely with null. */
+  function updateTheme(theme: DashboardTheme | null): void {
+    if (!dashboard.value || !dashboard.value.id) return
+    dashboardStore.setDashboardTheme(dashboard.value.id, theme)
+  }
+
   function clearItems(): void {
     if (!dashboard.value || !dashboard.value.id) return
     dashboardStore.clearDashboardItems(dashboard.value.id)
@@ -573,5 +580,6 @@ export function useDashboard(
     unSelect,
     dashboardCreated,
     updateTitle,
+    updateTheme,
   }
 }
