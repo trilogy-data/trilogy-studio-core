@@ -5,6 +5,7 @@ import {
   type MarkdownData,
   type MemoData,
   type ClaimData,
+  type FreeformData,
 } from './base'
 import type { ContentInput } from '../stores/resolver'
 import type { EditorStoreType } from '../stores/editorStore'
@@ -61,6 +62,9 @@ function isMemoLike(obj: any): obj is MemoData {
 function isClaimLike(obj: any): obj is ClaimData {
   return obj && typeof obj === 'object' && 'claim' in obj && !('headline' in obj)
 }
+function isFreeformLike(obj: any): obj is FreeformData {
+  return obj && typeof obj === 'object' && typeof obj.html === 'string'
+}
 
 /** Resolve a grid item into the response shape cells and the query executor
  *  consume. Pure over the dashboard model. */
@@ -98,10 +102,15 @@ export function buildItemDataResponse(
   let hasDrilldown = false
   let content = isMarkdownData(item.content)
     ? item.content
-    : isMemoLike(item.content) || isClaimLike(item.content)
+    : isMemoLike(item.content) || isClaimLike(item.content) || isFreeformLike(item.content)
       ? // Structured-payload cells expose their query under `query` so the
-        // dashboard query executor can wire `data` for templating.
-        { markdown: '', query: (item.content as MemoData | ClaimData).query || '' }
+        // dashboard query executor can wire `data` for templating. Freeform
+        // widgets ride the same path — the executor sees an ordinary query and
+        // needs to know nothing about the iframe.
+        {
+          markdown: '',
+          query: (item.content as MemoData | ClaimData | FreeformData).query || '',
+        }
       : {
           markdown: item.type === 'markdown' ? (item.content as string) : '',
           query: item.type !== 'markdown' ? (item.content as string) : '',
@@ -137,6 +146,7 @@ export function buildItemDataResponse(
     structured_content: content,
     memoData: isMemoLike(item.content) ? (item.content as MemoData) : undefined,
     claimData: isClaimLike(item.content) ? (item.content as ClaimData) : undefined,
+    freeformData: isFreeformLike(item.content) ? (item.content as FreeformData) : undefined,
     name: item.name,
     allowCrossFilter: item.allowCrossFilter !== false, // Default to true if not explicitly false
     width: item.width || 0,

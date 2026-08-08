@@ -52,6 +52,13 @@ const itemOptions: Array<{
     testId: 'dashboard-add-item-type-filter',
   },
   {
+    value: CELL_TYPES.FREEFORM,
+    label: 'Custom Widget',
+    description: 'Hand-authored HTML rendered in a sandboxed frame, wired to a query.',
+    icon: 'mdi-code-braces',
+    testId: 'dashboard-add-item-type-freeform',
+  },
+  {
     value: CELL_TYPES.SECTION_HEADER,
     label: 'Section Header',
     description: 'Break the dashboard into labeled sections.',

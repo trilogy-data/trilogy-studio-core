@@ -16,8 +16,14 @@ import {
   CELL_TYPES,
   type DimensionClick,
 } from '../../dashboards/base'
+import type { DashboardTheme } from '../../dashboards/theme'
 import type { CompletionItem } from '../../stores/resolver'
-import type { DashboardImport, DashboardState } from '../../dashboards/base'
+import type {
+  DashboardImport,
+  DashboardState,
+  FreeformData,
+  MarkdownData,
+} from '../../dashboards/base'
 import QueryExecutionService from '../../stores/queryExecutionService'
 import useScreenNavigation from '../../stores/useScreenNavigation'
 import useEditorStore from '../../stores/editorStore'
@@ -76,6 +82,7 @@ export function useDashboard(
   const editingItem = ref<LayoutItem | null>(null)
   const showQueryEditor = ref(false)
   const showMarkdownEditor = ref(false)
+  const showFreeformEditor = ref(false)
   const showAddItemModal = ref(false)
   const globalCompletion = ref<CompletionItem[]>([])
 
@@ -330,6 +337,12 @@ export function useDashboard(
     dashboardStore.updateDashboardTitle(dashboard.value.id, newTitle)
   }
 
+  /** Merge a partial container theme, or clear it entirely with null. */
+  function updateTheme(theme: DashboardTheme | null): void {
+    if (!dashboard.value || !dashboard.value.id) return
+    dashboardStore.setDashboardTheme(dashboard.value.id, theme)
+  }
+
   function clearItems(): void {
     if (!dashboard.value || !dashboard.value.id) return
     dashboardStore.clearDashboardItems(dashboard.value.id)
@@ -367,13 +380,15 @@ export function useDashboard(
         showQueryEditor.value = true
       } else if (itemData.type === CELL_TYPES.FILTER) {
         showQueryEditor.value = true
+      } else if (itemData.type === CELL_TYPES.FREEFORM) {
+        showFreeformEditor.value = true
       } else if (itemData.type === CELL_TYPES.SECTION_HEADER) {
         editingItem.value = null
       }
     }
   }
 
-  function saveContent(content: string): void {
+  function saveContent(content: string | MarkdownData | FreeformData): void {
     if (!dashboard.value || !dashboard.value.id || !editingItem.value) return
     const itemId = editingItem.value.i
     setItemData(itemId, dashboard.value.id, { content })
@@ -383,6 +398,7 @@ export function useDashboard(
   function closeEditors(): void {
     showQueryEditor.value = false
     showMarkdownEditor.value = false
+    showFreeformEditor.value = false
     editingItem.value = null
   }
 
@@ -533,6 +549,7 @@ export function useDashboard(
     showAddItemModal,
     showQueryEditor,
     showMarkdownEditor,
+    showFreeformEditor,
     editingItem,
     dashboardMaxWidth,
     rootContent,
@@ -563,5 +580,6 @@ export function useDashboard(
     unSelect,
     dashboardCreated,
     updateTitle,
+    updateTheme,
   }
 }

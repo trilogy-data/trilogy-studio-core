@@ -7,6 +7,7 @@ export { default as DashboardChart } from './components/dashboard/DashboardChart
 export { default as DashboardTable } from './components/dashboard/DashboardTable.vue'
 export { default as DashboardFilter } from './components/dashboard/DashboardFilter.vue'
 export { default as DashboardMarkdown } from './components/dashboard/DashboardMarkdown.vue'
+export { default as DashboardFreeform } from './components/dashboard/DashboardFreeform.vue'
 export { default as DashboardDataSelector } from './components/dashboard/DashboardDataSelector.vue'
 export { default as DataTable } from './components/DataTable.vue'
 export { default as MarkdownRenderer } from './components/MarkdownRenderer.vue'
@@ -63,6 +64,7 @@ export type {
   Dashboard as DashboardDefinition,
   DashboardImport,
   DashboardState,
+  FreeformData,
   GridItemData,
   GridItemDataResponse,
   LayoutItem,

@@ -17,7 +17,7 @@
 
 <script lang="ts">
 import { defineComponent, reactive } from 'vue'
-import trilogyIcon from '../../static/trilogy.png'
+import trilogyIcon from '../../static/trilogy.webp'
 
 export default defineComponent({
   name: 'UserProfile',

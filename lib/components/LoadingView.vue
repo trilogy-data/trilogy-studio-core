@@ -27,7 +27,7 @@ import {
   nextTick,
   type PropType,
 } from 'vue'
-import trilogyIcon from '../static/trilogy.png'
+import trilogyIcon from '../static/trilogy.webp'
 
 interface Props {
   cancel?: (() => void) | null

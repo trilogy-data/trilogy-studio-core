@@ -190,6 +190,17 @@
         @cancel="closeEditors"
       />
     </Teleport>
+
+    <Teleport to="body" v-if="showFreeformEditor && editingItem">
+      <FreeformEditor
+        :connectionName="getItemData(editingItem.i, dashboardId).connectionName || ''"
+        :imports="getItemData(editingItem.i, dashboardId).imports || []"
+        :rootContent="getItemData(editingItem.i, dashboardId).rootContent || []"
+        :content="getItemData(editingItem.i, dashboardId).freeformData || null"
+        @save="onSaveContent"
+        @cancel="closeEditors"
+      />
+    </Teleport>
   </div>
 </template>
 
@@ -206,11 +217,13 @@ import DashboardFilter from './DashboardFilter.vue'
 import DashboardMemo from './DashboardMemo.vue'
 import DashboardClaim from './DashboardClaim.vue'
 import DashboardAppendixHeader from './DashboardAppendixHeader.vue'
+import DashboardFreeform from './DashboardFreeform.vue'
 import DashboardProvenance from './DashboardProvenance.vue'
 import DashboardChatPanel from './DashboardChatPanel.vue'
 import DashboardAddItemModal from './DashboardAddItemModal.vue'
 import ChartEditor from './DashboardChartEditor.vue'
 import MarkdownEditor from './DashboardMarkdownEditor.vue'
+import FreeformEditor from './DashboardFreeformEditor.vue'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 
 interface ReportLayoutProps {
@@ -242,6 +255,7 @@ const {
   showAddItemModal,
   showQueryEditor,
   showMarkdownEditor,
+  showFreeformEditor,
   editingItem,
   openAddItemModal,
   addItem,
@@ -346,6 +360,8 @@ function classify(type: CellType): BlockKind {
     case CELL_TYPES.CLAIM:
       return 'claim'
     case CELL_TYPES.CHART:
+    case CELL_TYPES.FREEFORM:
+      // Widgets sit where a chart would in the narrative: a claim's evidence.
       return 'evidence'
     case CELL_TYPES.TABLE:
       return 'table'
@@ -370,6 +386,8 @@ function componentFor(type: CellType) {
       return DashboardClaim
     case CELL_TYPES.CHART:
       return DashboardChart
+    case CELL_TYPES.FREEFORM:
+      return DashboardFreeform
     case CELL_TYPES.TABLE:
       return DashboardTable
     case CELL_TYPES.MARKDOWN:

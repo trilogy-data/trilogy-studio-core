@@ -13,6 +13,7 @@ import {
   type DashboardTypes,
   type ItemPropertyUpdates,
 } from '../dashboards/base'
+import type { DashboardTheme } from '../dashboards/theme'
 import { type PromptDashboard, parseDashboardSpec } from '../dashboards/prompts'
 import type { LLMConnectionStoreType } from './llmStore'
 import useConnectionStore from './connectionStore'
@@ -466,6 +467,16 @@ export const useDashboardStore = defineStore('dashboards', {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
       dashboard.setLayoutType(layoutType)
+    },
+
+    /** Patch a dashboard's container theme. A partial theme merges over what is
+     *  already set; null clears it back to the inherited app styling. */
+    setDashboardTheme(dashboardId: string, theme: DashboardTheme | null) {
+      const dashboard = this.dashboards[dashboardId]
+      if (!dashboard) {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+      dashboard.setTheme(theme)
     },
 
     // Add item to dashboard

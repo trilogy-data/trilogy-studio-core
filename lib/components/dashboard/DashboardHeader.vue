@@ -3,6 +3,7 @@ import { computed, type PropType, type Ref, ref } from 'vue'
 import { useConnectionStore, useEditorStore, useScreenNavigation } from '../../stores'
 import DashboardImportSelector from './DashboardImportSelector.vue'
 import DashboardSharePopup from './DashboardSharePopup.vue'
+import DashboardThemePopup from './DashboardThemePopup.vue'
 import FilterInputComponent from './DashboardHeaderFilterInput.vue'
 import LoadingButton from '../LoadingButton.vue'
 import { type CompletionItem } from '../../stores/resolver'
@@ -57,6 +58,7 @@ const emit = defineEmits([
   'toggle-chat',
   'navigate-up',
   'navigate-down',
+  'theme-change',
 ])
 
 const connectionStore = useConnectionStore()
@@ -65,6 +67,7 @@ const navigationStore = useScreenNavigation()
 
 const isLoading = ref(false)
 const isSharePopupOpen = ref(false)
+const isThemePopupOpen = ref(false)
 const isEditingTitle = ref(false)
 const editableTitle = ref('')
 const titleInput = ref<HTMLInputElement | null>(null)
@@ -75,6 +78,10 @@ function toggleSharePopup() {
 
 function closeSharePopup() {
   isSharePopupOpen.value = false
+}
+
+function toggleThemePopup() {
+  isThemePopupOpen.value = !isThemePopupOpen.value
 }
 
 function handleFilterApply(newValue: string) {
@@ -263,6 +270,19 @@ const modeIcon = computed(() => {
         </LoadingButton>
 
         <button
+          v-if="!editsLocked"
+          @click="toggleThemePopup"
+          class="btn filter-action-btn dashboard-theme-action"
+          :class="isThemePopupOpen ? 'btn-primary' : 'btn-secondary'"
+          data-testid="dashboard-theme-button"
+          title="Dashboard theme"
+          aria-label="Dashboard theme"
+        >
+          <i class="mdi mdi-palette-outline filter-action-icon" aria-hidden="true"></i>
+          <span class="filter-action-label">Theme</span>
+        </button>
+
+        <button
           @click="toggleSharePopup"
           class="btn btn-secondary filter-action-btn dashboard-export-action"
           data-testid="share-dashboard-button"
@@ -339,6 +359,13 @@ const modeIcon = computed(() => {
       :dashboard="dashboard"
       :is-open="isSharePopupOpen"
       @close="closeSharePopup"
+    />
+
+    <DashboardThemePopup
+      :dashboard="dashboard"
+      :is-open="isThemePopupOpen"
+      @close="isThemePopupOpen = false"
+      @theme-change="(theme) => $emit('theme-change', theme)"
     />
   </div>
 </template>
@@ -698,8 +725,11 @@ const modeIcon = computed(() => {
 }
 
 @media (max-width: 768px) {
+  /* The mobile filter row is a fixed bottom dock with room for a handful of
+     actions. Theming is a desktop-authoring task, so it yields the slot. */
   .dashboard-download-action,
-  .dashboard-export-action {
+  .dashboard-export-action,
+  .dashboard-theme-action {
     display: none;
   }
 
