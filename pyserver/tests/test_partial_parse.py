@@ -1,6 +1,7 @@
-from diagnostics import get_diagnostics
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+
+from diagnostics import get_diagnostics
 from io_models import ModelInSchema, ModelSourceInSchema, ValidateQueryInSchema
 from studio_endpoints import create_trilogy_router
 

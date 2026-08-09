@@ -1,15 +1,13 @@
-from io_models import QueryInSchema
-from trilogy.parser import parse_text
-
-from env_helpers import parse_env_from_full_model
-from trilogy.render import get_dialect_generator
-from query_helpers import generate_query_core
-from io_models import MultiQueryInSchema
-from query_helpers import generate_multi_query_core
 from trilogy.authoring import ArrayType, StructType
+from trilogy.core.exceptions import UndefinedConceptException
 from trilogy.core.models.core import MapType
 from trilogy.core.statements.execute import ProcessedQuery, ProcessedQueryPersist
-from trilogy.core.exceptions import UndefinedConceptException
+from trilogy.parser import parse_text
+from trilogy.render import get_dialect_generator
+
+from env_helpers import parse_env_from_full_model
+from io_models import MultiQueryInSchema, QueryInSchema
+from query_helpers import generate_multi_query_core, generate_query_core
 
 RAW_PAYLOAD = {
     "imports": [{"name": "game_event", "alias": None}],
@@ -279,7 +277,7 @@ MAP_DEBUG = {
 def test_map_access():
     query = QueryInSchema.model_validate(MAP_DEBUG)
     dialect = get_dialect_generator(query.dialect)
-    final, columns, _, _ = generate_query_core(query, dialect)
+    _final, columns, _, _ = generate_query_core(query, dialect)
     assert columns[0].datatype.value == "int"
 
 

@@ -626,7 +626,7 @@ const modeIcon = computed(() => {
   flex: 0 0 auto;
 }
 
-.mobile-dashboard-nav-action {
+.filter-actions .mobile-dashboard-nav-action {
   display: none;
 }
 
@@ -759,7 +759,7 @@ const modeIcon = computed(() => {
     display: none;
   }
 
-  .mobile-dashboard-nav-action {
+  .filter-actions .mobile-dashboard-nav-action {
     display: inline-flex;
   }
   .filter-row {

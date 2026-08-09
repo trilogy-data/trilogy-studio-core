@@ -114,7 +114,7 @@ def _format_query_task(query_data: dict) -> dict:
         )
     except HTTPException as exc:
         return _http_error_payload(exc)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 -- HTTP boundary converts parser errors
         return _worker_http_error(422, "Parsing error: " + str(exc))
     renderer = Renderer()
     return FormatQueryOutSchema(
@@ -187,7 +187,7 @@ def _drilldown_query_task(query_data: dict) -> dict:
         parsed_query.selection = components
     except HTTPException as exc:
         return _http_error_payload(exc)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 -- HTTP boundary converts parser errors
         return _worker_http_error(422, "Parsing error: " + str(exc))
     renderer = Renderer()
     return FormatQueryOutSchema(
@@ -224,7 +224,9 @@ def _validate_query_task(query_data: dict) -> dict:
                                 severity=base.items[0].severity,
                             )
                         )
-                except Exception as exc:
+                except (
+                    Exception  # noqa: BLE001 -- report model parse failure as HTTP 422
+                ) as exc:
                     raise HTTPException(
                         status_code=422,
                         detail=f"Filter validation error for {filter_string}: "
@@ -253,7 +255,7 @@ def _validate_query_task(query_data: dict) -> dict:
         return base.model_dump(mode="json")
     except HTTPException as exc:
         return _http_error_payload(exc)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 -- HTTP boundary converts parser errors
         return _worker_http_error(422, "Parsing error: " + str(exc))
 
 
@@ -293,9 +295,9 @@ def _generate_queries_task(queries_data: dict, enable_perf_logging: bool) -> dic
             total_time = time.time() - start_time
             perf_logger.info(
                 f"Multi-query endpoint - Total: {total_time:.4f}s | "
-                f"Dialect: {dialect_time:.4f}s ({safe_percentage(dialect_time,total_time):.1f}%) | "
-                f"Statements: {statements_time:.4f}s ({safe_percentage(statements_time,total_time):.1f}%) | "
-                f"Output: {output_time:.4f}s ({safe_percentage(output_time,total_time):.1f}%) | "
+                f"Dialect: {dialect_time:.4f}s ({safe_percentage(dialect_time, total_time):.1f}%) | "
+                f"Statements: {statements_time:.4f}s ({safe_percentage(statements_time, total_time):.1f}%) | "
+                f"Output: {output_time:.4f}s ({safe_percentage(output_time, total_time):.1f}%) | "
                 f"Dialect: {queries.dialect} | "
                 f"Query count: {len(queries.queries)}"
             )
@@ -303,11 +305,11 @@ def _generate_queries_task(queries_data: dict, enable_perf_logging: bool) -> dic
         return result.model_dump(mode="json")
     except HTTPException as exc:
         return _http_error_payload(exc)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 -- HTTP boundary converts generation errors
         if enable_perf_logging:
             error_time = time.time() - start_time
             perf_logger.error(
-                f"Multi-query generation failed after {error_time:.4f}s: {str(exc)}"
+                f"Multi-query generation failed after {error_time:.4f}s: {exc!s}"
             )
 
         return _worker_http_error(422, "Parsing error: " + str(exc))
@@ -356,10 +358,10 @@ def _generate_query_task(query_data: dict, enable_perf_logging: bool) -> dict:
 
             perf_logger.info(
                 f"Query generation completed - Total: {total_time:.6f}s | "
-                f"Dialect setup: {dialect_time:.6f}s ({safe_percentage(dialect_time,total_time):.1f}%) | "
-                f"Core processing: {core_time:.6f}s ({safe_percentage(core_time,total_time):.1f}%) | "
-                f"Output formatting: {output_time:.6f}s ({safe_percentage(output_time,total_time):.1f}%) | "
-                f"Unaccounted: {unaccounted_time:.6f}s ({safe_percentage(unaccounted_time,total_time):.1f}%) | "
+                f"Dialect setup: {dialect_time:.6f}s ({safe_percentage(dialect_time, total_time):.1f}%) | "
+                f"Core processing: {core_time:.6f}s ({safe_percentage(core_time, total_time):.1f}%) | "
+                f"Output formatting: {output_time:.6f}s ({safe_percentage(output_time, total_time):.1f}%) | "
+                f"Unaccounted: {unaccounted_time:.6f}s ({safe_percentage(unaccounted_time, total_time):.1f}%) | "
                 f"Input size: {query_size} chars | "
                 f"Output size: {sql_size} chars | "
                 f"Dialect: {query.dialect}"
@@ -368,18 +370,18 @@ def _generate_query_task(query_data: dict, enable_perf_logging: bool) -> dict:
     except InvalidSyntaxException as exc:
         if enable_perf_logging:
             error_time = time.perf_counter() - start_time
-            perf_logger.error(f"Syntax error in query: {error_time:.6f}s: {str(exc)}")
+            perf_logger.error(f"Syntax error in query: {error_time:.6f}s: {exc!s}")
         return _http_error_payload(
             HTTPException(status_code=422, detail=f"Syntax error: {exc.args[0]}")
         )
     except HTTPException as exc:
         return _http_error_payload(exc)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 -- HTTP boundary converts generation errors
         if enable_perf_logging:
             error_time = time.perf_counter() - start_time
             tb = traceback.format_exc()
             perf_logger.error(
-                f"Query generation failed after {error_time:.6f}s: {str(exc)} {tb}"
+                f"Query generation failed after {error_time:.6f}s: {exc!s} {tb}"
             )
         return _worker_http_error(422, str(exc))
 
@@ -402,12 +404,10 @@ def _parse_model_task(model_data: dict, enable_perf_logging: bool) -> dict:
         return result.model_dump(mode="json")
     except HTTPException as exc:
         return _http_error_payload(exc)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 -- HTTP boundary converts generation errors
         if enable_perf_logging:
             error_time = time.time() - start_time
-            perf_logger.error(
-                f"Model parsing failed after {error_time:.4f}s: {str(exc)}"
-            )
+            perf_logger.error(f"Model parsing failed after {error_time:.4f}s: {exc!s}")
 
         return _worker_http_error(422, "Parsing error: " + str(exc))
 

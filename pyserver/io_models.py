@@ -1,21 +1,19 @@
-from typing import List, Optional, Any
+from enum import Enum
+from typing import Any
 
+from pydantic import BaseModel, Field
+from trilogy import Dialects
 from trilogy.authoring import (
-    DataType,
-    Purpose,
     ArrayType,
-    StructType,
+    DataType,
     EnumType,
-    NumericType,
-    TraitDataType,
     MapType,
+    NumericType,
+    Purpose,
+    StructType,
+    TraitDataType,
     ValidatedType,
 )  # , NumericType, TraitDataType
-from pydantic import BaseModel, Field
-
-
-from trilogy import Dialects
-from enum import Enum
 
 
 class TrilogyType(Enum):
@@ -45,23 +43,23 @@ class UIConcept(BaseModel):
         | ValidatedType
     )
     purpose: Purpose
-    description: Optional[str] = None
-    lineage: List[LineageItem] = Field(default_factory=list)
-    keys: List[str] = Field(default_factory=list)
+    description: str | None = None
+    lineage: list[LineageItem] = Field(default_factory=list)
+    keys: list[str] = Field(default_factory=list)
 
 
 class UIDatasource(BaseModel):
     name: str
     location: str
-    description: Optional[str] = None
-    concepts: List[UIConcept]
-    grain: List[UIConcept] = Field(default_factory=list)
+    description: str | None = None
+    concepts: list[UIConcept]
+    grain: list[UIConcept] = Field(default_factory=list)
 
 
 class ModelSource(BaseModel):
     alias: str
-    concepts: List[UIConcept]
-    datasources: List[UIDatasource]
+    concepts: list[UIConcept]
+    datasources: list[UIDatasource]
 
 
 class Model(BaseModel):
@@ -70,7 +68,7 @@ class Model(BaseModel):
 
 
 class ListModelResponse(BaseModel):
-    models: List[Model]
+    models: list[Model]
 
 
 class FormatQueryOutSchema(BaseModel):
@@ -90,7 +88,7 @@ class ModelSourceInSchema(BaseModel):
 
 class ModelInSchema(BaseModel):
     name: str
-    sources: List[ModelSourceInSchema]
+    sources: list[ModelSourceInSchema]
 
 
 class Import(BaseModel):
@@ -101,28 +99,28 @@ class Import(BaseModel):
 class MultiQueryComponent(BaseModel):
     query: str
     label: str | None = None
-    extra_filters: Optional[list[str]] = None
-    parameters: Optional[dict[str, str | int | float]] = None
+    extra_filters: list[str] | None = None
+    parameters: dict[str, str | int | float] | None = None
 
 
 class MultiQueryInSchema(BaseModel):
-    imports: List[Import]
+    imports: list[Import]
     full_model: ModelInSchema
     dialect: Dialects
-    queries: List[MultiQueryComponent]
-    extra_filters: Optional[list[str]] = None
-    parameters: Optional[dict[str, str | int | float]] = None
+    queries: list[MultiQueryComponent]
+    extra_filters: list[str] | None = None
+    parameters: dict[str, str | int | float] | None = None
     # Names (or paths) of files the client has registered locally. Lifted
     # into DictImportResolver.data_files so the parser treats matching
     # `file '…'` datasources as live even when the trilogy compiler runs
     # remotely and can't see the user's files on disk.
-    files: Optional[list[str]] = None
+    files: list[str] | None = None
     # Optional absolute path to the user's project root (Tauri shell only).
     # Becomes Environment.working_path; file addresses resolve against it
     # so the rendered SQL points at the actual OS path the local DuckDB
     # worker can open. Studio leaves this null — the browser shell has no
     # filesystem to anchor against.
-    working_path: Optional[str] = None
+    working_path: str | None = None
 
 
 class QueryInSchema(BaseModel):
@@ -131,12 +129,12 @@ class QueryInSchema(BaseModel):
     dialect: Dialects
     full_model: ModelInSchema
     current_filename: str | None = None
-    extra_filters: Optional[list[str]] = None
-    parameters: Optional[dict[str, str | int | float]] = None
+    extra_filters: list[str] | None = None
+    parameters: dict[str, str | int | float] | None = None
     # See MultiQueryInSchema.files
-    files: Optional[list[str]] = None
+    files: list[str] | None = None
     # See MultiQueryInSchema.working_path
-    working_path: Optional[str] = None
+    working_path: str | None = None
     # chart_type: ChartType | None = None
 
 
@@ -149,14 +147,14 @@ class DrilldownQueryInSchema(QueryInSchema):
 class ValidateQueryInSchema(BaseModel):
     query: str
     imports: list[Import]
-    sources: List[ModelSourceInSchema]
+    sources: list[ModelSourceInSchema]
     current_filename: str | None = None
-    extra_filters: Optional[list[str]] = None
-    parameters: Optional[dict[str, str | int | float]] = None
+    extra_filters: list[str] | None = None
+    parameters: dict[str, str | int | float] | None = None
     # See MultiQueryInSchema.files
-    files: Optional[list[str]] = None
+    files: list[str] | None = None
     # See MultiQueryInSchema.working_path
-    working_path: Optional[str] = None
+    working_path: str | None = None
 
 
 class QueryOutColumn(BaseModel):
@@ -172,14 +170,14 @@ class QueryOutColumn(BaseModel):
         | ValidatedType
     )
     purpose: Purpose
-    traits: List[str] | None = None
+    traits: list[str] | None = None
     description: str | None = None
-    keys: List[str] | None = None
+    keys: list[str] | None = None
 
 
 class QueryOut(BaseModel):
     generated_sql: str | None
-    columns: List[QueryOutColumn] | None
+    columns: list[QueryOutColumn] | None
     generated_output: list[dict[str, Any]] | None = None
     error: str | None = None
     label: str | None = None
@@ -188,7 +186,7 @@ class QueryOut(BaseModel):
 
 
 class MultiQueryOutSchema(BaseModel):
-    queries: List[QueryOut] = Field(default_factory=list)
+    queries: list[QueryOut] = Field(default_factory=list)
 
 
 class Severity(Enum):
@@ -216,10 +214,10 @@ class CompletionItem(BaseModel):
     trilogySubType: Purpose | str | None = None
     description: str | None = None
     calculation: str | None = None
-    keys: List[str] | None = None
+    keys: list[str] | None = None
 
 
 class ValidateResponse(BaseModel):
-    items: List[ValidateItem]
+    items: list[ValidateItem]
     completion_items: list[CompletionItem]
     imports: list[Import] = Field(default_factory=list)

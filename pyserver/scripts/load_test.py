@@ -14,7 +14,7 @@ import json
 import sys
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -22,8 +22,8 @@ import matplotlib
 
 matplotlib.use("Agg")  # non-interactive backend — no display required
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 import numpy as np
+from matplotlib import gridspec
 
 # ---------------------------------------------------------------------------
 # Realistic payloads
@@ -183,7 +183,9 @@ async def send_request(
             status=resp.status_code,
             error=None if resp.is_success else f"HTTP {resp.status_code}",
         )
-    except Exception as exc:
+    except (
+        Exception  # noqa: BLE001 -- record all request failures in load results
+    ) as exc:
         latency_ms = (time.perf_counter() - t0) * 1000
         return RequestResult(
             endpoint=endpoint_key,
@@ -208,9 +210,8 @@ async def run_scenario(
     queue: list[str] = [endpoints[i % len(endpoints)] for i in range(total_requests)]
 
     async def bounded(ep: str) -> RequestResult:
-        async with sem:
-            async with httpx.AsyncClient() as client:
-                return await send_request(client, base_url, name, ep)
+        async with sem, httpx.AsyncClient() as client:
+            return await send_request(client, base_url, name, ep)
 
     print(
         f"  Running scenario '{name}': {total_requests} requests, concurrency={concurrency}"
@@ -231,7 +232,7 @@ async def run_scenario(
         else float("nan")
     )
     print(
-        f"    Done: {ok}/{total_requests} ok | p50={p50:.0f}ms p99={p99:.0f}ms | {(end-start):.1f}s elapsed"
+        f"    Done: {ok}/{total_requests} ok | p50={p50:.0f}ms p99={p99:.0f}ms | {(end - start):.1f}s elapsed"
     )
 
     return ScenarioResult(
@@ -382,7 +383,7 @@ def plot_results(scenarios: list[ScenarioResult], output_path: Path) -> None:
     n_main = len(main_scenarios)
     fig = plt.figure(figsize=(18, 5 + 4 * ((n_main + 1) // 2)))
     fig.suptitle(
-        f"Trilogy Server Load Test — {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        f"Trilogy Server Load Test — {datetime.now(UTC).strftime('%Y-%m-%d %H:%M')}",
         fontsize=14,
         fontweight="bold",
     )
@@ -459,7 +460,7 @@ def print_summary(scenarios: list[ScenarioResult]) -> None:
 
 
 def save_baseline(scenarios: list[ScenarioResult], output_dir: Path) -> None:
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    ts = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     baseline_file = output_dir / f"load_test_baseline_{ts}.json"
 
     data = {
@@ -536,7 +537,7 @@ def main() -> None:
     try:
         resp = httpx.get(args.url.rstrip("/") + "/health", timeout=10)
         print(f"Server health check: {resp.status_code} {resp.text[:60]}\n")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 -- CLI health check reports every failure
         print(f"ERROR: Cannot reach server at {args.url}: {exc}", file=sys.stderr)
         sys.exit(1)
 

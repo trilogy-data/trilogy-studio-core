@@ -1,35 +1,36 @@
-from typing import List, Union, Any
-import logging
+from logging import getLogger
+from typing import Any
+
 from lark import UnexpectedToken
+from trilogy.authoring import (
+    ArrayType,
+    Concept,
+    DataType,
+    Environment,
+    MapType,
+    StructType,
+)
+from trilogy.constants import DEFAULT_NAMESPACE
+from trilogy.core.models.core import NumericType, TraitDataType
+from trilogy.core.statements.author import ImportStatement
+from trilogy.parsing.parse_engine_v2 import TopLevelStatementParser
 from trilogy.parsing.v2.lark_backend import PARSER
 from trilogy.parsing.v2.syntax import syntax_document_from_parser
-from trilogy.parsing.parse_engine_v2 import TopLevelStatementParser
-from trilogy.constants import DEFAULT_NAMESPACE
-from trilogy.core.statements.author import ImportStatement
-from trilogy.core.models.core import TraitDataType, NumericType
-from trilogy.authoring import (
-    DataType,
-    Concept,
-    Environment,
-    StructType,
-    ArrayType,
-    MapType,
+
+from common import concept_to_derivation, concept_to_description
+from env_helpers import (
+    normalize_relative_imports,
+    parse_env_from_full_model,
 )
 from io_models import (
-    ValidateItem,
-    ValidateResponse,
-    Severity,
-    ModelSourceInSchema,
     CompletionItem,
     Import,
+    ModelSourceInSchema,
+    Severity,
     TrilogyType,
+    ValidateItem,
+    ValidateResponse,
 )
-from env_helpers import (
-    parse_env_from_full_model,
-    normalize_relative_imports,
-)
-from logging import getLogger
-from common import concept_to_description, concept_to_derivation
 
 logger = getLogger("diagnostics")
 
@@ -41,7 +42,7 @@ def address_to_display(address: str) -> str:
         return address
 
 
-def user_repr(error: Union[UnexpectedToken, Exception]) -> str:
+def user_repr(error: UnexpectedToken | Exception) -> str:
     if isinstance(error, UnexpectedToken):
         expected = ", ".join(error.accepts or error.expected)
         return (
@@ -78,7 +79,7 @@ def datatype_to_display(
     elif isinstance(datatype, MapType):
         return f"Map<{datatype_to_display(datatype.key_type)}, {datatype_to_display(datatype.value_type)}>"
     elif isinstance(datatype, StructType):
-        return f'Struct<{", ".join([f"{k}: {datatype_to_display(v)}" for k, v in datatype.fields_map.items()])}>'
+        return f"Struct<{', '.join([f'{k}: {datatype_to_display(v)}' for k, v in datatype.fields_map.items()])}>"
     else:
         return str(datatype)
 
@@ -99,13 +100,13 @@ def concept_to_completion(label: str, concept: Concept, environment: Environment
 
 def get_diagnostics(
     doctext: str,
-    sources: List[ModelSourceInSchema],
+    sources: list[ModelSourceInSchema],
     current_filename: str | None = None,
-    files: List[str] | None = None,
+    files: list[str] | None = None,
     working_path: str | None = None,
 ) -> ValidateResponse:
-    diagnostics: List[ValidateItem] = []
-    completions: List[CompletionItem] = []
+    diagnostics: list[ValidateItem] = []
+    completions: list[CompletionItem] = []
     imports: list[Import] = []
 
     def on_error(e: UnexpectedToken) -> Any:
@@ -127,11 +128,10 @@ def get_diagnostics(
     while parse_fragment.count(";") > 0:
         loops += 1
         try:
-
             tree = PARSER.parse(parse_fragment, on_error=on_error)  # type: ignore
             document = syntax_document_from_parser(text=parse_fragment, tree=tree)
             break
-        except Exception:
+        except Exception:  # noqa: BLE001 -- retry progressively shorter user input
             parse_fragment = truncate_to_last_semicolon(parse_fragment)
             logger.info(parse_fragment)
             diagnostics.append(
@@ -170,7 +170,7 @@ def get_diagnostics(
                     imports.append(Import(name=str(x.path), alias=x.alias))
 
         except Exception:
-            logging.exception("text parse error, may have partial results")
+            logger.exception("text parse error, may have partial results")
         for k, v in env.concepts.items():
             if v.name.startswith("_") or v.namespace.startswith("_"):
                 continue
@@ -182,7 +182,7 @@ def get_diagnostics(
                 completions.append(concept_to_completion(label, v, env))
 
     except Exception:
-        logging.exception("completion generation raised exception")
+        logger.exception("completion generation raised exception")
     return ValidateResponse(
         items=diagnostics, completion_items=completions, imports=imports
     )

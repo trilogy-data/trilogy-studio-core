@@ -1,7 +1,7 @@
 from mcp_server import (
+    create_model_connection,
     list_connection_fields,
     run_trilogy_query,
-    create_model_connection,
 )
 
 
