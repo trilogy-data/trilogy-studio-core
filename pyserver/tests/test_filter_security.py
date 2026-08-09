@@ -8,10 +8,11 @@ Instead they must travel as binding parameters so that downstream connections
 parameterized-query APIs.
 """
 
-from studio_endpoints import _generate_query_task
+from trilogy import Dialects
+
 from io_models import ModelInSchema, ModelSourceInSchema, QueryInSchema
 from query_helpers import _trilogy_type_for
-from trilogy import Dialects
+from studio_endpoints import _generate_query_task
 
 # ---------------------------------------------------------------------------
 # _trilogy_type_for unit tests

@@ -22,8 +22,8 @@ import matplotlib
 
 matplotlib.use("Agg")  # non-interactive backend — no display required
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 import numpy as np
+from matplotlib import gridspec
 
 # ---------------------------------------------------------------------------
 # Realistic payloads
@@ -208,9 +208,8 @@ async def run_scenario(
     queue: list[str] = [endpoints[i % len(endpoints)] for i in range(total_requests)]
 
     async def bounded(ep: str) -> RequestResult:
-        async with sem:
-            async with httpx.AsyncClient() as client:
-                return await send_request(client, base_url, name, ep)
+        async with sem, httpx.AsyncClient() as client:
+            return await send_request(client, base_url, name, ep)
 
     print(
         f"  Running scenario '{name}': {total_requests} requests, concurrency={concurrency}"

@@ -307,7 +307,7 @@ def _generate_queries_task(queries_data: dict, enable_perf_logging: bool) -> dic
         if enable_perf_logging:
             error_time = time.time() - start_time
             perf_logger.error(
-                f"Multi-query generation failed after {error_time:.4f}s: {str(exc)}"
+                f"Multi-query generation failed after {error_time:.4f}s: {exc!s}"
             )
 
         return _worker_http_error(422, "Parsing error: " + str(exc))
@@ -368,7 +368,7 @@ def _generate_query_task(query_data: dict, enable_perf_logging: bool) -> dict:
     except InvalidSyntaxException as exc:
         if enable_perf_logging:
             error_time = time.perf_counter() - start_time
-            perf_logger.error(f"Syntax error in query: {error_time:.6f}s: {str(exc)}")
+            perf_logger.error(f"Syntax error in query: {error_time:.6f}s: {exc!s}")
         return _http_error_payload(
             HTTPException(status_code=422, detail=f"Syntax error: {exc.args[0]}")
         )
@@ -379,7 +379,7 @@ def _generate_query_task(query_data: dict, enable_perf_logging: bool) -> dict:
             error_time = time.perf_counter() - start_time
             tb = traceback.format_exc()
             perf_logger.error(
-                f"Query generation failed after {error_time:.6f}s: {str(exc)} {tb}"
+                f"Query generation failed after {error_time:.6f}s: {exc!s} {tb}"
             )
         return _worker_http_error(422, str(exc))
 
@@ -406,7 +406,7 @@ def _parse_model_task(model_data: dict, enable_perf_logging: bool) -> dict:
         if enable_perf_logging:
             error_time = time.time() - start_time
             perf_logger.error(
-                f"Model parsing failed after {error_time:.4f}s: {str(exc)}"
+                f"Model parsing failed after {error_time:.4f}s: {exc!s}"
             )
 
         return _worker_http_error(422, "Parsing error: " + str(exc))

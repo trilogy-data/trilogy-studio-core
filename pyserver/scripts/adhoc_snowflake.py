@@ -1,8 +1,9 @@
-import requests
 import base64
 import json
 import time
 import uuid
+
+import requests
 
 
 def snowflake_rest_auth(account, username, password):

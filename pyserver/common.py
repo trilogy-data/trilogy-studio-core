@@ -1,26 +1,27 @@
+from typing import Any
+
 from trilogy.authoring import (
+    DEFAULT_NAMESPACE,
+    AggregateWrapper,
     Concept,
     ConceptRef,
-    Function,
-    WindowItem,
-    FilterItem,
-    AggregateWrapper,
-    MultiSelectStatement,
-    DEFAULT_NAMESPACE,
     Environment,
+    FilterItem,
+    Function,
+    MultiSelectStatement,
+    WindowItem,
 )
 from trilogy.core.models.author import (
     FunctionCallWrapper,
 )
+from trilogy.parsing.render import Renderer
 
 from io_models import (
     LineageItem,
 )
-from typing import Any, List
-from trilogy.parsing.render import Renderer
 
 
-def flatten_array(input: Any, depth: int = 0) -> List[LineageItem]:
+def flatten_array(input: Any, depth: int = 0) -> list[LineageItem]:
     arr_len = len(input)
     output = []
     for idx, val in enumerate(input):
@@ -33,7 +34,7 @@ def flatten_array(input: Any, depth: int = 0) -> List[LineageItem]:
 def flatten_lineage(
     input: Any,
     depth: int = 0,
-) -> List[LineageItem]:
+) -> list[LineageItem]:
     if depth == 0:
         chain = []
     elif isinstance(input, Function):

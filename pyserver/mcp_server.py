@@ -1,30 +1,31 @@
-from mcp.server.mcpserver import MCPServer
 from dataclasses import dataclass
+from functools import wraps
+
+import httpx
+from mcp.server.mcpserver import MCPServer
 from trilogy import Dialects, Environment
 from trilogy.authoring import Concept
 from trilogy.core.models.core import (
-    TraitDataType,
-    DataType,
     ArrayType,
-    StructType,
+    DataType,
+    DataTyped,
+    EnumType,
     MapType,
     NumericType,
-    DataTyped,
     StructComponent,
-    EnumType,
+    StructType,
+    TraitDataType,
     ValidatedType,
 )
-import httpx
 from trilogy.core.models.environment import DictImportResolver, EnvironmentConfig
 from trilogy.core.statements.execute import (
-    ProcessedRawSQLStatement,
-    ProcessedValidateStatement,
-    ProcessedQuery,
-    ProcessedStaticValueOutput,
-    ProcessedShowStatement,
     PROCESSED_STATEMENT_TYPES,
+    ProcessedQuery,
+    ProcessedRawSQLStatement,
+    ProcessedShowStatement,
+    ProcessedStaticValueOutput,
+    ProcessedValidateStatement,
 )
-from functools import wraps
 
 # Simple in-memory cache for HTTP requests
 _http_cache: dict[str, str] = {}
@@ -326,12 +327,7 @@ def run_trilogy_query(command: str, connection: str) -> QueryResult:
     if not result:
         return QueryResult(headers=[], results=[])
     headers: list[QueryHeader] = []
-    if isinstance(parsed, ProcessedRawSQLStatement):
-        headers = [
-            QueryHeader(name=col, datatype=DataType.UNKNOWN.name)
-            for col in result.keys()
-        ]
-    elif isinstance(parsed, ProcessedValidateStatement):
+    if isinstance(parsed, ProcessedRawSQLStatement) or isinstance(parsed, ProcessedValidateStatement):
         headers = [
             QueryHeader(name=col, datatype=DataType.UNKNOWN.name)
             for col in result.keys()

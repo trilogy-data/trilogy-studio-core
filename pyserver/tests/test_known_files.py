@@ -9,9 +9,10 @@ check) and preserves the literal address in the rendered SQL —
 ``read_csv('ratings.csv')``, which the client's duckdb-wasm has registered.
 """
 
+from trilogy.dialect.duckdb import DuckDBDialect
+
 from io_models import QueryInSchema
 from query_helpers import generate_query_core
-from trilogy.dialect.duckdb import DuckDBDialect
 
 _INLINE_FILE_QUERY = """
 key user_id int;
@@ -82,9 +83,10 @@ def test_inline_file_datasource_without_known_files_drops_datasource():
 def test_known_files_published_via_resolver():
     """Direct check on the datasource state after parsing with files
     registered in the resolver's ``data_files``."""
-    from env_helpers import parse_env_from_full_model
     from trilogy.core.enums import DatasourceState
     from trilogy.parser import parse_text
+
+    from env_helpers import parse_env_from_full_model
     from query_helpers import PARSE_CONFIG
 
     env = parse_env_from_full_model([], files=["ratings.csv"])

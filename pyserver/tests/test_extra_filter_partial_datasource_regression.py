@@ -1,6 +1,7 @@
+from trilogy.dialect.duckdb import DuckDBDialect
+
 from io_models import QueryInSchema
 from query_helpers import generate_query_core, query_to_output
-from trilogy.dialect.duckdb import DuckDBDialect
 
 MINIMAL_SOURCES = [
     {

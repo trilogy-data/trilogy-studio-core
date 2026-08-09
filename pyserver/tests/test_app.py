@@ -1,13 +1,14 @@
 from fastapi.testclient import TestClient
+from trilogy import Dialects
+
 from io_models import (
+    DrilldownQueryInSchema,
+    Import,
     ModelInSchema,
     ModelSourceInSchema,
     QueryInSchema,
-    DrilldownQueryInSchema,
-    Import,
 )
 from studio_endpoints import _generate_query_task
-from trilogy import Dialects
 
 
 def test_read_main(test_client: TestClient):
@@ -230,5 +231,5 @@ def test_generate_query_invalid_filter_returns_422(test_client: TestClient):
 
 #     for arg in arguments:
 #         parsed = GenAIConnectionInSchema.model_validate(arg)
-#         response = test_client.post("/gen_ai_connection", data=parsed.model_dump_json(by_alias=True))  # type: ignore # noqa: E501
+#         response = test_client.post("/gen_ai_connection", data=parsed.model_dump_json(by_alias=True))  # type: ignore
 #         assert response.status_code == 403

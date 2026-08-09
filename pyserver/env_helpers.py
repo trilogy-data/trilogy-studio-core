@@ -1,26 +1,25 @@
 import copy
+from collections.abc import Iterable
 from pathlib import PurePosixPath
-from typing import Iterable
 
 from trilogy import Environment
-from io_models import (
-    ModelInSchema,
-    Model,
-    UIConcept,
-    UIDatasource,
-    ModelSource,
-    ModelSourceInSchema,
-)
-from common import concept_to_description
-from trilogy.parsing.exceptions import ParseError
-from trilogy.core.models.environment import DictImportResolver, EnvironmentConfig
 from trilogy.authoring import (
     Concept,
 )
 from trilogy.core.enums import ConceptSource
 from trilogy.core.models.datasource import Address
+from trilogy.core.models.environment import DictImportResolver, EnvironmentConfig
+from trilogy.parsing.exceptions import ParseError
 
-from common import flatten_lineage
+from common import concept_to_description, flatten_lineage
+from io_models import (
+    Model,
+    ModelInSchema,
+    ModelSource,
+    ModelSourceInSchema,
+    UIConcept,
+    UIDatasource,
+)
 
 PARSE_DEPENDENCY_RESOLUTION_ATTEMPTS = 10
 
@@ -34,12 +33,9 @@ def _normalize_source_path(path: str | None) -> str | None:
     if not path:
         return None
     normalized = path.replace("\\", "/").strip()
-    if normalized.endswith(".preql"):
-        normalized = normalized[: -len(".preql")]
-    if normalized.endswith(".sql"):
-        normalized = normalized[: -len(".sql")]
-    if normalized.endswith(".py"):
-        normalized = normalized[: -len(".py")]
+    normalized = normalized.removesuffix(".preql")
+    normalized = normalized.removesuffix(".sql")
+    normalized = normalized.removesuffix(".py")
     return normalized.strip("/")
 
 

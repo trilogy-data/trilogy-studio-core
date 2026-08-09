@@ -1,60 +1,57 @@
 import re
 import time
-
-
-from trilogy.constants import Parsing
-from trilogy import Environment
-from trilogy.parser import parse_text
-from trilogy.dialect.base import BaseDialect
-from trilogy.authoring import (
-    Concept,
-    SelectStatement,
-    MultiSelectStatement,
-    RawSQLStatement,
-    DEFAULT_NAMESPACE,
-    Parenthetical,
-    Conditional,
-    BooleanOperator,
-    WhereClause,
-    PersistStatement,
-    Purpose,
-    DataType,
-    ValidateStatement,
-    ShowStatement,
-    Comment,
-)
-from trilogy.core.statements.execute import (
-    ProcessedRawSQLStatement,
-    ProcessedQueryPersist,
-    ProcessedShowStatement,
-    ProcessedQuery,
-    ProcessedCopyStatement,
-    ProcessedValidateStatement,
-    PROCESSED_STATEMENT_TYPES,
-)
-from trilogy.core.models.core import TraitDataType, ListWrapper
 from logging import getLogger
 
-from env_helpers import (
-    parse_env_from_full_model,
-    normalize_relative_imports,
-    resolve_import_path,
+from trilogy import Environment
+from trilogy.authoring import (
+    DEFAULT_NAMESPACE,
+    BooleanOperator,
+    Comment,
+    Concept,
+    Conditional,
+    DataType,
+    MultiSelectStatement,
+    Parenthetical,
+    PersistStatement,
+    Purpose,
+    RawSQLStatement,
+    SelectStatement,
+    ShowStatement,
+    ValidateStatement,
+    WhereClause,
 )
-
-
-from io_models import (
-    QueryInSchema,
-    QueryOut,
-    QueryOutColumn,
-    MultiQueryInSchema,
+from trilogy.constants import Parsing
+from trilogy.core.internal import DEFAULT_CONCEPTS
+from trilogy.core.models.core import ListWrapper, TraitDataType
+from trilogy.core.statements.execute import (
+    PROCESSED_STATEMENT_TYPES,
+    ProcessedCopyStatement,
+    ProcessedQuery,
+    ProcessedQueryPersist,
+    ProcessedRawSQLStatement,
+    ProcessedShowStatement,
+    ProcessedValidateStatement,
 )
+from trilogy.core.validation.environment import validate_environment
+from trilogy.dialect.base import BaseDialect
 from trilogy.dialect.metadata import (
     handle_processed_show_statement,
     handle_processed_validate_statement,
 )
+from trilogy.parser import parse_text
+
+from env_helpers import (
+    normalize_relative_imports,
+    parse_env_from_full_model,
+    resolve_import_path,
+)
+from io_models import (
+    MultiQueryInSchema,
+    QueryInSchema,
+    QueryOut,
+    QueryOutColumn,
+)
 from utility import safe_percentage
-from trilogy.core.validation.environment import validate_environment
-from trilogy.core.internal import DEFAULT_CONCEPTS
 
 perf_logger = getLogger("trilogy.performance")
 
@@ -103,7 +100,7 @@ _CONCEPT_PARAM_RE = re.compile(
 )
 
 
-def _trilogy_type_for(value: str | int | float) -> str:
+def _trilogy_type_for(value: str | float) -> str:
     """Infer a Trilogy parameter type from a scalar value."""
     if isinstance(value, str):
         if _DATE_RE.match(value):

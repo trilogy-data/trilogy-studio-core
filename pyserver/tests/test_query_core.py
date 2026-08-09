@@ -1,6 +1,7 @@
-from query_helpers import generate_query_core, query_to_output
-from io_models import QueryInSchema
 from trilogy.dialect.duckdb import DuckDBDialect
+
+from io_models import QueryInSchema
+from query_helpers import generate_query_core, query_to_output
 
 
 def test_show_statement():

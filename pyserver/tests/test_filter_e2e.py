@@ -12,10 +12,10 @@ import re
 
 import duckdb
 import pytest
+from trilogy import Dialects
 
 from io_models import ModelInSchema, ModelSourceInSchema, QueryInSchema
 from studio_endpoints import _generate_query_task
-from trilogy import Dialects
 
 # ---------------------------------------------------------------------------
 # Binding helper (mirrors lib/connections/duckdb.ts query_core)

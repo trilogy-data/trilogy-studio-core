@@ -1,35 +1,37 @@
-from typing import List, Union, Any
 import logging
+from logging import getLogger
+from typing import Any
+
 from lark import UnexpectedToken
+from trilogy.authoring import (
+    ArrayType,
+    Concept,
+    DataType,
+    Environment,
+    MapType,
+    StructType,
+)
+from trilogy.constants import DEFAULT_NAMESPACE
+from trilogy.core.models.core import NumericType, TraitDataType
+from trilogy.core.statements.author import ImportStatement
+from trilogy.parsing.parse_engine_v2 import TopLevelStatementParser
 from trilogy.parsing.v2.lark_backend import PARSER
 from trilogy.parsing.v2.syntax import syntax_document_from_parser
-from trilogy.parsing.parse_engine_v2 import TopLevelStatementParser
-from trilogy.constants import DEFAULT_NAMESPACE
-from trilogy.core.statements.author import ImportStatement
-from trilogy.core.models.core import TraitDataType, NumericType
-from trilogy.authoring import (
-    DataType,
-    Concept,
-    Environment,
-    StructType,
-    ArrayType,
-    MapType,
+
+from common import concept_to_derivation, concept_to_description
+from env_helpers import (
+    normalize_relative_imports,
+    parse_env_from_full_model,
 )
 from io_models import (
-    ValidateItem,
-    ValidateResponse,
-    Severity,
-    ModelSourceInSchema,
     CompletionItem,
     Import,
+    ModelSourceInSchema,
+    Severity,
     TrilogyType,
+    ValidateItem,
+    ValidateResponse,
 )
-from env_helpers import (
-    parse_env_from_full_model,
-    normalize_relative_imports,
-)
-from logging import getLogger
-from common import concept_to_description, concept_to_derivation
 
 logger = getLogger("diagnostics")
 
@@ -41,7 +43,7 @@ def address_to_display(address: str) -> str:
         return address
 
 
-def user_repr(error: Union[UnexpectedToken, Exception]) -> str:
+def user_repr(error: UnexpectedToken | Exception) -> str:
     if isinstance(error, UnexpectedToken):
         expected = ", ".join(error.accepts or error.expected)
         return (
@@ -99,13 +101,13 @@ def concept_to_completion(label: str, concept: Concept, environment: Environment
 
 def get_diagnostics(
     doctext: str,
-    sources: List[ModelSourceInSchema],
+    sources: list[ModelSourceInSchema],
     current_filename: str | None = None,
-    files: List[str] | None = None,
+    files: list[str] | None = None,
     working_path: str | None = None,
 ) -> ValidateResponse:
-    diagnostics: List[ValidateItem] = []
-    completions: List[CompletionItem] = []
+    diagnostics: list[ValidateItem] = []
+    completions: list[CompletionItem] = []
     imports: list[Import] = []
 
     def on_error(e: UnexpectedToken) -> Any:

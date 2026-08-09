@@ -1,9 +1,11 @@
 import concurrent.futures
-from io_models import QueryInSchema
-from trilogy.parser import parse_text
-from env_helpers import parse_env_from_full_model
-from trilogy.render import get_dialect_generator
+
 from fastapi.testclient import TestClient
+from trilogy.parser import parse_text
+from trilogy.render import get_dialect_generator
+
+from env_helpers import parse_env_from_full_model
+from io_models import QueryInSchema
 
 X = {
     "query": "SELECT\r\n    names.state,\r\n    sum(names.total_births) as total_births\r\norder by\r\ntotal_births desc;",

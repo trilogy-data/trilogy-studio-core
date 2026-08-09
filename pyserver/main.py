@@ -1,27 +1,23 @@
+import asyncio
+import logging
+import multiprocessing
 import os
 import sys
+import traceback
+from dataclasses import dataclass
+from logging import getLogger
 from pathlib import Path
 
-import asyncio
-import multiprocessing
-import traceback
-import logging
-from typing import Dict
-from dataclasses import dataclass
-import uvicorn
-from uvicorn.config import LOGGING_CONFIG
-
-from starlette.background import BackgroundTask
-from trilogy import Environment, Executor
-from logging import getLogger
 import click
+import uvicorn
 from click_default_group import DefaultGroup
-
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse, JSONResponse
-from trilogy import __version__
+from fastapi.responses import JSONResponse, PlainTextResponse
+from starlette.background import BackgroundTask
+from trilogy import Environment, Executor, __version__
+from uvicorn.config import LOGGING_CONFIG
 
 # Import the reusable endpoints module
 from studio_endpoints import create_trilogy_router
@@ -86,8 +82,8 @@ app = FastAPI()
 
 @dataclass
 class InstanceSettings:
-    connections: Dict[str, Executor]
-    models: Dict[str, Environment]
+    connections: dict[str, Executor]
+    models: dict[str, Environment]
 
 
 allowed_origins = [
@@ -138,7 +134,6 @@ async def exit_app():
             task.cancel()
         except Exception:
             print(f"Task kill failed: {_get_last_exc()}")
-            pass
     asyncio.gather(*asyncio.all_tasks())
     loop = asyncio.get_running_loop()
     loop.stop()
