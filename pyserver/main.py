@@ -132,7 +132,7 @@ async def exit_app():
         print(f"cancelling task: {task}")
         try:
             task.cancel()
-        except Exception:
+        except Exception:  # noqa: BLE001 -- shutdown must continue for every task
             print(f"Task kill failed: {_get_last_exc()}")
     asyncio.gather(*asyncio.all_tasks())
     loop = asyncio.get_running_loop()
@@ -218,7 +218,7 @@ def run():
 
     try:
         run()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 -- top-level server error boundary
         print(f"Server is shutting down due to {e}")
         sys.exit(1)
 
@@ -226,7 +226,7 @@ def run():
 @cli.command()
 def test():
 
-    assert 1 == 1
+    assert True
 
 
 if __name__ == "__main__":

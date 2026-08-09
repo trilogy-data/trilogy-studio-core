@@ -212,7 +212,7 @@ def filters_to_conditional(
     final_conditions = " AND ".join(final)
     idx = len(cleaned) - 1
     _, fparsed = parse_text(
-        f"{param_declarations}\nWHERE {final_conditions} SELECT 1 as __ftest_{base_filter_idx*100+idx};",
+        f"{param_declarations}\nWHERE {final_conditions} SELECT 1 as __ftest_{base_filter_idx * 100 + idx};",
         env,
         parse_config=PARSE_CONFIG,
     )
@@ -476,8 +476,8 @@ def generate_query_core(
         perf_logger.info(
             f"Query core timing - Total: {total_time:.4f}s | "
             f"Env setup: {env_time:.4f}s ({safe_percentage(env_time, total_time):.1f}%) | "
-            f"Imports: {import_time:.4f}s ({safe_percentage(import_time,total_time):.1f}%) | "
-            f"Generation: {gen_time:.4f}s ({safe_percentage(gen_time,total_time):.1f}%)"
+            f"Imports: {import_time:.4f}s ({safe_percentage(import_time, total_time):.1f}%) | "
+            f"Generation: {gen_time:.4f}s ({safe_percentage(gen_time, total_time):.1f}%)"
         )
 
     return target, columns, results, select_count
@@ -555,7 +555,7 @@ def generate_multi_query_core(
                 cleanup_concepts=cleanup_concepts,
             )
             all.append((subquery.label, generated, columns, values))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 -- isolate failure to this batch item
             perf_logger.error(f"Error generating query '{subquery.query}': {e}")
             # log full traceback
             import traceback
@@ -572,9 +572,9 @@ def generate_multi_query_core(
         total_time = time.time() - start_time
         perf_logger.info(
             f"Multi-query generation - Total: {total_time:.4f}s | "
-            f"Env setup: {env_time:.4f}s ({safe_percentage(env_time,total_time):.1f}%) | "
-            f"Imports: {import_time:.4f}s ({safe_percentage(import_time,total_time):.1f}%) | "
-            f"Queries: {queries_time:.4f}s ({safe_percentage(queries_time,total_time):.1f}%) | "
+            f"Env setup: {env_time:.4f}s ({safe_percentage(env_time, total_time):.1f}%) | "
+            f"Imports: {import_time:.4f}s ({safe_percentage(import_time, total_time):.1f}%) | "
+            f"Queries: {queries_time:.4f}s ({safe_percentage(queries_time, total_time):.1f}%) | "
             f"Query count: {len(query.queries)}"
         )
 
@@ -647,7 +647,7 @@ def query_to_output(
             total_time = time.time() - start_time
             perf_logger.debug(
                 f"SQL output generation - Total: {total_time:.4f}s | "
-                f"SQL Compilation: {compile_time:.4f}s ({safe_percentage(compile_time,total_time):.1f}%) | "
+                f"SQL Compilation: {compile_time:.4f}s ({safe_percentage(compile_time, total_time):.1f}%) | "
                 f"SQL length: {len(sql)} chars"
             )
 

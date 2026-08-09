@@ -39,7 +39,9 @@ async def hit_generate(
         try:
             response = await client.post(url, json=payload, timeout=120.0)
             results.append((response.status_code, time.perf_counter() - started, None))
-        except Exception as exc:  # pragma: no cover - benchmark-only path
+        except (
+            Exception  # noqa: BLE001
+        ) as exc:  # pragma: no cover - benchmark-only path
             results.append((None, time.perf_counter() - started, repr(exc)))
 
 
@@ -55,7 +57,9 @@ async def probe_health(
         try:
             response = await client.get(health_url, timeout=2.0)
             latencies.append((response.status_code, time.perf_counter() - started))
-        except Exception as exc:  # pragma: no cover - benchmark-only path
+        except (
+            Exception  # noqa: BLE001
+        ) as exc:  # pragma: no cover - benchmark-only path
             failures.append(repr(exc))
         await asyncio.sleep(0.1)
 

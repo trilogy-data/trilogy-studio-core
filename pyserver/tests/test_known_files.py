@@ -71,7 +71,9 @@ def test_inline_file_datasource_without_known_files_drops_datasource():
     # which surfaces as an inability to resolve the query.
     try:
         target, _, _, _ = generate_query_core(query, DuckDBDialect())
-    except Exception:
+    except (
+        Exception  # noqa: BLE001 -- any build failure satisfies this regression case
+    ):
         return
     # If we got a target, the datasource must have been skipped during build —
     # the SQL would not reference any source.

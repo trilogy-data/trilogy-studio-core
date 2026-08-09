@@ -1,4 +1,3 @@
-import logging
 from logging import getLogger
 from typing import Any
 
@@ -80,7 +79,7 @@ def datatype_to_display(
     elif isinstance(datatype, MapType):
         return f"Map<{datatype_to_display(datatype.key_type)}, {datatype_to_display(datatype.value_type)}>"
     elif isinstance(datatype, StructType):
-        return f'Struct<{", ".join([f"{k}: {datatype_to_display(v)}" for k, v in datatype.fields_map.items()])}>'
+        return f"Struct<{', '.join([f'{k}: {datatype_to_display(v)}' for k, v in datatype.fields_map.items()])}>"
     else:
         return str(datatype)
 
@@ -129,11 +128,10 @@ def get_diagnostics(
     while parse_fragment.count(";") > 0:
         loops += 1
         try:
-
             tree = PARSER.parse(parse_fragment, on_error=on_error)  # type: ignore
             document = syntax_document_from_parser(text=parse_fragment, tree=tree)
             break
-        except Exception:
+        except Exception:  # noqa: BLE001 -- retry progressively shorter user input
             parse_fragment = truncate_to_last_semicolon(parse_fragment)
             logger.info(parse_fragment)
             diagnostics.append(
@@ -172,7 +170,7 @@ def get_diagnostics(
                     imports.append(Import(name=str(x.path), alias=x.alias))
 
         except Exception:
-            logging.exception("text parse error, may have partial results")
+            logger.exception("text parse error, may have partial results")
         for k, v in env.concepts.items():
             if v.name.startswith("_") or v.namespace.startswith("_"):
                 continue
@@ -184,7 +182,7 @@ def get_diagnostics(
                 completions.append(concept_to_completion(label, v, env))
 
     except Exception:
-        logging.exception("completion generation raised exception")
+        logger.exception("completion generation raised exception")
     return ValidateResponse(
         items=diagnostics, completion_items=completions, imports=imports
     )
