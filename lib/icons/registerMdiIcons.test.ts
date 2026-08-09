@@ -24,13 +24,8 @@ const MODIFIER_CLASSES = /^mdi-(?:set|spin|\d+px|rotate-\d+|flip-[hv])$/
  * Project-internal marker classes that merely share the `mdi-` prefix. Keep
  * this list short and justified — every entry is a name this test can no
  * longer protect.
- *
- * `mdi-export-inline`: applied by the PNG export path in Dashboard.vue, which
- * swaps each icon for a real inline <svg> because html2canvas cannot rasterize
- * a mask-image. The class exists to suppress the ::before/::after box, so it is
- * the opposite of a glyph registration.
  */
-const NON_GLYPH_CLASSES = new Set(['mdi-export-inline'])
+const NON_GLYPH_CLASSES = new Set<string>()
 
 function collectFiles(dir: string, found: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {

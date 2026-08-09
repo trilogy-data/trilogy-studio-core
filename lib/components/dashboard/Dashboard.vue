@@ -20,7 +20,6 @@ import {
   normalizeEmbedTheme,
 } from '../../embed/config'
 import type { UserSettingsStoreType } from '../../stores/userSettingsStore'
-import { resolveMdiIconPath } from '../../icons/registerMdiIcons'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 export interface DashboardProps {
   name: string
@@ -175,20 +174,6 @@ function handleRefreshItem(itemId: string): string | undefined {
   return handleRefresh(itemId)
 }
 
-interface ExportItemMetric {
-  id: string
-  left: number
-  top: number
-  width: number
-  height: number
-}
-
-interface ExportLayoutMetrics {
-  width: number
-  height: number
-  items: ExportItemMetric[]
-}
-
 interface ItemOverflowDiagnostic {
   itemId: string
   visiblePx: number
@@ -221,42 +206,23 @@ function sanitizeDownloadName(name: string | undefined): string {
   return normalized || 'dashboard'
 }
 
-function collectExportLayoutMetrics(gridContent: HTMLElement): ExportLayoutMetrics {
+/**
+ * Export dimensions for the PNG. Width is exactly what is on screen — the grid
+ * lays out within the visible width and never scrolls sideways, so a wider
+ * canvas would only add letterboxing. Height covers the full grid, including
+ * anything the user has scrolled out of view.
+ */
+function collectExportDimensions(gridContent: HTMLElement): { width: number; height: number } {
   const gridContentRect = gridContent.getBoundingClientRect()
   const gridLayout = gridContent.querySelector<HTMLElement>('.vue-grid-layout')
-  const items = Array.from(gridContent.querySelectorAll<HTMLElement>('.vue-grid-item[data-i]'))
-    .map((item) => {
-      const id = item.dataset.i
-      if (!id) {
-        return null
-      }
+  const layoutBottom = gridLayout
+    ? gridLayout.getBoundingClientRect().bottom - gridContentRect.top
+    : 0
 
-      const rect = item.getBoundingClientRect()
-      return {
-        id,
-        left: Math.max(0, Math.round(rect.left - gridContentRect.left)),
-        top: Math.max(0, Math.round(rect.top - gridContentRect.top)),
-        width: Math.max(1, Math.round(rect.width)),
-        height: Math.max(1, Math.round(rect.height)),
-      }
-    })
-    .filter((item): item is ExportItemMetric => item !== null)
-
-  const width = Math.max(
-    Math.ceil(gridContent.scrollWidth),
-    Math.ceil(gridContent.clientWidth),
-    Math.ceil(gridLayout?.scrollWidth || 0),
-    ...items.map((item) => item.left + item.width),
-  )
-
-  const height = Math.max(
-    Math.ceil(gridContent.scrollHeight),
-    Math.ceil(gridContent.clientHeight),
-    Math.ceil(gridLayout?.scrollHeight || 0),
-    ...items.map((item) => item.top + item.height),
-  )
-
-  return { width, height, items }
+  return {
+    width: Math.max(1, Math.ceil(gridContentRect.width)),
+    height: Math.max(1, Math.ceil(Math.max(gridContent.scrollHeight, layoutBottom))),
+  }
 }
 
 /**
@@ -315,119 +281,36 @@ function collectOverflowDiagnostics(gridContent: HTMLElement): ItemOverflowDiagn
   return diagnostics
 }
 
-function applyExportCloneLayout(
-  clonedGridContent: HTMLElement,
-  metrics: ExportLayoutMetrics,
-): void {
-  const itemMetrics = new Map(metrics.items.map((item) => [item.id, item]))
+// Editing affordances that are visible on screen but do not belong in a
+// shared PNG. Excluded via the capture `filter` so the live DOM is untouched.
+const EXPORT_EXCLUDED_CLASSES = [
+  'vue-grid-placeholder',
+  'vue-resizable-handle',
+  'content-edit-overlay',
+  'dev-toolbar-shell',
+  'controls-toggle',
+  'drag-handle-icon',
+  'edit-indicator',
+  'filter-remove-btn',
+]
 
-  clonedGridContent.classList.add('image-export-mode', 'image-export-render')
-  clonedGridContent.style.width = `${metrics.width}px`
-  clonedGridContent.style.maxWidth = `${metrics.width}px`
-  clonedGridContent.style.height = 'auto'
-  clonedGridContent.style.minHeight = `${metrics.height}px`
-  clonedGridContent.style.overflow = 'visible'
-  clonedGridContent.style.padding = '0'
-  clonedGridContent.style.margin = '0'
-
-  const clonedGridLayout = clonedGridContent.querySelector<HTMLElement>('.vue-grid-layout')
-  if (clonedGridLayout) {
-    clonedGridLayout.style.position = 'relative'
-    clonedGridLayout.style.width = `${metrics.width}px`
-    clonedGridLayout.style.height = `${metrics.height}px`
-    clonedGridLayout.style.minHeight = `${metrics.height}px`
-    clonedGridLayout.style.maxHeight = 'none'
-    clonedGridLayout.style.overflow = 'visible'
+function includeNodeInExport(node: Node): boolean {
+  if (!(node instanceof Element)) {
+    return true
   }
 
-  clonedGridContent
-    .querySelectorAll<HTMLElement>(
-      '.vue-grid-placeholder, .content-edit-overlay, .dev-toolbar-shell, .vue-resizable-handle, .controls-toggle, .drag-handle-icon, .edit-indicator, .filter-remove-btn',
-    )
-    .forEach((element) => {
-      element.style.display = 'none'
-    })
+  const classList = node.classList
+  if (EXPORT_EXCLUDED_CLASSES.some((className) => classList.contains(className))) {
+    return false
+  }
 
-  clonedGridContent.querySelectorAll<HTMLElement>('.vue-grid-item').forEach((element) => {
-    const metric = itemMetrics.get(element.dataset.i || '')
-    if (!metric) {
-      return
-    }
+  // Charts keep an inactive container mounted while swapping renders; only
+  // the active one reflects what is on screen.
+  if (classList.contains('vega-container') && !classList.contains('vega-active')) {
+    return false
+  }
 
-    element.style.position = 'absolute'
-    element.style.transform = 'none'
-    element.style.left = `${metric.left}px`
-    element.style.top = `${metric.top}px`
-    element.style.width = `${metric.width}px`
-    element.style.height = `${metric.height}px`
-    element.style.margin = '0'
-  })
-
-  clonedGridContent
-    .querySelectorAll<HTMLElement>('.grid-item-content:not(.grid-item-section-header-style)')
-    .forEach((element) => {
-      element.style.boxShadow = 'none'
-      element.style.border =
-        '1px solid var(--trilogy-embed-border-light, var(--border-light, #e1e6ed))'
-      element.style.backgroundColor =
-        'var(--trilogy-embed-dashboard-background, var(--dashboard-background, #ffffff))'
-      element.style.overflow = 'hidden'
-    })
-
-  clonedGridContent.querySelectorAll<HTMLElement>('.vega-container').forEach((element) => {
-    if (!element.classList.contains('vega-active')) {
-      element.style.display = 'none'
-      return
-    }
-
-    element.style.opacity = '1'
-    element.style.pointerEvents = 'none'
-  })
-
-  const clonedWindow = clonedGridContent.ownerDocument.defaultView
-
-  clonedGridContent.querySelectorAll<HTMLElement>('.mdi').forEach((element) => {
-    const path = resolveMdiIconPath(element.classList)
-    if (!path) {
-      return
-    }
-
-    const computedStyle = clonedWindow?.getComputedStyle(element)
-    const fontSize = computedStyle?.fontSize || '16px'
-    const color = computedStyle?.color || 'currentColor'
-    const lineHeight = computedStyle?.lineHeight || '1'
-
-    const svg = clonedGridContent.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    svg.setAttribute('viewBox', '0 0 24 24')
-    svg.setAttribute('width', fontSize)
-    svg.setAttribute('height', fontSize)
-    svg.setAttribute('aria-hidden', 'true')
-    svg.style.display = 'block'
-    svg.style.width = fontSize
-    svg.style.height = fontSize
-    svg.style.fill = color
-    svg.style.flexShrink = '0'
-
-    const pathElement = clonedGridContent.ownerDocument.createElementNS(
-      'http://www.w3.org/2000/svg',
-      'path',
-    )
-    pathElement.setAttribute('d', path)
-    pathElement.setAttribute('fill', 'currentColor')
-    svg.appendChild(pathElement)
-
-    element.replaceChildren(svg)
-    element.classList.add('mdi-export-inline')
-    element.style.display = 'inline-flex'
-    element.style.alignItems = 'center'
-    element.style.justifyContent = 'center'
-    element.style.width = fontSize
-    element.style.height = fontSize
-    element.style.minWidth = fontSize
-    element.style.minHeight = fontSize
-    element.style.lineHeight = lineHeight
-    element.style.color = color
-  })
+  return true
 }
 
 // Desktop-specific methods
@@ -489,6 +372,12 @@ function handleToggleMode(mode: DashboardState) {
  * Render the current dashboard to a PNG. Returns the resulting blob plus
  * width/height. Used by both the manual download (exportToImage) and the
  * agent's capture_dashboard_screenshot tool.
+ *
+ * Capture is delegated to modern-screenshot, which serializes the live DOM
+ * into an SVG <foreignObject> and lets the browser itself paint it — so the
+ * PNG matches what is on screen (Tabulator tables, box-shadows, mask-image
+ * icons, text wrapping) instead of re-implementing CSS layout the way
+ * html2canvas did.
  */
 async function renderDashboardToPng(): Promise<{
   blob: Blob
@@ -496,8 +385,8 @@ async function renderDashboardToPng(): Promise<{
   height: number
   overflows: ItemOverflowDiagnostic[]
 }> {
-  // Dynamically import html2canvas only when needed
-  const { default: html2canvas } = await import('html2canvas')
+  // Dynamically import modern-screenshot only when needed
+  const { domToBlob } = await import('modern-screenshot')
 
   // Find the dashboard content element. The agent loop lives in chatStore and
   // outlives this component, so a run can keep issuing tool calls after the
@@ -511,76 +400,54 @@ async function renderDashboardToPng(): Promise<{
     )
   }
 
-  // Temporarily disable any hover effects and transitions for cleaner capture
-  dashboardElement.classList.add('image-export-mode')
+  // Wait for pending layout, font, and chart renders to settle.
+  await nextTick()
+  await waitForAnimationFrames(3)
 
-  try {
-    // Wait for pending layout, font, and chart renders to settle.
-    await nextTick()
-    await waitForAnimationFrames(3)
+  if ('fonts' in document) {
+    await document.fonts.ready
+  }
 
-    if ('fonts' in document) {
-      await document.fonts.ready
-    }
+  const exportMetrics = collectExportDimensions(dashboardElement)
+  const overflows = collectOverflowDiagnostics(dashboardElement)
 
-    const exportMetrics = collectExportLayoutMetrics(dashboardElement)
-    // Collect overflow diagnostics BEFORE we mutate the DOM for export — once
-    // the clone runs we lose the original clientHeight/scrollHeight relationships.
-    const overflows = collectOverflowDiagnostics(dashboardElement)
+  // Resolve the background painted BEHIND the cards, so dark-mode exports
+  // don't get a white background. The dashboard theme can move the canvas
+  // away from the card fill, so the canvas variables are checked first and
+  // the card background is only the last resort.
+  const exportStyles = window.getComputedStyle(dashboardElement)
+  const computedBackground = [
+    '--dashboard-canvas-bg',
+    '--main-bg-color',
+    '--trilogy-embed-dashboard-background',
+  ]
+    .map((name) => exportStyles.getPropertyValue(name).trim())
+    .find((value) => !!value)
+  const exportBackground = computedBackground || exportStyles.backgroundColor || '#ffffff'
 
-    // Resolve the background painted BEHIND the cards, so dark-mode exports
-    // don't get a white background. The dashboard theme can move the canvas
-    // away from the card fill, so the canvas variables are checked first and
-    // the card background is only the last resort.
-    const exportStyles = window.getComputedStyle(dashboardElement)
-    const computedBackground = [
-      '--dashboard-canvas-bg',
-      '--main-bg-color',
-      '--trilogy-embed-dashboard-background',
-    ]
-      .map((name) => exportStyles.getPropertyValue(name).trim())
-      .find((value) => !!value)
-    const exportBackground = computedBackground || exportStyles.backgroundColor || '#ffffff'
+  const imageBlob = await domToBlob(dashboardElement, {
+    type: 'image/png',
+    width: exportMetrics.width,
+    height: exportMetrics.height,
+    scale: Math.max(2, Math.min(window.devicePixelRatio || 1, 3)),
+    backgroundColor: exportBackground,
+    filter: includeNodeInExport,
+    features: {
+      // A card the user scrolled (e.g. a long table) should export the slice
+      // they are looking at, not jump back to the top.
+      restoreScrollPosition: true,
+    },
+  })
 
-    // Capture the dashboard as canvas
-    const canvas = await html2canvas(dashboardElement as HTMLElement, {
-      backgroundColor: exportBackground,
-      scale: Math.max(2, Math.min(window.devicePixelRatio || 1, 3)),
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      width: exportMetrics.width,
-      height: exportMetrics.height,
-      windowWidth: exportMetrics.width,
-      windowHeight: exportMetrics.height,
-      scrollX: 0,
-      scrollY: 0,
-      onclone: (clonedDocument) => {
-        const clonedGridContent = clonedDocument.querySelector<HTMLElement>('.grid-content')
-        if (!clonedGridContent) {
-          return
-        }
+  if (!imageBlob || imageBlob.size === 0) {
+    throw new Error('Failed to create dashboard image')
+  }
 
-        applyExportCloneLayout(clonedGridContent, exportMetrics)
-      },
-    })
-
-    const imageBlob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, 'image/png')
-    })
-
-    if (!imageBlob) {
-      throw new Error('Failed to create dashboard image')
-    }
-
-    return {
-      blob: imageBlob,
-      width: exportMetrics.width,
-      height: exportMetrics.height,
-      overflows,
-    }
-  } finally {
-    dashboardElement.classList.remove('image-export-mode')
+  return {
+    blob: imageBlob,
+    width: exportMetrics.width,
+    height: exportMetrics.height,
+    overflows,
   }
 }
 
@@ -854,63 +721,6 @@ async function captureDashboardImage(): Promise<{
 .grid-content {
   width: 100%;
   height: 100%;
-}
-
-/* Image export mode styles to clean up the appearance */
-.grid-content.image-export-mode * {
-  transition: none !important;
-  animation: none !important;
-}
-
-.grid-content.image-export-mode {
-  overflow: visible !important;
-}
-
-.grid-content.image-export-mode :deep(.vue-grid-layout) {
-  overflow: visible !important;
-}
-
-.grid-content.image-export-mode .vue-grid-item:hover {
-  transform: none !important;
-}
-
-.grid-content.image-export-mode .content-edit-overlay,
-.grid-content.image-export-mode .dev-toolbar-shell,
-.grid-content.image-export-mode :deep(.vue-resizable-handle),
-.grid-content.image-export-mode .drag-handle-icon,
-.grid-content.image-export-mode .edit-indicator,
-.grid-content.image-export-mode .controls-toggle,
-.grid-content.image-export-mode .filter-remove-btn {
-  display: none !important;
-}
-
-.grid-content.image-export-mode .vega-container:not(.vega-active) {
-  display: none !important;
-}
-
-.grid-content.image-export-mode .mdi-export-inline::before,
-.grid-content.image-export-mode .mdi-export-inline::after {
-  display: none !important;
-  content: none !important;
-}
-
-/* html2canvas does not rasterize box-shadow, so the inset ring that normally
-   draws the card edge is redrawn here as a real border. Width and color follow
-   the dashboard theme; the width floors at 1px so an elevation-only theme still
-   exports with a visible card edge. The themed corner radius and fill are left
-   alone — html2canvas handles both. */
-.grid-content.image-export-mode .grid-item-content:not(.grid-item-section-header-style) {
-  box-shadow: none !important;
-  border: var(--dashboard-export-border-width, 1px) solid
-    var(
-      --dashboard-card-border-color,
-      var(--trilogy-embed-border-light, var(--border-light, #e1e6ed))
-    ) !important;
-  background: var(
-    --dashboard-card-bg,
-    var(--trilogy-embed-dashboard-background, var(--dashboard-background, #ffffff))
-  ) !important;
-  overflow: hidden !important;
 }
 
 .vue-grid-layout {
