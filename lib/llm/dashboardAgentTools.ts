@@ -4,6 +4,38 @@ import {
   connectDataConnectionTool,
 } from './sharedToolSchemas'
 import { RETURN_TO_USER_TOOL } from './chatAgentPrompt'
+import {
+  DASHBOARD_PRESET_OPTIONS,
+  DASHBOARD_CORNER_OPTIONS,
+  DASHBOARD_DENSITY_OPTIONS,
+  DASHBOARD_ELEVATION_OPTIONS,
+  DASHBOARD_THEME_COLOR_OPTIONS,
+  type DashboardThemeOption,
+} from '../dashboards/theme'
+
+/** Turn a theme vocabulary into an enum property whose description carries the
+ *  same per-value hints the settings picker shows, so the agent and the user
+ *  are choosing from one described vocabulary rather than two. */
+function themeEnumProperty<T extends string>(
+  options: readonly DashboardThemeOption<T>[],
+  lead: string,
+) {
+  return {
+    type: 'string',
+    enum: options.map((option) => option.value),
+    description: `${lead} ${options.map((option) => `"${option.value}": ${option.hint}`).join(' ')}`,
+  }
+}
+
+const themeColorProperties = Object.fromEntries(
+  DASHBOARD_THEME_COLOR_OPTIONS.map((color) => [
+    color.key,
+    {
+      type: 'string',
+      description: `${color.label} color — ${color.hint} Accepts a hex string ("#101820"), rgb()/rgba()/hsl(), or a CSS color name. Pass an empty string to clear it back to the inherited theme color. Omit to leave it as-is.`,
+    },
+  ]),
+)
 
 /**
  * Tool definitions for the dashboard chat agent.
@@ -53,13 +85,13 @@ export const DASHBOARD_TOOLS = [
   },
   {
     name: 'add_dashboard_item',
-    description: `Add a new item to the dashboard grid. Supports chart, table, markdown, and filter types. For charts and tables, provide a Trilogy query as content. For markdown items you can ALSO supply a 'query' to drive dynamic data — the query results are then available to the markdown via {field} template substitutions (see system prompt for full templating syntax). ${chartConfigGuidance}`,
+    description: `Add a new item to the dashboard grid. Supports chart, table, markdown, filter, and freeform types. For charts and tables, provide a Trilogy query as content. For markdown items you can ALSO supply a 'query' to drive dynamic data — the query results are then available to the markdown via {field} template substitutions (see system prompt for full templating syntax). For freeform items, put the Trilogy query in 'content' and the widget markup in 'html' — the query and the rendering are authored separately, and the widget never issues queries of its own. ${chartConfigGuidance}`,
     input_schema: {
       type: 'object',
       properties: {
         type: {
           type: 'string',
-          enum: ['chart', 'table', 'markdown', 'filter'],
+          enum: ['chart', 'table', 'markdown', 'filter', 'freeform'],
           description: 'The type of item to add',
         },
         name: {
@@ -69,7 +101,12 @@ export const DASHBOARD_TOOLS = [
         content: {
           type: 'string',
           description:
-            'Content for the item. For chart/table: a Trilogy query. For markdown: markdown text (which may contain {field} or {{#each data}}…{{/each}} template expressions). For filter: a filter expression.',
+            'Content for the item. For chart/table/freeform: a Trilogy query. For markdown: markdown text (which may contain {field} or {{#each data}}…{{/each}} template expressions). For filter: a filter expression.',
+        },
+        html: {
+          type: 'string',
+          description:
+            'FREEFORM items only: the widget markup. A self-contained HTML fragment that renders the rows delivered by `content`. Runs in a sandboxed frame — no network, no storage, no access to the host page. Use window.trilogy (see the system prompt) to read state, cross-filter, and signal readiness. Required for freeform items.',
         },
         query: {
           type: 'string',
@@ -96,7 +133,7 @@ export const DASHBOARD_TOOLS = [
   {
     name: 'update_dashboard_item',
     description:
-      'Update an existing dashboard item. Can change its query/content, chart configuration, title, or type. The item will re-execute its query after update. For MARKDOWN items, supply `content` to change the markdown text and/or `query` to change (or add) the Trilogy query that powers dynamic data templating — you do NOT need to remove and re-add the item to add a query.',
+      'Update an existing dashboard item. Can change its query/content, chart configuration, title, or type. The item will re-execute its query after update. For MARKDOWN items, supply `content` to change the markdown text and/or `query` to change (or add) the Trilogy query that powers dynamic data templating — you do NOT need to remove and re-add the item to add a query. For FREEFORM items, supply `content` to change the query and/or `html` to change the widget markup; either can be updated independently.',
     input_schema: {
       type: 'object',
       properties: {
@@ -106,7 +143,12 @@ export const DASHBOARD_TOOLS = [
         },
         content: {
           type: 'string',
-          description: 'New content (query for chart/table, markdown text for markdown)',
+          description: 'New content (query for chart/table/freeform, markdown text for markdown)',
+        },
+        html: {
+          type: 'string',
+          description:
+            'FREEFORM items only: replacement widget markup. Leaves the query untouched.',
         },
         query: {
           type: 'string',
@@ -119,7 +161,7 @@ export const DASHBOARD_TOOLS = [
         },
         type: {
           type: 'string',
-          enum: ['chart', 'table', 'markdown', 'filter'],
+          enum: ['chart', 'table', 'markdown', 'filter', 'freeform'],
           description: 'Change the item type',
         },
         chartConfig: {
@@ -217,6 +259,38 @@ export const DASHBOARD_TOOLS = [
         },
       },
       required: ['title'],
+    },
+  },
+  {
+    name: 'set_dashboard_theme',
+    description:
+      'Restyle the dashboard container: card corners, spacing density, elevation, and colors. This is presentation only — it changes no queries, items, or layout positions. Fields you omit are left as they are, so you can nudge one knob without restating the theme; start from a `preset` and override individual fields from there. Only call this when the user asks about the look (theme, colors, branding, "make it denser", "match our brand"), or when a screenshot shows a genuine presentation problem. Do NOT restyle a dashboard the user did not ask you to restyle. Pass reset=true to clear everything back to the app default. Verify with capture_dashboard_screenshot: colors here override the app light/dark palette, so a color that looks right in one mode can be unreadable in the other.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        preset: themeEnumProperty(
+          DASHBOARD_PRESET_OPTIONS,
+          'Baseline look. Sets corners, density, elevation, and border treatment together; the individual fields below override whatever it chose.',
+        ),
+        corners: themeEnumProperty(DASHBOARD_CORNER_OPTIONS, 'Card corner rounding.'),
+        density: themeEnumProperty(
+          DASHBOARD_DENSITY_OPTIONS,
+          'Gutter width and padding. Denser fits more panels per screen; spacious suits fewer, larger panels.',
+        ),
+        elevation: themeEnumProperty(DASHBOARD_ELEVATION_OPTIONS, 'Card drop shadow.'),
+        mobileCards: {
+          type: 'boolean',
+          description:
+            'Keep the card treatment on narrow viewports. Default false, which flattens panels to the page background below 768px — the right choice for most dashboards, since cards on a phone waste horizontal space.',
+        },
+        ...themeColorProperties,
+        reset: {
+          type: 'boolean',
+          description:
+            'Clear the entire theme and go back to the app default, which follows the user\'s light/dark setting. Use this when the user says "undo the styling" or "back to normal". When true, every other field is ignored.',
+        },
+      },
+      required: [],
     },
   },
   {

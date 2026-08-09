@@ -3,6 +3,7 @@ import { computed, type PropType, type Ref, ref } from 'vue'
 import { useConnectionStore, useEditorStore, useScreenNavigation } from '../../stores'
 import DashboardImportSelector from './DashboardImportSelector.vue'
 import DashboardSharePopup from './DashboardSharePopup.vue'
+import DashboardThemePopup from './DashboardThemePopup.vue'
 import FilterInputComponent from './DashboardHeaderFilterInput.vue'
 import LoadingButton from '../LoadingButton.vue'
 import { type CompletionItem } from '../../stores/resolver'
@@ -57,6 +58,7 @@ const emit = defineEmits([
   'toggle-chat',
   'navigate-up',
   'navigate-down',
+  'theme-change',
 ])
 
 const connectionStore = useConnectionStore()
@@ -65,6 +67,7 @@ const navigationStore = useScreenNavigation()
 
 const isLoading = ref(false)
 const isSharePopupOpen = ref(false)
+const isThemePopupOpen = ref(false)
 const isEditingTitle = ref(false)
 const editableTitle = ref('')
 const titleInput = ref<HTMLInputElement | null>(null)
@@ -75,6 +78,10 @@ function toggleSharePopup() {
 
 function closeSharePopup() {
   isSharePopupOpen.value = false
+}
+
+function toggleThemePopup() {
+  isThemePopupOpen.value = !isThemePopupOpen.value
 }
 
 function handleFilterApply(newValue: string) {
@@ -116,11 +123,30 @@ function cancelEditingTitle() {
   editableTitle.value = props.dashboard?.name || 'Untitled Dashboard'
 }
 
-const availableImports: Ref<DashboardImport[]> = computed(() => {
-  const conn = props.selectedConnection
+/** Connections offered in the picker. Sorted by name — the store keys them by
+ *  insertion order, which puts them in whatever order they happened to be
+ *  created in. */
+const selectableConnections = computed(() =>
+  Object.values(connectionStore.connections)
+    .filter((conn) => conn.model && !conn.deleted)
+    .sort((a, b) => a.name.localeCompare(b.name)),
+)
+
+/** `selectedConnection` is a store id, but dashboards persisted before the id
+ *  migration can still hand us a bare display name — so resolve both ways. */
+const selectedConnectionObject = computed(() =>
+  props.selectedConnection
     ? connectionStore.connections[props.selectedConnection] ||
       connectionStore.connectionByName(props.selectedConnection)
-    : undefined
+    : undefined,
+)
+
+const selectedConnectionName = computed(
+  () => selectedConnectionObject.value?.name || props.selectedConnection,
+)
+
+const availableImports: Ref<DashboardImport[]> = computed(() => {
+  const conn = selectedConnectionObject.value
   if (!conn) return []
   const imports = Object.values(editorStore.editors)
     .filter((editor) => isTrilogyType(editor.type) && editor.connectionId === conn.id)
@@ -192,15 +218,9 @@ const modeIcon = computed(() => {
               data-testid="connection-selector"
               @change="$emit('connection-change', $event)"
               :value="selectedConnection"
-              :title="selectedConnection"
+              :title="selectedConnectionName"
             >
-              <option
-                v-for="conn in Object.values(connectionStore.connections).filter(
-                  (conn) => conn.model && !conn.deleted,
-                )"
-                :key="conn.name"
-                :value="conn.name"
-              >
+              <option v-for="conn in selectableConnections" :key="conn.id" :value="conn.id">
                 {{ conn.name }}
               </option>
             </select>
@@ -261,6 +281,19 @@ const modeIcon = computed(() => {
           <i class="mdi mdi-download-outline filter-action-icon" aria-hidden="true"></i>
           <span class="filter-action-label">Download</span>
         </LoadingButton>
+
+        <button
+          v-if="!editsLocked"
+          @click="toggleThemePopup"
+          class="btn filter-action-btn dashboard-theme-action"
+          :class="isThemePopupOpen ? 'btn-primary' : 'btn-secondary'"
+          data-testid="dashboard-theme-button"
+          title="Dashboard theme"
+          aria-label="Dashboard theme"
+        >
+          <i class="mdi mdi-palette-outline filter-action-icon" aria-hidden="true"></i>
+          <span class="filter-action-label">Theme</span>
+        </button>
 
         <button
           @click="toggleSharePopup"
@@ -339,6 +372,13 @@ const modeIcon = computed(() => {
       :dashboard="dashboard"
       :is-open="isSharePopupOpen"
       @close="closeSharePopup"
+    />
+
+    <DashboardThemePopup
+      :dashboard="dashboard"
+      :is-open="isThemePopupOpen"
+      @close="isThemePopupOpen = false"
+      @theme-change="(theme) => $emit('theme-change', theme)"
     />
   </div>
 </template>
@@ -581,7 +621,8 @@ const modeIcon = computed(() => {
   flex-wrap: nowrap;
 }
 
-.filter-action-btn {
+.filter-action-btn,
+.filter-actions :deep(.dashboard-download-action) {
   flex: 0 0 auto;
 }
 
@@ -601,7 +642,15 @@ const modeIcon = computed(() => {
   display: inline;
 }
 
-.btn {
+/* The Download control is a LoadingButton, whose template is multi-root (the
+   button plus its error modal). Vue cannot decide which root to stamp with this
+   component's scope id, so it stamps neither — none of the rules below reach
+   that button on their own and it falls back to the global `.btn`, rendering
+   31px tall and 500-weight beside its 40px/600 siblings. Every ruleset it needs
+   therefore carries a `:deep` selector alongside the plain one, so the two can
+   never drift apart. */
+.btn,
+.filter-actions :deep(.dashboard-download-action) {
   min-width: 86px;
   height: 40px;
   display: inline-flex;
@@ -645,7 +694,8 @@ const modeIcon = computed(() => {
   color: white;
 }
 
-.btn-secondary {
+.btn-secondary,
+.filter-actions :deep(.dashboard-download-action) {
   background: transparent;
   color: var(--text-color);
 }
@@ -698,8 +748,14 @@ const modeIcon = computed(() => {
 }
 
 @media (max-width: 768px) {
+  /* The mobile filter row is a fixed bottom dock with room for a handful of
+     actions. Theming is a desktop-authoring task, so it yields the slot.
+     Download needs the :deep form for the scope-id reason noted above —
+     without it the button stayed visible in the dock. */
   .dashboard-download-action,
-  .dashboard-export-action {
+  .filter-actions :deep(.dashboard-download-action),
+  .dashboard-export-action,
+  .dashboard-theme-action {
     display: none;
   }
 

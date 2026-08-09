@@ -97,6 +97,8 @@ export function useDashboardItemShell(options: DashboardItemShellOptions) {
       }
 
       currentQueryId.value = await dashboardQueryExecutor.runSingle(itemId)
+      // The executor settles the item itself when there was nothing to run.
+      if (!currentQueryId.value) return
       await dashboardQueryExecutor.waitForQuery(currentQueryId.value)
     } catch (err) {
       console.error('Error setting up query:', err)

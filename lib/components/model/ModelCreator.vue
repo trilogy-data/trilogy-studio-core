@@ -135,7 +135,7 @@
 }
 </style>
 <script lang="ts">
-import { defineComponent, ref, inject } from 'vue'
+import { defineComponent, ref, inject, type PropType } from 'vue'
 import type { ModelConfigStoreType } from '../../stores/modelStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { EditorStoreType } from '../../stores/editorStore'
@@ -144,6 +144,13 @@ import Tooltip from '../Tooltip.vue'
 import LoadingButton from '../LoadingButton.vue'
 import type { DashboardStoreType } from '../../stores/dashboardStore'
 
+export interface ModelCreatorFormDefaults {
+  name?: string
+  importAddress?: string
+  importToken?: string
+  connection?: string
+}
+
 export default defineComponent({
   name: 'ModelCreator',
   components: {
@@ -151,8 +158,11 @@ export default defineComponent({
     LoadingButton,
   },
   props: {
+    // Typed rather than a bare Object: as `Object` every field read off it is
+    // `any`, which is how `importToken` came to be passed into importModel's
+    // options-object parameter without vue-tsc noticing.
     formDefaults: {
-      type: Object,
+      type: Object as PropType<ModelCreatorFormDefaults>,
       required: false,
       default: () => ({}),
     },
@@ -308,7 +318,7 @@ export default defineComponent({
             modelDetails.value.name,
             modelDetails.value.importAddress,
             connectionName,
-            modelDetails.value.importToken || undefined,
+            { token: modelDetails.value.importToken || undefined },
           )
         } catch (error) {
           console.error('Error importing model:', error)

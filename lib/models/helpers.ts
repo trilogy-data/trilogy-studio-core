@@ -272,6 +272,7 @@ export class ModelImportService {
     component: ComponentData,
     connectionName: string,
     dashboards: Map<string, string>,
+    options: ModelImportOptions = {},
   ): void {
     if (!component.content) {
       console.warn(`Dashboard ${component.name} has no content, skipping`)
@@ -284,17 +285,32 @@ export class ModelImportService {
       // Configure dashboard properties
       dashboardObj.storage = 'local'
       dashboardObj.connection = connectionName
-      dashboardObj.connectionId = computeConnectionId({ name: connectionName, storage: 'local' })
+      // Must match the storage of the connection this import is attaching to.
+      // Hardcoding 'local' stamped `local:<name>` onto dashboards belonging to
+      // a remote connection; the id then resolved nowhere, which orphaned them
+      // on cascade delete and split them into a second sidebar group carrying
+      // the same display name.
+      dashboardObj.connectionId = computeConnectionId({
+        name: connectionName,
+        storage: options.remote ? 'remote' : 'local',
+        remoteStoreId: options.remoteStoreId,
+      })
       dashboardObj.state = 'published'
 
-      // Resolve each import to a local editor ID. Manifest imports only ever
-      // create local editors, so a remote-origin editor that happens to share
-      // the same name + connection must not be referenced here.
+      // Resolve each import to an editor ID, scoped to the origin this import
+      // is creating editors under (see createOrUpdateEditor). Matching only
+      // local editors was correct for a local import — it stops a same-named
+      // remote editor being referenced — but on a remote import it matched
+      // nothing and left every import with an empty id.
+      const wantRemote = Boolean(options.remote)
       dashboardObj.imports = dashboardObj.imports.map((imp) => ({
         ...imp,
         id:
           this.editorStore.editorList.find(
-            (e) => e.name === imp.name && e.connection === connectionName && e.storage !== 'remote',
+            (e) =>
+              e.name === imp.name &&
+              e.connection === connectionName &&
+              (e.storage === 'remote') === wantRemote,
           )?.id || '',
       }))
 
@@ -379,7 +395,7 @@ export class ModelImportService {
       // Phase 2: Create/update dashboards (now that all editor IDs are available)
       for (const component of dashboardComponents) {
         console.log(`Processing dashboard: ${component.name}`)
-        this.createOrUpdateDashboard(component, connectionName, dashboards)
+        this.createOrUpdateDashboard(component, connectionName, dashboards, options)
       }
 
       // Update model sources

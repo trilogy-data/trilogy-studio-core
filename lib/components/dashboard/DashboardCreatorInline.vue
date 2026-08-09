@@ -142,9 +142,9 @@ export default {
     })
 
     const connections = computed(() => {
-      return Object.values(connectionStore.connections).filter(
-        (conn) => conn.model && !conn.deleted,
-      )
+      return Object.values(connectionStore.connections)
+        .filter((conn) => conn.model && !conn.deleted)
+        .sort((a, b) => a.name.localeCompare(b.name))
     })
 
     const availableImports: Ref<DashboardImport[]> = computed(() => {

@@ -13,6 +13,7 @@ import {
   type DashboardTypes,
   type ItemPropertyUpdates,
 } from '../dashboards/base'
+import type { DashboardTheme } from '../dashboards/theme'
 import { type PromptDashboard, parseDashboardSpec } from '../dashboards/prompts'
 import type { LLMConnectionStoreType } from './llmStore'
 import useConnectionStore from './connectionStore'
@@ -82,9 +83,24 @@ export const useDashboardStore = defineStore('dashboards', {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
 
-      // Return existing executor if it exists
+      // Return existing executor if it exists.
+      //
+      // Its connection is re-synced from the caller's freshly resolved value
+      // first. Executors are cached for the life of the dashboard, so an id
+      // resolved before the connection store finished hydrating — or before a
+      // fork was given its connectionId — otherwise stuck permanently, and
+      // every query on that dashboard failed with "Connection <name> not
+      // found." while the header (which reads the dashboard, not the executor)
+      // showed a perfectly good connection.
       if (this.queryExecutors[dashboardId]) {
-        return this.queryExecutors[dashboardId]
+        const existing = this.queryExecutors[dashboardId]
+        if (
+          dependencies.connectionName &&
+          existing.connectionName !== dependencies.connectionName
+        ) {
+          existing.setConnection(dependencies.connectionName)
+        }
+        return existing
       }
 
       // Create new executor
@@ -200,6 +216,7 @@ export const useDashboardStore = defineStore('dashboards', {
         id: newId,
         name: newId,
         connection: existingDashboard.connection,
+        connectionId: existingDashboard.connectionId,
         storage: existingDashboard.storage,
         state: 'editing',
       })
@@ -258,6 +275,9 @@ export const useDashboardStore = defineStore('dashboards', {
         id: newId,
         name: newId,
         connection: parent.connection,
+        // Without the id the fork falls back to matching the parent's display
+        // name, which only works once the connection store has hydrated.
+        connectionId: parent.connectionId,
         storage: parent.storage,
         state: 'editing',
         parentDashboardId: parentId,
@@ -466,6 +486,16 @@ export const useDashboardStore = defineStore('dashboards', {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
       dashboard.setLayoutType(layoutType)
+    },
+
+    /** Patch a dashboard's container theme. A partial theme merges over what is
+     *  already set; null clears it back to the inherited app styling. */
+    setDashboardTheme(dashboardId: string, theme: DashboardTheme | null) {
+      const dashboard = this.dashboards[dashboardId]
+      if (!dashboard) {
+        throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
+      }
+      dashboard.setTheme(theme)
     },
 
     // Add item to dashboard

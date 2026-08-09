@@ -7,12 +7,14 @@ import DashboardFilter from './DashboardFilter.vue'
 import DashboardMemo from './DashboardMemo.vue'
 import DashboardClaim from './DashboardClaim.vue'
 import DashboardAppendixHeader from './DashboardAppendixHeader.vue'
+import DashboardFreeform from './DashboardFreeform.vue'
 import Tooltip from '../Tooltip.vue'
 import { useClickOutside } from '../../composables/useClickOutside'
 import {
   type GridItemDataResponse,
   type LayoutItem,
   CELL_TYPES,
+  type CellType,
   type DimensionClick,
 } from '../../dashboards/base'
 import type { DashboardQueryExecutor } from '../../dashboards/dashboardQueryExecutor'
@@ -165,6 +167,7 @@ function removeFilter(filterSource: string): void {
 
 const itemData = computed(() => props.getItemData(props.item.i, props.dashboardId))
 const isSectionHeader = computed(() => itemData.value.type === CELL_TYPES.SECTION_HEADER)
+const isFreeform = computed(() => itemData.value.type === CELL_TYPES.FREEFORM)
 
 const cellComponent = computed(() => {
   switch (itemData.value.type) {
@@ -182,6 +185,8 @@ const cellComponent = computed(() => {
       return DashboardClaim
     case CELL_TYPES.APPENDIX_HEADER:
       return DashboardAppendixHeader
+    case CELL_TYPES.FREEFORM:
+      return DashboardFreeform
     case CELL_TYPES.MARKDOWN:
     default:
       return DashboardMarkdown
@@ -204,16 +209,31 @@ const getPlaceholderText = computed(() => {
       return 'Claim'
     case CELL_TYPES.APPENDIX_HEADER:
       return 'Appendix'
+    case CELL_TYPES.FREEFORM:
+      return 'Widget Name'
     case CELL_TYPES.MARKDOWN:
     default:
       return 'Note Name'
   }
 })
 
-const supportsFilters = computed(() => {
-  //@ts-ignore
-  return [CELL_TYPES.CHART, CELL_TYPES.TABLE, CELL_TYPES.MARKDOWN].includes(itemData.value.type)
-})
+const FILTERABLE_TYPES: CellType[] = [
+  CELL_TYPES.CHART,
+  CELL_TYPES.TABLE,
+  CELL_TYPES.MARKDOWN,
+  CELL_TYPES.FREEFORM,
+]
+
+const CARD_STYLE_TYPES: CellType[] = [
+  CELL_TYPES.CHART,
+  CELL_TYPES.TABLE,
+  CELL_TYPES.FILTER,
+  CELL_TYPES.FREEFORM,
+]
+
+const supportsFilters = computed(() => FILTERABLE_TYPES.includes(itemData.value.type))
+
+const usesCardStyle = computed(() => CARD_STYLE_TYPES.includes(itemData.value.type))
 
 const filterCount = computed(() => {
   return itemData.value.filters ? itemData.value.filters.length : 0
@@ -368,10 +388,7 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
     class="grid-item-content"
     :data-testid="`dashboard-component-${item.i}`"
     :class="{
-      'grid-item-chart-style': [CELL_TYPES.CHART, CELL_TYPES.TABLE, CELL_TYPES.FILTER].includes(
-        //@ts-ignore
-        itemData.type,
-      ),
+      'grid-item-chart-style': usesCardStyle,
       'grid-item-markdown-style': itemData.type === CELL_TYPES.MARKDOWN,
       'grid-item-section-header-style': isSectionHeader,
       'grid-item-edit-style': editMode,
@@ -460,6 +477,16 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
       </div>
 
       <div class="grid-item-header-right">
+        <Tooltip
+          v-if="isFreeform"
+          content="Custom code widget — runs in a sandboxed frame with no network or app access"
+          position="bottom"
+        >
+          <span class="widget-badge" data-testid="freeform-widget-badge">
+            <i class="mdi mdi-code-braces"></i>
+          </span>
+        </Tooltip>
+
         <div v-if="supportsFilters && filterCount > 0" class="header-filters no-drag">
           <div class="desktop-header-filters">
             <Tooltip
@@ -670,11 +697,21 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   );
   position: relative;
   overflow-y: hidden;
-  background-color: var(--trilogy-embed-dashboard-background, var(--dashboard-background, #ffffff));
-  border-radius: 14px;
+  background-color: var(
+    --dashboard-card-bg,
+    var(--trilogy-embed-dashboard-background, var(--dashboard-background, #ffffff))
+  );
+  border-radius: var(--dashboard-card-radius, 14px);
   box-shadow:
-    inset 0 0 0 1px var(--trilogy-embed-border, var(--border-color, var(--border, #d6dde6))),
-    var(--trilogy-embed-surface-shadow, var(--surface-shadow, 0 1px 2px rgba(15, 23, 42, 0.08)));
+    inset 0 0 0 var(--dashboard-card-border-width, 1px)
+      var(
+        --dashboard-card-border-color,
+        var(--trilogy-embed-border, var(--border-color, var(--border, #d6dde6)))
+      ),
+    var(
+      --dashboard-card-shadow,
+      var(--trilogy-embed-surface-shadow, var(--surface-shadow, 0 1px 2px rgba(15, 23, 42, 0.08)))
+    );
 }
 
 .grid-item-section-header-style {
@@ -731,10 +768,17 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  min-height: 27px;
-  padding: 4px 12px 3px;
-  background-color: var(--trilogy-embed-panel-header-bg, var(--panel-header-bg, #f6f8fb));
-  border-bottom: 1px solid var(--trilogy-embed-border, var(--border-color, var(--border, #d6dde6)));
+  min-height: var(--dashboard-header-min-height, 27px);
+  padding: var(--dashboard-header-padding, 4px 12px 3px);
+  background-color: var(
+    --dashboard-header-bg,
+    var(--trilogy-embed-panel-header-bg, var(--panel-header-bg, #f6f8fb))
+  );
+  border-bottom: var(--dashboard-header-border-width, 1px) solid
+    var(
+      --dashboard-card-border-color,
+      var(--trilogy-embed-border, var(--border-color, var(--border, #d6dde6)))
+    );
   flex-shrink: 0;
 }
 
@@ -830,7 +874,7 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   gap: 6px;
   max-width: min(100%, 280px);
   padding: 8px;
-  border-radius: 14px;
+  border-radius: var(--dashboard-card-radius, 14px);
   background: color-mix(
     in srgb,
     var(--trilogy-embed-bg, var(--bg-color, #ffffff)) 92%,
@@ -966,7 +1010,7 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   outline: none;
   background-color: var(--trilogy-embed-bg, var(--bg-color, #ffffff));
   color: var(--trilogy-embed-text-color, var(--text-color, #1f2937));
-  border-radius: 10px;
+  border-radius: var(--dashboard-control-radius, 10px);
 }
 
 .section-header-input {
@@ -1018,7 +1062,7 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
     background-color 0.2s,
     border-color 0.2s,
     color 0.2s;
-  border-radius: 10px;
+  border-radius: var(--dashboard-control-radius, 10px);
 }
 
 .control-btn:hover {
@@ -1058,6 +1102,23 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
 
 .icon {
   font-size: 15px;
+}
+
+.widget-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  border-radius: 6px;
+  color: var(--trilogy-embed-special-text, var(--special-text, #2563eb));
+  background: rgba(
+    var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)),
+    0.08
+  );
+  font-size: 12px;
+  flex-shrink: 0;
 }
 
 .header-filters {
@@ -1167,7 +1228,7 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
     var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)),
     0.08
   );
-  border-radius: 999px;
+  border-radius: var(--dashboard-chip-radius, 999px);
   box-shadow: inset 0 0 0 1px
     rgba(var(--trilogy-embed-special-text-rgb, var(--special-text-rgb, 37, 99, 235)), 0.18);
   color: var(--trilogy-embed-text-color, var(--text-color, #1f2937));
@@ -1242,11 +1303,14 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
 }
 
 @media (max-width: 768px) {
+  /* Narrow viewports historically dropped the card treatment entirely. The
+     defaults below reproduce that exactly; a dashboard theme with
+     `mobileCards` re-points these at the desktop card values instead. */
   .grid-item-chart-style,
   .grid-item-markdown-style {
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
+    border-radius: var(--dashboard-card-radius-mobile, 0px);
+    background: var(--dashboard-card-bg-mobile, transparent);
+    box-shadow: var(--dashboard-card-shadow-mobile, none);
   }
 
   .grid-item-chart-style .content-area,
@@ -1276,10 +1340,18 @@ useClickOutside([contentEditToolbarRef, devToolbarRef], dismissHoverControls, {
   .grid-item-header {
     box-sizing: border-box;
     width: 100%;
-    padding: 3px 10px 2px;
-    min-height: 25px;
-    background: var(--trilogy-embed-panel-header-bg, var(--panel-header-bg, #f6f8fb));
+    padding: var(--dashboard-header-padding-mobile, 3px 10px 2px);
+    min-height: var(--dashboard-header-min-height-mobile, 25px);
+    background: var(
+      --dashboard-header-bg,
+      var(--trilogy-embed-panel-header-bg, var(--panel-header-bg, #f6f8fb))
+    );
     border: 0;
+    border-bottom: var(--dashboard-header-border-width-mobile, 0px) solid
+      var(
+        --dashboard-card-border-color,
+        var(--trilogy-embed-border, var(--border-color, var(--border, #d6dde6)))
+      );
     border-radius: 0;
   }
 

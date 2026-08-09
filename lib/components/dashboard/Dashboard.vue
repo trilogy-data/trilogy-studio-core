@@ -6,12 +6,20 @@ import DashboardGridItem from './DashboardGridItem.vue'
 import DashboardAddItemModal from './DashboardAddItemModal.vue'
 import ChartEditor from './DashboardChartEditor.vue'
 import MarkdownEditor from './DashboardMarkdownEditor.vue'
+import FreeformEditor from './DashboardFreeformEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import DashboardCTA from './DashboardCTA.vue'
 import DashboardChatPanel from './DashboardChatPanel.vue'
 import { useDashboard } from './useDashboard'
 import { useDashboardStore } from '../../stores/dashboardStore'
 import { type DashboardState } from '../../dashboards/base'
+import { resolveDashboardTheme, applyEmbedPrecedence } from '../../dashboards/theme'
+import {
+  useResolvedThemeMode,
+  useTrilogyEmbedConfig,
+  normalizeEmbedTheme,
+} from '../../embed/config'
+import type { UserSettingsStoreType } from '../../stores/userSettingsStore'
 import { resolveMdiIconPath } from '../../icons/registerMdiIcons'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 export interface DashboardProps {
@@ -47,12 +55,12 @@ const {
   layout,
   editMode,
   selectedConnection,
-  filter,
   filterError,
   globalCompletion,
   showAddItemModal,
   showQueryEditor,
   showMarkdownEditor,
+  showFreeformEditor,
   editingItem,
   dashboardMaxWidth,
 
@@ -82,6 +90,7 @@ const {
   unSelect,
   dashboardCreated,
   updateTitle,
+  updateTheme,
 } = useDashboard(
   dashboard,
   {
@@ -98,6 +107,23 @@ const {
   },
 )
 
+// Container theming. The resolved theme drives both CSS custom properties and
+// the two grid props (gutter, row height) that CSS cannot reach.
+const settingsStore = inject<UserSettingsStoreType | null>('userSettingsStore', null)
+const themeMode = useResolvedThemeMode(settingsStore)
+const embedConfig = useTrilogyEmbedConfig()
+const resolvedTheme = computed(() =>
+  resolveDashboardTheme({ theme: dashboard.value?.theme, mode: themeMode.value }),
+)
+// An embedding host that named a variable outranks the dashboard definition —
+// a shared dashboard should not be able to repaint the host's branding.
+const dashboardThemeStyle = computed(() =>
+  applyEmbedPrecedence(
+    resolvedTheme.value.vars,
+    normalizeEmbedTheme(embedConfig.value?.theme)?.variables,
+  ),
+)
+
 // Desktop-specific reactive state
 const editable = computed(() => dashboard.value?.state === 'editing' || false)
 const loaded = ref(false)
@@ -111,6 +137,12 @@ const chatPanelOpen = ref(false)
 const chatInitialPrompt = ref<string | null>(null)
 const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore')
 const hasLlmConnection = computed(() => !!llmConnectionStore?.activeConnection)
+
+// The "get started" CTA replaces the grid only while the dashboard is empty
+// and the assistant is closed.
+const showEmptyCTA = computed(
+  () => !!dashboard.value && layout.value.length === 0 && !chatPanelOpen.value,
+)
 
 function toggleChatPanel() {
   chatPanelOpen.value = !chatPanelOpen.value
@@ -467,10 +499,16 @@ async function renderDashboardToPng(): Promise<{
   // Dynamically import html2canvas only when needed
   const { default: html2canvas } = await import('html2canvas')
 
-  // Find the dashboard content element
+  // Find the dashboard content element. The agent loop lives in chatStore and
+  // outlives this component, so a run can keep issuing tool calls after the
+  // user switched tabs/screens and unmounted the dashboard. There is nothing
+  // on screen to photograph in that case — say so plainly rather than failing
+  // with a message that reads like a broken dashboard.
   const dashboardElement = gridContentRef.value
   if (!dashboardElement) {
-    throw new Error('Dashboard content not found')
+    throw new Error(
+      'the dashboard is not currently on screen (its tab is not the visible one), so there is nothing to render. Ask the user to reopen the dashboard, or continue without the screenshot.',
+    )
   }
 
   // Temporarily disable any hover effects and transitions for cleaner capture
@@ -490,14 +528,19 @@ async function renderDashboardToPng(): Promise<{
     // the clone runs we lose the original clientHeight/scrollHeight relationships.
     const overflows = collectOverflowDiagnostics(dashboardElement)
 
-    // Resolve the current dashboard background color from the active theme so that
-    // dark-mode exports don't get a white background.
-    const computedBackground = window
-      .getComputedStyle(dashboardElement)
-      .getPropertyValue('--trilogy-embed-dashboard-background')
-      .trim()
-    const exportBackground =
-      computedBackground || window.getComputedStyle(dashboardElement).backgroundColor || '#ffffff'
+    // Resolve the background painted BEHIND the cards, so dark-mode exports
+    // don't get a white background. The dashboard theme can move the canvas
+    // away from the card fill, so the canvas variables are checked first and
+    // the card background is only the last resort.
+    const exportStyles = window.getComputedStyle(dashboardElement)
+    const computedBackground = [
+      '--dashboard-canvas-bg',
+      '--main-bg-color',
+      '--trilogy-embed-dashboard-background',
+    ]
+      .map((name) => exportStyles.getPropertyValue(name).trim())
+      .find((value) => !!value)
+    const exportBackground = computedBackground || exportStyles.backgroundColor || '#ffffff'
 
     // Capture the dashboard as canvas
     const canvas = await html2canvas(dashboardElement as HTMLElement, {
@@ -605,7 +648,7 @@ async function captureDashboardImage(): Promise<{
 </script>
 
 <template>
-  <div class="dashboard-container" v-if="dashboard">
+  <div class="dashboard-container" v-if="dashboard" :style="dashboardThemeStyle">
     <DashboardHeader
       :dashboard="dashboard"
       :edits-locked="dashboard.state === 'locked'"
@@ -625,20 +668,20 @@ async function captureDashboardImage(): Promise<{
       @refresh="handleRefresh"
       @clear-filter="handleFilterClear"
       @title-update="updateTitle"
+      @theme-change="updateTheme"
       @export-image="exportToImage"
       @toggle-chat="toggleChatPanel"
     />
 
     <div class="dashboard-body" :class="{ 'chat-open': chatPanelOpen }">
       <div class="dashboard-main">
-        <div
-          v-if="dashboard && layout.length === 0 && !chatPanelOpen"
-          class="empty-dashboard-wrapper"
-        >
+        <div v-if="showEmptyCTA" class="empty-dashboard-wrapper">
           <DashboardCTA :dashboard-id="dashboard.id" @start-chat-with-prompt="openChatWithPrompt" />
         </div>
 
-        <div v-else class="grid-container">
+        <!-- v-show, not v-if: the CTA must not unmount `.grid-content`, or the
+             screenshot capture (agent + manual export) loses its element. -->
+        <div v-show="!showEmptyCTA" class="grid-container">
           <div
             ref="gridContentRef"
             class="grid-content"
@@ -646,7 +689,8 @@ async function captureDashboardImage(): Promise<{
           >
             <GridLayout
               :col-num="20"
-              :row-height="30"
+              :row-height="resolvedTheme.rowHeight"
+              :margin="resolvedTheme.gridMargin"
               :is-draggable="editable"
               :is-resizable="editable"
               :is-bounded="true"
@@ -673,7 +717,6 @@ async function captureDashboardImage(): Promise<{
                   :dashboard-id="dashboard.id"
                   :item="item"
                   :edit-mode="editMode"
-                  :filter="filter"
                   :get-item-data="getItemData"
                   :symbols="globalCompletion"
                   :get-dashboard-query-executor="getDashboardQueryExecutor"
@@ -728,6 +771,17 @@ async function captureDashboardImage(): Promise<{
         @cancel="closeEditors"
       />
     </Teleport>
+
+    <Teleport to="body" v-if="showFreeformEditor && editingItem">
+      <FreeformEditor
+        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+        :imports="getItemData(editingItem.i, dashboard.id).imports || []"
+        :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
+        :content="getItemData(editingItem.i, dashboard.id).freeformData || null"
+        @save="saveContent"
+        @cancel="closeEditors"
+      />
+    </Teleport>
   </div>
 
   <div v-else class="dashboard-not-found">
@@ -757,7 +811,7 @@ async function captureDashboardImage(): Promise<{
   width: 100%;
   font-size: var(--font-size);
   color: var(--text-color);
-  background-color: var(--main-bg-color);
+  background-color: var(--dashboard-canvas-bg, var(--main-bg-color));
 }
 
 @media (max-width: 768px) {
@@ -790,8 +844,8 @@ async function captureDashboardImage(): Promise<{
 .grid-container {
   flex: 1;
   overflow: auto;
-  padding: 16px 18px 24px;
-  background-color: var(--main-bg-color);
+  padding: var(--dashboard-canvas-padding, 16px 18px 24px);
+  background-color: var(--dashboard-canvas-bg, var(--main-bg-color));
   display: flex;
   justify-content: center;
   min-height: 0;
@@ -840,12 +894,21 @@ async function captureDashboardImage(): Promise<{
   content: none !important;
 }
 
+/* html2canvas does not rasterize box-shadow, so the inset ring that normally
+   draws the card edge is redrawn here as a real border. Width and color follow
+   the dashboard theme; the width floors at 1px so an elevation-only theme still
+   exports with a visible card edge. The themed corner radius and fill are left
+   alone — html2canvas handles both. */
 .grid-content.image-export-mode .grid-item-content:not(.grid-item-section-header-style) {
   box-shadow: none !important;
-  border: 1px solid var(--trilogy-embed-border-light, var(--border-light, #e1e6ed)) !important;
+  border: var(--dashboard-export-border-width, 1px) solid
+    var(
+      --dashboard-card-border-color,
+      var(--trilogy-embed-border-light, var(--border-light, #e1e6ed))
+    ) !important;
   background: var(
-    --trilogy-embed-dashboard-background,
-    var(--dashboard-background, #ffffff)
+    --dashboard-card-bg,
+    var(--trilogy-embed-dashboard-background, var(--dashboard-background, #ffffff))
   ) !important;
   overflow: hidden !important;
 }

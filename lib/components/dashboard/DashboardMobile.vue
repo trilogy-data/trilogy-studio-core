@@ -1,16 +1,24 @@
 <script lang="ts" setup>
-import { nextTick, computed } from 'vue'
+import { nextTick, computed, inject } from 'vue'
 import DashboardHeader from './DashboardHeader.vue'
 import DashboardGridItem from './DashboardGridItem.vue'
 import DashboardAddItemModal from './DashboardAddItemModal.vue'
 import ChartEditor from './DashboardChartEditor.vue'
 import MarkdownEditor from './DashboardMarkdownEditor.vue'
+import FreeformEditor from './DashboardFreeformEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import DashboardCTA from './DashboardCTA.vue'
 import { useDashboard } from './useDashboard'
 import { CELL_TYPES, type LayoutItem } from '../../dashboards/base'
 import { useDashboardStore } from '../../stores/dashboardStore'
 import { type DashboardState } from '../../dashboards/base'
+import { resolveDashboardTheme, applyEmbedPrecedence } from '../../dashboards/theme'
+import {
+  useResolvedThemeMode,
+  useTrilogyEmbedConfig,
+  normalizeEmbedTheme,
+} from '../../embed/config'
+import type { UserSettingsStoreType } from '../../stores/userSettingsStore'
 export interface DashboardMobileProps {
   name: string
   connectionId?: string
@@ -43,12 +51,12 @@ const {
   sortedLayout,
   editMode,
   selectedConnection,
-  filter,
   filterError,
   globalCompletion,
   showAddItemModal,
   showQueryEditor,
   showMarkdownEditor,
+  showFreeformEditor,
   editingItem,
 
   // Methods
@@ -75,6 +83,7 @@ const {
   removeFilter,
   unSelect,
   dashboardCreated,
+  updateTheme,
 } = useDashboard(
   dashboard,
   {
@@ -88,6 +97,22 @@ const {
     triggerResize: () => triggerResize(),
     fullScreen: () => {}, // Not needed for mobile
   },
+)
+
+// Container theming. Mobile stacks rather than gridding, so only the row height
+// carries over from the resolved grid metrics — it is the unit persisted item
+// heights are expressed in, and the stacked heights below are derived from it.
+const settingsStore = inject<UserSettingsStoreType | null>('userSettingsStore', null)
+const themeMode = useResolvedThemeMode(settingsStore)
+const embedConfig = useTrilogyEmbedConfig()
+const resolvedTheme = computed(() =>
+  resolveDashboardTheme({ theme: dashboard.value?.theme, mode: themeMode.value }),
+)
+const dashboardThemeStyle = computed(() =>
+  applyEmbedPrecedence(
+    resolvedTheme.value.vars,
+    normalizeEmbedTheme(embedConfig.value?.theme)?.variables,
+  ),
 )
 
 // Mobile-specific methods
@@ -144,8 +169,16 @@ function calculateMobileHeight(item: any): number | string {
     return `${mobileFilterHeight}px`
   }
 
+  const rowHeight = resolvedTheme.value.rowHeight
+
   if (itemData.type === CELL_TYPES.SECTION_HEADER) {
-    return `${Math.max(item.h * 30 + 4, 36)}px`
+    return `${Math.max(item.h * rowHeight + 4, 36)}px`
+  }
+
+  // Freeform widgets author their own layout, so honour the height the item was
+  // given rather than deriving one from a chart aspect ratio.
+  if (itemData.type === CELL_TYPES.FREEFORM) {
+    return `${Math.max(item.h * rowHeight, minHeight)}px`
   }
 
   if (itemData.type === CELL_TYPES.CHART) {
@@ -177,7 +210,7 @@ function calculateMobileHeight(item: any): number | string {
   // If no stored dimensions, use the grid layout's width and height
   const aspectRatio = item.h / item.w
   // Target height based on aspect ratio, with reasonable constraints
-  return `${Math.max(Math.min(aspectRatio * 12 * 30, maxHeight), mobileMinHeight)}px`
+  return `${Math.max(Math.min(aspectRatio * 12 * rowHeight, maxHeight), mobileMinHeight)}px`
 }
 
 // Handle edit mode toggle for mobile
@@ -245,7 +278,7 @@ function scrollDownOne() {
 </script>
 
 <template>
-  <div class="dashboard-mobile-container" v-if="dashboard">
+  <div class="dashboard-mobile-container" v-if="dashboard" :style="dashboardThemeStyle">
     <DashboardHeader
       :dashboard="dashboard"
       :edits-locked="dashboard.state === 'locked'"
@@ -263,6 +296,7 @@ function scrollDownOne() {
       @clear-filter="handleFilterClear"
       @navigate-up="scrollUpOne"
       @navigate-down="scrollDownOne"
+      @theme-change="updateTheme"
     />
 
     <div v-if="dashboard && sortedLayout.length === 0" class="empty-dashboard-wrapper">
@@ -288,7 +322,6 @@ function scrollDownOne() {
           :dashboard-id="dashboard.id"
           :item="item"
           :edit-mode="editMode"
-          :filter="filter"
           :get-item-data="getItemData"
           :symbols="globalCompletion"
           :get-dashboard-query-executor="getDashboardQueryExecutor"
@@ -329,6 +362,17 @@ function scrollDownOne() {
         @cancel="closeEditors"
       />
     </Teleport>
+
+    <Teleport to="body" v-if="showFreeformEditor && editingItem">
+      <FreeformEditor
+        :connectionName="getItemData(editingItem.i, dashboard.id).connectionName || ''"
+        :imports="getItemData(editingItem.i, dashboard.id).imports || []"
+        :rootContent="getItemData(editingItem.i, dashboard.id).rootContent || []"
+        :content="getItemData(editingItem.i, dashboard.id).freeformData || null"
+        @save="saveContent"
+        @cancel="closeEditors"
+      />
+    </Teleport>
   </div>
 
   <div v-else class="dashboard-not-found">
@@ -355,7 +399,7 @@ function scrollDownOne() {
   width: 100%;
   font-size: var(--font-size);
   color: var(--text-color);
-  background-color: var(--bg-color);
+  background-color: var(--dashboard-canvas-bg, var(--bg-color));
   overflow: hidden;
   position: relative;
 }
@@ -363,18 +407,20 @@ function scrollDownOne() {
 .mobile-container {
   flex: 1;
   overflow-y: auto;
-  padding: 5px 10px;
-  background-color: var(--bg-color);
+  padding: var(--dashboard-mobile-canvas-padding, 5px 10px);
+  background-color: var(--dashboard-canvas-bg, var(--bg-color));
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: var(--dashboard-mobile-gap, 15px);
   padding-bottom: calc(125px + env(safe-area-inset-bottom));
   /* Keep the final item above the pinned filter/action dock. */
 }
 
 .mobile-item {
   width: 100%;
-  background: var(--result-window-bg);
+  /* Transparent under a card-carrying theme, so the card's own fill and corner
+     radius are what show. Otherwise the historical opaque wrapper. */
+  background: var(--dashboard-mobile-item-bg, var(--result-window-bg));
   position: relative;
 }
 

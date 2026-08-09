@@ -352,8 +352,12 @@ export default abstract class BaseConnection {
 
   abstract connect(): Promise<boolean>
 
-  setModel(model: string) {
-    this.model = model
+  // Routed through setAttribute so the connection is flagged dirty:
+  // LocalStorage.saveConnections only writes back entries with `changed` set,
+  // so a direct assignment here persisted nothing and the old model came back
+  // on reload.
+  setModel(model: string | null) {
+    this.setAttribute('model', model)
   }
 
   async reset() {

@@ -265,6 +265,12 @@ export async function prepareTestPage(page) {
   const resolverUrl = getResolverUrl()
 
   await page.addInitScript((url) => {
+    // Init scripts run in EVERY frame, including sandboxed widget frames. Those
+    // have an opaque origin, so touching localStorage throws SecurityError and
+    // surfaces as an uncaught page exception. Only the top frame needs seeding.
+    if (window !== window.top) {
+      return
+    }
     if (window.localStorage.getItem('__playwright_prepared') === 'true') {
       return
     }

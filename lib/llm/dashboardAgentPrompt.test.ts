@@ -186,7 +186,7 @@ describe('dashboard agent prompt / state split', () => {
     function makeExecutor(dashboard: DashboardModel) {
       return new DashboardToolExecutor({
         dashboardStore: { dashboards: { 'dash-1': dashboard } } as any,
-        connectionStore: { connections: { 'conn-1': { connected: true } } } as any,
+        connectionStore,
         editorStore: {} as any,
         queryExecutionService: {} as any,
         dashboardId: 'dash-1',

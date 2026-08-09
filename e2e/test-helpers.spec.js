@@ -1,5 +1,5 @@
 import http from 'node:http'
-import { test, expect } from './console-capture'
+import { test, expect, isCancellationSentinel, attachConsoleCapture } from './console-capture'
 import { cacheDeployedAssets, retryShedNavigations } from './test-helpers.js'
 import {
   getResolverUrl,
@@ -192,6 +192,78 @@ test.describe('prod host load shedding', () => {
     } finally {
       await host.close()
     }
+  })
+})
+
+// Disposing a monaco editor rejects whatever it had in flight with monaco's
+// `Canceled` sentinel, and no engine lets us catch it at the source. The capture
+// filters it — but it only recognised the chromium/firefox shape, so the same
+// teardown passed there and failed every run on Mobile Safari.
+test.describe('isCancellationSentinel', () => {
+  // How Playwright turns a WebKit console line into the Error a `pageerror`
+  // listener receives: split at the FIRST colon, name before, message after.
+  // Reproduced rather than imported so a change in that parsing shows up here.
+  function asWebkitPageError(consoleText) {
+    const idx = consoleText.indexOf(':')
+    const error = new Error(consoleText.slice(idx + 2))
+    error.name = consoleText.slice(0, idx)
+    return error
+  }
+
+  function asPageError(name, message) {
+    const error = new Error(message)
+    error.name = name
+    return error
+  }
+
+  test('matches the chromium/firefox shape', () => {
+    expect(isCancellationSentinel(asPageError('Canceled', 'Canceled'))).toBe(true)
+  })
+
+  test('matches the WebKit unhandled-rejection wrapper', () => {
+    const error = asWebkitPageError('Unhandled Promise Rejection: Canceled: Canceled')
+    expect(error.name).toBe('Unhandled Promise Rejection')
+    expect(error.message).toBe('Canceled: Canceled')
+    expect(isCancellationSentinel(error)).toBe(true)
+  })
+
+  // The filter exists to hide one specific non-fault. Anything that merely
+  // mentions cancellation is a real uncaught exception and must still fail.
+  test('does not swallow real errors that mention cancellation', () => {
+    expect(isCancellationSentinel(asPageError('TypeError', 'Canceled'))).toBe(false)
+    expect(isCancellationSentinel(asPageError('Canceled', 'request failed'))).toBe(false)
+    expect(
+      isCancellationSentinel(asWebkitPageError('Unhandled Promise Rejection: TypeError: Canceled')),
+    ).toBe(false)
+    expect(
+      isCancellationSentinel(
+        asWebkitPageError('Unhandled Promise Rejection: Error: Canceled: Canceled'),
+      ),
+    ).toBe(false)
+    expect(isCancellationSentinel(asPageError('Error', 'query was Canceled: Canceled'))).toBe(false)
+  })
+
+  // The unit cases above assume a shape. This one drives the real path — a
+  // genuine unhandled rejection, reported by whichever engine the project is
+  // running — so the assumption is checked against each of them rather than
+  // trusted. Capture is attached to a hand-made page so the `boom` rejection
+  // lands somewhere that doesn't escalate and fail this test.
+  test('the filter holds against a real unhandled rejection', async ({ browser }) => {
+    const page = await browser.newPage()
+    const diagnostics = attachConsoleCapture(page)
+
+    await page.evaluate(() => {
+      const canceled = new Error('Canceled')
+      canceled.name = 'Canceled'
+      Promise.reject(canceled)
+      // Reported after the sentinel, so waiting for it proves the sentinel was
+      // already delivered and dropped rather than merely still in flight.
+      setTimeout(() => Promise.reject(new TypeError('boom')), 0)
+    })
+
+    await expect.poll(() => diagnostics.pageErrors().length).toBe(1)
+    expect(diagnostics.pageErrors()[0].text).toContain('boom')
+    await page.close()
   })
 })
 

@@ -45,12 +45,29 @@ const SELF_INFLICTED_REQUEST_FAILURES = ['net::ERR_ABORTED', 'NS_BINDING_ABORTED
  * pageerror even though nothing went wrong — it is control flow, not a fault,
  * and it is raised inside monaco-editor where we have no seam to handle it.
  *
- * Keyed on the exact sentinel rather than a message substring — as is the one
- * other thing this file declines to treat as fatal (see below). Anything broader
- * would start hiding the real defects this capture exists to surface.
+ * It arrives in two shapes, because the engines disagree on how an unhandled
+ * rejection is reported. Chromium and Firefox hand Playwright the rejected value
+ * itself, so it keeps its own name and message: `Canceled: Canceled`. WebKit
+ * reports rejections only as console text — `Unhandled Promise Rejection:
+ * Canceled: Canceled` — which Playwright splits at the *first* colon, so the
+ * name becomes the wrapper and the whole sentinel ends up in the message. That
+ * is why the same monaco teardown was silent on chromium and failed on Mobile
+ * Safari.
+ *
+ * Keyed on the exact sentinel in both shapes rather than a message substring —
+ * as is the one other thing this file declines to treat as fatal (see below).
+ * Anything broader would start hiding the real defects this capture exists to
+ * surface.
  */
-function isCancellationSentinel(error: Error) {
-  return error.name === 'Canceled' && error.message === 'Canceled'
+const CANCELLATION_SENTINEL = 'Canceled: Canceled'
+const WEBKIT_REJECTION_PREFIX = 'Unhandled Promise Rejection: '
+
+export function isCancellationSentinel(error: Error) {
+  const reported = `${error.name}: ${error.message}`
+  return (
+    reported === CANCELLATION_SENTINEL ||
+    reported === `${WEBKIT_REJECTION_PREFIX}${CANCELLATION_SENTINEL}`
+  )
 }
 
 /**

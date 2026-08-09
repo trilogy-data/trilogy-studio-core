@@ -150,7 +150,30 @@ function isUrlSafe(url: string): boolean {
 // ============================================================================
 
 /**
- * Create a loading pill based on fallback text length
+ * A literal zero-width space, not the `&#8203;` entity — the pill is injected
+ * into markdown source that later gets HTML-escaped, which would turn an entity
+ * into visible `&amp;#8203;`.
+ */
+const ZERO_WIDTH_SPACE = '​'
+
+/**
+ * Create a loading pill based on fallback text length.
+ *
+ * The bar is one em tall but must occupy a whole line box. Otherwise a cell —
+ * or a line — holding nothing but pills is shorter than the same cell holding
+ * text, and a markdown table visibly grew about 5px per row the moment results
+ * landed. Two things are needed, because neither suffices alone:
+ *
+ *  - The `lh`-based margin pads the bar's *margin* box out to one line, so the
+ *    bar keeps its current size while reserving a line's worth of space.
+ *  - The trailing zero-width space gives the line a real text node. A pill-only
+ *    line box otherwise collapses to the bar's height, and this is also what
+ *    holds the layout together on browsers predating the `lh` unit (Firefox
+ *    <120, Safari <16.4), where the whole margin declaration is dropped as
+ *    invalid.
+ *
+ * `vertical-align: top` then seats the bar without extending the line box the
+ * way `middle` does when the margin box is already a full line tall.
  */
 function createLoadingPill(fallbackText: string = 'Loading'): string {
   const length = fallbackText.length
@@ -161,7 +184,11 @@ function createLoadingPill(fallbackText: string = 'Loading'): string {
   else if (length <= 20) width = '120px'
   else width = '160px'
 
-  return `<span class="loading-pill" style="display: inline-block; width: ${width}; height: 1em; border-radius: 4px; filter: blur(0.5px);"></span>`
+  return (
+    `<span class="loading-pill" style="display: inline-block; width: ${width}; height: 1em; ` +
+    `margin: calc((1lh - 1em) / 2) 0; vertical-align: top; border-radius: 4px; ` +
+    `filter: blur(0.5px);"></span>${ZERO_WIDTH_SPACE}`
+  )
 }
 
 /**
@@ -469,6 +496,38 @@ export function evaluateFallback(
 // TEMPLATE PROCESSING
 // ============================================================================
 
+/** `{{#each ...}}` / `{{/each}}` leftovers, which are not value expressions. */
+function isLoopDirective(expression: string): boolean {
+  const trimmed = expression.trim()
+  return trimmed.startsWith('#') || trimmed.startsWith('/')
+}
+
+/**
+ * Substitute every `{expr}` and `{{expr}}` placeholder via `replace`.
+ *
+ * The template language grew two spellings: loop headers are double-braced
+ * (`{{#each data}}`) while value references are single-braced (`{field}`) — and
+ * the editor's own loop snippet has always emitted double-braced fields. Each
+ * brace style used to be handled by a different regex in a different code path:
+ * the loading pass matched only `{{ }}`, the loaded pass only `{ }`. A template
+ * therefore rendered correctly in one state and leaked its raw source in the
+ * other, which is what made a markdown item flash `{{field}}` mid-refresh.
+ * Accepting both spellings everywhere is what keeps the two passes agreeing.
+ *
+ * Double braces are consumed first, or the single-brace pass would bite off
+ * `{{field}` and leave a stray `}` behind. `replace` also receives the original
+ * match so a caller can decline a substitution and leave the source untouched.
+ */
+function substituteBracedExpressions(
+  text: string,
+  replace: (expression: string, match: string) => string,
+): string {
+  const substitute = (match: string, expression: string) =>
+    isLoopDirective(expression) ? match : replace(expression, match)
+
+  return text.replace(/\{\{([^{}]+)\}\}/g, substitute).replace(/\{([^{}]+)\}/g, substitute)
+}
+
 /**
  * Process field expressions within loop templates
  */
@@ -554,17 +613,13 @@ function processLoadingLoop(template: string, limit?: number): string {
   const actualLimit = Math.min(limit ?? 3, 3) // Max 3 loading items
 
   for (let i = 0; i < actualLimit; i++) {
-    let itemContent = template
-    itemContent = itemContent.replace(
-      /\{\{([^}]+)\}\}/g,
-      (_fieldMatch: string, fieldExpr: string) => {
-        const trimmed = fieldExpr.trim()
-        if (trimmed === '@index') {
-          return createLoadingPill('0')
-        }
-        return createLoadingPill(trimmed)
-      },
-    )
+    const itemContent = substituteBracedExpressions(template, (fieldExpr: string) => {
+      const trimmed = fieldExpr.trim()
+      if (trimmed === '@index') {
+        return createLoadingPill('0')
+      }
+      return createLoadingPill(trimmed)
+    })
     loopContent += itemContent
   }
 
@@ -593,7 +648,7 @@ function processArrayLoop(
     item = item[ARRAY_IMPLICIT_COLUMN] !== undefined ? item[ARRAY_IMPLICIT_COLUMN] : item
     let itemContent = template
     itemContent = processNestedLoops(itemContent, [item])
-    itemContent = itemContent.replace(/\{([^}]+)\}/g, (_fieldMatch: string, fieldExpr: string) =>
+    itemContent = substituteBracedExpressions(itemContent, (fieldExpr: string) =>
       processFieldExpression(fieldExpr, item, index, true),
     )
     loopContent += itemContent
@@ -682,10 +737,10 @@ function processLoops(htmlContent: string, context: TemplateContext, data: Row[]
 }
 
 /**
- * Process simple template substitutions {expression}
+ * Process simple template substitutions {expression} / {{expression}}
  */
 function processSimpleSubstitutions(text: string, context: TemplateContext): string {
-  return text.replace(/\{([^{}]+)\}/g, (_match: string, expression: string) => {
+  return substituteBracedExpressions(text, (expression: string, match: string) => {
     if (context.loading) {
       return evaluateFallback(
         expression,
@@ -701,7 +756,7 @@ function processSimpleSubstitutions(text: string, context: TemplateContext): str
         const stringLiteral = extractStringLiteral(fallback.fallbackExpr)
         return stringLiteral !== null ? stringLiteral : fallback.fallbackExpr
       }
-      return _match
+      return match
     }
 
     return evaluateFallback(
@@ -1038,6 +1093,35 @@ function restoreCodeBlocks(html: string, placeholders: CodeBlockPlaceholder): st
 }
 
 /**
+ * Markup this renderer generated itself — currently loading pills, which
+ * template substitution injects *before* markdown conversion runs.
+ *
+ * Table cells escape their contents, which is right for data but turns a pill
+ * that landed in a cell into visible `<span class="loading-pill" …>` source
+ * instead of a shimmer. Hiding generated markup behind a placeholder for the
+ * duration of the conversion is the same trick already used for code blocks
+ * and template expressions.
+ */
+function extractGeneratedMarkup(text: string): {
+  html: string
+  placeholders: CodeBlockPlaceholder
+} {
+  const placeholders: CodeBlockPlaceholder = {}
+  let counter = 0
+
+  // The trailing zero-width space is part of the pill — see createLoadingPill —
+  // so it has to travel with it rather than be left behind in the cell text.
+  const html = text.replace(/<span class="loading-pill"[^>]*><\/span>​?/g, (match: string) => {
+    const placeholder = `__GENERATEDMARKUP_${counter}__`
+    placeholders[placeholder] = match
+    counter++
+    return placeholder
+  })
+
+  return { html, placeholders }
+}
+
+/**
  * Convert markdown syntax to HTML
  */
 export function convertMarkdownToHtml(text: string): string {
@@ -1045,13 +1129,15 @@ export function convertMarkdownToHtml(text: string): string {
   const { html: htmlWithoutCode, placeholders } = extractCodeBlocks(text)
   const { html: htmlWithoutAdmonitions, placeholders: admonitionPlaceholders } =
     extractAdmonitions(htmlWithoutCode)
+  const { html: htmlWithoutGenerated, placeholders: generatedPlaceholders } =
+    extractGeneratedMarkup(htmlWithoutAdmonitions)
 
   // Extract {template} expressions before emphasis processing. Without this, * chars inside
   // expressions (e.g. {(a/b*100):.1f}) can pair up across merged list items and get consumed
   // by processEmphasis, mangling the literal text of unresolved expressions.
   const templatePlaceholders: CodeBlockPlaceholder = {}
   let templateCounter = 0
-  let html = htmlWithoutAdmonitions.replace(/\{([^{}]+)\}/g, (match: string) => {
+  let html = htmlWithoutGenerated.replace(/\{([^{}]+)\}/g, (match: string) => {
     const placeholder = `__TEMPLATEEXPR_${templateCounter}__`
     templatePlaceholders[placeholder] = match
     templateCounter++
@@ -1074,6 +1160,7 @@ export function convertMarkdownToHtml(text: string): string {
   // Restore code blocks
   html = restoreCodeBlocks(html, placeholders)
   html = restoreCodeBlocks(html, admonitionPlaceholders)
+  html = restoreCodeBlocks(html, generatedPlaceholders)
 
   return html
 }

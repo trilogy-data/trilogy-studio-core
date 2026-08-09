@@ -235,6 +235,16 @@ const systemPrompt = computed(() => {
   return promptProvider()
 })
 
+/** Abort an in-flight agent run. The loop lives in chatStore rather than in
+ *  this component, so closing the panel does not stop it — without this the
+ *  only way out of a long run was to clear the whole conversation. */
+function handleStop() {
+  const chatId = currentChatId.value
+  if (!chatId) return
+  if (!chatStore.isChatExecuting(chatId)) return
+  chatStore.stopExecution(chatId)
+}
+
 function handleClear() {
   const chatId = currentChatId.value
   if (!chatId) return
@@ -332,6 +342,16 @@ watch(
         Dashboard Assistant
       </span>
       <div class="chat-panel-actions">
+        <button
+          v-if="isChatLoading"
+          class="chat-panel-action chat-panel-action-stop"
+          @click="handleStop"
+          title="Stop the assistant"
+          data-testid="dashboard-chat-stop"
+        >
+          <i class="mdi mdi-stop-circle-outline"></i>
+          Stop
+        </button>
         <button
           class="chat-panel-action"
           :disabled="activeChatMessages.length === 0"
@@ -436,6 +456,17 @@ watch(
 .chat-panel-action:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Only ever rendered mid-run, so it can afford to be the loud control. */
+.chat-panel-action-stop {
+  border-color: var(--error-color, #c0392b);
+  color: var(--error-color, #c0392b);
+}
+
+.chat-panel-action-stop:hover:not(:disabled) {
+  background: var(--error-color, #c0392b);
+  color: white;
 }
 
 .chat-panel-close {

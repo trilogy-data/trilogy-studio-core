@@ -44,7 +44,7 @@
 
 <script setup lang="ts">
 import { ref, inject, computed, watch, onUnmounted } from 'vue'
-import trilogyIcon from '../static/trilogy.png'
+import trilogyIcon from '../static/trilogy.webp'
 import EditorCreatorInline from '../components/editor/EditorCreatorInline.vue'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import { getDefaultValueFromHash, URL_HASH_KEYS } from '../stores/urlStore'

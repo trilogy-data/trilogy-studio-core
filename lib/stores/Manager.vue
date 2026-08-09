@@ -52,6 +52,7 @@ import {
 } from '../data/credentialHelpers'
 import { useAnalyticsStore } from '../stores/analyticsStore.ts'
 import QueryResolver from './resolver'
+import { repairDashboardConnectionRefs } from '../dashboards/connectionResolution'
 import { provide, computed, ref, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import type { PropType } from 'vue'
 import type Storage from '../data/storage'
@@ -465,20 +466,30 @@ for (let source of props.storageSources) {
 const hydrationError = ref<unknown>(null)
 Promise.all(loadingPromises)
   .then(() => {
-    // One-time backfill for entities persisted before connectionId existed.
+    // One-time repair for entities whose connectionId is missing or stale.
     // Editors derive their id from existing fields in the constructor, so they
     // come up correct on their own. Dashboards and chats stored only the
     // display name; resolve it via the now-loaded connection store and stamp
     // the id so subsequent code paths can compare ids directly.
-    for (const dashboard of Object.values(props.dashboardStore.dashboards)) {
-      if (!dashboard.connectionId && dashboard.connection) {
-        const match = props.connectionStore.connectionByName(dashboard.connection)
-        if (match) {
-          dashboard.connectionId = match.id
-          dashboard.changed = true
-        }
-      }
-    }
+    //
+    // A *wrong* id is repaired too, not just an absent one. Importers have
+    // written ids that never resolved (e.g. a manifest import stamping
+    // `local:<name>` onto a dashboard whose connection is remote), and the
+    // exact-match consumers — cascade delete in ConnectionList, the
+    // getConnectionDashboards getter, the sidebar's connection grouping —
+    // silently mis-handle those: dashboards get orphaned on delete rather than
+    // cleaned up, and the sidebar renders them as a second group carrying the
+    // same display name. resolveDashboardConnectionId papers over the query
+    // path but none of those.
+    //
+    // Only ever written when the name resolves to a connection that actually
+    // exists: a dashboard whose connection is genuinely gone keeps its stored
+    // value, so it stays visible as its own group instead of being silently
+    // merged into a live connection.
+    repairDashboardConnectionRefs(
+      Object.values(props.dashboardStore.dashboards),
+      props.connectionStore,
+    )
     for (const chat of Object.values(props.chatStore.chats)) {
       if (!chat.dataConnectionId && chat.dataConnectionName) {
         const match = props.connectionStore.connectionByName(chat.dataConnectionName)
