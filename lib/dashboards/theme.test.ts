@@ -173,14 +173,6 @@ describe('resolveDashboardTheme — colors', () => {
   })
 })
 
-describe('resolveDashboardTheme — image export', () => {
-  it('floors the export border so a borderless theme still shows a card edge', () => {
-    // html2canvas ignores box-shadow, so a paper card would export invisible.
-    expect(resolve({ preset: 'paper' }).vars['--dashboard-export-border-width']).toBe('1px')
-    expect(resolve({ preset: 'default' }).vars['--dashboard-export-border-width']).toBe('1px')
-  })
-})
-
 describe('isSafeColor', () => {
   it('accepts the notations that describe a color', () => {
     for (const value of [

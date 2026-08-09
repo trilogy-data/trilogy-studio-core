@@ -458,10 +458,6 @@ export function resolveDashboardTheme(
     '--dashboard-chip-radius': corners.chip,
     '--dashboard-card-border-width': preset.borderWidth,
     '--dashboard-header-border-width': preset.borderWidth,
-    // PNG export redraws the card ring as a real border (html2canvas ignores
-    // box-shadow). A borderless, elevation-only theme would otherwise export as
-    // an invisible card on a same-colored canvas, so floor it at a hairline.
-    '--dashboard-export-border-width': preset.borderWidth === '0px' ? '1px' : preset.borderWidth,
     '--dashboard-card-shadow': dropShadow,
     '--dashboard-canvas-padding': density.canvasPadding,
     '--dashboard-header-padding': density.headerPadding,
