@@ -1,0 +1,27 @@
+{
+  "textCell": {
+    "height": 36,
+    "fontSize": "14px",
+    "lineHeight": "normal"
+  },
+  "pillCell": {
+    "height": 31,
+    "fontSize": "14px",
+    "lineHeight": "normal"
+  },
+  "pillSpan": {
+    "height": 14,
+    "fontSize": "14px",
+    "lineHeight": "normal"
+  },
+  "textGlyphs": 19,
+  "rowLoaded": 36,
+  "rowPilled": 31,
+  "rowMixed": 36,
+  "paraPill": {
+    "height": 13,
+    "fontSize": "13px",
+    "lineHeight": "22.75px"
+  },
+  "paraFontSize": "13px"
+}

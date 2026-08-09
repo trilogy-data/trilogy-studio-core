@@ -17,6 +17,7 @@ import type {
   FreeformData,
 } from '../dashboards/base'
 import { CELL_TYPES, type CellType, type MarkdownData } from '../dashboards/base'
+import { resolveDashboardConnectionId } from '../dashboards/connectionResolution'
 import {
   describeDashboardTheme,
   isSafeColor,
@@ -137,7 +138,7 @@ export class DashboardToolExecutor {
   }
 
   private get connectionName(): string {
-    return this.dashboard?.connectionId || this.dashboard?.connection || ''
+    return resolveDashboardConnectionId(this.dashboard, this.deps.connectionStore)
   }
 
   async executeToolCall(toolName: string, toolInput: Record<string, any>): Promise<ToolCallResult> {

@@ -120,7 +120,9 @@ function addDataReference(): void {
 }
 
 function addLoop(): void {
-  insertMarkdown('{{#each data}}\n- {{field_name}}\n{{/each}}')
+  // Loop *headers* are double-braced, the fields inside them single-braced —
+  // this snippet used to emit `{{field_name}}` for both.
+  insertMarkdown('{{#each data}}\n- {field_name}\n{{/each}}')
 }
 </script>
 
@@ -180,8 +182,8 @@ Template examples:
 - {field_name} - First row value
 - {data[0].field_name} - Specific row
 - {data.length} - Total rows
-- {{#each data}} {{field_name}} {{/each}} - Loop all
-- {{#each data limit=5}} {{field_name}} {{/each}} - Loop first 5"
+- {{#each data}} {field_name} {{/each}} - Loop all
+- {{#each data limit=5}} {field_name} {{/each}} - Loop first 5"
           class="markdown-editor"
         ></textarea>
       </div>

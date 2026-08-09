@@ -138,6 +138,12 @@ const chatInitialPrompt = ref<string | null>(null)
 const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore')
 const hasLlmConnection = computed(() => !!llmConnectionStore?.activeConnection)
 
+// The "get started" CTA replaces the grid only while the dashboard is empty
+// and the assistant is closed.
+const showEmptyCTA = computed(
+  () => !!dashboard.value && layout.value.length === 0 && !chatPanelOpen.value,
+)
+
 function toggleChatPanel() {
   chatPanelOpen.value = !chatPanelOpen.value
   if (!chatPanelOpen.value) {
@@ -493,10 +499,16 @@ async function renderDashboardToPng(): Promise<{
   // Dynamically import html2canvas only when needed
   const { default: html2canvas } = await import('html2canvas')
 
-  // Find the dashboard content element
+  // Find the dashboard content element. The agent loop lives in chatStore and
+  // outlives this component, so a run can keep issuing tool calls after the
+  // user switched tabs/screens and unmounted the dashboard. There is nothing
+  // on screen to photograph in that case — say so plainly rather than failing
+  // with a message that reads like a broken dashboard.
   const dashboardElement = gridContentRef.value
   if (!dashboardElement) {
-    throw new Error('Dashboard content not found')
+    throw new Error(
+      'the dashboard is not currently on screen (its tab is not the visible one), so there is nothing to render. Ask the user to reopen the dashboard, or continue without the screenshot.',
+    )
   }
 
   // Temporarily disable any hover effects and transitions for cleaner capture
@@ -663,14 +675,13 @@ async function captureDashboardImage(): Promise<{
 
     <div class="dashboard-body" :class="{ 'chat-open': chatPanelOpen }">
       <div class="dashboard-main">
-        <div
-          v-if="dashboard && layout.length === 0 && !chatPanelOpen"
-          class="empty-dashboard-wrapper"
-        >
+        <div v-if="showEmptyCTA" class="empty-dashboard-wrapper">
           <DashboardCTA :dashboard-id="dashboard.id" @start-chat-with-prompt="openChatWithPrompt" />
         </div>
 
-        <div v-else class="grid-container">
+        <!-- v-show, not v-if: the CTA must not unmount `.grid-content`, or the
+             screenshot capture (agent + manual export) loses its element. -->
+        <div v-show="!showEmptyCTA" class="grid-container">
           <div
             ref="gridContentRef"
             class="grid-content"

@@ -16,6 +16,7 @@ import {
   emptyItemDataResponse,
 } from '../dashboards/itemData'
 import type { DashboardModel } from '../dashboards/base'
+import { resolveDashboardConnectionId } from '../dashboards/connectionResolution'
 import type { DashboardQueryExecutor } from '../dashboards/dashboardQueryExecutor'
 import type { DashboardStoreType } from '../stores/dashboardStore'
 import type { ChatStoreType, ChatExecutionDependencies } from '../stores/chatStore'
@@ -188,10 +189,7 @@ export function getOrCreateHeadlessQueryExecutor(
 ): DashboardQueryExecutor {
   const { dashboardStore, connectionStore, editorStore, queryExecutionService } = stores
   const dashboardData = dashboardStore.dashboards[dashboardId]
-  const resolvedConnectionId =
-    dashboardData.connectionId ||
-    connectionStore.connectionByName(dashboardData.connection)?.id ||
-    dashboardData.connection
+  const resolvedConnectionId = resolveDashboardConnectionId(dashboardData, connectionStore)
   return dashboardStore.getOrCreateQueryExecutor(dashboardId, {
     queryExecutionService,
     connectionName: resolvedConnectionId,

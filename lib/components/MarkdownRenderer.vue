@@ -294,7 +294,9 @@ export default defineComponent({
   animation: shimmer 1.5s infinite linear;
   border-radius: 4px;
   filter: blur(0.5px);
-  vertical-align: middle;
+  /* Matches the inline style createLoadingPill emits, which reserves a full
+     line box via margins — `middle` would then extend the line box. */
+  vertical-align: top;
 }
 
 .md-code-container {

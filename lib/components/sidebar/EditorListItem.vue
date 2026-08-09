@@ -169,7 +169,9 @@ export default {
         }
         // Create a new model with the same name as the connection
         let model = modelConfigStore.newModelConfig(conn.name)
-        conn.model = model.name
+        // setModel, not a direct assignment: saveConnections only writes back
+        // connections flagged as changed.
+        conn.setModel(model.name)
 
         // await saveModels and saveConnections
         await saveModels()

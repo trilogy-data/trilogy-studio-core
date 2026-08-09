@@ -47,14 +47,37 @@ interface QueryWaiter {
   reject: (error: string) => void
 }
 
+/**
+ * The batch executor hands its per-query failure callbacks two different
+ * shapes: a query-level result object, where `error` is the message, and a
+ * batch-level QueryUpdate, where `error` is the boolean "this is an error"
+ * flag and the text lives in `message`. Reading `error` blindly turned the
+ * second shape into the literal string "true" on the item.
+ */
+interface BatchQueryFailure {
+  error?: string | boolean
+  message?: string
+}
+
+function describeBatchFailure(failure: BatchQueryFailure | string | null | undefined): string {
+  if (typeof failure === 'string') return failure
+  if (typeof failure?.error === 'string' && failure.error) return failure.error
+  if (typeof failure?.message === 'string' && failure.message) return failure.message
+  return 'Unknown error occurred'
+}
+
 export class DashboardQueryExecutor {
   private queryQueue: Map<string, QueuedQuery> = new Map()
   private activeQueries: Set<string> = new Set()
   private queryWaiters: Map<string, QueryWaiter> = new Map()
   // Track the latest query ID for each itemId
   private latestQueryByItemId: Map<string, string> = new Map()
-  // Track which itemIds are associated with each query ID (for cleanup)
-  private itemIdByQueryId: Map<string, string> = new Map()
+  // Which items each query is delivering for. Deduplication (findDuplicateQuery
+  // matches on query text/filters/parameters, deliberately NOT on itemId) means
+  // two items sharing a query share its id, so this is one-to-many. It used to
+  // be a plain Map<queryId, itemId>, which silently kept only whichever item
+  // registered last.
+  private itemIdsByQueryId: Map<string, Set<string>> = new Map()
 
   public queryExecutionService: DashboardExecutionService
   public connectionName: string
@@ -107,10 +130,14 @@ export class DashboardQueryExecutor {
     })
 
     this.activeQueries.forEach((queryId) => {
-      const itemIdForQuery = this.itemIdByQueryId.get(queryId)
-      if (itemIdForQuery === itemId && queryId !== currentLatestQueryId) {
-        queriesToCancel.push(queryId)
-      }
+      // A deduplicated query serves several items; it is only outdated for this
+      // one if it is not still the latest for any OTHER item it feeds.
+      const servedItems = this.itemIdsByQueryId.get(queryId)
+      if (!servedItems?.has(itemId) || queryId === currentLatestQueryId) return
+      const stillNeeded = [...servedItems].some(
+        (other) => other !== itemId && this.latestQueryByItemId.get(other) === queryId,
+      )
+      if (!stillNeeded) queriesToCancel.push(queryId)
     })
 
     // Cancel the identified queries
@@ -120,29 +147,74 @@ export class DashboardQueryExecutor {
     })
   }
 
-  /**
-   * Check if a query ID is the latest for its itemId
-   */
-  private isLatestQueryForItem(queryId: string): boolean {
-    const itemId = this.itemIdByQueryId.get(queryId)
-    if (!itemId) return false
+  /** Register that `queryId` will deliver results for `itemId`. */
+  private trackQueryForItem(itemId: string, queryId: string): void {
+    this.latestQueryByItemId.set(itemId, queryId)
+    const served = this.itemIdsByQueryId.get(queryId)
+    if (served) {
+      served.add(itemId)
+    } else {
+      this.itemIdsByQueryId.set(queryId, new Set([itemId]))
+    }
+  }
 
-    const latestQueryId = this.latestQueryByItemId.get(itemId)
-    return latestQueryId === queryId
+  /**
+   * Is this query still the one whose results the item wants?
+   *
+   * Takes the itemId rather than reverse-mapping from the query, because a
+   * deduplicated query serves several items and the answer differs per item.
+   */
+  private isLatestQueryForItem(itemId: string, queryId: string): boolean {
+    return this.latestQueryByItemId.get(itemId) === queryId
+  }
+
+  private isQueryInFlight(queryId: string): boolean {
+    return this.queryQueue.has(queryId) || this.activeQueries.has(queryId)
+  }
+
+  /**
+   * Stop the spinner for every item a finished query was feeding.
+   *
+   * `loading` is otherwise only ever cleared as a side effect of delivering
+   * `results` or an `error`, and both deliveries are skipped when the result is
+   * judged outdated — so a discarded result used to leave the item spinning
+   * with nothing left to ever clear it. There is no timeout behind this.
+   *
+   * An item is left spinning only while the query it is actually waiting for —
+   * `latestQueryByItemId` — is genuinely still queued or running. That covers
+   * both cases that must not settle early: a second refresh started while this
+   * one was in flight, and this same query re-queued for a retry. A newer query
+   * that has already finished or been cancelled does not count, or the spinner
+   * would outlive every query again.
+   *
+   * Callers must remove the query from `activeQueries` first, so that a query
+   * finishing normally does not see itself as still in flight.
+   */
+  private settleQueryLoading(queryId: string): void {
+    const servedItems = this.itemIdsByQueryId.get(queryId)
+    if (!servedItems) return
+
+    for (const itemId of servedItems) {
+      const awaited = this.latestQueryByItemId.get(itemId)
+      if (awaited && this.isQueryInFlight(awaited)) continue
+      this.setItemData(itemId, this.dashboardId, { loading: false })
+    }
   }
 
   /**
    * Cleanup tracking data for a completed query
    */
   private cleanupQueryTracking(queryId: string): void {
-    const itemId = this.itemIdByQueryId.get(queryId)
-    if (itemId) {
+    const servedItems = this.itemIdsByQueryId.get(queryId)
+    if (!servedItems) return
+
+    for (const itemId of servedItems) {
       // Only remove from latestQueryByItemId if this was indeed the latest query
       if (this.latestQueryByItemId.get(itemId) === queryId) {
         this.latestQueryByItemId.delete(itemId)
       }
-      this.itemIdByQueryId.delete(queryId)
     }
+    this.itemIdsByQueryId.delete(queryId)
   }
 
   /**
@@ -182,28 +254,63 @@ export class DashboardQueryExecutor {
   }
 
   /**
-   * Queue a single query for execution
+   * The text an item will actually execute.
+   *
+   * Deliberately the single expression both the empty-query guard and the
+   * request body read, so the two can never disagree about whether an item has
+   * a query — the guard used to test `structured_content.query` while the
+   * request fell back to `content`.
    */
-  public runSingle(itemId: string): string {
-    let inputs = this.getItemData(itemId, this.dashboardId)
-    const itemFilters = this.getItemData(itemId, this.dashboardId).filters || []
-    let filters = itemFilters.map((filter) => filter.value)
+  private getItemQueryText(inputs: GridItemDataResponse): string {
+    return (inputs.structured_content ? inputs.structured_content.query : inputs.content) || ''
+  }
+
+  /**
+   * Build, deduplicate, queue and track the query for one item.
+   *
+   * Shared by runSingle and runBatch, which differ only in how the queued query
+   * reaches the wire: runSingle starts it as soon as there is capacity, runBatch
+   * leaves it for the debounced processBatch sweep.
+   *
+   * Returns the query id, or null when the item has nothing to run.
+   */
+  private enqueueItemQuery(itemId: string, executeImmediately: boolean): string | null {
+    const inputs = this.getItemData(itemId, this.dashboardId)
+    const queryText = this.getItemQueryText(inputs)
+
+    // Markdown and freeform items can legitimately carry no query. Queuing one
+    // anyway raises `loading` with nothing behind it to ever lower it again —
+    // and nothing times out — so the item spins forever.
+    if (queryText.trim().length === 0) {
+      this.setItemData(itemId, this.dashboardId, {
+        error: null,
+        loading: false,
+      })
+      return null
+    }
+
+    const itemFilters = inputs.filters || []
     // Collect parameterised values from cross-filter entries and merge with any
     // item-level parameters so they all travel to the backend together.
     const filterParameters: Record<string, string | number> = Object.assign(
       {},
       ...itemFilters.map((f) => f.parameters || {}),
     )
+
     this.setItemData(itemId, this.dashboardId, {
       loading: true,
       error: null,
     })
 
-    let request = {
+    // Assigned below, before any callback can fire.
+    let finalQueryId: string
+    const isCurrent = () => this.isLatestQueryForItem(itemId, finalQueryId)
+
+    const request: QueryRequest = {
       dashboardId: this.dashboardId,
       queryInput: {
-        text: inputs.structured_content ? inputs.structured_content.query : inputs.content,
-        extraFilters: filters,
+        text: queryText,
+        extraFilters: itemFilters.map((filter) => filter.value),
         parameters: { ...(inputs.parameters || {}), ...filterParameters } as Record<string, any>,
         extraContent: inputs.rootContent || [],
       },
@@ -211,7 +318,7 @@ export class DashboardQueryExecutor {
       itemId,
       onSuccess: (result: any) => {
         // Only update if this is still the latest query for this itemId
-        if (this.isLatestQueryForItem(finalQueryId)) {
+        if (isCurrent()) {
           this.setItemData(itemId, this.dashboardId, {
             results: result.results,
           })
@@ -221,15 +328,13 @@ export class DashboardQueryExecutor {
       },
       onError: (error: string) => {
         // Only update if this is still the latest query for this itemId
-        if (this.isLatestQueryForItem(finalQueryId)) {
+        if (isCurrent()) {
           this.setItemData(itemId, this.dashboardId, { error })
         } else {
           console.log(`Ignoring outdated query error for itemId ${itemId}`)
         }
       },
-      onProgress: (_: any) => {
-        ;() => {}
-      },
+      onProgress: (_: any) => {},
     }
 
     // Generate a potential query ID first
@@ -240,10 +345,9 @@ export class DashboardQueryExecutor {
 
     // Check for duplicate queries BEFORE setting up tracking
     const existingQuery = this.findDuplicateQuery(request)
-    let finalQueryId: string
 
     if (existingQuery) {
-      console.log(`Deduplicating query for ${request.itemId}`)
+      console.log(`Deduplicating query for ${itemId}`)
       finalQueryId = existingQuery.id
 
       // Add callbacks to existing query
@@ -261,123 +365,41 @@ export class DashboardQueryExecutor {
       this.queryQueue.set(finalQueryId, queuedQuery)
 
       // Execute immediately if capacity allows
-      if (this.activeQueries.size < this.maxConcurrentQueries) {
-        console.log(`Executing query immediately for ${request.itemId}`)
+      if (executeImmediately && this.activeQueries.size < this.maxConcurrentQueries) {
+        console.log(`Executing query immediately for ${itemId}`)
         this.executeQuery(finalQueryId)
       }
     }
 
     // NOW set up tracking for the final query (whether new or deduplicated)
-    this.latestQueryByItemId.set(itemId, finalQueryId)
-    this.itemIdByQueryId.set(finalQueryId, itemId)
+    this.trackQueryForItem(itemId, finalQueryId)
 
     return finalQueryId
   }
 
   /**
-   * Queue multiple queries for batch execution with prioritization
+   * Queue a single query for execution.
+   *
+   * Returns null when the item has no query to run.
+   */
+  public runSingle(itemId: string): string | null {
+    return this.enqueueItemQuery(itemId, true)
+  }
+
+  /**
+   * Queue multiple queries for batch execution with prioritization.
+   *
+   * Items with no query are settled in place and contribute no query id.
    */
   public runBatch(itemIds: string[]): string[] {
-    const queryIds: string[] = []
-
     // Clear any pending batch timeout
     if (this.batchTimeout) {
       clearTimeout(this.batchTimeout)
     }
 
-    // Process each itemId similar to runSingle
-    itemIds.forEach((itemId) => {
-      let inputs = this.getItemData(itemId, this.dashboardId)
-      const batchItemFilters = inputs.filters || []
-      let filters = batchItemFilters.map((filter) => filter.value)
-      const batchFilterParameters: Record<string, string | number> = Object.assign(
-        {},
-        ...batchItemFilters.map(
-          (f: { parameters?: Record<string, string | number> }) => f.parameters || {},
-        ),
-      )
-      let query = inputs.structured_content.query
-      if (query.trim().length === 0) {
-        this.setItemData(itemId, this.dashboardId, {
-          error: null,
-          loading: false,
-        })
-        return
-      }
-      this.setItemData(itemId, this.dashboardId, {
-        loading: true,
-        error: null,
-      })
-
-      let request = {
-        dashboardId: this.dashboardId,
-        queryInput: {
-          text: inputs.structured_content ? inputs.structured_content.query : inputs.content,
-          extraFilters: filters,
-          parameters: { ...(inputs.parameters || {}), ...batchFilterParameters } as Record<
-            string,
-            any
-          >,
-          extraContent: inputs.rootContent || [],
-        },
-        priority: this.getDefaultPriority(itemId),
-        itemId,
-        onSuccess: (result: any) => {
-          // Only update if this is still the latest query for this itemId
-          if (this.isLatestQueryForItem(finalQueryId)) {
-            this.setItemData(itemId, this.dashboardId, {
-              results: result.results,
-            })
-          } else {
-            console.log(`Ignoring outdated batch query result for itemId ${itemId}`)
-          }
-        },
-        onError: (error: string) => {
-          // Only update if this is still the latest query for this itemId
-          if (this.isLatestQueryForItem(finalQueryId)) {
-            this.setItemData(itemId, this.dashboardId, { error })
-          } else {
-            console.log(`Ignoring outdated batch query error for itemId ${itemId}`)
-          }
-        },
-        onProgress: (_: any) => {
-          ;() => {}
-        },
-      }
-
-      // Generate a potential query ID first
-      const potentialQueryId = this.generateQueryId(request)
-
-      // Cancel any pending queries for this itemId FIRST
-      this.cancelPendingQueriesForItem(itemId)
-
-      // Check for duplicates BEFORE setting up tracking
-      const existingQuery = this.findDuplicateQuery(request)
-      let finalQueryId: string
-
-      if (existingQuery) {
-        console.log(`Deduplicating batch query for ${request.itemId}`)
-        finalQueryId = existingQuery.id
-        this.addCallbacksToExistingQuery(existingQuery, request)
-      } else {
-        // Create new query since no duplicate was found
-        finalQueryId = potentialQueryId
-        const queuedQuery: QueuedQuery = {
-          ...request,
-          id: finalQueryId,
-          timestamp: Date.now(),
-          retryCount: 0,
-        }
-
-        this.queryQueue.set(finalQueryId, queuedQuery)
-      }
-
-      // NOW set up tracking for the final query (whether new or deduplicated)
-      this.latestQueryByItemId.set(itemId, finalQueryId)
-      this.itemIdByQueryId.set(finalQueryId, itemId)
-
-      queryIds.push(finalQueryId)
-    })
+    const queryIds = itemIds
+      .map((itemId) => this.enqueueItemQuery(itemId, false))
+      .filter((queryId): queryId is string => queryId !== null)
 
     // Schedule batch execution with delay to allow for more queries to be added
     this.batchTimeout = setTimeout(() => {
@@ -427,7 +449,7 @@ export class DashboardQueryExecutor {
 
     this.queryQueue.clear()
     this.latestQueryByItemId.clear()
-    this.itemIdByQueryId.clear()
+    this.itemIdsByQueryId.clear()
 
     if (this.batchTimeout) {
       clearTimeout(this.batchTimeout)
@@ -594,6 +616,8 @@ export class DashboardQueryExecutor {
               this.queryWaiters.delete(queryArgs.label)
             }
             this.activeQueries.delete(queryArgs.label)
+            // After the delete, so a query cannot count itself as "in flight".
+            this.settleQueryLoading(queryArgs.label)
             this.cleanupQueryTracking(queryArgs.label)
           },
         ]),
@@ -601,14 +625,14 @@ export class DashboardQueryExecutor {
       let errorCallbacks = Object.fromEntries(
         queryArgsList.map((queryArgs) => [
           queryArgs.label,
-          (failure: { error?: string } | string) => {
-            const errorMessage =
-              typeof failure === 'string' ? failure : failure?.error || 'Unknown error occurred'
+          (failure: BatchQueryFailure | string) => {
+            const errorMessage = describeBatchFailure(failure)
             let matched = validQueries.find((q) => q.id === queryArgs.label)
             if (matched) {
               this.handleQueryError(matched, errorMessage)
             }
             this.activeQueries.delete(queryArgs.label)
+            this.settleQueryLoading(queryArgs.label)
             this.cleanupQueryTracking(queryArgs.label)
           },
         ]),
@@ -665,6 +689,7 @@ export class DashboardQueryExecutor {
           // Max retries reached
           this.handleQueryError(queuedQuery, errorMessage)
           this.activeQueries.delete(queryId)
+          this.settleQueryLoading(queryId)
           this.cleanupQueryTracking(queryId)
         }
       }
@@ -764,6 +789,8 @@ export class DashboardQueryExecutor {
       }
     } finally {
       this.activeQueries.delete(queryId)
+
+      this.settleQueryLoading(queryId)
 
       // Clean up tracking data when query completes
       this.cleanupQueryTracking(queryId)

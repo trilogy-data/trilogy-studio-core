@@ -17,6 +17,7 @@ import {
   type DimensionClick,
 } from '../../dashboards/base'
 import type { DashboardTheme } from '../../dashboards/theme'
+import { resolveDashboardConnectionId } from '../../dashboards/connectionResolution'
 import type { CompletionItem } from '../../stores/resolver'
 import type {
   DashboardImport,
@@ -448,10 +449,7 @@ export function useDashboard(
       throw new Error('Dashboard not found or not initialized')
     if (!queryExecutionService) throw new Error('Query execution service not found')
     let dashboardData = dashboardStore.dashboards[dashboardId]
-    const resolvedConnectionId =
-      dashboardData.connectionId ||
-      connectionStore.connectionByName(dashboardData.connection)?.id ||
-      dashboardData.connection
+    const resolvedConnectionId = resolveDashboardConnectionId(dashboardData, connectionStore)
     const executor = dashboardStore.getOrCreateQueryExecutor(dashboardId, {
       queryExecutionService,
       connectionName: resolvedConnectionId,
@@ -482,9 +480,10 @@ export function useDashboard(
     if (!dashboard.value) return undefined
 
     if (itemId) {
+      // null when the item has no query to run — same as no executor, for callers.
       const queryId = dashboardStore.getQueryExecutor(dashboard.value.id)?.runSingle(itemId)
       emit.dimensionsUpdate(itemId)
-      return queryId
+      return queryId ?? undefined
     }
 
     // refresh them all

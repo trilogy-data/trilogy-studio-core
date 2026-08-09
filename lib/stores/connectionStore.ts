@@ -217,15 +217,27 @@ const useConnectionStore = defineStore('connections', {
       const conn = this.connections[id]
       const modelStore = useModelConfigStore()
       const editorStore = useEditorStore()
-      let sources: ContentInput[] =
-        conn && conn.model
-          ? modelStore.models[conn.model].sources.map((source) => ({
-              alias: source.alias,
-              contents: editorStore.editors[source.editor]
-                ? editorStore.editors[source.editor].contents
-                : '',
-            }))
-          : []
+      if (!conn || !conn.model) {
+        return [] as ContentInput[]
+      }
+      // A connection can name a model that is not in the store: remote models
+      // are not persisted, and ensureConnectionModel's rehydration returns
+      // false when the backing store is unregistered or unreachable. This is on
+      // the path of every query and LLM tool call, so it degrades to no sources
+      // rather than throwing a TypeError mid-execution.
+      const model = modelStore.models[conn.model]
+      if (!model) {
+        console.warn(
+          `Connection "${conn.name}" references model "${conn.model}", which is not loaded; running with no model sources.`,
+        )
+        return [] as ContentInput[]
+      }
+      const sources: ContentInput[] = model.sources.map((source) => ({
+        alias: source.alias,
+        contents: editorStore.editors[source.editor]
+          ? editorStore.editors[source.editor].contents
+          : '',
+      }))
       return sources
     },
     /**

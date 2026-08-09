@@ -235,6 +235,93 @@ Current user: {name}`
     })
   })
 
+  /**
+   * Loop headers are double-braced but the fields inside them single-braced,
+   * and the loading and loaded passes each used to substitute only one of the
+   * two spellings. A markdown item therefore rendered fine in one state and
+   * flashed its raw `{{field}}` / `{field}` source in the other while
+   * refreshing. Whichever spelling is authored, neither state may leak braces.
+   */
+  describe('Brace-spelling parity between loading and loaded', () => {
+    it.each([
+      ['single-braced fields', '{{#each data}}- {name}\n{{/each}}'],
+      ['double-braced fields', '{{#each data}}- {{name}}\n{{/each}}'],
+    ])('renders %s with no raw source in either state', (_label, template) => {
+      const loadingResult = renderMarkdown(template, sampleData, true)
+      expect(loadingResult).toContain('loading-pill')
+      expect(loadingResult).not.toContain('name')
+
+      const loadedResult = renderMarkdown(template, sampleData, false)
+      expect(loadedResult).toContain('John')
+      expect(loadedResult).toContain('Jane')
+      expect(loadedResult).not.toContain('{')
+      expect(loadedResult).not.toContain('}')
+    })
+
+    it.each([
+      ['single-braced scalar', '{name}'],
+      ['double-braced scalar', '{{name}}'],
+    ])('substitutes a %s outside a loop in both states', (_label, template) => {
+      expect(renderMarkdown(template, sampleData, true)).toContain('loading-pill')
+      expect(renderMarkdown(template, sampleData, false)).toContain('John')
+    })
+
+    it('leaves an unmatched loop directive alone rather than substituting it', () => {
+      const result = renderMarkdown('{{/each}}', sampleData, false)
+      expect(result).toContain('{{/each}}')
+    })
+  })
+
+  /**
+   * Substitution runs before markdown conversion, so a pill is already sitting
+   * in the cell text by the time the table builder escapes it — and escaping is
+   * right for data, so the pill has to be hidden from that pass rather than the
+   * escaping relaxed. Otherwise the cell renders the literal `<span
+   * class="loading-pill" …>` source.
+   */
+  describe('Loading pills inside tables', () => {
+    it('renders a live pill in a static table cell, not escaped source', () => {
+      const template = '| Metric | Value |\n| --- | --- |\n| Headcount | {name} |'
+      const result = renderMarkdown(template, sampleData, true)
+
+      expect(result).toContain('<td style="text-align: left"><span class="loading-pill"')
+      expect(result).not.toContain('&lt;span')
+    })
+
+    it('renders live pills in a looped table body', () => {
+      const template = '| Name |\n| --- |\n{{#each data}}| {name} |\n{{/each}}'
+      const result = renderMarkdown(template, sampleData, true)
+
+      expect(result).toContain('<span class="loading-pill"')
+      expect(result).not.toContain('&lt;span')
+    })
+
+    /**
+     * jsdom has no layout engine, so this pins the emitted box rather than the
+     * measured height. Verified in Chromium: with these three pieces a table
+     * row is 36px whether it holds pills or text; without them a pill-only row
+     * collapses to 31px and the table jumps when results land.
+     */
+    it('reserves a full line box so rows do not resize when results land', () => {
+      const result = renderMarkdown('{name}', sampleData, true)
+
+      // Pads the bar's margin box out to one line without resizing the bar.
+      expect(result).toContain('margin: calc((1lh - 1em) / 2) 0')
+      // `middle` would extend the line box once the margin box is a line tall.
+      expect(result).toContain('vertical-align: top')
+      // A real text node, or a pill-only line box collapses to the bar height.
+      expect(result).toContain('</span>​')
+    })
+
+    it('still escapes table data that is not generated markup', () => {
+      const template = '| A |\n| --- |\n| <script>alert(1)</script> |'
+      const result = renderMarkdown(template, sampleData, false)
+
+      expect(result).toContain('&lt;script&gt;')
+      expect(result).not.toContain('<script>')
+    })
+  })
+
   describe('Loading Performance', () => {
     it('should not generate excessive loading items for large limits', () => {
       const template = '{{#each data limit=100}}{{name}}{{/each}}'

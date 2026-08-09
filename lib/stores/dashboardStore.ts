@@ -83,9 +83,24 @@ export const useDashboardStore = defineStore('dashboards', {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)
       }
 
-      // Return existing executor if it exists
+      // Return existing executor if it exists.
+      //
+      // Its connection is re-synced from the caller's freshly resolved value
+      // first. Executors are cached for the life of the dashboard, so an id
+      // resolved before the connection store finished hydrating — or before a
+      // fork was given its connectionId — otherwise stuck permanently, and
+      // every query on that dashboard failed with "Connection <name> not
+      // found." while the header (which reads the dashboard, not the executor)
+      // showed a perfectly good connection.
       if (this.queryExecutors[dashboardId]) {
-        return this.queryExecutors[dashboardId]
+        const existing = this.queryExecutors[dashboardId]
+        if (
+          dependencies.connectionName &&
+          existing.connectionName !== dependencies.connectionName
+        ) {
+          existing.setConnection(dependencies.connectionName)
+        }
+        return existing
       }
 
       // Create new executor
@@ -201,6 +216,7 @@ export const useDashboardStore = defineStore('dashboards', {
         id: newId,
         name: newId,
         connection: existingDashboard.connection,
+        connectionId: existingDashboard.connectionId,
         storage: existingDashboard.storage,
         state: 'editing',
       })
@@ -259,6 +275,9 @@ export const useDashboardStore = defineStore('dashboards', {
         id: newId,
         name: newId,
         connection: parent.connection,
+        // Without the id the fork falls back to matching the parent's display
+        // name, which only works once the connection store has hydrated.
+        connectionId: parent.connectionId,
         storage: parent.storage,
         state: 'editing',
         parentDashboardId: parentId,
