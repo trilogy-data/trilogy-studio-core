@@ -277,7 +277,7 @@ MAP_DEBUG = {
 def test_map_access():
     query = QueryInSchema.model_validate(MAP_DEBUG)
     dialect = get_dialect_generator(query.dialect)
-    final, columns, _, _ = generate_query_core(query, dialect)
+    _final, columns, _, _ = generate_query_core(query, dialect)
     assert columns[0].datatype.value == "int"
 
 

@@ -327,10 +327,10 @@ def run_trilogy_query(command: str, connection: str) -> QueryResult:
     if not result:
         return QueryResult(headers=[], results=[])
     headers: list[QueryHeader] = []
-    if isinstance(parsed, ProcessedRawSQLStatement) or isinstance(parsed, ProcessedValidateStatement):
+    if isinstance(parsed, (ProcessedRawSQLStatement, ProcessedValidateStatement)):
         headers = [
             QueryHeader(name=col, datatype=DataType.UNKNOWN.name)
-            for col in result.keys()
+            for col in result
         ]
     elif isinstance(
         parsed,

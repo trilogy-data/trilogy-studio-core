@@ -187,7 +187,7 @@ def run():
 
     if os.environ.get("in-ci"):
         print("Running in a unit test, exiting")
-        exit(0)
+        sys.exit(0)
     elif getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         print("running in a PyInstaller bundle")
 
@@ -220,7 +220,7 @@ def run():
         run()
     except Exception as e:
         print(f"Server is shutting down due to {e}")
-        exit(1)
+        sys.exit(1)
 
 
 @cli.command()

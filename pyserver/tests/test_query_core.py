@@ -37,7 +37,7 @@ def test_show_statement():
             },
         }
     )
-    target, columns, results, _ = generate_query_core(query, DuckDBDialect())
+    _target, _columns, results, _ = generate_query_core(query, DuckDBDialect())
     assert len(results) == 1
 
 

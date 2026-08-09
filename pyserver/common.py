@@ -126,7 +126,7 @@ def flatten_lineage(
 
     # enrich block
     if isinstance(input, Concept) and input.lineage:
-        if not depth == 0:
+        if depth != 0:
             chain += [LineageItem(token="<-", depth=depth)]
         chain += flatten_lineage(input.lineage, depth + 1)
 

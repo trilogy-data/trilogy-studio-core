@@ -144,7 +144,7 @@ def source_to_model_source(
             f"Unable to process file '{source.alias}', parsing error: {e}"
         ) from e
 
-    for skey, sconcept in env.concepts.items():
+    for sconcept in env.concepts.values():
         # don't show private concepts
         if sconcept.name.startswith("_"):
             continue
