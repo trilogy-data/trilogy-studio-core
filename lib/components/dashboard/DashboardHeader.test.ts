@@ -76,10 +76,12 @@ describe('DashboardHeader connection selector', () => {
 
   it('still selects when a legacy dashboard hands over a display name', () => {
     const wrapper = mountHeader(FAA.name)
+    const select = wrapper.get('[data-testid="connection-selector"]')
 
-    // The value can't match — options are ids — but the name must at least
-    // resolve for the tooltip rather than leaking the raw prop.
-    expect(wrapper.get('[data-testid="connection-selector"]').attributes('title')).toBe(FAA.name)
+    // Options are ids, so the raw name can't match one — it has to be resolved
+    // to the id before binding, or the browser renders the picker blank.
+    expect((select.element as HTMLSelectElement).value).toBe(FAA.id)
+    expect(select.attributes('title')).toBe(FAA.name)
     wrapper.unmount()
   })
 
@@ -91,6 +93,37 @@ describe('DashboardHeader connection selector', () => {
       .findAll('option')
       .map((o) => o.attributes('value'))
     expect(values).not.toContain(NO_MODEL.id)
+    wrapper.unmount()
+  })
+
+  it('offers the dashboard own connection even when it has no model', () => {
+    // A connection loses (or has yet to gain) its model config — filtering it
+    // out left the bound value matching no option, which is the blank picker.
+    const wrapper = mountHeader(NO_MODEL.id)
+    const select = wrapper.get('[data-testid="connection-selector"]')
+
+    expect(select.findAll('option').map((o) => o.attributes('value'))).toContain(NO_MODEL.id)
+    expect((select.element as HTMLSelectElement).value).toBe(NO_MODEL.id)
+    wrapper.unmount()
+  })
+
+  it('names a connection that is gone rather than rendering blank', () => {
+    const wrapper = mountHeader('local:deleted-thing')
+    const select = wrapper.get('[data-testid="connection-selector"]')
+    const placeholder = select.findAll('option')[0]
+
+    expect(placeholder.attributes('value')).toBe('local:deleted-thing')
+    expect(placeholder.attributes('disabled')).toBeDefined()
+    expect(placeholder.text()).toContain('unavailable')
+    expect((select.element as HTMLSelectElement).value).toBe('local:deleted-thing')
+    wrapper.unmount()
+  })
+
+  it('renders nothing selected when the dashboard names no connection', () => {
+    const wrapper = mountHeader('')
+    const select = wrapper.get('[data-testid="connection-selector"]')
+
+    expect(select.findAll('option').map((o) => o.attributes('value'))).toEqual([FAA.id, OTHER.id])
     wrapper.unmount()
   })
 })

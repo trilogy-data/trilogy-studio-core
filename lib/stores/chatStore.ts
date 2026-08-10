@@ -7,12 +7,13 @@ import type QueryExecutionService from './queryExecutionService'
 import type { EditorStoreType } from './editorStore'
 import type { ProjectStoreType } from './projectStore'
 import type { DashboardStoreType } from './dashboardStore'
-import { ChatToolExecutor } from '../llm/chatToolExecutor'
 import { OverseerToolExecutor } from '../llm/overseerToolExecutor'
 import { ArchitectToolExecutor } from '../llm/architectToolExecutor'
 import { summarizeSubchat } from '../llm/subchatSummarize'
 import type { ToolCallResult } from '../llm/sharedToolHelpers'
-import { buildChatAgentSystemPrompt, CHAT_TOOLS } from '../llm/chatAgentPrompt'
+import { buildChatAgentSystemPrompt } from '../llm/chatAgentPrompt'
+import { getSharedRegistry } from '../llm/registry'
+import { compactChat, COMPACTION_THRESHOLD_TOKENS } from '../llm/compactConversation'
 import {
   buildOverseerSystemPrompt,
   OVERSEER_TOOLS,
@@ -32,15 +33,17 @@ import {
 } from '../llm/toolLoopCore'
 
 /** Overrides that let a caller plug custom tools and a custom tool executor
- *  into the persistent executeMessage pipeline. Used by DashboardChatPanel so
- *  dashboard chats get persistence + background execution without polluting
- *  the generic chat agent. */
+ *  into the persistent executeMessage pipeline. Used by the dashboard agent
+ *  runtime and the global chat runtime so those agents get persistence +
+ *  background execution without polluting the generic chat agent. */
 export interface ExecuteMessageOverrides {
   tools: LLMToolDefinition[]
   executeToolCall: (toolName: string, toolInput: Record<string, any>) => Promise<ToolCallResult>
   buildSystemPrompt: () => string
   noToolCallReminder?: string
   terminateOnNoToolCall?: boolean
+  /** Cap on tool-loop iterations for this run (default 50). */
+  maxIterations?: number
 }
 
 /** Rate limit backoff state */
@@ -183,6 +186,12 @@ export const useChatStore = defineStore('chats', {
     updateChatName(chatId: string, name: string): void {
       if (this.chats[chatId]) {
         this.chats[chatId].setName(name)
+      }
+    },
+
+    updateChatLLMConnection(chatId: string, llmConnectionName: string): void {
+      if (this.chats[chatId]) {
+        this.chats[chatId].setLLMConnection(llmConnectionName)
       }
     },
 
@@ -399,6 +408,24 @@ export const useChatStore = defineStore('chats', {
         }
       }
 
+      // Auto-compact BEFORE starting the loop (never mid-loop: the running
+      // loop holds its own history copy) when the last request's context grew
+      // past the threshold. Failure is non-fatal — the turn proceeds uncompacted.
+      if ((chat.lastContextTokens ?? 0) > COMPACTION_THRESHOLD_TOKENS) {
+        const provider = llmConnectionStore.connections[llmConnectionName]
+        if (provider) {
+          try {
+            const compacted = await compactChat(provider, chat)
+            if (compacted) {
+              // Reset so the trigger re-arms only after the next real request.
+              chat.lastContextTokens = undefined
+            }
+          } catch (err) {
+            console.error('Automatic conversation compaction failed:', err)
+          }
+        }
+      }
+
       // Initialize execution state
       this.startExecution(chatId)
 
@@ -432,6 +459,15 @@ export const useChatStore = defineStore('chats', {
             )
             // Clear backoff state after successful completion
             this.clearRateLimitBackoff(chatId)
+            // Track approximate context size (prompt + cached input) so the
+            // auto-compaction trigger knows when the conversation has grown.
+            if (result.usage) {
+              chat.lastContextTokens =
+                result.usage.promptTokens +
+                (result.usage.cacheCreationTokens ?? 0) +
+                (result.usage.cacheReadTokens ?? 0)
+              chat.changed = true
+            }
             return result
           },
         }
@@ -453,7 +489,9 @@ export const useChatStore = defineStore('chats', {
               })
             }
           },
-          getMessages: () => chat.messages,
+          // getLLMMessages excludes compaction-archived history — this is the
+          // single history-construction point for the loop across all modes.
+          getMessages: () => chat.getLLMMessages(),
         }
 
         // Build tool executor: caller-provided override > overseer-kind
@@ -494,12 +532,19 @@ export const useChatStore = defineStore('chats', {
                   return { getToolExecutor: () => exec }
                 })()
               : (() => {
-                  const toolExecutor = new ChatToolExecutor(
-                    queryExecutionService,
-                    connectionStore,
-                    this,
-                    editorStore,
-                    chatId,
+                  // Default chat path goes through the tool registry: same
+                  // ChatToolExecutor underneath (session-memoized), but
+                  // dispatch and unknown-tool errors come from the registry.
+                  const toolExecutor = getSharedRegistry().createExecutor(
+                    'chat',
+                    {
+                      connectionStore,
+                      editorStore,
+                      chatStore: this,
+                      queryExecutionService,
+                      ...(deps.dashboardStore ? { dashboardStore: deps.dashboardStore } : {}),
+                    },
+                    { chatId, cache: new Map() },
                   )
                   return { getToolExecutor: () => toolExecutor }
                 })()
@@ -530,7 +575,7 @@ export const useChatStore = defineStore('chats', {
             ? OVERSEER_TOOLS
             : chat.kind === 'architect'
               ? ARCHITECT_TOOLS
-              : CHAT_TOOLS
+              : getSharedRegistry().getToolsetForContext('chat')
 
         await runToolLoop(
           message,
@@ -541,7 +586,7 @@ export const useChatStore = defineStore('chats', {
           stateUpdater,
           {
             tools,
-            maxIterations: 50,
+            maxIterations: options.overrides?.maxIterations ?? 50,
             noToolCallReminder:
               options.overrides?.noToolCallReminder ??
               'You must call a tool to proceed. If you are finished, call return_to_user with a summary of what was done. Do not respond with text only.',

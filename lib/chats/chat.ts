@@ -43,9 +43,13 @@ export interface ChatMessage extends LLMMessage {
   // executedToolCalls stores tool calls with their execution results for UI display
   // The inherited toolCalls/toolResults from LLMMessage are used for LLM history
   executedToolCalls?: ChatToolCall[]
+  /** Marks the hidden summary message a compaction inserted (UI badge). */
+  compaction?: boolean
 }
 
-export type ChatSource = 'user' | 'dashboard'
+/** 'editor' chats back the inline refinement surface; they are ephemeral and
+ *  excluded from the global panel's conversation list. */
+export type ChatSource = 'user' | 'dashboard' | 'editor'
 
 /**
  * Conversational role of a chat in the explorer's overseer/subchat model.
@@ -71,7 +75,7 @@ export interface ChatSessionData {
   imports: ChatImport[] // Data source imports for this chat
   createdAt: Date
   updatedAt: Date
-  storage: 'local' | 'github' | 'remote'
+  storage: 'local' | 'github' | 'remote' | 'ephemeral'
   /** What created this chat. 'user' is the default; 'dashboard' means it's
    * owned by a DashboardModel and should be hidden from the main chat list by default. */
   source: ChatSource
@@ -89,6 +93,14 @@ export interface ChatSessionData {
    * execution finishes. Used by the overseer flow: when a subchat completes
    * while its parent is busy, the result waits here until the parent is idle. */
   pendingInjections: string[]
+  /** Latest navigation-context note awaiting delivery. Written (latest-wins)
+   * by the navigation context injector as the user moves between screens, and
+   * materialized as a hidden user message at the start of the next send —
+   * navigation never wakes the agent on its own. */
+  pendingContextNote?: string | null
+  /** Approximate input-context size of the most recent LLM request (prompt +
+   * cached tokens). Drives the automatic compaction trigger. */
+  lastContextTokens?: number
   changed: boolean
   deleted: boolean
 }
@@ -105,13 +117,15 @@ export class Chat implements ChatSessionData {
   imports: ChatImport[]
   createdAt: Date
   updatedAt: Date
-  storage: 'local' | 'github' | 'remote'
+  storage: 'local' | 'github' | 'remote' | 'ephemeral'
   source: ChatSource
   sourceRefId?: string | null
   kind: ChatKind
   parentChatId?: string | null
   parentProjectId?: string | null
   pendingInjections: string[]
+  pendingContextNote?: string | null
+  lastContextTokens?: number
   changed: boolean
   deleted: boolean
 
@@ -134,6 +148,8 @@ export class Chat implements ChatSessionData {
     this.parentChatId = data.parentChatId ?? null
     this.parentProjectId = data.parentProjectId ?? null
     this.pendingInjections = data.pendingInjections || []
+    this.pendingContextNote = data.pendingContextNote ?? null
+    this.lastContextTokens = data.lastContextTokens ?? undefined
     this.changed = data.changed ?? true
     this.deleted = data.deleted ?? false
   }
@@ -141,6 +157,14 @@ export class Chat implements ChatSessionData {
   setName(name: string): void {
     if (this.name !== name) {
       this.name = name
+      this.updatedAt = new Date()
+      this.changed = true
+    }
+  }
+
+  setLLMConnection(name: string): void {
+    if (this.llmConnectionName !== name) {
+      this.llmConnectionName = name
       this.updatedAt = new Date()
       this.changed = true
     }
@@ -279,6 +303,12 @@ export class Chat implements ChatSessionData {
     return this.messages.filter((m) => !m.hidden)
   }
 
+  /** History as the LLM sees it: archived (compacted) messages excluded.
+   *  The single history-construction point for the tool loop. */
+  getLLMMessages(): ChatMessage[] {
+    return this.messages.filter((m) => !m.archived)
+  }
+
   serialize(): object {
     return {
       id: this.id,
@@ -299,6 +329,8 @@ export class Chat implements ChatSessionData {
       parentChatId: this.parentChatId ?? null,
       parentProjectId: this.parentProjectId ?? null,
       pendingInjections: this.pendingInjections,
+      pendingContextNote: this.pendingContextNote ?? null,
+      lastContextTokens: this.lastContextTokens,
     }
   }
 

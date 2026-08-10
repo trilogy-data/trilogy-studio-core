@@ -25,6 +25,8 @@ export const URL_HASH_KEYS = {
   PROFILE: 'profile',
   // Editor tab within a result panel
   ACTIVE_EDITOR_TAB: 'activeEditorTab',
+  // Global chat side panel: 'open' or the active conversation's chat id
+  CHAT_PANEL: 'chatPanel',
   // Deep-link / bootstrap params
   DEMO: 'demo',
   SKIP_TIPS: 'skipTips',

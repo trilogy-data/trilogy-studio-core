@@ -83,6 +83,9 @@ export interface LLMMessage {
   }
   hidden?: boolean // Used to hide messages in the UI
   error?: boolean // Marks a harness/provider failure surfaced as a chat message (warning styling in UI)
+  /** Compacted out of the LLM's view (Chat.getLLMMessages filters these).
+   *  Never deleted — the UI may still render them and unarchiving is trivial. */
+  archived?: boolean
   // Tool calls made by the assistant (for assistant messages)
   toolCalls?: LLMToolCall[]
   // Tool results from execution (for user messages responding to tool calls)

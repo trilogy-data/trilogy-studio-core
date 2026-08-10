@@ -9,8 +9,8 @@ import type { ToolCallResult } from './sharedToolHelpers'
 
 const USER_INPUT_START = '<user_input>'
 const USER_INPUT_END = '</user_input>'
-const SYSTEM_INPUT_START = '<system_input>'
-const SYSTEM_INPUT_END = '</system_input>'
+export const SYSTEM_INPUT_START = '<system_input>'
+export const SYSTEM_INPUT_END = '</system_input>'
 
 /** Interface for LLM operations needed by the tool loop */
 export interface LLMAdapter {
@@ -141,8 +141,12 @@ export function formatToolResultText(result: ToolCallResult): string {
           dataPreview = `\n\nQuery results (${totalRows} rows):\n${JSON.stringify(jsonData, null, 2)}`
         }
       }
+      // Surface query timing so the agent can reason about performance
+      // ("validate the dashboard is faster") without a separate tool call.
+      const timingInfo =
+        config && typeof config.executionTime === 'number' ? ` in ${config.executionTime}ms` : ''
       const artifactInfo = config
-        ? `Results: ${config.resultSize || 0} rows, ${config.columnCount || 0} columns.`
+        ? `Results: ${config.resultSize || 0} rows, ${config.columnCount || 0} columns${timingInfo}.`
         : ''
       const idInfo = artifactId ? `Artifact ID: ${artifactId}. ` : ''
       return `Success. ${idInfo}${result.message || artifactInfo}${dataPreview}`

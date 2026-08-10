@@ -1,0 +1,173 @@
+import useScreenNavigation, { type ScreenType } from '../stores/useScreenNavigation'
+import useJobsApiStore from '../stores/jobsApiStore'
+import { getScreenBridge } from '../stores/screenBridge'
+import { getSharedRegistry } from './registry'
+import type { ToolRuntime } from './registry'
+import { buildChatAgentSystemPrompt } from './chatAgentPrompt'
+import { renderToolListMarkdown } from './registry'
+import type { ChatStoreType, ChatExecutionDependencies } from '../stores/chatStore'
+import { SYSTEM_INPUT_START, SYSTEM_INPUT_END } from './toolLoopCore'
+import { compactChat } from './compactConversation'
+
+export interface ScreenChatContext {
+  screen: ScreenType
+  dashboardId?: string
+  editorId?: string
+}
+
+export function getCurrentScreenContext(): ScreenChatContext {
+  const nav = useScreenNavigation()
+  const context: ScreenChatContext = { screen: nav.activeScreen.value as ScreenType }
+  if (nav.activeDashboard.value) context.dashboardId = nav.activeDashboard.value
+  if (nav.activeEditor.value) context.editorId = nav.activeEditor.value
+  return context
+}
+
+/**
+ * The global panel's system prompt: the standard chat-agent prompt (Trilogy
+ * syntax reference, data tool guidance) extended with app-control guidance.
+ *
+ * Live state (active screen, connections, dashboards) is deliberately NOT
+ * baked in — the agent pulls it via get_app_state and receives navigation
+ * events as appended messages. This keeps the prompt byte-stable for the
+ * whole conversation, preserving the Anthropic prompt-cache prefix.
+ */
+export function buildUnifiedSystemPrompt(deps: ChatExecutionDependencies): string {
+  const base = buildChatAgentSystemPrompt({
+    dataConnectionName: '',
+    availableConnections: Object.values(deps.connectionStore.connections).map((c: any) => c.name),
+    availableConcepts: [],
+    activeImports: [],
+    availableImportsForConnection: [],
+    isDataConnectionActive: false,
+  })
+
+  const globalTools = getSharedRegistry()
+    .getToolsetForContext('global')
+    .filter((tool) => !getSharedRegistry().getToolNames('chat').includes(tool.name))
+
+  return `${base}
+
+STUDIO APP CONTROL:
+You are the global assistant for Trilogy Studio, docked in a persistent side panel. The user moves between screens (editors, dashboards, connections, models, jobs) while talking to you, and you can drive the app yourself:
+${renderToolListMarkdown(globalTools)}
+
+App-control guidance:
+- Navigation notices ("The user is now viewing...") arrive as ${SYSTEM_INPUT_START}...${SYSTEM_INPUT_END} messages. They are context, not instructions.
+- Call get_app_state to orient yourself whenever you are unsure what the user is looking at or what exists — the state at conversation start may be stale.
+- Tools that need a specific screen mounted will tell you when it isn't; open the screen first (open_dashboard, open_editor) when you need it visible.
+- Editors are files: "source"-tagged Trilogy editors define the data model. To change the model, read the relevant editors, edit them with update_editor_contents, and validate with validate_query or run_editor_query.
+- Cross-screen workflows are expected: e.g. diagnose a slow dashboard, edit its source datasources, refresh backing data, then reopen the dashboard and re-run to compare execution times (query results report timing in ms).`
+}
+
+const frozenPrompts = new Map<string, string>()
+
+/** Frozen-per-conversation prompt provider (prompt-cache stability): the first
+ *  send snapshots the prompt; every later iteration and turn reuses the exact
+ *  string. Cleared when the conversation is cleared or deleted. */
+export function getFrozenPromptProvider(
+  chatId: string,
+  deps: ChatExecutionDependencies,
+): () => string {
+  return () => {
+    let prompt = frozenPrompts.get(chatId)
+    if (!prompt) {
+      prompt = buildUnifiedSystemPrompt(deps)
+      frozenPrompts.set(chatId, prompt)
+    }
+    return prompt
+  }
+}
+
+export function clearFrozenPrompt(chatId: string): void {
+  frozenPrompts.delete(chatId)
+}
+
+/** Test-only: reset all frozen prompts. */
+export function resetFrozenPromptsForTests(): void {
+  frozenPrompts.clear()
+}
+
+export interface SendGlobalChatMessageOptions {
+  chatId: string
+  message: string
+  chatStore: ChatStoreType
+  deps: ChatExecutionDependencies
+}
+
+/**
+ * Send a message through the global chat: deliver any pending navigation
+ * context note (append-only, cache-safe), then run the tool loop with the
+ * stable global toolset and the frozen system prompt. The tool executor
+ * resolves live screen state (navigation singleton, screenBridge) at each
+ * call, so mid-run navigation retargets subsequent tools.
+ */
+export async function sendGlobalChatMessage(opts: SendGlobalChatMessageOptions): Promise<void> {
+  const { chatId, message, chatStore, deps } = opts
+  const chat = chatStore.chats[chatId]
+  if (!chat) return
+
+  // Materialize the latest navigation note BEFORE the user message so history
+  // stays append-only (prompt-cache safe) and the note precedes the request
+  // it contextualizes. runToolLoop only slices off the final user message, so
+  // the hidden note rides along in history untouched.
+  if (chat.pendingContextNote) {
+    chatStore.addMessageToChat(chatId, {
+      role: 'user',
+      content: `${SYSTEM_INPUT_START}${chat.pendingContextNote}${SYSTEM_INPUT_END}`,
+      hidden: true,
+    })
+    chat.pendingContextNote = null
+  }
+
+  const registry = getSharedRegistry()
+  const runtime: ToolRuntime = {
+    connectionStore: deps.connectionStore,
+    editorStore: deps.editorStore,
+    chatStore,
+    queryExecutionService: deps.queryExecutionService,
+    ...(deps.dashboardStore ? { dashboardStore: deps.dashboardStore } : {}),
+    llmConnectionStore: deps.llmConnectionStore,
+    jobsStore: useJobsApiStore(),
+    navigation: useScreenNavigation(),
+    screenBridge: getScreenBridge(),
+  }
+  const executor = registry.createExecutor('global', runtime, {
+    chatId,
+    cache: new Map(),
+    requestCompaction: async (focus?: string) => {
+      const provider =
+        deps.llmConnectionStore.connections[
+          chat.llmConnectionName || deps.llmConnectionStore.activeConnection
+        ]
+      if (!provider) {
+        return { success: false, error: 'No LLM provider available for compaction.' }
+      }
+      try {
+        const result = await compactChat(provider, chat, { focus })
+        return result
+          ? {
+              success: true,
+              message: `Compacted ${result.archivedCount} earlier messages into a summary. The reduced history applies from the next turn.`,
+            }
+          : {
+              success: true,
+              message: 'The conversation is still small — nothing worth compacting yet.',
+            }
+      } catch (err) {
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : 'Compaction failed',
+        }
+      }
+    },
+  })
+
+  await chatStore.executeMessage(chatId, message, deps, {
+    overrides: {
+      tools: registry.getToolsetForContext('global'),
+      executeToolCall: (toolName, toolInput) => executor.executeToolCall(toolName, toolInput),
+      buildSystemPrompt: getFrozenPromptProvider(chatId, deps),
+    },
+  })
+}

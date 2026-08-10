@@ -36,7 +36,7 @@
       </div>
     </header>
 
-    <div class="report-body" :class="{ 'with-chat': chatOpen && !externalChat }">
+    <div class="report-body">
       <article class="report-flow">
         <div v-if="!hasContent" class="report-empty-state">
           <h2 class="empty-headline">Brief the agent</h2>
@@ -143,28 +143,6 @@
           </button>
         </div>
       </article>
-
-      <aside v-if="chatOpen && !externalChat" class="report-chat">
-        <DashboardChatPanel
-          v-if="dashboard"
-          :dashboard="dashboard"
-          :get-dashboard-query-executor="getDashboardQueryExecutor"
-          :refresh-item="handleRefreshItem"
-          :initial-prompt="chatInitialPrompt"
-          @close="chatOpen = false"
-        />
-      </aside>
-
-      <!-- External-chat mode: the same engine, renderless. Queued briefs and
-           CTA submissions flow through initial-prompt exactly as embedded. -->
-      <DashboardChatPanel
-        v-if="externalChat && dashboard"
-        headless
-        :dashboard="dashboard"
-        :get-dashboard-query-executor="getDashboardQueryExecutor"
-        :refresh-item="handleRefreshItem"
-        :initial-prompt="chatInitialPrompt"
-      />
     </div>
 
     <DashboardAddItemModal :show="showAddItemModal" @add="onAddItem" @close="closeAddModal" />
@@ -205,7 +183,8 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, inject, ref, watch } from 'vue'
+import { computed, inject, ref, watch, onBeforeUnmount } from 'vue'
+import { registerDashboardBridge, unregisterDashboardBridge } from '../../stores/screenBridge'
 import { useDashboard } from './useDashboard'
 import { useDashboardStore } from '../../stores/dashboardStore'
 import { CELL_TYPES, type LayoutItem, type CellType } from '../../dashboards/base'
@@ -219,7 +198,10 @@ import DashboardClaim from './DashboardClaim.vue'
 import DashboardAppendixHeader from './DashboardAppendixHeader.vue'
 import DashboardFreeform from './DashboardFreeform.vue'
 import DashboardProvenance from './DashboardProvenance.vue'
-import DashboardChatPanel from './DashboardChatPanel.vue'
+import useGlobalChatPanel from '../../stores/useGlobalChatPanel'
+import { useDashboardAgentAutoRun } from './useDashboardAgentAutoRun'
+import { ensureDashboardChat } from '../../llm/dashboardAgentRuntime'
+import { useChatStore } from '../../stores'
 import DashboardAddItemModal from './DashboardAddItemModal.vue'
 import ChartEditor from './DashboardChartEditor.vue'
 import MarkdownEditor from './DashboardMarkdownEditor.vue'
@@ -310,30 +292,42 @@ function toggleEdit() {
   toggleMode(editable.value ? 'published' : 'editing')
 }
 
-const chatOpen = ref(false)
-const chatInitialPrompt = ref<string | null>(null)
+// The report agent runs headless (queued briefs from the creator flow and
+// the overseer consume via useDashboardAgentAutoRun); in the studio shell the
+// conversation surfaces in the global side panel. External-chat hosts (the
+// explorer) render the same chatStore record in their own UI instead.
+const globalChatPanel = useGlobalChatPanel()
+const chatStore = useChatStore()
+const chatOpen = computed(() => !props.externalChat && globalChatPanel.isOpen.value)
 const briefDraft = ref('')
-function toggleChat() {
-  chatOpen.value = !chatOpen.value
-}
-function onCtaSubmit(prompt: string) {
-  if (!prompt.trim()) return
-  chatInitialPrompt.value = prompt
-  chatOpen.value = true
-  briefDraft.value = ''
-}
-watch(
-  dashboard,
-  (current) => {
-    if (!current) return
-    const pending = dashboardStore.consumePendingChatPrompt(current.id)
-    if (pending) {
-      chatInitialPrompt.value = pending
-      chatOpen.value = true
+
+const { submitPrompt: submitAgentPrompt } = useDashboardAgentAutoRun(dashboard, {
+  onStarted: (chatId) => {
+    if (!props.externalChat) {
+      globalChatPanel.openPanel(chatId)
     }
   },
-  { immediate: true },
-)
+})
+
+function toggleChat() {
+  if (props.externalChat) return
+  if (globalChatPanel.isOpen.value) {
+    globalChatPanel.closePanel()
+    return
+  }
+  if (dashboard.value && llmStore) {
+    const chatId = ensureDashboardChat(dashboard.value, chatStore, llmStore)
+    globalChatPanel.openPanel(chatId)
+  } else {
+    globalChatPanel.openPanel()
+  }
+}
+
+function onCtaSubmit(prompt: string) {
+  if (!prompt.trim()) return
+  void submitAgentPrompt(prompt)
+  briefDraft.value = ''
+}
 
 const ctaPlaceholder =
   "What's the question this report should answer? Examples: 'Why did Q3 revenue slow?', 'Did the new onboarding flow improve activation?'"
@@ -507,6 +501,28 @@ function onSaveContent(content: any) {
 function handleRefreshItem(itemId: string): string | undefined {
   return handleRefresh(itemId)
 }
+
+// Publish live capabilities for the global chat's dashboard tools (no
+// screenshot support in the report layout).
+watch(
+  () => dashboard.value?.id,
+  (id, previousId) => {
+    if (previousId) unregisterDashboardBridge(previousId)
+    if (id) {
+      registerDashboardBridge({
+        dashboardId: id,
+        refreshItem: handleRefreshItem,
+        getDashboardQueryExecutor: () => getDashboardQueryExecutor(id) || null,
+      })
+    }
+  },
+  { immediate: true },
+)
+onBeforeUnmount(() => {
+  if (dashboard.value?.id) {
+    unregisterDashboardBridge(dashboard.value.id)
+  }
+})
 </script>
 
 <style scoped>

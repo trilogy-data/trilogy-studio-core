@@ -146,6 +146,19 @@
       </div>
       <div class="sidebar-bottom-icons">
         <div
+          class="sidebar-icon sidebar-icon-margin ai-panel-icon"
+          :class="{ selected: globalChatOpen }"
+          @click="toggleGlobalChat"
+          data-testid="sidebar-icon-ai-panel"
+        >
+          <tooltip content="AI Assistant (Ctrl+Shift+.)"><i class="mdi mdi-creation"></i></tooltip>
+          <span
+            v-if="aiChatRunning"
+            class="ai-running-dot"
+            title="An AI conversation is running"
+          ></span>
+        </div>
+        <div
           class="sidebar-icon sidebar-icon-margin"
           :class="{ selected: active == 'settings' }"
           @click="selectItem('settings')"
@@ -255,6 +268,7 @@ import Tooltip from '../Tooltip.vue'
 import { preloadScreen } from '../../utility/screenPreloader'
 import { useIsMobile } from '../useIsMobile'
 import useMobileSidebarNavigation from '../../stores/useMobileSidebarNavigation'
+import useGlobalChatPanel from '../../stores/useGlobalChatPanel'
 
 interface SidebarDestination {
   name: string
@@ -295,12 +309,16 @@ export default defineComponent({
     const previousUnSaved = ref(null)
     const isMobile = useIsMobile()
     const mobileNavigation = useMobileSidebarNavigation()
+    const globalChatPanel = useGlobalChatPanel()
+    const chatStore = inject<any>('chatStore', null)
 
     return {
       isSaving,
       previousUnSaved,
       isMobile,
       mobileNavigation,
+      globalChatPanel,
+      chatStore,
     }
   },
   data() {
@@ -429,10 +447,25 @@ export default defineComponent({
     mobileNavigationLevel(): 'root' | 'detail' {
       return this.mobileNavigation.level.value
     },
+    globalChatOpen(): boolean {
+      return this.globalChatPanel.isOpen.value
+    },
+    // Activity signal for the rail icon: an agent is running somewhere, even
+    // with the panel closed (runs live in chatStore, not the panel).
+    aiChatRunning(): boolean {
+      const executions = this.chatStore?.chatExecutions
+      if (!executions) return false
+      return Object.values(executions).some((e: any) => e?.isLoading)
+    },
   },
 
   methods: {
     preloadScreen,
+    // Not a screen: the AI panel is a persistent right column toggled directly,
+    // bypassing selectItem/screen-selected entirely.
+    toggleGlobalChat() {
+      this.globalChatPanel.togglePanel()
+    },
     triggerSaveAnimation() {
       this.isSaving = true
       // Ensure minimum 500ms spin duration
@@ -713,6 +746,32 @@ export default defineComponent({
   margin-bottom: 10px;
   margin-top: auto;
   width: 100%;
+}
+
+.ai-panel-icon {
+  position: relative;
+}
+
+.ai-running-dot {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--special-text);
+  animation: ai-dot-pulse 1.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes ai-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
 }
 
 @media screen and (max-width: 768px) {

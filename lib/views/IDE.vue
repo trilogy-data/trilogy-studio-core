@@ -68,6 +68,11 @@
           :activeDashboardKey="activeDashboard"
         />
       </template>
+      <!-- Persistent AI panel: sibling of the tab content, so it survives the
+           full unmount/remount that screen switches trigger below. -->
+      <template #right-panel>
+        <global-chat-panel v-if="globalChatOpen" />
+      </template>
       <template v-if="showingCredentialPrompt">
         <CredentialBackgroundPage />
       </template>
@@ -240,6 +245,7 @@ import {
 import type { Ref } from 'vue'
 import { preloadAllScreensWhenIdle } from '../utility/screenPreloader'
 import useScreenNavigation from '../stores/useScreenNavigation.ts'
+import useGlobalChatPanel from '../stores/useGlobalChatPanel.ts'
 import { getDefaultValueFromHash, removeHashFromUrl, URL_HASH_KEYS } from '../stores/urlStore.ts'
 import type { ModalItem } from '../data/tips.ts'
 
@@ -284,6 +290,7 @@ const ChatCreatorModal = defineAsyncComponent(
 const ConnectionErrorPopup = defineAsyncComponent(
   () => import('../components/ConnectionErrorPopup.vue'),
 )
+const GlobalChatPanel = defineAsyncComponent(() => import('../components/llm/GlobalChatPanel.vue'))
 
 // Lazy load utility components
 const ErrorMessage = defineAsyncComponent(() => import('../components/ErrorMessage.vue'))
@@ -338,6 +345,7 @@ const IDEComponent: Component = defineComponent({
     'asset-auto-importer': AssetAutoImporter,
     ChatCreatorModal,
     'connection-error-popup': ConnectionErrorPopup,
+    'global-chat-panel': GlobalChatPanel,
 
     // Utility components (may not be used in template but included for completeness)
     'error-message': ErrorMessage,
@@ -421,6 +429,10 @@ const IDEComponent: Component = defineComponent({
     onInitialLoad()
     addBackListeners()
 
+    const globalChatPanel = useGlobalChatPanel()
+    globalChatPanel.onInitialLoad()
+    globalChatPanel.addKeyListener()
+
     // Warm the remaining screen chunks once the initial screen has settled,
     // so navigation doesn't flash a blank pane while a chunk downloads.
     onMounted(() => {
@@ -430,6 +442,7 @@ const IDEComponent: Component = defineComponent({
     // on unmount, remove back listeners
     onBeforeUnmount(() => {
       removeBacklisteners()
+      globalChatPanel.removeKeyListener()
     })
 
     provide('navigationStore', screenNavigation)
@@ -559,6 +572,7 @@ const IDEComponent: Component = defineComponent({
       handleChatCreated,
       storesLoaded,
       sidebarCollapsed: ref(false),
+      globalChatOpen: globalChatPanel.isOpen,
     }
   },
   async mounted() {

@@ -37,6 +37,24 @@ export const stripAllWhitespace = (str: string): string => {
   return str.replace(/\s+/g, '')
 }
 
+/**
+ * Look up a connection by store key, falling back to its display name.
+ *
+ * Callers reach these actions from both sides of the id migration: the creator
+ * hands over a `local:<name>` key, while the sidebar context menu and anything
+ * grouping legacy dashboards still hand over a bare display name. Accepting
+ * only the key wrote the *name* into `connectionId`, and every exact-match
+ * consumer — the header's `<select>` above all, which renders blank when its
+ * bound value matches no option — then treated it as an unknown connection.
+ */
+function resolveConnectionRef(connectionRef: string) {
+  if (!connectionRef) return undefined
+  const connectionStore = useConnectionStore()
+  return (
+    connectionStore.connections[connectionRef] || connectionStore.connectionByName(connectionRef)
+  )
+}
+
 export const useDashboardStore = defineStore('dashboards', {
   state: () => ({
     dashboards: {} as Record<string, DashboardModel>,
@@ -174,13 +192,12 @@ export const useDashboardStore = defineStore('dashboards', {
         throw new Error(`A dashboard with name ${name} already exists.`)
       }
 
-      const connectionStore = useConnectionStore()
-      const connection = connectionStore.connections[connectionId]
+      const connection = resolveConnectionRef(connectionId)
       const dashboard = new DashboardModel({
         id,
         name,
         connection: connection?.name || connectionId,
-        connectionId,
+        connectionId: connection?.id || connectionId,
         storage: 'local',
         state: 'editing',
       })
@@ -676,10 +693,9 @@ export const useDashboardStore = defineStore('dashboards', {
     // Update dashboard connection
     updateDashboardConnection(dashboardId: string, connectionId: string) {
       if (this.dashboards[dashboardId]) {
-        const connectionStore = useConnectionStore()
-        const connection = connectionStore.connections[connectionId]
+        const connection = resolveConnectionRef(connectionId)
         this.dashboards[dashboardId].connection = connection?.name || connectionId
-        this.dashboards[dashboardId].connectionId = connectionId
+        this.dashboards[dashboardId].connectionId = connection?.id || connectionId
         this.dashboards[dashboardId].changed = true
       } else {
         throw new Error(`Dashboard with ID "${dashboardId}" not found.`)

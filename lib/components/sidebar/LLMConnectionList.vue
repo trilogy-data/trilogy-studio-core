@@ -127,8 +127,9 @@ export default {
     const collapsed = ref<Record<string, boolean>>({})
 
     // Scope filter — hide dashboard-owned chats by default so the sidebar stays
-    // focused on the user's own conversations.
-    const hiddenScopes = ref<Set<ChatSource>>(new Set<ChatSource>(['dashboard']))
+    // focused on the user's own conversations. Editor refinement chats are
+    // ephemeral engine records whose only UI is the inline refinement surface.
+    const hiddenScopes = ref<Set<ChatSource>>(new Set<ChatSource>(['dashboard', 'editor']))
     const filterMenuOpen = ref(false)
     const filterDropdown = ref<HTMLElement | null>(null)
 

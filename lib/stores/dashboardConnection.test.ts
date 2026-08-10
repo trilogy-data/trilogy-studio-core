@@ -112,7 +112,11 @@ describe('repairDashboardConnectionRefs', () => {
   it('leaves a dashboard whose connection is gone alone', () => {
     // Must not be silently merged into a live connection: an orphan should stay
     // visible as its own group.
-    const orphan = { connection: 'deleted-connection', connectionId: 'local:deleted', changed: false }
+    const orphan = {
+      connection: 'deleted-connection',
+      connectionId: 'local:deleted',
+      changed: false,
+    }
 
     expect(repairDashboardConnectionRefs([orphan], mockConnectionStore)).toBe(0)
     expect(orphan.connectionId).toBe('local:deleted')
@@ -133,6 +137,38 @@ describe('repairDashboardConnectionRefs', () => {
 })
 
 describe('dashboardStore connection plumbing', () => {
+  it('normalizes a display name into a store id on create', () => {
+    // The sidebar context menu and DashboardCreatorIcon hand over whatever the
+    // tree node was grouped under, which for legacy dashboards is a bare name.
+    // Storing that as the id left the header's `<select>` bound to a value no
+    // option carried, so the picker rendered blank on a brand-new dashboard.
+    const store = useDashboardStore()
+
+    const dashboard = store.newDashboard('by-name', FAA.name)
+
+    expect(dashboard.connectionId).toBe(FAA.id)
+    expect(dashboard.connection).toBe(FAA.name)
+  })
+
+  it('normalizes a display name into a store id on update', () => {
+    const store = useDashboardStore()
+    store.newDashboard('base', FAA.id)
+
+    store.updateDashboardConnection('base', FAA.name)
+
+    expect(store.dashboards['base'].connectionId).toBe(FAA.id)
+    expect(store.dashboards['base'].connection).toBe(FAA.name)
+  })
+
+  it('keeps an unresolvable ref intact so the error names it', () => {
+    const store = useDashboardStore()
+
+    const dashboard = store.newDashboard('orphan', 'local:gone')
+
+    expect(dashboard.connectionId).toBe('local:gone')
+    expect(dashboard.connection).toBe('local:gone')
+  })
+
   it('carries connectionId onto a fork', () => {
     const store = useDashboardStore()
     store.newDashboard('base', FAA.id)

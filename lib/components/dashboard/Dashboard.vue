@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import { ref, computed, nextTick, inject, watch } from 'vue'
+import { ref, computed, nextTick, inject, watch, onBeforeUnmount } from 'vue'
+import { registerDashboardBridge, unregisterDashboardBridge } from '../../stores/screenBridge'
 import { GridLayout, GridItem } from 'vue3-grid-layout-next'
 import DashboardHeader from './DashboardHeader.vue'
 import DashboardGridItem from './DashboardGridItem.vue'
@@ -9,7 +10,8 @@ import MarkdownEditor from './DashboardMarkdownEditor.vue'
 import FreeformEditor from './DashboardFreeformEditor.vue'
 import DashboardCreatorInline from './DashboardCreatorInline.vue'
 import DashboardCTA from './DashboardCTA.vue'
-import DashboardChatPanel from './DashboardChatPanel.vue'
+import useGlobalChatPanel from '../../stores/useGlobalChatPanel'
+import { useDashboardAgentAutoRun } from './useDashboardAgentAutoRun'
 import { useDashboard } from './useDashboard'
 import { useDashboardStore } from '../../stores/dashboardStore'
 import { type DashboardState } from '../../dashboards/base'
@@ -129,13 +131,17 @@ const loaded = ref(false)
 const isExportingImage = ref(false)
 const gridContentRef = ref<HTMLElement | null>(null)
 
-// Chat panel state
-const chatPanelOpen = ref(false)
-// Prompt to auto-send when the chat panel opens. Set either by an inline
-// CTA submission or by a queued prompt from the dashboard creator flow.
-const chatInitialPrompt = ref<string | null>(null)
+// Chat lives in the global side panel now. The header AI button opens it on
+// this dashboard's bound conversation (when one exists); CTA/creator prompts
+// fire the headless dashboard agent and surface its chat in the panel.
+const globalChatPanel = useGlobalChatPanel()
+const chatPanelOpen = computed(() => globalChatPanel.isOpen.value)
 const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore')
 const hasLlmConnection = computed(() => !!llmConnectionStore?.activeConnection)
+
+const { submitPrompt: submitAgentPrompt } = useDashboardAgentAutoRun(dashboard, {
+  onStarted: (chatId) => globalChatPanel.openPanel(chatId),
+})
 
 // The "get started" CTA replaces the grid only while the dashboard is empty
 // and the assistant is closed.
@@ -144,35 +150,47 @@ const showEmptyCTA = computed(
 )
 
 function toggleChatPanel() {
-  chatPanelOpen.value = !chatPanelOpen.value
-  if (!chatPanelOpen.value) {
-    chatInitialPrompt.value = null
+  if (globalChatPanel.isOpen.value) {
+    globalChatPanel.closePanel()
+    return
   }
+  // Resume the dashboard's own session when it has one; otherwise open the
+  // panel on whatever conversation the user last had active.
+  globalChatPanel.openPanel(dashboard.value?.chatId || undefined)
 }
 
 function openChatWithPrompt(prompt: string) {
   if (!prompt || !prompt.trim()) return
-  chatInitialPrompt.value = prompt
-  chatPanelOpen.value = true
+  void submitAgentPrompt(prompt)
 }
-
-// When the bound dashboard changes (initial mount or navigating between
-// dashboards), drain any prompt that was queued for it via the store.
-watch(
-  dashboard,
-  (current) => {
-    if (!current) return
-    const pending = dashboardStore.consumePendingChatPrompt(current.id)
-    if (pending) {
-      openChatWithPrompt(pending)
-    }
-  },
-  { immediate: true },
-)
 
 function handleRefreshItem(itemId: string): string | undefined {
   return handleRefresh(itemId)
 }
+
+// Publish live capabilities (screenshots, in-view refresh, the mounted query
+// executor) for the global chat's dashboard tools. Registration follows the
+// bound dashboard, including post-fork id changes.
+watch(
+  () => dashboard.value?.id,
+  (id, previousId) => {
+    if (previousId) unregisterDashboardBridge(previousId)
+    if (id) {
+      registerDashboardBridge({
+        dashboardId: id,
+        refreshItem: handleRefreshItem,
+        captureImage: captureDashboardImage,
+        getDashboardQueryExecutor: () => getDashboardQueryExecutor(id) || null,
+      })
+    }
+  },
+  { immediate: true },
+)
+onBeforeUnmount(() => {
+  if (dashboard.value?.id) {
+    unregisterDashboardBridge(dashboard.value.id)
+  }
+})
 
 interface ItemOverflowDiagnostic {
   itemId: string
@@ -540,7 +558,7 @@ async function captureDashboardImage(): Promise<{
       @toggle-chat="toggleChatPanel"
     />
 
-    <div class="dashboard-body" :class="{ 'chat-open': chatPanelOpen }">
+    <div class="dashboard-body">
       <div class="dashboard-main">
         <div v-if="showEmptyCTA" class="empty-dashboard-wrapper">
           <DashboardCTA :dashboard-id="dashboard.id" @start-chat-with-prompt="openChatWithPrompt" />
@@ -601,16 +619,6 @@ async function captureDashboardImage(): Promise<{
           </div>
         </div>
       </div>
-
-      <DashboardChatPanel
-        v-if="chatPanelOpen && dashboard"
-        :dashboard="dashboard"
-        :get-dashboard-query-executor="getDashboardQueryExecutor"
-        :refresh-item="handleRefreshItem"
-        :capture-dashboard-image="captureDashboardImage"
-        :initial-prompt="chatInitialPrompt"
-        @close="chatPanelOpen = false"
-      />
     </div>
 
     <!-- Add Item Modal -->
