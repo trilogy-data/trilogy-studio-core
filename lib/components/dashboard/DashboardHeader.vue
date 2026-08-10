@@ -123,15 +123,6 @@ function cancelEditingTitle() {
   editableTitle.value = props.dashboard?.name || 'Untitled Dashboard'
 }
 
-/** Connections offered in the picker. Sorted by name — the store keys them by
- *  insertion order, which puts them in whatever order they happened to be
- *  created in. */
-const selectableConnections = computed(() =>
-  Object.values(connectionStore.connections)
-    .filter((conn) => conn.model && !conn.deleted)
-    .sort((a, b) => a.name.localeCompare(b.name)),
-)
-
 /** `selectedConnection` is a store id, but dashboards persisted before the id
  *  migration can still hand us a bare display name — so resolve both ways. */
 const selectedConnectionObject = computed(() =>
@@ -139,6 +130,40 @@ const selectedConnectionObject = computed(() =>
     ? connectionStore.connections[props.selectedConnection] ||
       connectionStore.connectionByName(props.selectedConnection)
     : undefined,
+)
+
+/** Connections offered in the picker. Sorted by name — the store keys them by
+ *  insertion order, which puts them in whatever order they happened to be
+ *  created in.
+ *
+ *  The dashboard's own connection is always offered, even when it fails the
+ *  model/deleted filter. A `<select>` whose bound value matches no option
+ *  renders *blank* rather than falling back to the first one, so a connection
+ *  that is merely modelless (or mid-hydration) would otherwise make the picker
+ *  look like no connection was ever chosen. */
+const selectableConnections = computed(() => {
+  const offered = Object.values(connectionStore.connections).filter(
+    (conn) => conn.model && !conn.deleted,
+  )
+  const current = selectedConnectionObject.value
+  if (current && !offered.some((conn) => conn.id === current.id)) {
+    offered.push(current)
+  }
+  return offered.sort((a, b) => a.name.localeCompare(b.name))
+})
+
+/** The value to bind. Always a key present in `selectableConnections` when the
+ *  dashboard's connection exists at all — including the legacy case where the
+ *  dashboard handed us a display name instead of an id. */
+const selectedConnectionKey = computed(
+  () => selectedConnectionObject.value?.id || props.selectedConnection,
+)
+
+/** True when the dashboard names a connection that is not in the store at all
+ *  (deleted, or an import that arrived before its connection did). Nothing can
+ *  be selected, so the picker offers a placeholder naming what is missing. */
+const connectionMissing = computed(
+  () => !!props.selectedConnection && !selectedConnectionObject.value,
 )
 
 const selectedConnectionName = computed(
@@ -217,9 +242,12 @@ const modeIcon = computed(() => {
               id="connection"
               data-testid="connection-selector"
               @change="$emit('connection-change', $event)"
-              :value="selectedConnection"
+              :value="selectedConnectionKey"
               :title="selectedConnectionName"
             >
+              <option v-if="connectionMissing" :value="selectedConnection" disabled>
+                {{ selectedConnectionName }} (unavailable)
+              </option>
               <option v-for="conn in selectableConnections" :key="conn.id" :value="conn.id">
                 {{ conn.name }}
               </option>
