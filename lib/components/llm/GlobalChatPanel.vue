@@ -1,13 +1,14 @@
 <script lang="ts" setup>
 import { computed, inject, onBeforeUnmount, onMounted, watch } from 'vue'
 import LLMChat from './LLMChat.vue'
+import ChatArtifact from './ChatArtifact.vue'
 import GlobalChatConversationList from './GlobalChatConversationList.vue'
 import EditableTitle from '../EditableTitle.vue'
 import useGlobalChatPanel, {
   GLOBAL_CHAT_MIN_WIDTH,
   GLOBAL_CHAT_MAX_WIDTH,
 } from '../../stores/useGlobalChatPanel'
-import { sendGlobalChatMessage } from '../../llm/globalChatRuntime'
+import { sendGlobalChatMessage, clearFrozenPrompt } from '../../llm/globalChatRuntime'
 import { startNavigationContextInjection } from '../../llm/navigationContextInjector'
 import type { ChatStoreType } from '../../stores/chatStore'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
@@ -60,6 +61,17 @@ watch(
 )
 
 const activeChatMessages = computed<ChatMessage[]>(() => activeChat.value?.messages || [])
+
+// Only the newest artifact renders expanded — older ones collapse to a header
+// so long conversations don't mount a wall of tables and charts.
+const lastArtifactMessage = computed<ChatMessage | null>(() => {
+  const messages = activeChatMessages.value
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i]
+    if (msg && msg.artifact && !msg.hidden) return msg
+  }
+  return null
+})
 
 const isChatLoading = computed(() =>
   activeChat.value ? chatStore.isChatExecuting(activeChat.value.id) : false,
@@ -159,6 +171,18 @@ function handleStop() {
   chatStore.stopExecution(chat.id)
 }
 
+function handleClearChat() {
+  const chat = activeChat.value
+  if (!chat) return
+  if (!window.confirm(`Clear all messages in "${chat.name}"?`)) return
+  if (chatStore.isChatExecuting(chat.id)) {
+    chatStore.stopExecution(chat.id)
+  }
+  chatStore.clearChatMessages(chat.id)
+  // Let the next send re-snapshot the system prompt — nothing cached remains.
+  clearFrozenPrompt(chat.id)
+}
+
 // ---- resize (manual drag handle; split.js does not manage this column) ----
 let resizeCleanup: (() => void) | null = null
 
@@ -176,6 +200,8 @@ function startResize(event: MouseEvent) {
       resizeCleanup()
       resizeCleanup = null
     }
+    // Charts (vega) size to their container only on window resize events.
+    window.dispatchEvent(new Event('resize'))
   }
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
@@ -254,6 +280,15 @@ onBeforeUnmount(() => {
             <i class="mdi mdi-stop-circle-outline"></i>
           </button>
           <button
+            v-if="panel.view.value === 'conversation' && activeChat && activeChatMessages.length"
+            class="panel-header-btn"
+            @click="handleClearChat"
+            title="Clear conversation"
+            data-testid="global-chat-clear"
+          >
+            <i class="mdi mdi-broom"></i>
+          </button>
+          <button
             class="panel-header-btn"
             @click="handleNewChat"
             title="New conversation"
@@ -298,7 +333,16 @@ onBeforeUnmount(() => {
         ]"
         send-button-text="Send"
         loading-text="Working..."
-      />
+      >
+        <template #artifact="{ artifact, message }">
+          <ChatArtifact
+            :artifact="artifact"
+            :height="320"
+            :can-expand="false"
+            :default-expanded="message === lastArtifactMessage"
+          />
+        </template>
+      </LLMChat>
     </div>
   </div>
 </template>

@@ -478,9 +478,14 @@ export const useChatStore = defineStore('chats', {
           },
           addArtifact: (artifact) => {
             this.addArtifactToChat(chatId, artifact)
-            // For chart and markdown artifacts, inject into the chat as a message
-            // so the user sees it inline in the conversation
-            if (artifact.type === 'chart' || artifact.type === 'markdown') {
+            // Inject renderable artifacts into the chat as carrier messages so
+            // the user sees them inline. These are UI-only — getLLMMessages
+            // excludes them from LLM history.
+            if (
+              artifact.type === 'chart' ||
+              artifact.type === 'markdown' ||
+              artifact.type === 'results'
+            ) {
               this.addMessageToChat(chatId, {
                 role: 'assistant',
                 content: '',

@@ -1,29 +1,31 @@
 <template>
-  <sidebar-list title="Community Models">
+  <sidebar-list title="External Models">
     <template #header>
       <div class="community-header">
-        <h3 class="font-sans sidebar-header">Community Models</h3>
-        <div class="community-header-actions">
-          <button
-            class="sidebar-control-button sidebar-header-action"
-            @click="communityStore.refreshData()"
-            :disabled="communityStore.loading"
-          >
-            <i class="mdi mdi-refresh"></i>
-            {{ communityStore.loading ? 'Refreshing' : 'Refresh' }}
-          </button>
-          <button
-            class="sidebar-control-button sidebar-header-action sidebar-primary-create"
-            @click="communityStore.openAddStoreModal()"
-            :disabled="communityStore.loading"
-          >
-            <i class="mdi mdi-plus"></i>
-            Add Store
-          </button>
-        </div>
+        <h3 class="font-sans sidebar-header">External Models</h3>
+        <button
+          class="sidebar-control-button sidebar-header-action sidebar-primary-create"
+          @click="communityStore.openAddStoreModal()"
+          data-testid="community-store-add"
+        >
+          <i class="mdi mdi-plus"></i>
+          New
+        </button>
       </div>
     </template>
-    <template #actions> </template>
+    <template #actions>
+      <div class="button-container">
+        <button
+          class="sidebar-control-button sidebar-header-action"
+          @click="communityStore.refreshData()"
+          :disabled="communityStore.loading"
+          data-testid="community-store-refresh"
+        >
+          <i class="mdi mdi-refresh"></i>
+          {{ communityStore.loading ? 'Refreshing' : 'Refresh' }}
+        </button>
+      </div>
+    </template>
 
     <!-- Error Display -->
     <div v-if="communityStore.hasErrors" class="error-container">
@@ -246,17 +248,17 @@ export default defineComponent({
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
 .community-header .sidebar-header {
   margin: 0;
 }
 
-.community-header-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+/* "External Models" is wide enough to wrap at the default sidebar width; without
+   this the button gets squeezed and clipped by the sidebar edge instead. */
+.community-header .sidebar-primary-create {
+  flex: 0 0 auto;
 }
 
 .error-container {

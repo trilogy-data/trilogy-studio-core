@@ -7,6 +7,7 @@ import {
   resetFrozenPromptsForTests,
   buildUnifiedSystemPrompt,
   getCurrentScreenContext,
+  maybeGenerateChatName,
 } from './globalChatRuntime'
 import useScreenNavigation from '../stores/useScreenNavigation'
 import { getSharedRegistry } from './registry'
@@ -97,6 +98,70 @@ describe('globalChatRuntime', () => {
     expect(prompt).toContain('STUDIO APP CONTROL')
     // Live state stays out of the frozen prompt (cache stability).
     expect(prompt).not.toContain('Active screen:')
+  })
+
+  describe('maybeGenerateChatName', () => {
+    const makeNamingSetup = (name: string, messages: any[]) => {
+      const chat = {
+        id: 'chat-1',
+        name,
+        deleted: false,
+        llmConnectionName: 'llm-1',
+        messages,
+      }
+      const chatStore = {
+        chats: { 'chat-1': chat },
+        updateChatName: vi.fn((_id: string, newName: string) => {
+          chat.name = newName
+        }),
+      } as any
+      const deps = makeDeps()
+      deps.llmConnectionStore.generateChatName = vi.fn().mockResolvedValue('Sales Deep Dive')
+      return { chat, chatStore, deps }
+    }
+
+    const exchange = [
+      { role: 'user', content: 'show me sales' },
+      { role: 'assistant', content: 'Here you go.' },
+    ]
+
+    it('renames a chat still carrying the default name after an exchange', async () => {
+      const { chatStore, deps } = makeNamingSetup('Chat 3:45:12 PM', exchange)
+      await maybeGenerateChatName('chat-1', chatStore, deps)
+      expect(deps.llmConnectionStore.generateChatName).toHaveBeenCalledWith('llm-1', exchange)
+      expect(chatStore.updateChatName).toHaveBeenCalledWith('chat-1', 'Sales Deep Dive')
+    })
+
+    it('never renames a user-titled chat', async () => {
+      const { chatStore, deps } = makeNamingSetup('My Analysis', exchange)
+      await maybeGenerateChatName('chat-1', chatStore, deps)
+      expect(deps.llmConnectionStore.generateChatName).not.toHaveBeenCalled()
+    })
+
+    it('waits for an assistant reply before naming', async () => {
+      const { chatStore, deps } = makeNamingSetup('Chat 3:45:12 PM', [
+        { role: 'user', content: 'show me sales' },
+      ])
+      await maybeGenerateChatName('chat-1', chatStore, deps)
+      expect(deps.llmConnectionStore.generateChatName).not.toHaveBeenCalled()
+    })
+
+    it('swallows naming failures', async () => {
+      const { chatStore, deps } = makeNamingSetup('Chat 3:45:12 PM', exchange)
+      deps.llmConnectionStore.generateChatName = vi.fn().mockRejectedValue(new Error('nope'))
+      await expect(maybeGenerateChatName('chat-1', chatStore, deps)).resolves.toBeUndefined()
+      expect(chatStore.updateChatName).not.toHaveBeenCalled()
+    })
+
+    it('skips the rename if the user renamed mid-generation', async () => {
+      const { chat, chatStore, deps } = makeNamingSetup('Chat 3:45:12 PM', exchange)
+      deps.llmConnectionStore.generateChatName = vi.fn().mockImplementation(async () => {
+        chat.name = 'Renamed By Hand'
+        return 'Sales Deep Dive'
+      })
+      await maybeGenerateChatName('chat-1', chatStore, deps)
+      expect(chatStore.updateChatName).not.toHaveBeenCalled()
+    })
   })
 
   it('reads the current screen context from the navigation singleton', () => {

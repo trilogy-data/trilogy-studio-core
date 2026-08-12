@@ -5,7 +5,7 @@ import { SYSTEM_INPUT_START, SYSTEM_INPUT_END } from './toolLoopCore'
 
 /** Approximate input-context size that triggers automatic compaction before
  *  the next run. */
-export const COMPACTION_THRESHOLD_TOKENS = 100_000
+export const COMPACTION_THRESHOLD_TOKENS = 200_000
 
 /** Never bother summarizing fewer messages than this. */
 const MIN_ARCHIVE_COUNT = 6

@@ -267,6 +267,8 @@ export class Chat implements ChatSessionData {
     this.messages = []
     this.artifacts = []
     this.activeArtifactIndex = -1
+    // Reset the compaction trigger — the context this measured is gone.
+    this.lastContextTokens = undefined
     this.updatedAt = new Date()
     this.changed = true
   }
@@ -304,9 +306,15 @@ export class Chat implements ChatSessionData {
   }
 
   /** History as the LLM sees it: archived (compacted) messages excluded.
+   *  Artifact-carrier messages (artifact attached, no text, no tool calls)
+   *  are also excluded — they exist only so the UI can render the artifact
+   *  inline; the LLM already saw the artifact via its tool result, and
+   *  Anthropic rejects empty-content messages mid-history.
    *  The single history-construction point for the tool loop. */
   getLLMMessages(): ChatMessage[] {
-    return this.messages.filter((m) => !m.archived)
+    return this.messages.filter(
+      (m) => !m.archived && !(m.artifact && !m.content && !m.toolCalls?.length),
+    )
   }
 
   serialize(): object {

@@ -88,6 +88,35 @@ export function resetFrozenPromptsForTests(): void {
   frozenPrompts.clear()
 }
 
+/** Matches the constructor default "Chat <localized time>" so auto-naming
+ *  never overwrites a user-chosen title. */
+const DEFAULT_CHAT_NAME = /^Chat \d{1,2}:\d{2}:\d{2}/
+
+/** Auto-name a conversation still carrying its default title, using the fast
+ *  model. Failures are swallowed — naming is cosmetic. */
+export async function maybeGenerateChatName(
+  chatId: string,
+  chatStore: ChatStoreType,
+  deps: ChatExecutionDependencies,
+): Promise<void> {
+  const chat = chatStore.chats[chatId]
+  if (!chat || chat.deleted) return
+  if (!DEFAULT_CHAT_NAME.test(chat.name || '')) return
+  const visible = (chat.messages || []).filter((m) => !m.hidden && m.content?.trim())
+  if (!visible.some((m) => m.role === 'assistant')) return
+  const connectionName = chat.llmConnectionName || deps.llmConnectionStore.activeConnection
+  if (!connectionName) return
+  try {
+    const name = await deps.llmConnectionStore.generateChatName(connectionName, visible)
+    // Re-check: the user may have renamed while the fast model ran.
+    if (name && DEFAULT_CHAT_NAME.test(chatStore.chats[chatId]?.name || '')) {
+      chatStore.updateChatName(chatId, name)
+    }
+  } catch (err) {
+    console.warn('Chat auto-naming failed:', err)
+  }
+}
+
 export interface SendGlobalChatMessageOptions {
   chatId: string
   message: string
@@ -170,4 +199,6 @@ export async function sendGlobalChatMessage(opts: SendGlobalChatMessageOptions):
       buildSystemPrompt: getFrozenPromptProvider(chatId, deps),
     },
   })
+
+  await maybeGenerateChatName(chatId, chatStore, deps)
 }

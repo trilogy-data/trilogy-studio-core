@@ -5,13 +5,10 @@ from logging import getLogger
 from trilogy import Environment
 from trilogy.authoring import (
     DEFAULT_NAMESPACE,
-    BooleanOperator,
     Comment,
     Concept,
-    Conditional,
     DataType,
     MultiSelectStatement,
-    Parenthetical,
     PersistStatement,
     Purpose,
     RawSQLStatement,
@@ -366,29 +363,19 @@ def generate_single_query(
         else [final_select]
     )
 
+    # `where_clause` is derived (the AND fold of `where_clauses`) and memoized
+    # on the stage list's identity, so extra filters are added by replacing the
+    # list with an extended copy - never by mutating the fold or the list.
     if extra_filters:
         conditional = filters_to_conditional(
             extra_filters, variables, env, base_filter_idx=base_filter_idx
         )
-        for candidate in candidates:
-            if not candidate.where_clause:
-                candidate.where_clause = conditional
-            elif conditional:
-                candidate.where_clause.conditional = Conditional(
-                    left=Parenthetical(content=candidate.where_clause.conditional),
-                    right=Parenthetical(content=conditional.conditional),
-                    operator=BooleanOperator.AND,
-                )
+        if conditional:
+            for candidate in candidates:
+                candidate.where_clauses = [*candidate.where_clauses, conditional]
     if extra_conditional:
         for candidate in candidates:
-            if not candidate.where_clause:
-                candidate.where_clause = extra_conditional
-            else:
-                candidate.where_clause.conditional = Conditional(
-                    left=Parenthetical(content=candidate.where_clause.conditional),
-                    right=Parenthetical(content=extra_conditional.conditional),
-                    operator=BooleanOperator.AND,
-                )
+            candidate.where_clauses = [*candidate.where_clauses, extra_conditional]
 
     limit_filter_time = time.time() - limit_filter_start
 

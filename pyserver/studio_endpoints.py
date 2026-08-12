@@ -176,14 +176,12 @@ def _drilldown_query_task(query_data: dict) -> dict:
                 SelectItem(content=env.concepts[val].reference),
             )
 
+        # `where_clause` is derived from the `where_clauses` stage list, so the
+        # drilldown filter is appended as a new stage (rendered as `then where`
+        # when a where already exists).
         where_filter = where_clause.where_clause
         if where_filter:
-            if parsed_query.where_clause:
-                parsed_query.where_clause.conditional = (
-                    parsed_query.where_clause.conditional + where_filter.conditional
-                )
-            else:
-                parsed_query.where_clause = where_filter
+            parsed_query.where_clauses = [*parsed_query.where_clauses, where_filter]
         parsed_query.selection = components
     except HTTPException as exc:
         return _http_error_payload(exc)
