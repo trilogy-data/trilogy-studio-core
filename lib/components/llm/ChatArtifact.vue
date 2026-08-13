@@ -331,6 +331,7 @@ export default defineComponent({
 .artifact-tab {
   padding: 6px 12px;
   border: none;
+  border-radius: 0 !important;
   background: transparent;
   color: var(--text-color);
   font-size: var(--small-font-size);

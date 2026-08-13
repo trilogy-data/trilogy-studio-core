@@ -280,14 +280,8 @@ export default defineComponent({
       }
     },
     setContent(newContent: string) {
-      // Update the editor store
+      // Update the editor store; CodeEditor watches contents and syncs Monaco
       this.editorStore.setEditorContents(this.editorId, newContent)
-
-      // Also update the Monaco editor directly if needed
-      const codeEditorRef = this.$refs.codeEditor as CodeEditorRef
-      if (codeEditorRef) {
-        codeEditorRef.setValue(newContent)
-      }
     },
     updateEditorName(newName: string): void {
       this.editorStore.updateEditorName(this.editorId, newName)
@@ -474,7 +468,6 @@ export default defineComponent({
           formatFiles.length > 0 ? formatFiles : null,
         )
         if (formatted.data && formatted.data.text) {
-          codeEditorRef.setValue(formatted.data.text)
           this.editorData.contents = formatted.data.text
         }
       } catch (error) {
@@ -554,7 +547,6 @@ export default defineComponent({
           drilldownFiles.length > 0 ? drilldownFiles : null,
         )
         if (drilldown.data && drilldown.data.text) {
-          codeEditorRef.setValue(drilldown.data.text)
           this.editorData.contents = drilldown.data.text
         }
         await this.runQuery()

@@ -1,6 +1,7 @@
 import { KeySeparator } from '../data/constants'
 import type Connection from './base'
 import { Table } from './base'
+import type { CollapsePredicate } from '../components/sidebar/collapseState'
 
 /**
  * Node types that configure or report on their parent connection rather than
@@ -30,7 +31,7 @@ export const CONNECTION_BRANCH_NODE_TYPES = new Set(['connection', 'database', '
 
 export function buildConnectionTree(
   connections: Connection[],
-  collapsed: Record<string, boolean>,
+  isCollapsed: CollapsePredicate,
   isLoading: Record<string, boolean>,
   isErrored: Record<string, string>,
 ): Array<{
@@ -82,7 +83,7 @@ export function buildConnectionTree(
       connection,
     })
 
-    if (collapsed[connKey] === false) {
+    if (!isCollapsed(connKey)) {
       if (['duckdb', 'sqlite'].includes(connection.type)) {
         list.push({
           id: `${connKey}-upload`,
@@ -222,7 +223,7 @@ export function buildConnectionTree(
           connection,
         })
 
-        if (!collapsed[dbId]) {
+        if (!isCollapsed(dbId)) {
           if (isLoading[dbId]) {
             list.push({
               id: `${dbId}-loading`,
@@ -268,7 +269,7 @@ export function buildConnectionTree(
               })
 
               // If this schema is not collapsed, add all its tables
-              if (!collapsed[schemaId]) {
+              if (!isCollapsed(schemaId)) {
                 if (isLoading[schemaId]) {
                   list.push({
                     id: `${schemaId}-loading`,

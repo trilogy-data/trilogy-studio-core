@@ -16,6 +16,7 @@ import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { EditorStoreType } from '../../stores/editorStore'
 import type { DashboardStoreType } from '../../stores/dashboardStore'
 import type { ProjectStoreType } from '../../stores/projectStore'
+import type { ModelConfigStoreType } from '../../stores/modelStore'
 import type QueryExecutionService from '../../stores/queryExecutionService'
 import type { ChatMessage } from '../../chats/chat'
 
@@ -30,6 +31,9 @@ const queryExecutionService = inject<QueryExecutionService>(
 ) as QueryExecutionService
 const dashboardStore = inject<DashboardStoreType | null>('dashboardStore', null)
 const projectStore = inject<ProjectStoreType | null>('projectStore', null)
+const modelStore = inject<ModelConfigStoreType | null>('modelStore', null)
+const saveEditors = inject<(() => Promise<unknown> | unknown) | null>('saveEditors', null)
+const saveModels = inject<(() => Promise<unknown> | unknown) | null>('saveModels', null)
 
 const panel = useGlobalChatPanel()
 
@@ -142,6 +146,9 @@ async function handleSend(message: string, _messages: ChatMessage[]) {
       editorStore,
       ...(projectStore ? { projectStore } : {}),
       ...(dashboardStore ? { dashboardStore } : {}),
+      ...(modelStore ? { modelStore } : {}),
+      ...(saveEditors ? { saveEditors } : {}),
+      ...(saveModels ? { saveModels } : {}),
     },
   })
 }

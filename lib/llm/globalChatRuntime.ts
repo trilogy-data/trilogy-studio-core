@@ -57,6 +57,7 @@ App-control guidance:
 - Call get_app_state to orient yourself whenever you are unsure what the user is looking at or what exists — the state at conversation start may be stale.
 - Tools that need a specific screen mounted will tell you when it isn't; open the screen first (open_dashboard, open_editor) when you need it visible.
 - Editors are files: "source"-tagged Trilogy editors define the data model. To change the model, read the relevant editors, edit them with update_editor_contents, and validate with validate_query or run_editor_query.
+- Use rename_editor and delete_editor for editor lifecycle management. Deletion requires explicit confirmation and removes the editor from any model that uses it as a source.
 - Cross-screen workflows are expected: e.g. diagnose a slow dashboard, edit its source datasources, refresh backing data, then reopen the dashboard and re-run to compare execution times (query results report timing in ms).`
 }
 
@@ -156,8 +157,11 @@ export async function sendGlobalChatMessage(opts: SendGlobalChatMessageOptions):
     chatStore,
     queryExecutionService: deps.queryExecutionService,
     ...(deps.dashboardStore ? { dashboardStore: deps.dashboardStore } : {}),
+    ...(deps.modelStore ? { modelStore: deps.modelStore } : {}),
     llmConnectionStore: deps.llmConnectionStore,
     jobsStore: useJobsApiStore(),
+    ...(deps.saveEditors ? { saveEditors: deps.saveEditors } : {}),
+    ...(deps.saveModels ? { saveModels: deps.saveModels } : {}),
     navigation: useScreenNavigation(),
     screenBridge: getScreenBridge(),
   }

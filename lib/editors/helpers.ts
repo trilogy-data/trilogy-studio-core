@@ -1,10 +1,11 @@
 import { Editor } from '.'
 import type { Connection } from '../connections'
+import type { CollapsePredicate } from '../components/sidebar/collapseState'
 
 export function buildEditorTree(
   connections: Connection[],
   editors: Editor[],
-  collapsed: Record<string, boolean>,
+  isCollapsed: CollapsePredicate,
   hiddenTags: Set<string>,
 ) {
   const list: Array<{
@@ -190,7 +191,7 @@ export function buildEditorTree(
           })
 
           // If folder is not collapsed, add its contents
-          if (!collapsed[folderKey]) {
+          if (!isCollapsed(folderKey)) {
             addToList(node.children, currentIndent + 1, folderPath)
           }
         } else if (node.type === 'editor') {
@@ -224,7 +225,7 @@ export function buildEditorTree(
     })
 
     // If storage is not collapsed, add connections and editors
-    if (!collapsed[storageKey]) {
+    if (!isCollapsed(storageKey)) {
       // Sort connections to show active ones first
       const sortedConnections = Object.entries(connections).sort(([connA], [connB]) => {
         const aIsActive = connectionLookup[connA]?.connected || false
@@ -258,7 +259,7 @@ export function buildEditorTree(
           processedConnections.add(connectionKey)
 
           // If connection is not collapsed, add folder structure
-          if (!collapsed[connectionKey]) {
+          if (!isCollapsed(connectionKey)) {
             buildFolderStructure(group.editors, storage, connectionId, group.label, 2)
           }
         }

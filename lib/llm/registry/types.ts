@@ -4,6 +4,7 @@ import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { EditorStoreType } from '../../stores/editorStore'
 import type { ChatStoreType } from '../../stores/chatStore'
 import type { DashboardStoreType } from '../../stores/dashboardStore'
+import type { ModelConfigStoreType } from '../../stores/modelStore'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 import type { JobsApiStoreType } from '../../stores/jobsApiStore'
 import type QueryExecutionService from '../../stores/queryExecutionService'
@@ -65,8 +66,11 @@ export interface ToolRuntime {
   chatStore: ChatStoreType
   queryExecutionService: QueryExecutionService
   dashboardStore?: DashboardStoreType
+  modelStore?: ModelConfigStoreType
   llmConnectionStore?: LLMConnectionStoreType
   jobsStore?: JobsApiStoreType
+  saveEditors?: () => Promise<unknown> | unknown
+  saveModels?: () => Promise<unknown> | unknown
   navigation?: NavigationStore
   screenBridge?: ScreenBridge
 }

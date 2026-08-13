@@ -40,7 +40,7 @@
         <JobsListItem
           :key="item.key"
           :item="item"
-          :is-collapsed="collapsed[item.key]"
+          :is-collapsed="isCollapsed(item.key)"
           :active-jobs-key="activeJobsKey"
           @item-click="handleJobsTreeClick"
           @item-toggle="handleItemToggle"
@@ -77,7 +77,8 @@ import { useCommunityApiStore, useJobsApiStore, useScreenNavigation } from '../.
 import { useConfirmationState } from '../useConfirmationState'
 import { KeySeparator } from '../../data/constants'
 import type { GenericModelStore } from '../../remotes/models'
-import { buildJobsDirectoryKey, buildJobsTree, type JobsTreeNode } from '../../remotes/jobs'
+import { buildJobsTree, type JobsTreeNode } from '../../remotes/jobs'
+import { useCollapseState } from './collapseState'
 import type Storage from '../../data/storage'
 import type RemoteStoreStorage from '../../data/remoteStoreStorage'
 import type { EditorStoreType } from '../../stores/editorStore'
@@ -107,7 +108,6 @@ const storageSources = inject<Storage[]>('storageSources', [])
 const editorStore = inject<EditorStoreType>('editorStore')
 const connectionStore = inject<ConnectionStoreType>('connectionStore')
 const modelStore = inject<ModelConfigStoreType>('modelStore')
-const collapsed = ref<Record<string, boolean>>({})
 const showAddStoreModal = ref(false)
 const isMobile = useIsMobile()
 const mobileTree = ref<any>(null)
@@ -125,42 +125,29 @@ const storesWithErrors = computed(() =>
   genericStores.value.filter((store) => !!jobsStore.errors[store.id]),
 )
 
-const expandDirectoryPath = (storeId: string, directory: string, includeSelf: boolean) => {
-  const segments = directory.split('/').filter(Boolean)
-  let currentPath = ''
+// The store above the active file or directory. Directories below it do not
+// need listing — they are open by default (see openByDefault).
+const activeStoreId = computed(() => {
+  const parts = (props.activeJobsKey || '').split(KeySeparator)
+  return parts[0] || ''
+})
 
-  segments.forEach((segment, index) => {
-    currentPath = currentPath ? `${currentPath}/${segment}` : segment
-    if (includeSelf || index < segments.length - 1) {
-      collapsed.value[buildJobsDirectoryKey(storeId, currentPath)] = false
-    }
-  })
+const openByDefault = (key: string) => {
+  // Directories open with their store. A jobs store is a shallow tree of
+  // scripts, and making someone click through every intermediate directory to
+  // reach one is worse than showing the structure at once. This is the one
+  // tree here that opens below its root, so it says so explicitly rather than
+  // relying on an unseeded map to do it by accident.
+  if (key.includes(`${KeySeparator}directory${KeySeparator}`)) return true
+  if (activeStoreId.value) return key === activeStoreId.value
+  // Nothing active: open a lone store, never an arbitrary one of several.
+  return genericStores.value.length === 1 && key === genericStores.value[0].id
 }
 
-const expandAncestors = (key: string) => {
-  const parts = key.split(KeySeparator)
-  if (!parts.length) {
-    return
-  }
+const { isCollapsed, toggle: toggleKey, open: openKey } = useCollapseState(openByDefault)
 
-  const storeId = parts[0]
-  collapsed.value[storeId] = false
-
-  if (parts[1] === 'directory') {
-    expandDirectoryPath(storeId, decodeURIComponent(parts[2] || ''), true)
-    return
-  }
-
-  if (parts[1] === 'file') {
-    const target = decodeURIComponent(parts[2] || '')
-    const directory = target.split('/').slice(0, -1).join('/')
-    if (directory) {
-      expandDirectoryPath(storeId, directory, true)
-    }
-  }
-}
 const displayTree = computed(() =>
-  buildJobsTree(collapsed.value, genericStores.value, jobsStore.filesByStore),
+  buildJobsTree(isCollapsed, genericStores.value, jobsStore.filesByStore),
 )
 
 const handleAddStoreSubmit = async (store: GenericModelStore) => {
@@ -176,7 +163,7 @@ const handleAddStoreSubmit = async (store: GenericModelStore) => {
         modelStore,
       )
     }
-    collapsed.value[store.id] = false
+    openKey(store.id)
     showAddStoreModal.value = false
   } catch (error) {
     console.error('Failed to add jobs store:', error)
@@ -202,11 +189,11 @@ const handleItemClick = (item: JobsTreeNode) => {
 }
 
 const handleItemToggle = (item: JobsTreeNode) => {
-  collapsed.value[item.key] = !collapsed.value[item.key]
+  toggleKey(item.key)
 }
 const isJobsBranch = (item: JobsTreeNode) => ['store', 'directory'].includes(item.type)
 const expandMobileBranch = (item: JobsTreeNode) => {
-  if (collapsed.value[item.key]) handleItemToggle(item)
+  if (isCollapsed(item.key)) handleItemToggle(item)
 }
 const handleJobsTreeClick = (item: JobsTreeNode) => {
   if (isMobile.value) mobileTree.value?.openItem(item)
@@ -219,19 +206,6 @@ const handleRefreshStore = async (storeId: string) => {
 
 onMounted(async () => {
   communityStore.loadStoresFromStorage()
-
-  genericStores.value.forEach((store) => {
-    if (collapsed.value[store.id] === undefined) {
-      collapsed.value[store.id] = true
-    }
-  })
-
-  if (props.activeJobsKey) {
-    expandAncestors(props.activeJobsKey)
-  } else if (genericStores.value[0]) {
-    collapsed.value[genericStores.value[0].id] = false
-  }
-
   await jobsStore.refreshAllStores()
 })
 </script>

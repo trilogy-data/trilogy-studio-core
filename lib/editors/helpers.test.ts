@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildEditorTree } from './helpers'
+import { openOnly } from '../components/sidebar/collapseState'
 
 describe('buildEditorTree', () => {
   it('keeps same-named local and remote connections in separate sidebar groups', () => {
@@ -34,12 +35,7 @@ describe('buildEditorTree', () => {
           tags: [],
         },
       ] as any,
-      {
-        's-local': false,
-        's-remote': false,
-        'c-local-local:shared': false,
-        'c-remote-remote:store-a:shared': false,
-      },
+      openOnly('s-local', 's-remote', 'c-local-local:shared', 'c-remote-remote:store-a:shared'),
       new Set(),
     )
 

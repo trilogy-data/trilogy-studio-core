@@ -5,10 +5,11 @@ import type { QueryInput, QueryResult } from '../../../stores/queryExecutionServ
 import { generateArtifactId, type ChatArtifact } from '../../../chats/chat'
 import { getChatExecutor } from './chatPacks'
 import type Editor from '../../../editors/editor'
+import { normalizeRemoteEditorPath } from '../../../editors/editor'
 
 // Store-backed editor tools for the global chat: they operate on editors by
 // id/name through editorStore, which is live-visible in an open Monaco tab
-// (Monaco binds to editor.contents). Deliberately NOT built on
+// (EditorCode watches editor.contents and syncs the Monaco model). Deliberately NOT built on
 // EditorRefinementToolExecutor — its EditorContext callback shape is bound to
 // a mounted component; these tools must work with no editor on screen.
 
@@ -25,6 +26,76 @@ function resolveEditor(ctx: ToolContext, ref: string): Editor | null {
 function editorSummaryLine(editor: Editor): string {
   const lineCount = (editor.contents || '').split('\n').length
   return `- "${editor.name}" (id ${editor.id}, type ${editor.type}, connection ${editor.connection}, ${lineCount} lines${editor.tags.length ? `, tags: ${editor.tags.join(',')}` : ''})`
+}
+
+function editorNameForRename(editor: Editor, requestedName: string): string {
+  return editor.storage === 'remote'
+    ? normalizeRemoteEditorPath(requestedName, editor.type)
+    : requestedName
+}
+
+function findEditorNameConflict(ctx: ToolContext, editor: Editor, name: string): Editor | null {
+  return (
+    (Object.values(ctx.runtime.editorStore.editors).find(
+      (candidate) =>
+        !candidate.deleted &&
+        candidate.id !== editor.id &&
+        candidate.connectionId === editor.connectionId &&
+        candidate.name === name,
+    ) as Editor | undefined) || null
+  )
+}
+
+function syncEditorModels(
+  ctx: ToolContext,
+  editorId: string,
+  action: 'rename' | 'delete',
+  newName?: string,
+): number {
+  let updated = 0
+  for (const model of Object.values(ctx.runtime.modelStore?.models || {})) {
+    if (!model.sources.some((source) => source.editor === editorId)) continue
+    if (action === 'rename') {
+      model.updateModelSourceName(editorId, newName || '')
+    } else {
+      model.removeModelSourceSimple(editorId)
+    }
+    updated += 1
+  }
+  return updated
+}
+
+async function persistEditorMutation(
+  ctx: ToolContext,
+  modelsChanged = false,
+): Promise<{ success: true; suffix: string } | { success: false; error: string }> {
+  const callbacks = [ctx.runtime.saveEditors, modelsChanged ? ctx.runtime.saveModels : undefined]
+  const availableCallbacks = callbacks.filter(
+    (callback): callback is () => Promise<unknown> | unknown => !!callback,
+  )
+  const needsAutosave = !ctx.runtime.saveEditors || (modelsChanged && !ctx.runtime.saveModels)
+
+  try {
+    await Promise.all(availableCallbacks.map((callback) => Promise.resolve(callback())))
+  } catch (error) {
+    return {
+      success: false,
+      error: `The editor change was applied in memory, but could not be saved: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    }
+  }
+
+  return {
+    success: true,
+    suffix: needsAutosave ? ' The change is marked for autosave.' : ' The change was saved.',
+  }
+}
+
+function modelSyncSuffix(modelCount: number, action: 'renamed' | 'removed'): string {
+  return modelCount > 0
+    ? ` The editor source was ${action} in ${modelCount} model${modelCount === 1 ? '' : 's'}.`
+    : ''
 }
 
 async function runEditorQuery(ctx: ToolContext, editor: Editor): Promise<ToolCallResult> {
@@ -199,6 +270,10 @@ export function buildEditorPack(): RegisteredTool[] {
         },
       },
       execute: async (input, ctx) => {
+        const name = String(input.name ?? '').trim()
+        if (!name) {
+          return { success: false, error: 'Editor name cannot be empty.' }
+        }
         const connection =
           ctx.runtime.connectionStore.connections[input.connection] ||
           ctx.runtime.connectionStore.connectionByName(input.connection)
@@ -210,15 +285,68 @@ export function buildEditorPack(): RegisteredTool[] {
         }
         const type = input.type === 'sql' ? 'sql' : 'preql'
         const editor = ctx.runtime.editorStore.newEditor(
-          String(input.name),
+          name,
           type as any,
           connection.name,
           input.contents || '',
         )
         ctx.runtime.navigation?.setActiveEditor(editor.id)
+        const persistence = await persistEditorMutation(ctx)
+        if (!persistence.success) return persistence
         return {
           success: true,
-          message: `Created editor "${editor.name}" (id ${editor.id}, type ${editor.type}) on connection "${connection.name}".`,
+          message: `Created editor "${editor.name}" (id ${editor.id}, type ${editor.type}) on connection "${connection.name}".${persistence.suffix}`,
+        }
+      },
+    },
+    {
+      pack: 'editor',
+      definition: {
+        name: 'rename_editor',
+        description:
+          'Rename an editor by id or exact name. The editor id stays stable, open tabs update immediately, and model-source aliases are kept in sync.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            editor_ref: { type: 'string', description: 'Editor id or exact name' },
+            new_name: {
+              type: 'string',
+              description: 'New editor name or path. Remote files keep a language extension.',
+            },
+          },
+          required: ['editor_ref', 'new_name'],
+        },
+      },
+      execute: async (input, ctx) => {
+        const editor = resolveEditor(ctx, String(input.editor_ref ?? ''))
+        if (!editor) {
+          return {
+            success: false,
+            error: `Editor "${input.editor_ref}" not found. Use list_editors to see available editors.`,
+          }
+        }
+        const requestedName = String(input.new_name ?? '').trim()
+        if (!requestedName) {
+          return { success: false, error: 'New editor name cannot be empty.' }
+        }
+        const newName = editorNameForRename(editor, requestedName)
+        const conflict = findEditorNameConflict(ctx, editor, newName)
+        if (conflict) {
+          return {
+            success: false,
+            error: `An editor named "${newName}" already exists on connection "${editor.connection}" (id ${conflict.id}).`,
+          }
+        }
+
+        const previousName = editor.name
+        ctx.runtime.editorStore.updateEditorName(editor.id, requestedName)
+        const updatedModels = syncEditorModels(ctx, editor.id, 'rename', editor.name)
+        ctx.runtime.navigation?.updateTabName('editors', null, editor.id)
+        const persistence = await persistEditorMutation(ctx, updatedModels > 0)
+        if (!persistence.success) return persistence
+        return {
+          success: true,
+          message: `Renamed editor "${previousName}" to "${editor.name}" (id ${editor.id}).${modelSyncSuffix(updatedModels, 'renamed')}${persistence.suffix}`,
         }
       },
     },
@@ -250,9 +378,61 @@ export function buildEditorPack(): RegisteredTool[] {
         }
         const previousLines = (editor.contents || '').split('\n').length
         editor.setContent(input.contents)
+        const persistence = await persistEditorMutation(ctx)
+        if (!persistence.success) return persistence
         return {
           success: true,
-          message: `Updated editor "${editor.name}": ${previousLines} -> ${input.contents.split('\n').length} lines. Changes are unsaved until the user (or autosave) saves.`,
+          message: `Updated editor "${editor.name}": ${previousLines} -> ${input.contents.split('\n').length} lines.${persistence.suffix}`,
+        }
+      },
+    },
+    {
+      pack: 'editor',
+      definition: {
+        name: 'delete_editor',
+        description:
+          'Delete an editor by id or exact name and close its open tab. This also removes it from any model that uses it as a source. This is destructive and requires explicit confirmation.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            editor_ref: { type: 'string', description: 'Editor id or exact name' },
+            confirm: {
+              type: 'boolean',
+              description: 'Must be true to confirm permanent deletion',
+            },
+          },
+          required: ['editor_ref', 'confirm'],
+        },
+      },
+      execute: async (input, ctx) => {
+        const editor = resolveEditor(ctx, String(input.editor_ref ?? ''))
+        if (!editor) {
+          return {
+            success: false,
+            error: `Editor "${input.editor_ref}" not found. Use list_editors to see available editors.`,
+          }
+        }
+        if (input.confirm !== true) {
+          return {
+            success: false,
+            error: `Deletion of editor "${editor.name}" was not confirmed. Set confirm to true only when deletion is intended.`,
+          }
+        }
+        if (editor.loading) {
+          return {
+            success: false,
+            error: `Editor "${editor.name}" is currently running. Wait for it to finish or cancel it before deleting.`,
+          }
+        }
+
+        editor.delete()
+        const updatedModels = syncEditorModels(ctx, editor.id, 'delete')
+        ctx.runtime.navigation?.closeTab(null, editor.id)
+        const persistence = await persistEditorMutation(ctx, updatedModels > 0)
+        if (!persistence.success) return persistence
+        return {
+          success: true,
+          message: `Deleted editor "${editor.name}" (id ${editor.id}).${modelSyncSuffix(updatedModels, 'removed')}${persistence.suffix}`,
         }
       },
     },

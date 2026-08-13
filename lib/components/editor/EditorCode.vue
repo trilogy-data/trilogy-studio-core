@@ -17,6 +17,7 @@ import {
   getEditorText as getEditorTextHelper,
   getEditorRange as getEditorRangeHelper,
   setValue as setValueHelper,
+  syncExternalContent as syncExternalContentHelper,
   executeEdits as executeEditsHelper,
   setModelMarkers as setModelMarkersHelper,
   getEditorInstance as getEditorInstanceHelper,
@@ -160,6 +161,18 @@ export default defineComponent({
           createEditor(editorElement.value, props, callbacks, providerDisposables.value)
         }
       },
+    )
+
+    // Pull in content written to the editor from outside Monaco (chat agent tools,
+    // format, drilldown). Ignored when Monaco already holds the value, i.e. when the
+    // change came from the user typing. Sync flush so callers that immediately read
+    // the text back out of Monaco (drilldown -> runQuery) see the new value.
+    watch(
+      () => props.contents,
+      (contents) => {
+        syncExternalContentHelper(props.context, contents)
+      },
+      { flush: 'sync' },
     )
 
     watch(

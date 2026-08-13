@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+﻿import { describe, expect, it } from 'vitest'
 import {
   buildJobsDirectoryKey,
   buildJobsFileKey,
@@ -6,6 +6,7 @@ import {
   type StoreFilesResponse,
 } from './jobs'
 import type { GenericModelStore } from './models'
+import { EXPAND_ALL, openOnly } from '../components/sidebar/collapseState'
 
 const store: GenericModelStore = {
   type: 'generic',
@@ -37,14 +38,7 @@ const filesResponse: StoreFilesResponse = {
 
 describe('buildJobsTree', () => {
   it('builds nested directory nodes instead of flattening directory paths', () => {
-    const tree = buildJobsTree(
-      {
-        [store.id]: false,
-        [buildJobsDirectoryKey(store.id, 'raw')]: false,
-      },
-      [store],
-      { [store.id]: filesResponse },
-    )
+    const tree = buildJobsTree(EXPAND_ALL, [store], { [store.id]: filesResponse })
 
     expect(tree.map((node) => [node.type, node.label, node.indent])).toEqual([
       ['store', 'Jobs Test Store', 0],
@@ -63,14 +57,7 @@ describe('buildJobsTree', () => {
   })
 
   it('respects collapsed state for nested directories', () => {
-    const tree = buildJobsTree(
-      {
-        [store.id]: false,
-        [buildJobsDirectoryKey(store.id, 'raw')]: true,
-      },
-      [store],
-      { [store.id]: filesResponse },
-    )
+    const tree = buildJobsTree(openOnly(store.id), [store], { [store.id]: filesResponse })
 
     expect(tree.map((node) => node.key)).toEqual([
       store.id,
@@ -81,23 +68,16 @@ describe('buildJobsTree', () => {
   })
 
   it('creates intermediate directories when only nested paths are present', () => {
-    const tree = buildJobsTree(
-      {
-        [store.id]: false,
-        [buildJobsDirectoryKey(store.id, 'raw')]: false,
+    const tree = buildJobsTree(EXPAND_ALL, [store], {
+      [store.id]: {
+        directories: [
+          {
+            directory: 'raw/burlington',
+            files: ['burlington_tree_info.preql'],
+          },
+        ],
       },
-      [store],
-      {
-        [store.id]: {
-          directories: [
-            {
-              directory: 'raw/burlington',
-              files: ['burlington_tree_info.preql'],
-            },
-          ],
-        },
-      },
-    )
+    })
 
     expect(tree.map((node) => [node.type, node.label, node.indent])).toEqual([
       ['store', 'Jobs Test Store', 0],

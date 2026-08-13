@@ -53,7 +53,7 @@
           :key="item.key"
           :item="item"
           :mobile-tree-mode="isMobile"
-          :is-collapsed="collapsed[item.key]"
+          :is-collapsed="isCollapsed(item.key)"
           :active-model="navigationStore.activeCommunityModelKey.value"
           @item-click="handleItemClick"
           @item-toggle="handleItemToggle"
@@ -89,6 +89,8 @@
 import { ref, onMounted, computed, defineComponent, inject } from 'vue'
 
 import { useCommunityApiStore, useScreenNavigation } from '../../stores'
+import { KeySeparator } from '../../data/constants'
+import { useCollapseState } from './collapseState'
 import SidebarList from './SidebarList.vue'
 import CommunityModelListItem from './CommunityModelListItem.vue'
 import AddStoreModal from '../community/AddStoreModal.vue'
@@ -111,45 +113,32 @@ export default defineComponent({
     const editorStore = inject<EditorStoreType>('editorStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const modelStore = inject<ModelConfigStoreType>('modelStore')
-    const collapsed = ref<Record<string, boolean>>({})
     const isMobile = useIsMobile()
     const mobileTree = ref<any>(null)
 
     // Get the currently active model key
     const activeKey = navigationStore.activeCommunityModelKey.value || ''
 
-    // Helper to expand ancestors of active key
-    const expandAncestors = (key: string) => {
-      // Parse the key to get store/root, engine, and model parts
-      // Keys are formatted as: storeId+engine+model
-      const parts = key.split('+')
-
-      if (parts.length > 0) {
-        // Expand the root/store
-        collapsed.value[parts[0]] = false
-
-        if (parts.length > 1) {
-          // Expand the engine
-          const engineKey = `${parts[0]}+${parts[1]}`
-          collapsed.value[engineKey] = false
-        }
+    // Keys that start open: the store and engine above the active model, or —
+    // with nothing active — a lone store, so the panel is never empty-looking
+    // but never picks arbitrarily between several. Computed rather than seeded,
+    // so it survives stores arriving after mount.
+    const openKeys = computed(() => {
+      if (activeKey) {
+        // Keys are formatted as storeId+engine+model.
+        const [storeId, engine] = activeKey.split(KeySeparator)
+        return new Set(engine ? [storeId, `${storeId}${KeySeparator}${engine}`] : [storeId])
       }
-    }
+      const stores = communityStore.stores
+      return stores.length === 1 ? new Set([stores[0].id]) : new Set<string>()
+    })
 
-    // Initialize collapsed state for stores (collapsed by default)
-    for (const store of communityStore.stores) {
-      collapsed.value[store.id] = true
-    }
-
-    // Expand ancestors of active item if there is one
-    if (activeKey) {
-      expandAncestors(activeKey)
-    } else {
-      // If no active key, expand the first store by default
-      if (communityStore.stores.length > 0) {
-        collapsed.value[communityStore.stores[0].id] = false
-      }
-    }
+    const {
+      overrides: collapsed,
+      isCollapsed,
+      toggle: toggleKey,
+      open: openKey,
+    } = useCollapseState((key) => openKeys.value.has(key))
 
     // Handle adding a store from the modal
     const handleAddStoreSubmit = async (store: any) => {
@@ -187,19 +176,19 @@ export default defineComponent({
     }
 
     const handleItemToggle = (_: string, key: string, __: ModelRoot) => {
-      collapsed.value[key] = !collapsed.value[key]
+      toggleKey(key)
     }
 
     const displayTree = computed(() => {
       return buildCommunityModelTree(
-        collapsed.value,
+        isCollapsed,
         communityStore.stores,
         communityStore.filesByStore,
       )
     })
     const isCommunityBranch = (item: any) => ['root', 'engine'].includes(item.type)
     const expandMobileBranch = (item: any) => {
-      if (collapsed.value[item.key]) collapsed.value[item.key] = false
+      if (isCollapsed(item.key)) openKey(item.key)
     }
     const selectMobileItem = (item: any) => {
       if (item.type === 'model') handleModelSelected(item.model, item.key, item.modelRoot)
@@ -224,6 +213,7 @@ export default defineComponent({
       handleItemClick,
       handleItemToggle,
       collapsed,
+      isCollapsed,
       displayTree,
       isMobile,
       mobileTree,

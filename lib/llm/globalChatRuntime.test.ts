@@ -95,6 +95,8 @@ describe('globalChatRuntime', () => {
     expect(prompt).toContain('get_app_state')
     expect(prompt).toContain('open_dashboard')
     expect(prompt).toContain('update_editor_contents')
+    expect(prompt).toContain('rename_editor')
+    expect(prompt).toContain('delete_editor')
     expect(prompt).toContain('STUDIO APP CONTROL')
     // Live state stays out of the frozen prompt (cache stability).
     expect(prompt).not.toContain('Active screen:')

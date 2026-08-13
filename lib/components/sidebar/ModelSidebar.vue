@@ -48,7 +48,7 @@
             ['model'].includes(item.type) ||
             (['source', 'datasource'].includes(item.type) && item.count > 0)
           "
-          :is-collapsed="collapsed[item.id]"
+          :is-collapsed="isCollapsed(item.id)"
           @click="isMobile ? mobileTree?.openItem(item) : handleClick(item.id)"
           @toggle="handleToggle"
         >
@@ -82,6 +82,7 @@
 
 <script lang="ts">
 import { ref, computed, inject } from 'vue'
+import { useCollapseState } from './collapseState'
 import SidebarList from './SidebarList.vue'
 import SidebarItem from './GenericSidebarItem.vue'
 import ModelCreator from '../model/ModelCreator.vue'
@@ -150,40 +151,26 @@ export default {
       throw new Error('Model store is not provided!')
     }
 
-    let collapsedPre = {} as Record<string, boolean>
-    // first loop to pre-collapse
-    Object.values(modelStore.models).forEach((model) => {
-      let modelId = ['model', model.name].join(KeySeparator)
-      if (model.name !== currentModel) {
-        collapsedPre[modelId] = true
-      }
+    // Only the path to the active selection starts open.
+    const onActivePath = (id: string): boolean => {
+      const [type, model, source, datasource] = id.split(KeySeparator)
+      if (model !== currentModel) return false
+      if (type === 'model') return true
+      if (source !== currentSource) return false
+      if (type === 'source') return true
+      return type === 'datasource' && datasource === currentDatasource
+    }
 
-      model.sources.forEach((source) => {
-        let sourceId = ['source', model.name, source.alias].join(KeySeparator)
-        if (model.name !== currentModel || source.alias !== currentSource) {
-          collapsedPre[sourceId] = true
-        }
-        source.datasources.forEach((ds) => {
-          let dsId = ['datasource', model.name, source.alias, ds.name].join(KeySeparator)
-          if (
-            model.name !== currentModel ||
-            source.alias !== currentSource ||
-            ds.name !== currentDatasource
-          ) {
-            collapsedPre[dsId] = true
-          }
-        })
-      })
-    })
-
-    const collapsed = ref<Record<string, boolean>>(collapsedPre)
+    const {
+      overrides: collapsed,
+      isCollapsed,
+      toggle: handleToggle,
+    } = useCollapseState(onActivePath)
 
     const searchQuery = computed(() => props.mobileSearchQuery.trim().toLocaleLowerCase())
     // While searching, treat everything as expanded — otherwise concepts inside
     // a collapsed source or datasource are never emitted and can't be found.
-    const effectiveCollapsed = computed(() =>
-      searchQuery.value ? ({} as Record<string, boolean>) : collapsed.value,
-    )
+    const nodeCollapsed = (id: string): boolean => (searchQuery.value ? false : isCollapsed(id))
 
     const flatList = computed(() => {
       const list: Array<{
@@ -207,7 +194,7 @@ export default {
           concept: null,
         })
 
-        if (!effectiveCollapsed.value[modelId]) {
+        if (!nodeCollapsed(modelId)) {
           model.sources.forEach((source) => {
             let sourceId = ['source', model.name, source.alias].join(KeySeparator)
             list.push({
@@ -218,7 +205,7 @@ export default {
               type: 'source',
               concept: null,
             })
-            if (!effectiveCollapsed.value[sourceId]) {
+            if (!nodeCollapsed(sourceId)) {
               source.concepts.forEach((concept) => {
                 list.push({
                   id: ['concept', model.name, source.alias, concept.namespace, concept.name].join(
@@ -244,7 +231,7 @@ export default {
                   type: 'datasource',
                   concept: null,
                 })
-                if (!effectiveCollapsed.value[dsId]) {
+                if (!nodeCollapsed(dsId)) {
                   ds.concepts.forEach((field) => {
                     list.push({
                       id: [
@@ -304,13 +291,10 @@ export default {
       navigationStore.openTab('models', label, id)
     }
 
-    const handleToggle = (id: string) => {
-      collapsed.value[id] = !collapsed.value[id]
-    }
     const isModelBranch = (item: { type: string; count: number }) =>
       item.type === 'model' || (['source', 'datasource'].includes(item.type) && item.count > 0)
     const expandMobileBranch = (item: { id: string }) => {
-      if (collapsed.value[item.id]) handleToggle(item.id)
+      if (isCollapsed(item.id)) handleToggle(item.id)
     }
     const selectMobileItem = (item: { id: string }) => handleClick(item.id)
 
@@ -341,6 +325,7 @@ export default {
       creatorVisible,
       flatList,
       collapsed,
+      isCollapsed,
       saveModels,
       fetchParseResults,
       trilogyIcon,

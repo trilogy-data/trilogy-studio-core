@@ -7,6 +7,7 @@ import type QueryExecutionService from './queryExecutionService'
 import type { EditorStoreType } from './editorStore'
 import type { ProjectStoreType } from './projectStore'
 import type { DashboardStoreType } from './dashboardStore'
+import type { ModelConfigStoreType } from './modelStore'
 import { OverseerToolExecutor } from '../llm/overseerToolExecutor'
 import { ArchitectToolExecutor } from '../llm/architectToolExecutor'
 import { summarizeSubchat } from '../llm/subchatSummarize'
@@ -77,6 +78,10 @@ export interface ChatExecutionDependencies {
    *  what to put in the system prompt. Studio chats (kind=user) don't
    *  need this. */
   projectStore?: ProjectStoreType
+  /** Optional model + persistence services used by global editor-management tools. */
+  modelStore?: ModelConfigStoreType
+  saveEditors?: () => Promise<unknown> | unknown
+  saveModels?: () => Promise<unknown> | unknown
   /** Optional dashboard store — used by the overseer's create_report tool to
    *  spin up a new report-mode dashboard and queue its initial prompt. */
   dashboardStore?: DashboardStoreType

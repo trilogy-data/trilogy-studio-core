@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { buildNavigationPack } from './navigationPack'
 import { buildEditorPack } from './editorPack'
 import type { RegisteredTool, ToolContext } from '../types'
@@ -20,6 +20,7 @@ const makeNavigation = () => {
   return {
     calls,
     nav: {
+      calls,
       activeScreen: { value: 'editors' },
       activeDashboard: { value: '' },
       activeEditor: { value: 'ed-1' },
@@ -29,6 +30,8 @@ const makeNavigation = () => {
       setActiveSidebarScreen: record('setActiveSidebarScreen'),
       setActiveDashboard: record('setActiveDashboard'),
       setActiveEditor: record('setActiveEditor'),
+      updateTabName: record('updateTabName'),
+      closeTab: record('closeTab'),
     } as any,
   }
 }
@@ -42,10 +45,21 @@ const makeContext = (navigation: any): ToolContext => {
       connection: 'duckdb',
       connectionId: 'local-duckdb',
       contents: 'key a int;',
+      storage: 'local',
       deleted: false,
+      loading: false,
+      changed: false,
       tags: [],
       setContent(next: string) {
         this.contents = next
+        this.changed = true
+      },
+      setName(next: string) {
+        this.name = next
+        this.changed = true
+      },
+      delete() {
+        this.deleted = true
         this.changed = true
       },
     },
@@ -65,7 +79,24 @@ const makeContext = (navigation: any): ToolContext => {
       editorStore: {
         editors,
         getEditorByName: (name: string) => Object.values(editors).find((e: any) => e.name === name),
+        updateEditorName: (id: string, name: string) => editors[id].setName(name),
       },
+      modelStore: {
+        models: {
+          sales: {
+            sources: [{ editor: 'ed-1', alias: 'sales_model' }],
+            updateModelSourceName(id: string, name: string) {
+              const source = this.sources.find((candidate: any) => candidate.editor === id)
+              if (source) source.alias = name
+            },
+            removeModelSourceSimple(id: string) {
+              this.sources = this.sources.filter((source: any) => source.editor !== id)
+            },
+          },
+        },
+      },
+      saveEditors: vi.fn().mockResolvedValue(undefined),
+      saveModels: vi.fn().mockResolvedValue(undefined),
       chatStore: {},
       queryExecutionService: {},
       dashboardStore: {
@@ -172,5 +203,67 @@ describe('editorPack', () => {
     )
     expect(result.success).toBe(false)
     expect(result.error).toContain('not found')
+  })
+
+  it('rename_editor updates the editor, model source, tab title, and persistence', async () => {
+    const result = await toolByName(pack, 'rename_editor').execute(
+      { editor_ref: 'ed-1', new_name: 'sales_clean' },
+      ctx,
+    )
+
+    expect(result.success).toBe(true)
+    expect((ctx.runtime.editorStore as any).editors['ed-1'].name).toBe('sales_clean')
+    expect((ctx.runtime.modelStore as any).models.sales.sources[0].alias).toBe('sales_clean')
+    expect((ctx.runtime.navigation as any).calls.updateTabName[0]).toEqual([
+      'editors',
+      null,
+      'ed-1',
+    ])
+    expect(ctx.runtime.saveEditors as any).toHaveBeenCalledTimes(1)
+    expect(ctx.runtime.saveModels as any).toHaveBeenCalledTimes(1)
+  })
+
+  it('rename_editor rejects a duplicate name on the same connection', async () => {
+    ;(ctx.runtime.editorStore as any).editors['ed-2'] = {
+      id: 'ed-2',
+      name: 'taken',
+      connectionId: 'local-duckdb',
+      deleted: false,
+    }
+
+    const result = await toolByName(pack, 'rename_editor').execute(
+      { editor_ref: 'ed-1', new_name: 'taken' },
+      ctx,
+    )
+
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('already exists')
+    expect((ctx.runtime.editorStore as any).editors['ed-1'].name).toBe('sales_model')
+  })
+
+  it('delete_editor requires confirmation', async () => {
+    const result = await toolByName(pack, 'delete_editor').execute(
+      { editor_ref: 'ed-1', confirm: false },
+      ctx,
+    )
+
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('not confirmed')
+    expect((ctx.runtime.editorStore as any).editors['ed-1'].deleted).toBe(false)
+  })
+
+  it('delete_editor marks the editor deleted, removes its model source, and closes its tab', async () => {
+    const navigation = ctx.runtime.navigation as any
+    const result = await toolByName(pack, 'delete_editor').execute(
+      { editor_ref: 'ed-1', confirm: true },
+      ctx,
+    )
+
+    expect(result.success).toBe(true)
+    expect((ctx.runtime.editorStore as any).editors['ed-1'].deleted).toBe(true)
+    expect((ctx.runtime.modelStore as any).models.sales.sources).toEqual([])
+    expect(navigation.calls.closeTab[0]).toEqual([null, 'ed-1'])
+    expect(ctx.runtime.saveEditors as any).toHaveBeenCalledTimes(1)
+    expect(ctx.runtime.saveModels as any).toHaveBeenCalledTimes(1)
   })
 })

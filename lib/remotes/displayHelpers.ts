@@ -2,6 +2,7 @@
 
 import { type ModelRoot, type ModelFile, type AnyModelStore } from './models'
 import { KeySeparator } from '../data/constants'
+import type { CollapsePredicate } from '../components/sidebar/collapseState'
 
 export interface TreeNode {
   type: 'root' | 'engine' | 'model'
@@ -21,7 +22,7 @@ export interface TreeNode {
  * @returns Tree structure with nested hierarchy
  */
 export const buildCommunityModelTree = (
-  collapsed: Record<string, boolean> = {},
+  isCollapsed: CollapsePredicate,
   stores: AnyModelStore[] = [],
   filesByStore: Record<string, ModelFile[]> = {},
 ): TreeNode[] => {
@@ -51,7 +52,7 @@ export const buildCommunityModelTree = (
     })
 
     // If this root is not collapsed, add its engines and models
-    if (!collapsed[rootKey]) {
+    if (!isCollapsed(rootKey)) {
       const files = filesByStore[rootKey] || []
       const engines: Record<string, ModelFile[]> = {}
 
@@ -77,7 +78,7 @@ export const buildCommunityModelTree = (
             store,
           })
           // If this engine is not collapsed, add its models
-          if (!collapsed[engineKey]) {
+          if (!isCollapsed(engineKey)) {
             engines[engine].forEach((file) => {
               tree.push({
                 type: 'model',

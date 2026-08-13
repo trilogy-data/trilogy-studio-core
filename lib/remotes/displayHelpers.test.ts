@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
+﻿import { describe, it, expect } from 'vitest'
 import { buildCommunityModelTree, generateRootKey } from './displayHelpers'
+import { EXPAND_ALL, openOnly } from '../components/sidebar/collapseState'
 import type { ModelRoot, ModelFile, GithubModelStore, GenericModelStore } from './models'
 
 describe('buildCommunityModelTree', () => {
@@ -30,7 +31,7 @@ describe('buildCommunityModelTree', () => {
       },
     ]
 
-    const tree = buildCommunityModelTree({}, [store], { [store.id]: files })
+    const tree = buildCommunityModelTree(EXPAND_ALL, [store], { [store.id]: files })
 
     // Should have root node
     expect(tree[0].type).toBe('root')
@@ -67,7 +68,7 @@ describe('buildCommunityModelTree', () => {
       },
     ]
 
-    const tree = buildCommunityModelTree({}, [store], { [store.id]: files })
+    const tree = buildCommunityModelTree(EXPAND_ALL, [store], { [store.id]: files })
 
     expect(tree[0].type).toBe('root')
     expect(tree[0].label).toBe('Local Dev Store')
@@ -115,7 +116,7 @@ describe('buildCommunityModelTree', () => {
       },
     ]
 
-    const tree = buildCommunityModelTree({}, [githubStore, genericStore], {
+    const tree = buildCommunityModelTree(EXPAND_ALL, [githubStore, genericStore], {
       [githubStore.id]: githubFiles,
       [genericStore.id]: genericFiles,
     })
@@ -155,7 +156,7 @@ describe('buildCommunityModelTree', () => {
     ]
 
     const tree = buildCommunityModelTree(
-      { [store.id]: true }, // Collapsed
+      openOnly(), // store collapsed
       [store],
       { [store.id]: files },
     )
@@ -185,13 +186,8 @@ describe('buildCommunityModelTree', () => {
       },
     ]
 
-    const engineKey = `${store.id}+duckdb`
-
-    const tree = buildCommunityModelTree(
-      { [engineKey]: true }, // Engine collapsed
-      [store],
-      { [store.id]: files },
-    )
+    // The store is open but its duckdb engine is not.
+    const tree = buildCommunityModelTree(openOnly(store.id), [store], { [store.id]: files })
 
     // Should have root and engine, but not models
     expect(tree.length).toBe(2)
@@ -233,7 +229,7 @@ describe('buildCommunityModelTree', () => {
       },
     ]
 
-    const tree = buildCommunityModelTree({}, [store], { [store.id]: files })
+    const tree = buildCommunityModelTree(EXPAND_ALL, [store], { [store.id]: files })
 
     // Root
     expect(tree[0].type).toBe('root')
@@ -260,7 +256,7 @@ describe('buildCommunityModelTree', () => {
       baseUrl: 'http://example.com',
     }
 
-    const tree = buildCommunityModelTree({}, [store], { [store.id]: [] })
+    const tree = buildCommunityModelTree(EXPAND_ALL, [store], { [store.id]: [] })
 
     // Should only have root node
     expect(tree.length).toBe(1)
