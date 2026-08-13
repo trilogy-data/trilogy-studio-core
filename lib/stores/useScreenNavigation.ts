@@ -187,8 +187,23 @@ const createNavigationStore = (): NavigationStore => {
     removeHashFromUrl(URL_HASH_KEYS.SIDEBAR_SCREEN)
   }
 
+  /**
+   * Follow the active tab with the sidebar, but only for tabs that have a
+   * sidebar list of their own.
+   *
+   * Screens like welcome and the importers have none, and blanking the sidebar
+   * for them empties the whole column: every list in `Sidebar.vue` is `v-show`n
+   * on this value, so '' renders nothing at all, with no error and no way back
+   * except clicking the icon rail. That is reachable without ever touching a
+   * tab — deleting the last open editor closes its tab, which activates
+   * whatever is adjacent, and the adjacent tab is usually Welcome. Keep showing
+   * the list the user was already on instead.
+   */
   const syncSidebarScreenWithTab = (screen: ScreenType, skipUrlUpdate: boolean = false): void => {
-    updateSidebarScreen(sidebarScreens.has(screen) ? screen : '', skipUrlUpdate)
+    if (!sidebarScreens.has(screen)) {
+      return
+    }
+    updateSidebarScreen(screen, skipUrlUpdate)
   }
 
   const getName = (screen: ScreenType, title: string | null, address: string): string => {

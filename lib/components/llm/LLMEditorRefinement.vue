@@ -14,7 +14,6 @@
     >
       <template #input-actions>
         <button
-          v-if="!isMobile"
           class="action-btn accept-btn"
           @click="handleAccept"
           :disabled="isLoading"
@@ -58,7 +57,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject, computed, type PropType, type Ref } from 'vue'
+import { defineComponent, ref, inject, computed, type PropType } from 'vue'
 import LLMChat from './LLMChat.vue'
 import ResultsComponent from '../editor/Results.vue'
 import type { ChatMessage, ChatArtifact } from '../../chats/chat'
@@ -99,7 +98,6 @@ export default defineComponent({
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     const editorStore = inject<EditorStoreType>('editorStore')
     const chatStore = inject<ChatStoreType>('chatStore')
-    const isMobile = inject<Ref<boolean> | boolean>('isMobile', false)
 
     if (
       !llmConnectionStore ||
@@ -232,7 +230,6 @@ export default defineComponent({
 
     return {
       chatRef,
-      isMobile,
       messages,
       artifacts,
       isLoading,

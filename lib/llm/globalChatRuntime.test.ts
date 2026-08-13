@@ -8,8 +8,12 @@ import {
   buildUnifiedSystemPrompt,
   getCurrentScreenContext,
   maybeGenerateChatName,
+  openGlobalChatForEditor,
 } from './globalChatRuntime'
 import useScreenNavigation from '../stores/useScreenNavigation'
+import useGlobalChatPanel, {
+  resetGlobalChatPanelForTests,
+} from '../stores/useGlobalChatPanel'
 import { getSharedRegistry } from './registry'
 
 const makeDeps = () =>
@@ -163,6 +167,113 @@ describe('globalChatRuntime', () => {
       })
       await maybeGenerateChatName('chat-1', chatStore, deps)
       expect(chatStore.updateChatName).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('openGlobalChatForEditor', () => {
+    const makeChat = (id: string, overrides: Record<string, any> = {}) => ({
+      id,
+      deleted: false,
+      kind: 'user',
+      source: 'user',
+      updatedAt: new Date('2026-01-01'),
+      pendingContextNote: null,
+      ...overrides,
+    })
+
+    const makeChatStore = (chats: Record<string, any>) =>
+      ({
+        chats,
+        get chatList() {
+          return Object.values(chats).filter((c: any) => !c.deleted)
+        },
+        newChat: vi.fn((llmConnectionName: string) => {
+          const chat = makeChat('new-chat', { llmConnectionName })
+          chats['new-chat'] = chat
+          return chat
+        }),
+      }) as any
+
+    const llmConnectionStore = { activeConnection: 'llm-1', connections: {} } as any
+    const editor = { id: 'ed-1', name: 'sales_report' }
+
+    beforeEach(() => {
+      resetGlobalChatPanelForTests()
+    })
+
+    it('seeds a context note on the active panel conversation and opens the panel', () => {
+      const chats = { 'chat-a': makeChat('chat-a') }
+      const chatStore = makeChatStore(chats)
+      const panel = useGlobalChatPanel()
+      panel.setActivePanelChat('chat-a')
+      panel.closePanel()
+
+      const chatId = openGlobalChatForEditor({ chatStore, llmConnectionStore, editor })
+
+      expect(chatId).toBe('chat-a')
+      expect(panel.isOpen.value).toBe(true)
+      expect(chats['chat-a'].pendingContextNote).toContain('sales_report')
+      expect(chats['chat-a'].pendingContextNote).toContain('ed-1')
+      expect(chatStore.newChat).not.toHaveBeenCalled()
+    })
+
+    it('falls back to the most recent user conversation when the active id is stale', () => {
+      const chats = {
+        old: makeChat('old', { updatedAt: new Date('2026-01-01') }),
+        recent: makeChat('recent', { updatedAt: new Date('2026-02-01') }),
+        dashboard: makeChat('dashboard', {
+          source: 'dashboard',
+          updatedAt: new Date('2026-03-01'),
+        }),
+      }
+      const chatStore = makeChatStore(chats)
+      useGlobalChatPanel().setActivePanelChat('deleted-chat')
+
+      const chatId = openGlobalChatForEditor({ chatStore, llmConnectionStore, editor })
+
+      expect(chatId).toBe('recent')
+      expect(chats['recent'].pendingContextNote).toContain('sales_report')
+    })
+
+    it('creates a conversation when none exists', () => {
+      const chatStore = makeChatStore({})
+
+      const chatId = openGlobalChatForEditor({ chatStore, llmConnectionStore, editor })
+
+      expect(chatStore.newChat).toHaveBeenCalledWith('llm-1', '', undefined, '', {
+        activate: false,
+      })
+      expect(chatId).toBe('new-chat')
+      expect(chatStore.chats['new-chat'].pendingContextNote).toContain('sales_report')
+      expect(useGlobalChatPanel().activePanelChatId.value).toBe('new-chat')
+    })
+
+    it('includes and truncates the selection', () => {
+      const chats = { 'chat-a': makeChat('chat-a') }
+      const chatStore = makeChatStore(chats)
+      useGlobalChatPanel().setActivePanelChat('chat-a')
+
+      openGlobalChatForEditor({
+        chatStore,
+        llmConnectionStore,
+        editor,
+        selectedText: 'x'.repeat(3000),
+      })
+
+      const note = chats['chat-a'].pendingContextNote as string
+      expect(note).toContain('selection')
+      expect(note).toContain('...(selection truncated)')
+      expect(note.length).toBeLessThan(2600)
+    })
+
+    it('omits the selection block for whitespace-only selections', () => {
+      const chats = { 'chat-a': makeChat('chat-a') }
+      const chatStore = makeChatStore(chats)
+      useGlobalChatPanel().setActivePanelChat('chat-a')
+
+      openGlobalChatForEditor({ chatStore, llmConnectionStore, editor, selectedText: '   \n ' })
+
+      expect(chats['chat-a'].pendingContextNote).not.toContain('selection')
     })
   })
 

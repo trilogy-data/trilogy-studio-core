@@ -67,3 +67,42 @@ describe('useScreenNavigation onInitialLoad', () => {
     TEST_TIMEOUT,
   )
 })
+
+describe('useScreenNavigation sidebar screen', () => {
+  beforeEach(() => {
+    window.location.hash = ''
+    localStorage.clear()
+  })
+
+  it(
+    'keeps the sidebar list when the active tab has no sidebar of its own',
+    async () => {
+      // Every list in Sidebar.vue is v-shown on activeSidebarScreen, so '' is
+      // not a neutral value — it empties the sidebar column entirely. Closing
+      // the last editor tab activates the welcome tab, which is exactly how
+      // deleting a few editors used to make the editor list vanish.
+      const navigation = await loadNavigation('')
+      navigation.openTab('welcome', 'Welcome', 'welcome')
+      navigation.openTab('editors', null, 'my-editor')
+      expect(navigation.activeSidebarScreen.value).toBe('editors')
+
+      navigation.closeTab(null, 'my-editor')
+
+      expect(navigation.tabs.value.map((tab) => tab.screen)).toEqual(['welcome'])
+      expect(navigation.activeSidebarScreen.value).toBe('editors')
+    },
+    TEST_TIMEOUT,
+  )
+
+  it(
+    'still follows the active tab between screens that do have a sidebar',
+    async () => {
+      const navigation = await loadNavigation('')
+      navigation.openTab('editors', null, 'my-editor')
+      navigation.openTab('connections', null, 'local:duckdb')
+
+      expect(navigation.activeSidebarScreen.value).toBe('connections')
+    },
+    TEST_TIMEOUT,
+  )
+})

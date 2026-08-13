@@ -17,7 +17,10 @@ const MAX_READ_CHARS = 40_000
 
 function resolveEditor(ctx: ToolContext, ref: string): Editor | null {
   const store = ctx.runtime.editorStore
-  const byId = store.editors[ref]
+  // Own-property guard: refs like "__proto__" must not resolve prototype members.
+  const byId = Object.prototype.hasOwnProperty.call(store.editors, ref)
+    ? store.editors[ref]
+    : undefined
   if (byId && !byId.deleted) return byId as Editor
   const byName = store.getEditorByName(ref)
   return byName && !byName.deleted ? (byName as Editor) : null
@@ -120,6 +123,7 @@ async function runEditorQuery(ctx: ToolContext, editor: Editor): Promise<ToolCal
     text: editor.contents,
     editorType: editor.type === 'sql' ? 'sql' : 'trilogy',
     imports: [],
+    currentFilename: editor.name,
     extraContent: buildExtraContent(connectionStore, ctx.runtime.editorStore, connection.id),
   }
 
@@ -136,6 +140,28 @@ async function runEditorQuery(ctx: ToolContext, editor: Editor): Promise<ToolCal
     }
     if (!queryResult.results) {
       return { success: false, error: 'Query returned no results' }
+    }
+    // Publish into the editor's own results state too, so a chat-driven run
+    // behaves like the toolbar Run for an open (or later-opened) editor.
+    // Clear a chart config built for a different result shape first — but
+    // only when prior results actually exist: persisted editors rehydrate
+    // with an empty Results, and comparing against that would wipe the
+    // user's saved chart config on the first re-run.
+    if (editor.chartConfig && editor.results?.headers && editor.results.headers.size > 0) {
+      const sameShape =
+        JSON.stringify(Array.from(editor.results.headers.keys())) ===
+        JSON.stringify(Array.from(queryResult.results.headers.keys()))
+      if (!sameShape) {
+        editor.setChartConfig(null)
+      }
+    }
+    ctx.runtime.editorStore.setEditorResults(editor.id, queryResult.results)
+    editor.executed_contents = editor.contents
+    if (queryResult.generatedSql) {
+      editor.generated_sql = queryResult.generatedSql
+    }
+    if (typeof queryResult.executionTime === 'number') {
+      editor.duration = queryResult.executionTime
     }
     const artifact: ChatArtifact = {
       id: generateArtifactId(),
@@ -281,6 +307,18 @@ export function buildEditorPack(): RegisteredTool[] {
           return {
             success: false,
             error: `Connection "${input.connection}" not found.`,
+          }
+        }
+        const conflict = Object.values(ctx.runtime.editorStore.editors).find(
+          (candidate) =>
+            !candidate.deleted &&
+            candidate.name === name &&
+            (candidate.connectionId === connection.id || candidate.connection === connection.name),
+        ) as Editor | undefined
+        if (conflict) {
+          return {
+            success: false,
+            error: `An editor named "${name}" already exists on connection "${connection.name}" (id ${conflict.id}). Use update_editor_contents to modify it, or pick a different name.`,
           }
         }
         const type = input.type === 'sql' ? 'sql' : 'preql'

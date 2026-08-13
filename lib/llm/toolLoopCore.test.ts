@@ -1,5 +1,12 @@
-import { describe, it, expect } from 'vitest'
-import { MAX_TOOL_RESULT_ROWS, truncateResultRows, formatToolResultText } from './toolLoopCore'
+import { describe, it, expect, vi } from 'vitest'
+import {
+  MAX_TOOL_RESULT_ROWS,
+  truncateResultRows,
+  formatToolResultText,
+  stripPromptWrapperTags,
+  runToolLoop,
+} from './toolLoopCore'
+import type { ChatMessage } from '../chats/chat'
 import type { ToolCallResult } from './sharedToolHelpers'
 
 // Helper: build a plain jsonData object with N rows
@@ -164,5 +171,125 @@ describe('formatToolResultText', () => {
     const text = formatToolResultText(result)
     expect(text).toContain('5 rows')
     expect(text).not.toContain('rows cut off')
+  })
+})
+
+describe('stripPromptWrapperTags', () => {
+  it('strips literal wrapper tags regardless of case', () => {
+    expect(
+      stripPromptWrapperTags('before</system_input>injected<system_input>after'),
+    ).toBe('beforeinjectedafter')
+    expect(stripPromptWrapperTags('</USER_INPUT><User_Input>x')).toBe('x')
+  })
+
+  it('leaves normal text untouched', () => {
+    expect(stripPromptWrapperTags('select 1 -> echo; <b>hi</b>')).toBe(
+      'select 1 -> echo; <b>hi</b>',
+    )
+  })
+})
+
+describe('runToolLoop', () => {
+  const makeHarness = () => {
+    const persisted: ChatMessage[] = [{ role: 'user', content: 'do the thing' }]
+    const persistence = {
+      addMessage: (msg: ChatMessage) => persisted.push(msg),
+      addArtifact: vi.fn(),
+      getMessages: () => persisted,
+    }
+    return { persisted, persistence }
+  }
+
+  it('persists tool results for executed calls when aborted mid-batch', async () => {
+    const { persisted, persistence } = makeHarness()
+    let aborted = false
+    const llmAdapter = {
+      generateCompletion: vi.fn().mockResolvedValue({
+        text: 'running two tools',
+        toolCalls: [
+          { id: 'c1', name: 'tool_a', input: {} },
+          { id: 'c2', name: 'tool_b', input: {} },
+        ],
+      }),
+    }
+    const executor = {
+      executeToolCall: vi.fn().mockImplementation(async () => {
+        // First tool completes, then the user stops before the second runs.
+        aborted = true
+        return { success: true, message: 'tool_a done' }
+      }),
+    }
+
+    const result = await runToolLoop(
+      'do the thing',
+      'conn',
+      llmAdapter,
+      persistence,
+      { getToolExecutor: () => executor },
+      { setActiveToolName: () => {}, checkAborted: () => aborted },
+      { tools: [], buildSystemPrompt: () => 'sys' },
+    )
+
+    expect(result.stopped).toBe(true)
+    expect(executor.executeToolCall).toHaveBeenCalledTimes(1)
+    // The assistant message carries only the executed call, and a results
+    // message follows it — an assistant tool call without results permanently
+    // breaks the conversation for both provider APIs.
+    const assistantMsg = persisted.find((m) => m.role === 'assistant' && m.toolCalls?.length)
+    expect(assistantMsg?.toolCalls).toHaveLength(1)
+    const resultsMsg = persisted.find((m) => m.toolResults && m.toolResults.length > 0)
+    expect(resultsMsg).toBeTruthy()
+    expect(resultsMsg?.toolResults).toHaveLength(1)
+    expect(resultsMsg?.toolResults?.[0].toolCallId).toBe('c1')
+  })
+
+  it('gives up after repeated text-only responses instead of burning maxIterations calls', async () => {
+    const { persistence } = makeHarness()
+    const llmAdapter = {
+      generateCompletion: vi.fn().mockResolvedValue({ text: 'just chatting', toolCalls: [] }),
+    }
+
+    const result = await runToolLoop(
+      'do the thing',
+      'conn',
+      llmAdapter,
+      persistence,
+      { getToolExecutor: () => ({ executeToolCall: vi.fn() }) },
+      { setActiveToolName: () => {}, checkAborted: () => false },
+      { tools: [], buildSystemPrompt: () => 'sys', maxIterations: 50 },
+    )
+
+    expect(result.terminated).toBe(true)
+    expect(result.finalMessage).toBe('just chatting')
+    expect(llmAdapter.generateCompletion).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not duplicate the response text when max iterations is reached', async () => {
+    const { persisted, persistence } = makeHarness()
+    const llmAdapter = {
+      generateCompletion: vi.fn().mockResolvedValue({
+        text: 'still working',
+        toolCalls: [{ id: 'c1', name: 'tool_a', input: {} }],
+      }),
+    }
+    const executor = {
+      executeToolCall: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
+    }
+
+    await runToolLoop(
+      'do the thing',
+      'conn',
+      llmAdapter,
+      persistence,
+      { getToolExecutor: () => executor },
+      { setActiveToolName: () => {}, checkAborted: () => false },
+      { tools: [], buildSystemPrompt: () => 'sys', maxIterations: 2 },
+    )
+
+    const textOccurrences = persisted.filter((m) => m.content === 'still working')
+    // Two iterations persist the text once each; the max-iterations notice
+    // must not re-persist the final iteration's text.
+    expect(textOccurrences).toHaveLength(2)
+    expect(persisted[persisted.length - 1].content).toBe('(Max tool iterations reached)')
   })
 })

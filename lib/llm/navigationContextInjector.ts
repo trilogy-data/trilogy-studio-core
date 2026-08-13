@@ -8,6 +8,31 @@ const DEBOUNCE_MS = 1500
 // to the same screen produces no duplicate note.
 const lastQueuedKey = new Map<string, string>()
 
+function currentNavigationKey(): string {
+  const nav = useScreenNavigation()
+  const screen = nav.activeScreen.value
+  const refId = nav.activeDashboard.value || nav.activeEditor.value || ''
+  return `${screen}:${refId}`
+}
+
+/**
+ * Mark the current location as already delivered for a chat. Callers that
+ * seed their own richer context note (e.g. the editor AI-assist note, which
+ * names the editor and carries the selection) use this so the injector's
+ * immediate/debounced nav note for the same location doesn't clobber it.
+ */
+export function markNavigationContextDelivered(chatId: string): void {
+  if (!chatId) return
+  lastQueuedKey.set(chatId, currentNavigationKey())
+}
+
+/** Forget a chat's dedupe state so its next note re-queues even for the
+ *  current location. Used when a conversation is cleared: the delivered note
+ *  died with the history, and a fresh one should accompany the next send. */
+export function resetNavigationNoteDedupe(chatId: string): void {
+  lastQueuedKey.delete(chatId)
+}
+
 export function describeNavigationContext(
   context: { screen: string; dashboardId?: string; editorId?: string },
   stores: { dashboardName?: string | null; editorName?: string | null },
@@ -55,7 +80,7 @@ export function startNavigationContextInjection(deps: NavigationInjectionDeps): 
       dashboardId: nav.activeDashboard.value || undefined,
       editorId: nav.activeEditor.value || undefined,
     }
-    const key = `${context.screen}:${context.dashboardId || context.editorId || ''}`
+    const key = currentNavigationKey()
     if (lastQueuedKey.get(chatId) === key) return
     lastQueuedKey.set(chatId, key)
 

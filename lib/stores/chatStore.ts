@@ -87,6 +87,16 @@ export interface ChatExecutionDependencies {
   dashboardStore?: DashboardStoreType
 }
 
+/** Module-level removal hooks: caches keyed by chat id (frozen prompts,
+ *  nav-note dedupe, refinement state) register here so deletions from ANY
+ *  surface (sidebar, tools, panel) clean them up. Kept outside the store to
+ *  avoid import cycles — higher layers import the store, never vice versa. */
+type ChatRemovalListener = (chatId: string) => void
+const chatRemovalListeners: ChatRemovalListener[] = []
+export function onChatRemoved(listener: ChatRemovalListener): void {
+  chatRemovalListeners.push(listener)
+}
+
 export const useChatStore = defineStore('chats', {
   state: () => ({
     chats: {} as Record<string, Chat>,
@@ -152,6 +162,7 @@ export const useChatStore = defineStore('chats', {
       dataConnectionName: string = '',
       name?: string,
       dataConnectionId: string = '',
+      options: { activate?: boolean } = {},
     ): Chat {
       const chat = new Chat({
         llmConnectionName,
@@ -160,7 +171,11 @@ export const useChatStore = defineStore('chats', {
         name: name || `Chat ${new Date().toLocaleTimeString()}`,
       })
       this.chats[chat.id] = chat
-      this.activeChatId = chat.id
+      // activeChatId belongs to the llms screen; panel-driven creation passes
+      // activate: false so it doesn't silently change that screen's selection.
+      if (options.activate !== false) {
+        this.activeChatId = chat.id
+      }
       return chat
     },
 
@@ -175,6 +190,13 @@ export const useChatStore = defineStore('chats', {
         if (this.activeChatId === id) {
           this.activeChatId = ''
         }
+        chatRemovalListeners.forEach((listener) => {
+          try {
+            listener(id)
+          } catch (e) {
+            console.error('Chat removal listener failed', e)
+          }
+        })
       }
     },
 
@@ -408,6 +430,19 @@ export const useChatStore = defineStore('chats', {
       // Use the chat's LLM connection, falling back to global active connection
       const llmConnectionName = chat.llmConnectionName || llmConnectionStore.activeConnection
       if (!llmConnectionName) {
+        // Persist the message and a visible error — chat UIs render from the
+        // store and deliberately don't echo locally, so silently dropping the
+        // send makes the user's text vanish without feedback.
+        this.addMessageToChat(chatId, {
+          role: 'user',
+          content: message,
+          hidden: options.hiddenUserMessage ?? false,
+        })
+        this.addMessageToChat(chatId, {
+          role: 'assistant',
+          content: 'Error: No LLM connection available. Please configure an LLM provider first.',
+          error: true,
+        })
         return {
           response: 'No LLM connection available. Please configure an LLM provider first.',
         }
@@ -431,11 +466,16 @@ export const useChatStore = defineStore('chats', {
         }
       }
 
-      // Initialize execution state
+      // Initialize execution state. Keep the record's identity: a later
+      // executeMessage on the same chat replaces it via startExecution, and
+      // this (superseded) run must then never touch the new run's state.
       this.startExecution(chatId)
+      const execution = this.chatExecutions[chatId]
+      const isCurrentRun = () => this.chatExecutions[chatId] === execution
 
       // Get abort signal for this execution
-      const signal = this.chatExecutions[chatId]?.abortController?.signal
+      const signal = execution?.abortController?.signal
+      let stoppedByUser = false
 
       // Add user message to chat (runToolLoop expects it in getMessages() and will slice it off)
       this.addMessageToChat(chatId, {
@@ -587,7 +627,7 @@ export const useChatStore = defineStore('chats', {
               ? ARCHITECT_TOOLS
               : getSharedRegistry().getToolsetForContext('chat')
 
-        await runToolLoop(
+        const loopResult = await runToolLoop(
           message,
           llmConnectionName,
           llmAdapter,
@@ -605,14 +645,21 @@ export const useChatStore = defineStore('chats', {
             onToolResult,
           },
         )
+        stoppedByUser = !!loopResult.stopped
 
         // Don't return response - messages are synced to UI via watchers in useChatWithTools
         // Returning a response here would cause duplicate messages in the UI
       } catch (err) {
-        // Handle abort errors gracefully - don't add error message to chat
-        if (err instanceof DOMException && err.name === 'AbortError') {
-          // User stopped the execution - no error message needed
-          this.completeExecution(chatId)
+        // Handle abort gracefully - no error message in the chat. Providers
+        // rewrap DOMException AbortErrors into plain Errors, so the reliable
+        // signal is this run's own abort flag.
+        const wasAborted =
+          (err instanceof DOMException && err.name === 'AbortError') || signal?.aborted
+        if (wasAborted) {
+          stoppedByUser = true
+          if (isCurrentRun()) {
+            this.completeExecution(chatId)
+          }
           return
         }
 
@@ -623,14 +670,26 @@ export const useChatStore = defineStore('chats', {
           content: `Error: ${errorMessage}`,
           error: true,
         })
-        this.completeExecution(chatId, errorMessage)
+        if (isCurrentRun()) {
+          this.completeExecution(chatId, errorMessage)
+        }
       } finally {
-        this.completeExecution(chatId)
+        // Only finalize when this run still owns the execution record (a
+        // newer executeMessage may have replaced it) and no error was already
+        // recorded (completeExecution would wipe the error field).
+        if (isCurrentRun() && execution.isLoading) {
+          this.completeExecution(chatId)
+        }
       }
 
       // Post-execution: if this is a subchat, inject its summary into the
       // parent overseer (auto-trigger or queue). Then drain any pending
-      // injections this chat itself accumulated while busy.
+      // injections this chat itself accumulated while busy. Skip both when
+      // the user stopped this run (a stop must not auto-restart the agent)
+      // or when a newer run superseded it (the newer run owns follow-ups).
+      if (stoppedByUser || !isCurrentRun()) {
+        return undefined
+      }
       this.handleSubchatCompletion(chatId, deps).catch((e) =>
         console.error('handleSubchatCompletion failed', e),
       )

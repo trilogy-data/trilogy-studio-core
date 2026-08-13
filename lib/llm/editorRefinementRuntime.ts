@@ -1,12 +1,15 @@
 import { Chat } from '../chats/chat'
 import type { ChartConfig } from '../editors/results'
 import type { EditorStoreType } from '../stores/editorStore'
+import { onChatRemoved } from '../stores/chatStore'
 import type { ChatStoreType, ChatExecutionDependencies } from '../stores/chatStore'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
 import {
   EditorRefinementToolExecutor,
+  createRefinementSessionState,
   type EditorContext,
   type QueryExecutionResult,
+  type RefinementSessionState,
 } from './editorRefinementToolExecutor'
 import {
   getEditorRefinementTools,
@@ -63,6 +66,28 @@ export function ensureRefinementChat(
 // through validate/run/edit tool results instead.
 const frozenPrompts = new Map<string, string>()
 
+// Cross-call executor state (artifact registry, last results) keyed by the
+// session's backing chat. A fresh executor is built per tool call so the
+// editor context stays live; this state must persist across those calls or
+// get_artifact_rows on an earlier run's artifact always fails.
+const sessionStates = new Map<string, RefinementSessionState>()
+
+function getSessionState(chatId: string): RefinementSessionState {
+  let state = sessionStates.get(chatId)
+  if (!state) {
+    state = createRefinementSessionState()
+    sessionStates.set(chatId, state)
+  }
+  return state
+}
+
+// Belt-and-braces: clear per-chat state when the backing chat is removed by
+// any surface, not just disposeRefinementChat.
+onChatRemoved((chatId) => {
+  frozenPrompts.delete(chatId)
+  sessionStates.delete(chatId)
+})
+
 export function clearRefinementPrompt(chatId: string): void {
   frozenPrompts.delete(chatId)
 }
@@ -88,6 +113,11 @@ export async function sendRefinementMessage(opts: {
 
   const chatId = ensureRefinementChat(editorId, stores)
   if (!chatId) return
+
+  // Set when the agent calls close_session; the session is accepted (cleared)
+  // only after the tool loop finishes, never mid-run.
+  let agentRequestedClose = false
+  let agentCloseMessage: string | undefined
 
   // Editor context resolved fresh per tool call, mirroring the old
   // per-iteration factory: the session's currentContent/selection evolve as
@@ -120,8 +150,20 @@ export async function sendRefinementMessage(opts: {
           const before = currentSession.currentContent.slice(0, currentSession.selectionRange.start)
           const after = currentSession.currentContent.slice(currentSession.selectionRange.end)
           newContent = before + content + after
+          // The replacement may change length — retarget the selection to the
+          // freshly inserted text so a follow-up selection edit doesn't splice
+          // stale offsets.
+          editorStore.updateRefinementSession(editorId, {
+            currentContent: newContent,
+            selectedText: content,
+            selectionRange: {
+              start: currentSession.selectionRange.start,
+              end: currentSession.selectionRange.start + content.length,
+            },
+          })
+        } else {
+          editorStore.updateRefinementSession(editorId, { currentContent: newContent })
         }
-        editorStore.updateRefinementSession(editorId, { currentContent: newContent })
         callbacks.onContentChange?.(newContent, replaceSelection)
       },
       onChartConfigChange: (config: ChartConfig) => {
@@ -129,7 +171,11 @@ export async function sendRefinementMessage(opts: {
         callbacks.onChartConfigChange?.(config)
       },
       onFinish: (msg?: string) => {
-        callbacks.onFinish?.(msg)
+        // Deferred: clearing the session here would tear down the backing
+        // chat while the tool loop is still finishing this iteration. Record
+        // the request; sendRefinementMessage accepts after the run completes.
+        agentRequestedClose = true
+        agentCloseMessage = msg
       },
       onRunActiveEditorQuery: callbacks.onRunActiveEditorQuery
         ? () => callbacks.onRunActiveEditorQuery!()
@@ -166,6 +212,7 @@ export async function sendRefinementMessage(opts: {
           deps.connectionStore,
           buildEditorContext(),
           editorStore,
+          getSessionState(chatId),
         ).executeToolCall(toolName, toolInput as Record<string, any>),
       buildSystemPrompt: buildFrozenPrompt,
       maxIterations: 20,
@@ -173,6 +220,14 @@ export async function sendRefinementMessage(opts: {
         'You must call a tool to proceed. If you are finished with the requested changes, call request_close to wrap up the session. Do not respond with text only.',
     },
   })
+
+  // close_session actually closes now: accept the refinement (keeping the
+  // agent's changes) and let the host tear down the chat surface.
+  if (agentRequestedClose && editorStore.editors[editorId]?.refinementSession) {
+    editorStore.acceptRefinement(editorId, {
+      onFinish: () => callbacks.onFinish?.(agentCloseMessage),
+    })
+  }
 }
 
 /** Tear down the session's backing chat (stop any run, drop the record). */
@@ -188,4 +243,5 @@ export function disposeRefinementChat(
   }
   stores.chatStore.removeChat(chatId)
   clearRefinementPrompt(chatId)
+  sessionStates.delete(chatId)
 }

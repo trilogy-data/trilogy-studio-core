@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, inject, onBeforeUnmount, onMounted, watch } from 'vue'
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
 import LLMChat from './LLMChat.vue'
 import ChatArtifact from './ChatArtifact.vue'
 import GlobalChatConversationList from './GlobalChatConversationList.vue'
@@ -9,7 +9,10 @@ import useGlobalChatPanel, {
   GLOBAL_CHAT_MAX_WIDTH,
 } from '../../stores/useGlobalChatPanel'
 import { sendGlobalChatMessage, clearFrozenPrompt } from '../../llm/globalChatRuntime'
-import { startNavigationContextInjection } from '../../llm/navigationContextInjector'
+import {
+  startNavigationContextInjection,
+  resetNavigationNoteDedupe,
+} from '../../llm/navigationContextInjector'
 import type { ChatStoreType } from '../../stores/chatStore'
 import type { LLMConnectionStoreType } from '../../stores/llmStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
@@ -36,6 +39,9 @@ const saveEditors = inject<(() => Promise<unknown> | unknown) | null>('saveEdito
 const saveModels = inject<(() => Promise<unknown> | unknown) | null>('saveModels', null)
 
 const panel = useGlobalChatPanel()
+// Persisted chats hydrate asynchronously; falling back before they load would
+// bounce a valid #chatPanel=<id> restore to the list view.
+const storesLoaded = inject<Ref<boolean>>('storesLoaded', ref(true))
 
 const activeChat = computed(() => {
   const id = panel.activePanelChatId.value
@@ -49,9 +55,9 @@ const activeChat = computed(() => {
 // closing/deleting the active conversation should land somewhere sensible.
 // Fall back to the most recent visible conversation, else the list view.
 watch(
-  [() => panel.isOpen.value, activeChat],
-  ([open, chat]) => {
-    if (!open || chat) return
+  [() => panel.isOpen.value, activeChat, storesLoaded],
+  ([open, chat, loaded]) => {
+    if (!open || chat || !loaded) return
     const fallback = chatStore.chatList
       .filter((c) => c.kind === 'user' && c.source === 'user')
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]
@@ -121,7 +127,9 @@ function handleTitleUpdate(name: string) {
 }
 
 function handleNewChat() {
-  const chat = chatStore.newChat(llmConnectionStore.activeConnection || '')
+  const chat = chatStore.newChat(llmConnectionStore.activeConnection || '', '', undefined, '', {
+    activate: false,
+  })
   panel.setActivePanelChat(chat.id)
 }
 
@@ -132,8 +140,13 @@ function handleSelectChat(chatId: string) {
 async function handleSend(message: string, _messages: ChatMessage[]) {
   let chat = activeChat.value
   if (!chat) {
-    chat = chatStore.newChat(llmConnectionStore.activeConnection || '')
+    chat = chatStore.newChat(llmConnectionStore.activeConnection || '', '', undefined, '', {
+      activate: false,
+    })
     panel.setActivePanelChat(chat.id)
+    // Let the injector's target watcher queue the location note for the new
+    // conversation before the send consumes pendingContextNote.
+    await nextTick()
   }
   await sendGlobalChatMessage({
     chatId: chat.id,
@@ -188,6 +201,9 @@ function handleClearChat() {
   chatStore.clearChatMessages(chat.id)
   // Let the next send re-snapshot the system prompt — nothing cached remains.
   clearFrozenPrompt(chat.id)
+  // The delivered location note died with the history; forget the dedupe so
+  // the next send carries a fresh context note.
+  resetNavigationNoteDedupe(chat.id)
 }
 
 // ---- resize (manual drag handle; split.js does not manage this column) ----
@@ -195,6 +211,12 @@ let resizeCleanup: (() => void) | null = null
 
 function startResize(event: MouseEvent) {
   event.preventDefault()
+  // A drag released outside the window never gets its mouseup — clean up any
+  // orphaned listeners from the previous drag before starting a new one.
+  if (resizeCleanup) {
+    resizeCleanup()
+    resizeCleanup = null
+  }
   const startX = event.clientX
   const startWidth = panel.panelWidth.value
 

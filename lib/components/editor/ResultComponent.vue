@@ -1,6 +1,6 @@
 <template>
   <div class="results-view">
-    <!-- Horizontal split when chat is active -->
+    <!-- Inline refinement chat (hosts without the global chat panel) -->
     <div v-if="displayMode === 'chat' && hasActiveChat" class="chat-only-view">
       <LLMEditorRefinement
         :editorId="editorData.id"
@@ -11,49 +11,7 @@
         @chart-config-change="handleChartConfigChange"
       />
     </div>
-    <div v-else-if="displayMode === 'all' && hasActiveChat" class="split-view" ref="splitViewRef">
-      <div class="results-pane" :style="{ width: resultsPaneWidth }">
-        <!-- Loading in results pane -->
-        <loading-view
-          v-if="editorData.loading"
-          :startTime="editorData.startTime"
-          :cancel="editorData.cancelCallback"
-        />
-        <!-- Results in results pane -->
-        <results-container
-          v-else-if="hasResults"
-          ref="resultsContainerRef"
-          :results="editorData.results"
-          :generatedSql="editorData.generated_sql || undefined"
-          :trilogySource="editorData.executed_contents || undefined"
-          :containerHeight="containerHeight"
-          :type="editorData.type"
-          :chartConfig="editorData.chartConfig"
-          :error="editorData.error || undefined"
-          :symbols="editorData.completionSymbols"
-          :showChatButton="false"
-          @config-change="(config: ChartConfig) => editorData.setChartConfig(config)"
-          @drilldown-click="handleDrilldown"
-          @refresh-click="() => $emit('refresh-click')"
-        />
-        <!-- Hint when no results yet -->
-        <hint-component v-else />
-      </div>
-      <div class="divider" @mousedown="startDragging">
-        <div class="divider-handle"></div>
-      </div>
-      <div class="chat-pane" :style="{ width: chatPaneWidth }">
-        <LLMEditorRefinement
-          :editorId="editorData.id"
-          :runEditorQuery="handleRunEditorQuery"
-          @accept="handleAccept"
-          @discard="handleDiscard"
-          @content-change="handleContentChange"
-          @chart-config-change="handleChartConfigChange"
-        />
-      </div>
-    </div>
-    <!-- No chat active: show loading, results, or hint -->
+    <!-- Results mode: show loading, results, or hint -->
     <template v-else-if="displayMode !== 'chat'">
       <loading-view
         v-if="editorData.loading"
@@ -82,7 +40,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, inject, ref, type PropType } from 'vue'
+import { defineComponent, inject, type PropType } from 'vue'
 import LoadingView from '../LoadingView.vue'
 import ResultsContainer from './Results.vue'
 import HintComponent from '../HintComponent.vue'
@@ -118,8 +76,8 @@ export default defineComponent({
       default: undefined,
     },
     displayMode: {
-      type: String as PropType<'all' | 'results' | 'chat'>,
-      default: 'all',
+      type: String as PropType<'results' | 'chat'>,
+      default: 'results',
     },
   },
   emits: ['llm-query-accepted', 'drilldown-click', 'refresh-click', 'content-change', 'open-chat'],
@@ -130,19 +88,8 @@ export default defineComponent({
       throw new Error('Requires injection of connection store')
     }
 
-    const splitViewRef = ref<HTMLElement | null>(null)
-    const resultsContainerRef = ref<InstanceType<typeof ResultsContainer> | null>(null)
-    const splitRatio = ref(0.58)
-    const isDragging = ref(false)
-    const minPaneWidth = 200 // Minimum width in pixels
-
     return {
       connectionStore,
-      splitViewRef,
-      resultsContainerRef,
-      splitRatio,
-      isDragging,
-      minPaneWidth,
     }
   },
   computed: {
@@ -154,12 +101,6 @@ export default defineComponent({
         (this.editorData.results.headers && this.editorData.results.headers.size > 0) ||
         !!this.editorData.error
       )
-    },
-    resultsPaneWidth(): string {
-      return `calc(${this.splitRatio * 100}% - 4px)`
-    },
-    chatPaneWidth(): string {
-      return `calc(${(1 - this.splitRatio) * 100}% - 4px)`
     },
   },
   methods: {
@@ -177,8 +118,6 @@ export default defineComponent({
     },
     handleChartConfigChange(config: ChartConfig) {
       this.editorData.setChartConfig(config)
-      // Switch to visualize tab when chart config is updated via LLM
-      this.resultsContainerRef?.switchToVisualizeTab()
     },
     handleDrilldown(data: any) {
       this.$emit('drilldown-click', data)
@@ -219,44 +158,6 @@ export default defineComponent({
         generatedSql: result.generatedSql,
       }
     },
-    startDragging(e: MouseEvent) {
-      e.preventDefault()
-      this.isDragging = true
-      document.addEventListener('mousemove', this.onDrag)
-      document.addEventListener('mouseup', this.stopDragging)
-      document.body.style.cursor = 'col-resize'
-      document.body.style.userSelect = 'none'
-    },
-    onDrag(e: MouseEvent) {
-      if (!this.isDragging || !this.splitViewRef) return
-
-      const container = this.splitViewRef
-      const containerRect = container.getBoundingClientRect()
-      const containerWidth = containerRect.width
-      const mouseX = e.clientX - containerRect.left
-
-      // Calculate new ratio with constraints
-      let newRatio = mouseX / containerWidth
-
-      // Enforce minimum widths
-      const minRatio = this.minPaneWidth / containerWidth
-      const maxRatio = 1 - minRatio
-
-      newRatio = Math.max(minRatio, Math.min(maxRatio, newRatio))
-      this.splitRatio = newRatio
-    },
-    stopDragging() {
-      this.isDragging = false
-      document.removeEventListener('mousemove', this.onDrag)
-      document.removeEventListener('mouseup', this.stopDragging)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    },
-  },
-  beforeUnmount() {
-    // Clean up event listeners if component unmounts while dragging
-    document.removeEventListener('mousemove', this.onDrag)
-    document.removeEventListener('mouseup', this.stopDragging)
   },
 })
 </script>
@@ -271,14 +172,6 @@ export default defineComponent({
   border-top: 1px solid rgba(148, 163, 184, 0.12);
 }
 
-.split-view {
-  display: flex;
-  flex-direction: row;
-  height: 100%;
-  overflow: hidden;
-  background: var(--query-window-bg);
-}
-
 .chat-only-view {
   display: flex;
   flex-direction: column;
@@ -286,46 +179,5 @@ export default defineComponent({
   height: 100%;
   min-width: 0;
   overflow: hidden;
-}
-
-.results-pane {
-  min-width: 200px;
-  overflow: hidden;
-  background: var(--query-window-bg);
-}
-
-.chat-pane {
-  min-width: 200px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background: var(--query-window-bg);
-}
-
-.divider {
-  width: 4px;
-  background: transparent;
-  cursor: col-resize;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.divider:hover,
-.divider:active {
-  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.06);
-}
-
-.divider-handle {
-  width: 2px;
-  height: 26px;
-  background: rgba(148, 163, 184, 0.32);
-  border-radius: 999px;
-}
-
-.divider:hover .divider-handle,
-.divider:active .divider-handle {
-  background: rgba(var(--special-text-rgb, 37, 99, 235), 0.4);
 }
 </style>

@@ -57,6 +57,36 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   list_subchats: 'Listed subagents',
   peek_subchat: 'Peeked at subagent',
   delete_subchat: 'Deleted subagent',
+  // Global editor tools
+  list_editors: 'Listed editors',
+  read_editor: 'Read editor',
+  run_editor_query: 'Ran editor query',
+  // Navigation / app-state tools
+  get_app_state: 'Read app state',
+  navigate_to_screen: 'Navigated',
+  open_dashboard: 'Opened dashboard',
+  open_editor: 'Opened editor',
+  // Docs tools
+  search_docs: 'Searched docs',
+  read_doc: 'Read doc',
+  open_documentation: 'Opened documentation',
+  // Dashboard lifecycle tools
+  list_dashboards: 'Listed dashboards',
+  create_dashboard: 'Created dashboard',
+  refresh_dashboard_item: 'Refreshed dashboard item',
+  // Context tools
+  compact_conversation: 'Compacted conversation',
+  // Jobs tools
+  list_job_stores: 'Listed job stores',
+  list_store_files: 'Listed store files',
+  submit_store_job: 'Submitted job',
+  get_job_status: 'Got job status',
+  await_job: 'Awaited job',
+  get_store_state: 'Got store state',
+  list_jobs: 'Listed jobs',
+  get_recent_query_history: 'Got query history',
+  // Refinement tools
+  browse_database_tree: 'Browsed database tree',
 }
 
 export function getToolDisplayName(toolName: string): string {

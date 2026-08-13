@@ -81,7 +81,10 @@ const useEditorStore = defineStore('editors', {
       this.editors[editor.id] = editor
     },
     getEditorByName(name: string): Editor | undefined {
-      return Object.values(this.editors).find((editor) => editor.name === name)
+      // Prefer live editors: deletion is a soft flag, so a deleted editor can
+      // otherwise permanently shadow a live one recreated with the same name.
+      const matches = Object.values(this.editors).filter((editor) => editor.name === name)
+      return matches.find((editor) => !editor.deleted) ?? matches[0]
     },
     getConnectionEditors(connectionId: string, tags: EditorTag[] = []) {
       const base = Object.values(this.editors).filter(

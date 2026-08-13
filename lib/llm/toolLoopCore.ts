@@ -12,6 +12,16 @@ const USER_INPUT_END = '</user_input>'
 export const SYSTEM_INPUT_START = '<system_input>'
 export const SYSTEM_INPUT_END = '</system_input>'
 
+/**
+ * Strip literal wrapper tags from untrusted text before it is interpolated
+ * inside <user_input>/<system_input> framing. Without this, pasted content —
+ * or an imported object whose *name* contains a closing tag — can escape the
+ * untrusted framing and forge trusted system context.
+ */
+export function stripPromptWrapperTags(text: string): string {
+  return text.replace(/<\/?(?:user_input|system_input)>/gi, '')
+}
+
 /** Interface for LLM operations needed by the tool loop */
 export interface LLMAdapter {
   generateCompletion(
@@ -206,23 +216,35 @@ export async function runToolLoop(
     .slice(0, -1)
     .map((msg) =>
       msg.role === 'user' && !msg.hidden && msg.content
-        ? { ...msg, content: `${USER_INPUT_START}${msg.content}${USER_INPUT_END}` }
+        ? {
+            ...msg,
+            content: `${USER_INPUT_START}${stripPromptWrapperTags(msg.content)}${USER_INPUT_END}`,
+          }
         : msg,
     )
   // Wrap user message in delimiters for LLM context; display strips these automatically
-  const wrappedUserMessage = `${USER_INPUT_START}${userMessage}${USER_INPUT_END}`
+  const wrappedUserMessage = `${USER_INPUT_START}${stripPromptWrapperTags(userMessage)}${USER_INPUT_END}`
   let currentPrompt = wrappedUserMessage
   let lastResponseText = ''
   // Track whether we've added the user message to currentMessages (happens after first tool call)
   let userMessageAddedToHistory = false
+  // Consecutive text-only responses. Some models keep answering in prose no
+  // matter how often they're reminded to call a tool — without a cap that
+  // burns one paid LLM call per iteration up to maxIterations.
+  let consecutiveNoToolCalls = 0
+  const MAX_NO_TOOL_CALL_REPROMPTS = 3
 
   for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-    // Check for abort before starting iteration
+    // Check for abort before starting iteration. On iteration > 0 the
+    // previous response was already persisted at the end of the last
+    // iteration — re-adding it here would duplicate it in the history.
     if (stateUpdater.checkAborted()) {
-      messagePersistence.addMessage({
-        role: 'assistant',
-        content: lastResponseText || '(Response in progress when stopped)',
-      })
+      if (iteration === 0) {
+        messagePersistence.addMessage({
+          role: 'assistant',
+          content: '(Response in progress when stopped)',
+        })
+      }
       messagePersistence.addMessage({
         role: 'user',
         content: `${SYSTEM_INPUT_START}[User requested pause - conversation can be continued]${SYSTEM_INPUT_END}`,
@@ -238,10 +260,12 @@ export async function runToolLoop(
       await new Promise((resolve) => setTimeout(resolve, 200))
     }
     if (stateUpdater.checkAborted()) {
-      messagePersistence.addMessage({
-        role: 'assistant',
-        content: lastResponseText || '(Response in progress when stopped)',
-      })
+      if (iteration === 0) {
+        messagePersistence.addMessage({
+          role: 'assistant',
+          content: '(Response in progress when stopped)',
+        })
+      }
       messagePersistence.addMessage({
         role: 'user',
         content: `${SYSTEM_INPUT_START}[User requested pause - conversation can be continued]${SYSTEM_INPUT_END}`,
@@ -299,6 +323,14 @@ export async function runToolLoop(
         return { terminated: true, finalMessage: responseText }
       }
 
+      // Give up gracefully when the model keeps answering in text: treat the
+      // last response as the final answer instead of burning further calls.
+      consecutiveNoToolCalls++
+      if (consecutiveNoToolCalls >= MAX_NO_TOOL_CALL_REPROMPTS) {
+        console.log('[toolLoopCore] Model ignored repeated tool reminders — ending turn')
+        return { terminated: true, finalMessage: responseText }
+      }
+
       // Re-prompt: agent must call a tool; plain text responses are not a valid exit
       const reminder =
         config.noToolCallReminder ??
@@ -307,6 +339,13 @@ export async function runToolLoop(
       console.log('[toolLoopCore] No tool call — re-prompting agent to use a tool')
 
       const wrappedReminder = `${SYSTEM_INPUT_START}${reminder}${SYSTEM_INPUT_END}`
+      // Persist the reminder too, so the rebuilt history on the next run
+      // matches what the model actually saw this run.
+      messagePersistence.addMessage({
+        role: 'user',
+        content: wrappedReminder,
+        hidden: true,
+      })
       currentMessages = [
         ...currentMessages,
         ...(!userMessageAddedToHistory
@@ -319,6 +358,8 @@ export async function runToolLoop(
       currentPrompt = '' // reminder is already in currentMessages; avoid sending it twice
       continue
     }
+
+    consecutiveNoToolCalls = 0
 
     // Execute tool calls
     const toolResults: LLMToolResult[] = []
@@ -333,6 +374,18 @@ export async function runToolLoop(
           toolCalls: toolCalls.slice(0, executedToolCalls.length),
           executedToolCalls: executedToolCalls.length > 0 ? executedToolCalls : undefined,
         })
+        // Persist results for the calls that DID execute — an assistant
+        // message carrying tool calls without a following results message is
+        // rejected by both the Anthropic and OpenAI APIs, permanently
+        // breaking every subsequent turn of the conversation.
+        if (toolResults.length > 0) {
+          messagePersistence.addMessage({
+            role: 'user',
+            content: '',
+            toolResults: toolResults,
+            hidden: true,
+          })
+        }
         messagePersistence.addMessage({
           role: 'user',
           content: `${SYSTEM_INPUT_START}[User requested pause - conversation can be continued]${SYSTEM_INPUT_END}`,
@@ -484,14 +537,14 @@ export async function runToolLoop(
 
     currentPrompt = '' // No extra prompt needed - tool results speak for themselves
 
-    // Safety check for last iteration
+    // Safety check for last iteration. responseText was already persisted
+    // above with its tool calls — only add the notice, not the text again.
     if (iteration === MAX_ITERATIONS - 1) {
-      const warningMessage = responseText + '\n\n(Max tool iterations reached)'
       messagePersistence.addMessage({
         role: 'assistant',
-        content: warningMessage,
+        content: '(Max tool iterations reached)',
       })
-      return { terminated: false, finalMessage: warningMessage }
+      return { terminated: false, finalMessage: responseText + '\n\n(Max tool iterations reached)' }
     }
   }
 

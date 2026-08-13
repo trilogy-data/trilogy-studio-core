@@ -104,6 +104,7 @@
                 :containerHeight="containerHeight"
                 :canOpenChat="canOpenChat"
                 :runEditorQuery="runQuery"
+                display-mode="results"
                 @llm-query-accepted="runQuery"
                 @refresh-click="runQuery"
                 @drilldown-click="drilldownClick"
@@ -446,6 +447,9 @@ const IDEComponent: Component = defineComponent({
     })
 
     provide('navigationStore', screenNavigation)
+    // Editors mounted under this host route AI requests to the persistent
+    // global chat panel instead of opening an inline refinement session.
+    provide('hasGlobalChatPanel', true)
 
     const markTipRead = userSettingsStore.markTipRead
     const handleTipRead = (id: string) => {
@@ -618,9 +622,10 @@ const IDEComponent: Component = defineComponent({
       }
     },
     handleOpenChat() {
-      // Open LLM refinement chat on the editor
+      // Route through the editor's unified AI entry point (global chat panel
+      // under this host).
       if (this.editorRef) {
-        this.editorRef.openLLMRefinement()
+        this.editorRef.handleLLMTrigger()
       }
     },
     waitForStoresLoaded(): Promise<void> {

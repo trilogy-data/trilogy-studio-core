@@ -162,9 +162,24 @@ export function getArtifactRowsFromData(
     return { success: false, error: `Artifact "${artifactId}" has no row data.` }
   }
 
+  // NaN from missing/non-numeric inputs would flow through Math.max/min and
+  // silently slice an empty range reported as success. Coerce first so
+  // numeric strings still work.
+  const start = Number(startRow)
+  const end = Number(endRow)
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    return {
+      success: false,
+      error: 'start_row and end_row must be numbers (0-indexed, inclusive).',
+    }
+  }
+  if (rows.length === 0) {
+    return { success: false, error: `Artifact "${artifactId}" has 0 rows.` }
+  }
+
   const totalRows = rows.length
-  const clampedStart = Math.max(0, Math.min(startRow, totalRows - 1))
-  const clampedEnd = Math.max(clampedStart, Math.min(endRow, totalRows - 1))
+  const clampedStart = Math.max(0, Math.min(start, totalRows - 1))
+  const clampedEnd = Math.max(clampedStart, Math.min(end, totalRows - 1))
   const slice = rows.slice(clampedStart, clampedEnd + 1)
 
   return {

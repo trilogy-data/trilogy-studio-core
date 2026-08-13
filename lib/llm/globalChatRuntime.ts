@@ -1,12 +1,16 @@
 import useScreenNavigation, { type ScreenType } from '../stores/useScreenNavigation'
 import useJobsApiStore from '../stores/jobsApiStore'
+import useGlobalChatPanel from '../stores/useGlobalChatPanel'
 import { getScreenBridge } from '../stores/screenBridge'
 import { getSharedRegistry } from './registry'
 import type { ToolRuntime } from './registry'
 import { buildChatAgentSystemPrompt } from './chatAgentPrompt'
 import { renderToolListMarkdown } from './registry'
+import { onChatRemoved } from '../stores/chatStore'
 import type { ChatStoreType, ChatExecutionDependencies } from '../stores/chatStore'
-import { SYSTEM_INPUT_START, SYSTEM_INPUT_END } from './toolLoopCore'
+import type { LLMConnectionStoreType } from '../stores/llmStore'
+import { markNavigationContextDelivered, resetNavigationNoteDedupe } from './navigationContextInjector'
+import { SYSTEM_INPUT_START, SYSTEM_INPUT_END, stripPromptWrapperTags } from './toolLoopCore'
 import { compactChat } from './compactConversation'
 
 export interface ScreenChatContext {
@@ -63,6 +67,13 @@ App-control guidance:
 
 const frozenPrompts = new Map<string, string>()
 
+// Chats can be deleted from surfaces that never touch the panel (sidebar
+// lists, overseer tools) — clean up the per-chat caches on any removal.
+onChatRemoved((chatId) => {
+  frozenPrompts.delete(chatId)
+  resetNavigationNoteDedupe(chatId)
+})
+
 /** Frozen-per-conversation prompt provider (prompt-cache stability): the first
  *  send snapshots the prompt; every later iteration and turn reuses the exact
  *  string. Cleared when the conversation is cleared or deleted. */
@@ -118,6 +129,60 @@ export async function maybeGenerateChatName(
   }
 }
 
+/** Cap on how much selected text rides along in the seeded context note —
+ *  a full-file selection would bloat the (hidden) note message. */
+const MAX_SELECTION_NOTE_CHARS = 2000
+
+export interface OpenGlobalChatForEditorOptions {
+  chatStore: ChatStoreType
+  llmConnectionStore: LLMConnectionStoreType
+  editor: { id: string; name: string }
+  selectedText?: string
+}
+
+/**
+ * Route an in-editor "AI assist" request into the persistent global panel:
+ * reuse the panel's active conversation (falling back to the most recent user
+ * conversation, else a fresh one) and queue a context note naming the editor.
+ * The note delivers lazily on the next send — opening the panel never fires an
+ * LLM turn. Returns the conversation id shown in the panel.
+ */
+export function openGlobalChatForEditor(opts: OpenGlobalChatForEditorOptions): string {
+  const { chatStore, llmConnectionStore, editor, selectedText } = opts
+  const panel = useGlobalChatPanel()
+
+  const activeId = panel.activePanelChatId.value
+  const active = activeId ? chatStore.chats[activeId] : null
+  let chat = active && !active.deleted ? active : null
+  if (!chat) {
+    // Same fallback the panel itself uses when its stored id no longer resolves.
+    chat =
+      chatStore.chatList
+        .filter((c) => c.kind === 'user' && c.source === 'user')
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0] ||
+      null
+  }
+  if (!chat) {
+    chat = chatStore.newChat(llmConnectionStore.activeConnection || '', '', undefined, '', {
+      activate: false,
+    })
+  }
+
+  const trimmedSelection = selectedText?.trim() ? stripPromptWrapperTags(selectedText) : ''
+  const selectionNote = trimmedSelection
+    ? `\nTheir current selection in that editor:\n${trimmedSelection.slice(0, MAX_SELECTION_NOTE_CHARS)}${
+        trimmedSelection.length > MAX_SELECTION_NOTE_CHARS ? '\n...(selection truncated)' : ''
+      }`
+    : ''
+  // This note supersedes any queued nav note and already carries the user's
+  // location — mark the location delivered so the navigation injector's
+  // immediate/debounced note doesn't clobber it (losing the selection).
+  chat.pendingContextNote = `[editor] The user asked for AI help from editor "${stripPromptWrapperTags(editor.name)}" (id ${editor.id}). Read it with read_editor before proposing or making changes; apply edits with update_editor_contents.${selectionNote}`
+  markNavigationContextDelivered(chat.id)
+  panel.openPanel(chat.id)
+  return chat.id
+}
+
 export interface SendGlobalChatMessageOptions {
   chatId: string
   message: string
@@ -140,11 +205,14 @@ export async function sendGlobalChatMessage(opts: SendGlobalChatMessageOptions):
   // Materialize the latest navigation note BEFORE the user message so history
   // stays append-only (prompt-cache safe) and the note precedes the request
   // it contextualizes. runToolLoop only slices off the final user message, so
-  // the hidden note rides along in history untouched.
-  if (chat.pendingContextNote) {
+  // the hidden note rides along in history untouched. Skip when no LLM
+  // connection exists — executeMessage will fail fast and the note should
+  // survive for the first real send.
+  const hasConnection = !!(chat.llmConnectionName || deps.llmConnectionStore.activeConnection)
+  if (hasConnection && chat.pendingContextNote) {
     chatStore.addMessageToChat(chatId, {
       role: 'user',
-      content: `${SYSTEM_INPUT_START}${chat.pendingContextNote}${SYSTEM_INPUT_END}`,
+      content: `${SYSTEM_INPUT_START}${stripPromptWrapperTags(chat.pendingContextNote)}${SYSTEM_INPUT_END}`,
       hidden: true,
     })
     chat.pendingContextNote = null

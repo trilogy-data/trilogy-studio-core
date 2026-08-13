@@ -616,6 +616,14 @@ export class ChatToolExecutor {
     }
 
     const idSet = new Set(artifactIds)
+    // A repeated id would map to the same artifact object twice, persisting
+    // duplicate entries in the chat.
+    if (idSet.size !== artifactIds.length) {
+      return {
+        success: false,
+        error: 'artifact_ids contains duplicate IDs; each artifact may appear only once.',
+      }
+    }
     const activeArtifact = chat.getActiveArtifact()
 
     const specifiedArtifacts = artifactIds.map((id) => chat.artifacts.find((a) => a.id === id)!)

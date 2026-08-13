@@ -145,7 +145,7 @@ async function executeDashboardTool(
     }
   }
   const dashboard = ctx.runtime.dashboardStore.dashboards[dashboardId]
-  if (!dashboard) {
+  if (!dashboard || (dashboard as any).deleted) {
     return { success: false, error: `Dashboard "${dashboardId}" not found.` }
   }
 

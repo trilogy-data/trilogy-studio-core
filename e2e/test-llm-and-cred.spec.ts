@@ -168,59 +168,79 @@ test.describe('LLM Connection Tests', () => {
   })
 
   test('can use prompt refinement with interactive chat', async ({ page, isMobile }) => {
-    // Set up mocks with tool call responses for the new interactive chat experience
-    await setupOpenAIMocks(page, {
-      models: CONST_GPT_MODELS,
-      completionHandler: createCompletionHandler({
-        'generate query': 'This is a mocked query generation response',
-        'filter query': 'This is a mocked filter response',
-        // Initial request - LLM writes to editor using edit_editor tool
-        'top 10 products by orders': createToolCallResponse(
-          "I'll create a query for the top 10 products by orders.",
-          [
-            {
-              name: 'edit_editor',
-              input: {
-                content: `import lineitem;
-
-select
-    part.name,
-    part.manufacturer,
-    count(order.id) as order_count
-order by order_count desc
-limit 10;`,
-              },
-            },
-          ],
-        ),
-        // Follow-up refinement request
-        'use order.id.count as the count': createToolCallResponse(
-          "I'll update the query to use order.id.count instead.",
-          [
-            {
-              name: 'edit_editor',
-              input: {
-                content: `import lineitem;
+    const refinedQuery = `import lineitem;
 
 select
     part.name,
     part.manufacturer,
     order.id.count as order_count
 order by order_count desc
-limit 10;`,
-              },
-            },
-          ],
-        ),
-        'run the current query': createToolCallResponse("I'll run the current editor query.", [
-          { name: 'run_active_editor_query', input: {} },
+limit 10;`
+
+    // Desktop routes editor AI requests to the global chat panel, whose tools
+    // address editors by reference. The editor id is dynamic, so pull it from
+    // the seeded context note in the request history.
+    const editorIdFromRequest = (requestBody: any): string => {
+      const raw = JSON.stringify(requestBody.input || [])
+      const match = raw.match(/\(id ([A-Za-z0-9_-]+)\)/)
+      return match ? match[1] : ''
+    }
+
+    const desktopResponses = {
+      // First send: rewrite the editor via the global editor tool.
+      'use order.id.count as the count': (requestBody: any) =>
+        createToolCallResponse("I'll update the query to use order.id.count instead.", [
+          {
+            name: 'update_editor_contents',
+            input: { editor_ref: editorIdFromRequest(requestBody), contents: refinedQuery },
+          },
         ]),
-        // Tool result continuation - request close
-        'Continue based on the tool results': createToolCallResponse(
-          "I've updated the query. The changes look good.",
-          [{ name: 'request_close', input: { message: 'Query updated successfully.' } }],
-        ),
-      }),
+      'run the current query': (requestBody: any) =>
+        createToolCallResponse("I'll run the current editor query.", [
+          { name: 'run_editor_query', input: { editor_ref: editorIdFromRequest(requestBody) } },
+        ]),
+      // run_editor_query requires a live connection — connect and retry like
+      // a real agent would.
+      'is not connected': createToolCallResponse('', [
+        { name: 'connect_data_connection', input: { connection: 'demo-model-connection' } },
+      ]),
+      'Successfully connected': (requestBody: any) =>
+        createToolCallResponse('', [
+          { name: 'run_editor_query', input: { editor_ref: editorIdFromRequest(requestBody) } },
+        ]),
+      // Tool-result continuations: end the turn.
+      'Updated editor': createToolCallResponse('', [
+        { name: 'return_to_user', input: { message: 'Updated the query to use order.id.count.' } },
+      ]),
+      'Artifact ID': createToolCallResponse('', [
+        { name: 'return_to_user', input: { message: 'Ran editor query successfully.' } },
+      ]),
+    }
+
+    const mobileResponses = {
+      'generate query': 'This is a mocked query generation response',
+      'filter query': 'This is a mocked filter response',
+      // Follow-up refinement request via the inline refinement tools
+      'use order.id.count as the count': createToolCallResponse(
+        "I'll update the query to use order.id.count instead.",
+        [{ name: 'edit_editor', input: { content: refinedQuery } }],
+      ),
+      'run the current query': createToolCallResponse("I'll run the current editor query.", [
+        { name: 'run_active_editor_query', input: {} },
+      ]),
+      // Tool-result continuations (keyed on the executor's actual result
+      // strings) - request close.
+      'Updated editor contents': createToolCallResponse('', [
+        { name: 'request_close', input: { message: 'Query updated successfully.' } },
+      ]),
+      'Query executed successfully': createToolCallResponse('', [
+        { name: 'request_close', input: { message: 'Query executed.' } },
+      ]),
+    }
+
+    await setupOpenAIMocks(page, {
+      models: CONST_GPT_MODELS,
+      completionHandler: createCompletionHandler(isMobile ? mobileResponses : desktopResponses),
     })
 
     await page.goto('#skipTips=true')
@@ -277,95 +297,123 @@ limit 10;`,
     )
     await page.getByTestId('editor').click({ clickCount: 3 })
 
-    // Open refinement chat
+    // Open the editor AI experience: mobile opens the inline refinement
+    // session; desktop routes to the global chat panel.
     await page.getByTestId('editor-generate-button').click()
 
-    // Verify refinement container is visible
-    await expect(page.getByTestId('editor-refinement-container')).toBeVisible()
+    if (isMobile) {
+      // Verify refinement container is visible
+      await expect(page.getByTestId('editor-refinement-container')).toBeVisible()
 
-    // Send refinement request via chat
-    await page.getByTestId('input-textarea').fill('use order.id.count as the count')
-    await page.getByTestId('send-button').click()
+      // Send refinement request via chat
+      await page.getByTestId('input-textarea').fill('use order.id.count as the count')
+      await page.getByTestId('send-button').click()
 
-    // Wait for response and verify message appears
-    await expect(page.getByTestId('messages-container')).toContainText('order.id.count')
+      // Wait for response and verify message appears
+      await expect(page.getByTestId('messages-container')).toContainText('order.id.count')
 
-    // Mobile switches between panes; desktop keeps editor and chat mounted
-    // side-by-side. Both must synchronize the edit into Monaco.
-    if (isMobile) await page.getByTestId('editor-tab').click()
-    await expect(page.getByTestId('editor')).toContainText('order.id.count')
-    if (isMobile) await page.getByTestId('chat-tab').click()
+      // The edit must synchronize into Monaco on the editor pane.
+      await page.getByTestId('editor-tab').click()
+      await expect(page.getByTestId('editor')).toContainText('order.id.count')
+      await page.getByTestId('chat-tab').click()
 
-    // The mobile ResultsView must pass the active Editor's run callback into
-    // refinement tools, just like the desktop split view does.
-    await page.getByTestId('input-textarea').fill('run the current query')
-    await page.getByTestId('send-button').click()
-    await expect(page.getByTestId('messages-container')).toContainText('Ran editor query', {
-      timeout: 15000,
-    })
+      // The mobile ResultsView must pass the active Editor's run callback into
+      // refinement tools.
+      await page.getByTestId('input-textarea').fill('run the current query')
+      await page.getByTestId('send-button').click()
+      await expect(page.getByTestId('messages-container')).toContainText('Ran editor query', {
+        timeout: 15000,
+      })
 
-    // The tool run must publish into the same editor state used by the Results
-    // tab, not merely return an artifact to the agent.
-    if (isMobile) await page.getByTestId('results-tab').click()
-    await expect(page.getByRole('grid')).toBeVisible({ timeout: 15000 })
-    await expect(page.getByTestId('query-results-length')).not.toHaveText('0')
+      // The tool run must publish into the same editor state used by the
+      // Results tab, not merely return an artifact to the agent.
+      await page.getByTestId('results-tab').click()
+      // The chat pane's inline artifact renders a second results view — scope
+      // to the first match (the Results tab pane).
+      await expect(page.getByRole('grid').first()).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('query-results-length').first()).not.toHaveText('0')
 
-    if (isMobile) await page.getByTestId('chat-tab').click()
+      await page.getByTestId('chat-tab').click()
 
-    // Close the refinement session
-    await page.getByTestId('discard-button').click()
+      // Close the refinement session
+      await page.getByTestId('discard-button').click()
 
-    // Verify refinement container is closed
-    await expect(page.getByTestId('editor-refinement-container')).not.toBeVisible()
+      // Verify refinement container is closed
+      await expect(page.getByTestId('editor-refinement-container')).not.toBeVisible()
+    } else {
+      // Desktop: the global chat panel opens (no inline refinement) with a
+      // seeded context note pointing at the active editor.
+      await expect(page.getByTestId('global-chat-panel')).toBeVisible()
+      await expect(page.getByTestId('editor-refinement-container')).not.toBeVisible()
+
+      await page.getByTestId('input-textarea').fill('use order.id.count as the count')
+      await page.getByTestId('send-button').click()
+
+      // The update_editor_contents edit lands live in the open Monaco editor.
+      await expect(page.getByTestId('editor')).toContainText('order.id.count', { timeout: 15000 })
+      await expect(page.getByTestId('messages-container')).toContainText(
+        'Updated the query to use order.id.count.',
+      )
+
+      // run_editor_query executes against the editor's own connection...
+      await page.getByTestId('input-textarea').fill('run the current query')
+      await page.getByTestId('send-button').click()
+      await expect(page.getByTestId('messages-container')).toContainText(
+        'Ran editor query successfully.',
+        { timeout: 15000 },
+      )
+
+      // ...and publishes into the editor's results pane, same as toolbar Run.
+      await expect(page.getByRole('grid').first()).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('query-results-length').first()).not.toHaveText('0')
+
+      // Close the panel
+      await page.getByTestId('global-chat-close').click()
+      await expect(page.getByTestId('global-chat-panel')).not.toBeVisible()
+    }
   })
 
   test('interactive chat with full tool use loop', async ({ page, isMobile }) => {
-    // Skip if mobile - refinement UI not optimized for mobile
+    // Desktop-only: exercises the global chat panel's multi-step tool loop
+    // (mobile covers the inline refinement loop in the previous test).
     if (isMobile) {
       test.skip()
     }
 
-    // Track tool call sequence for verification
-    let toolCallCount = 0
+    const simpleQuery = `import lineitem;
+
+select
+    count(part.id) as part_count;`
+
+    const editorIdFromRequest = (requestBody: any): string => {
+      const raw = JSON.stringify(requestBody.input || [])
+      const match = raw.match(/\(id ([A-Za-z0-9_-]+)\)/)
+      return match ? match[1] : ''
+    }
 
     // Set up mocks with a sequence of tool call responses
     await setupOpenAIMocks(page, {
       models: CONST_GPT_MODELS,
       completionHandler: createCompletionHandler({
-        // Initial query generation request
-        'write a simple query': createToolCallResponse(
-          "I'll create a simple query to count parts.",
-          [
+        // Initial request - write to the editor via the global editor tool
+        'write a simple query': (requestBody: any) =>
+          createToolCallResponse("I'll create a simple query to count parts.", [
             {
-              name: 'edit_editor',
-              input: {
-                content: `import lineitem;
-
-select
-    count(part.id) as part_count;`,
-              },
+              name: 'update_editor_contents',
+              input: { editor_ref: editorIdFromRequest(requestBody), contents: simpleQuery },
             },
-          ],
-        ),
-        // After edit_editor tool result - validate the query
-        'Continue based on the tool results': createToolCallResponse(
-          'Query written. Let me validate it.',
-          [
-            {
-              name: 'validate_query',
-              input: {
-                query: `import lineitem;
-
-select
-    count(part.id) as part_count;`,
-              },
-            },
-          ],
-        ),
-        // After validate tool result - close session
+          ]),
+        // After the edit lands - validate the query
+        'Updated editor': createToolCallResponse('Query written. Let me validate it.', [
+          {
+            name: 'validate_query',
+            input: { query: simpleQuery, connection: 'demo-model-connection' },
+          },
+        ]),
+        // After validate succeeds ('Success.') - return control to the user
         Success: createToolCallResponse('The query is valid and ready.', [
           {
-            name: 'request_close',
+            name: 'return_to_user',
             input: { message: 'Query created and validated successfully.' },
           },
         ]),
@@ -414,11 +462,11 @@ select
     await page.keyboard.type('import lineitem;\n\n# write a simple query')
     await page.getByTestId('editor').click({ clickCount: 3 })
 
-    // Open refinement chat
+    // Open the AI experience — desktop routes to the global chat panel
     await page.getByTestId('editor-generate-button').click()
 
-    // Verify chat container is visible
-    await expect(page.getByTestId('editor-refinement-container')).toBeVisible()
+    // Verify the panel opened with a chat surface
+    await expect(page.getByTestId('global-chat-panel')).toBeVisible()
     await expect(page.getByTestId('llm-chat-container')).toBeVisible()
 
     // Send initial request
@@ -429,13 +477,17 @@ select
     await expect(page.getByTestId('loading-indicator')).toBeVisible({ timeout: 5000 })
     await expect(page.getByTestId('loading-indicator')).not.toBeVisible({ timeout: 15000 })
 
-    // Verify the chat shows assistant messages
-    await expect(page.getByTestId('messages-container')).toContainText('query', { timeout: 5000 })
+    // Verify the chat shows assistant messages and the edit reached Monaco.
+    // (return_to_user's message is only displayed when the response carries no
+    // text, so assert on the response text.)
+    await expect(page.getByTestId('messages-container')).toContainText(
+      'The query is valid and ready.',
+      { timeout: 5000 },
+    )
+    await expect(page.getByTestId('editor')).toContainText('part_count')
 
-    // Close the session
-    await page.getByTestId('discard-button').click()
-
-    // Verify refinement is closed
-    await expect(page.getByTestId('editor-refinement-container')).not.toBeVisible()
+    // Close the panel
+    await page.getByTestId('global-chat-close').click()
+    await expect(page.getByTestId('global-chat-panel')).not.toBeVisible()
   })
 })

@@ -27,13 +27,14 @@ export interface CompactionResult {
 
 /** A safe cut point starts a fresh turn: cutting immediately before it can
  *  never separate an assistant toolCalls message from its paired toolResults
- *  message (those are adjacent by construction in the tool loop). */
+ *  message (those are adjacent by construction in the tool loop; the results
+ *  message is the only user message carrying toolResults). Hidden user
+ *  messages without toolResults (system notes, injections) are safe cuts too
+ *  — chats driven purely by hidden injections (e.g. an overseer woken by
+ *  subchat completions) would otherwise never find a cut point and could
+ *  never compact. */
 function isSafeCutPoint(message: ChatMessage): boolean {
-  return (
-    message.role === 'user' &&
-    !message.hidden &&
-    !(message.toolResults && message.toolResults.length > 0)
-  )
+  return message.role === 'user' && !(message.toolResults && message.toolResults.length > 0)
 }
 
 function buildArtifactIndex(chat: Chat): string {
@@ -107,19 +108,24 @@ export async function compactChat(
   const toArchive = live.slice(0, cut)
   const summary = await summarizeMessages(provider, toArchive, opts.focus)
 
+  // The chat may have been cleared or rebuilt during the summarize await —
+  // splicing a summary of erased history into a fresh conversation would be
+  // wrong, so bail out before mutating anything.
+  const cutMessage = live[cut]
+  const insertAt = chat.messages.indexOf(cutMessage)
+  if (insertAt < 0) return null
+
   // Mutations happen only after the summary call succeeds.
   toArchive.forEach((message) => {
     message.archived = true
   })
-  const cutMessage = live[cut]
-  const insertAt = chat.messages.indexOf(cutMessage)
   const summaryMessage: ChatMessage = {
     role: 'user',
     hidden: true,
     compaction: true,
     content: `${SYSTEM_INPUT_START}[Conversation compacted. Summary of the earlier conversation:]\n\n${summary}${buildArtifactIndex(chat)}${SYSTEM_INPUT_END}`,
   }
-  chat.messages.splice(insertAt < 0 ? 0 : insertAt, 0, summaryMessage)
+  chat.messages.splice(insertAt, 0, summaryMessage)
   chat.updatedAt = new Date()
   chat.changed = true
 

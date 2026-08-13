@@ -29,14 +29,18 @@ function requireNavigation(ctx: ToolContext): ToolAvailability {
 function resolveDashboard(ctx: ToolContext, ref: string) {
   const store = ctx.runtime.dashboardStore
   if (!store) return null
-  const byId = store.dashboards[ref]
-  if (byId) return byId
+  const byId = Object.prototype.hasOwnProperty.call(store.dashboards, ref)
+    ? store.dashboards[ref]
+    : undefined
+  if (byId && !(byId as any).deleted) return byId
   return Object.values(store.dashboards).find((d: any) => d.name === ref && !d.deleted) || null
 }
 
 function resolveEditor(ctx: ToolContext, ref: string) {
   const store = ctx.runtime.editorStore
-  const byId = store.editors[ref]
+  const byId = Object.prototype.hasOwnProperty.call(store.editors, ref)
+    ? store.editors[ref]
+    : undefined
   if (byId && !byId.deleted) return byId
   const byName = store.getEditorByName(ref)
   return byName && !byName.deleted ? byName : null

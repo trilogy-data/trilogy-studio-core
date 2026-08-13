@@ -280,7 +280,8 @@ export function buildJobsPack(): RegisteredTool[] {
       },
       execute: async (input, ctx) => {
         const jobs = ctx.runtime.jobsStore!
-        const list = jobs.getStoreJobs(String(input.store_id)).slice(0, Number(input.limit) || 10)
+        const limit = Math.max(1, Math.floor(Number(input.limit) || 10))
+        const list = jobs.getStoreJobs(String(input.store_id)).slice(0, limit)
         if (list.length === 0) {
           return { success: true, message: `No jobs recorded for store ${input.store_id}.` }
         }
@@ -303,7 +304,7 @@ export function buildJobsPack(): RegisteredTool[] {
         },
       },
       execute: async (input, _ctx): Promise<ToolCallResult> => {
-        const limit = Number(input.limit) || 10
+        const limit = Math.max(1, Math.floor(Number(input.limit) || 10))
         try {
           const records = await getHistoryStorage().getQueriesForConnection(
             String(input.connection),

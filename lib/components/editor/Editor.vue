@@ -133,6 +133,8 @@ import EditorMobileToolbar from './EditorMobileToolbar.vue'
 import CodeEditor from './EditorCode.vue'
 import { Range } from 'monaco-editor'
 import { type AnalyticsStoreType } from '../../stores/analyticsStore.ts'
+import type { ChatStoreType } from '../../stores/chatStore.ts'
+import { openGlobalChatForEditor } from '../../llm/globalChatRuntime'
 import { type GoToDefinitionEvent } from './events'
 import { useIsMobile } from '../useIsMobile'
 import {
@@ -198,6 +200,12 @@ export default defineComponent({
     // (e.g. explorer's center pane) can suppress the symbols pane without
     // pretending to be a mobile context.
     const hideEditorSymbols = inject<boolean>('hideEditorSymbols', false)
+    // Provided (true) only by hosts that render the persistent global chat
+    // panel (desktop IDE.vue). Those hosts route editor AI requests to the
+    // panel; hosts without it (mobile IDE, explorer) keep the inline
+    // refinement session as the native editor experience.
+    const hasGlobalChatPanel = inject<boolean>('hasGlobalChatPanel', false)
+    const chatStore = inject<ChatStoreType | null>('chatStore', null)
     const setActiveEditor = inject<Function>('setActiveEditor')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     const analyticsStore = inject<AnalyticsStoreType>('analyticsStore')
@@ -222,6 +230,8 @@ export default defineComponent({
     return {
       isMobile,
       hideEditorSymbols,
+      hasGlobalChatPanel,
+      chatStore,
       connectionStore,
       modelStore,
       llmStore,
@@ -630,8 +640,14 @@ export default defineComponent({
           }
           if (result.results) {
             // check if the result headers have changed
-            // and clear our cached chart config if so
-            if (this.editorData.results && this.editorData.results.headers) {
+            // and clear our cached chart config if so. Skip when prior
+            // results are the empty rehydrated placeholder — comparing
+            // against it would wipe a persisted chart config on first run.
+            if (
+              this.editorData.results &&
+              this.editorData.results.headers &&
+              this.editorData.results.headers.size > 0
+            ) {
               let identical =
                 JSON.stringify(Array.from(this.editorData.results.headers.keys())) ==
                 JSON.stringify(Array.from(result.results.headers.keys()))
@@ -698,6 +714,10 @@ export default defineComponent({
       return queryResult
     },
 
+    // Single entry point for "AI assist" on this editor (toolbar button,
+    // Monaco keybinding, results-pane chat button via IDE.vue). Hosts that
+    // render the global chat panel get the unified assistant; everyone else
+    // gets the inline refinement session.
     async handleLLMTrigger(): Promise<void> {
       if (!this.editorData || this.editorData.type === 'python') {
         if (this.editorData) {
@@ -706,11 +726,38 @@ export default defineComponent({
         return
       }
 
+      if (this.hasGlobalChatPanel && this.chatStore && this.llmStore) {
+        const codeEditorRef = this.$refs.codeEditor as CodeEditorRef | undefined
+        // Read the selection off the Monaco instance directly —
+        // getEditorRange/getEditorText fall back to the full document when
+        // nothing is selected, which would attach the file head as a fake
+        // "selection".
+        let selectedText: string | undefined
+        const instance = codeEditorRef?.getEditorInstance()
+        const selection = instance?.getSelection?.()
+        if (
+          selection &&
+          !(
+            selection.startLineNumber === selection.endLineNumber &&
+            selection.startColumn === selection.endColumn
+          )
+        ) {
+          selectedText = instance.getModel()?.getValueInRange(selection) || undefined
+        }
+        openGlobalChatForEditor({
+          chatStore: this.chatStore,
+          llmConnectionStore: this.llmStore,
+          editor: { id: this.editorData.id, name: this.editorData.name },
+          ...(selectedText ? { selectedText } : {}),
+        })
+        return
+      }
+
       await this.openLLMRefinement()
     },
 
-    // Open an LLM refinement session for the current editor.
-    // Public: also called from parent components (e.g. IDE.vue).
+    // Open an inline LLM refinement session for the current editor. Used by
+    // hosts without the global chat panel (mobile IDE, explorer).
     async openLLMRefinement(): Promise<void> {
       if (!this.llmStore || !this.editorData) {
         console.error('LLM store or editor data is not available')
@@ -728,40 +775,47 @@ export default defineComponent({
           throw new Error('Code editor reference not found')
         }
 
-        const text = codeEditorRef.getEditorText(this.editorData.contents)
-        const range: Range = codeEditorRef.getEditorRange()
-
-        // Set up refinement session.
-        // Calculate selection range as character offsets.
+        // Capture the selection off the Monaco instance directly — the
+        // getEditorRange/getEditorText helpers fall back to the whole
+        // document when nothing is selected, which would present the full
+        // file as the user's "selection".
         let selectionRange: { start: number; end: number } | undefined
-        let selectedText = ''
-        if (range && text) {
-          // Convert line/column to character offsets
-          const lines = targetEditor.contents.split('\n')
-          let startOffset = 0
-          for (let i = 0; i < range.startLineNumber - 1; i++) {
-            startOffset += lines[i].length + 1 // +1 for newline
-          }
-          startOffset += range.startColumn - 1
+        let selectedText: string | undefined
+        const instance = codeEditorRef.getEditorInstance()
+        const selection = instance?.getSelection?.()
+        if (
+          selection &&
+          !(
+            selection.startLineNumber === selection.endLineNumber &&
+            selection.startColumn === selection.endColumn
+          )
+        ) {
+          selectedText = instance.getModel()?.getValueInRange(selection) || undefined
+          if (selectedText) {
+            // Convert line/column to character offsets
+            const lines = targetEditor.contents.split('\n')
+            let startOffset = 0
+            for (let i = 0; i < selection.startLineNumber - 1; i++) {
+              startOffset += lines[i].length + 1 // +1 for newline
+            }
+            startOffset += selection.startColumn - 1
 
-          let endOffset = 0
-          for (let i = 0; i < range.endLineNumber - 1; i++) {
-            endOffset += lines[i].length + 1
-          }
-          endOffset += range.endColumn - 1
+            let endOffset = 0
+            for (let i = 0; i < selection.endLineNumber - 1; i++) {
+              endOffset += lines[i].length + 1
+            }
+            endOffset += selection.endColumn - 1
 
-          selectionRange = { start: startOffset, end: endOffset }
-          selectedText = text
+            selectionRange = { start: startOffset, end: endOffset }
+          }
         }
 
         // Reuse existing session if available, otherwise create new one.
         // If a session exists, just show it (don't overwrite messages/artifacts).
+        // startRefinementSession also snapshots the chart config, so Discard
+        // can restore it.
         if (!this.editorData.hasActiveRefinement()) {
-          this.editorData.setRefinementSession({
-            messages: [],
-            artifacts: [],
-            originalContent: targetEditor.contents,
-            currentContent: targetEditor.contents,
+          this.editorStore.startRefinementSession(this.editorData.id, {
             selectedText,
             selectionRange,
           })
