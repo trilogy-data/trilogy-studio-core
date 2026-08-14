@@ -64,13 +64,26 @@ inline accept/discard UI but runs on the shared chat pipeline.
   reads chatStore state. Old loop machinery removed from `editorStore`;
   `lib/composables/useEditorRefinement.ts` (dead duplicate) deleted.
 
-### Compaction (Phase 7)
+### Compaction (Phase 7, generalized 2026-08-14)
 
-- `lib/llm/compactConversation.ts` — `COMPACTION_THRESHOLD_TOKENS = 200_000`; archived-flag
-  design (never deletes); safe cut points never split toolCalls/toolResults pairs;
-  fast-model summary + programmatic artifact index. Auto-trigger sits in
-  `chatStore.executeMessage` before the loop; usage recorded per response into
-  `Chat.lastContextTokens`.
+- `lib/llm/compaction.ts` (was `compactConversation.ts`) — archived-flag design (never
+  deletes); safe cut points never split toolCalls/toolResults pairs; structured
+  ("## Goal / ## Progress / ## Key decisions / ## Current state / ## Open items") fast-model
+  summary produced in a standalone request, plus a programmatic artifact index.
+  - **Generic core**: `compactHistory(provider, history, opts)` works on any
+    `CompactableHistory` (`{ messages, getLLMMessages() }` — `Chat` satisfies it
+    structurally), so ref-array histories can compact too. `compactChat` is the `Chat`
+    binding; `maybeCompactChat` is the threshold-checked auto-entry point.
+  - **Retention is a token budget**, not a message count: keep the recent tail until
+    `keepRecentTokens` (default 20k) is filled, floored at 6 and capped at 20 messages, so a
+    few huge tool results cost the same as many small turns. Sizing uses
+    `lib/llm/tokenEstimate.ts` (~4 chars/token; images charged flat, not by base64 length).
+  - **Threshold is per LLM connection**: `LLMProvider.compactionThresholdTokens`
+    (null = `DEFAULT_COMPACTION_THRESHOLD_TOKENS` 200k, 0 = disabled), persisted through
+    `toJSON`/`fromJSON`, edited in the sidebar under each connection's Settings →
+    "Auto-Compact At". Auto-trigger still sits in `chatStore.executeMessage` before the loop
+    (never mid-loop); usage recorded per response into `Chat.lastContextTokens`, with a
+    local estimate as fallback for restored chats and providers that report no usage.
 
 ## Contracts that must not drift
 

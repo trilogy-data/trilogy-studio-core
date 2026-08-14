@@ -14,7 +14,7 @@ import { summarizeSubchat } from '../llm/subchatSummarize'
 import type { ToolCallResult } from '../llm/sharedToolHelpers'
 import { buildChatAgentSystemPrompt } from '../llm/chatAgentPrompt'
 import { getSharedRegistry } from '../llm/registry'
-import { compactChat, COMPACTION_THRESHOLD_TOKENS } from '../llm/compactConversation'
+import { maybeCompactChat } from '../llm/compaction'
 import {
   buildOverseerSystemPrompt,
   OVERSEER_TOOLS,
@@ -448,22 +448,13 @@ export const useChatStore = defineStore('chats', {
         }
       }
 
-      // Auto-compact BEFORE starting the loop (never mid-loop: the running
-      // loop holds its own history copy) when the last request's context grew
-      // past the threshold. Failure is non-fatal — the turn proceeds uncompacted.
-      if ((chat.lastContextTokens ?? 0) > COMPACTION_THRESHOLD_TOKENS) {
-        const provider = llmConnectionStore.connections[llmConnectionName]
-        if (provider) {
-          try {
-            const compacted = await compactChat(provider, chat)
-            if (compacted) {
-              // Reset so the trigger re-arms only after the next real request.
-              chat.lastContextTokens = undefined
-            }
-          } catch (err) {
-            console.error('Automatic conversation compaction failed:', err)
-          }
-        }
+      // Auto-compact BEFORE starting the loop (never mid-loop: the running loop
+      // holds its own history copy) when the context grew past the connection's
+      // configured threshold. Failure is non-fatal — the turn proceeds
+      // uncompacted.
+      const compactionProvider = llmConnectionStore.connections[llmConnectionName]
+      if (compactionProvider) {
+        await maybeCompactChat(compactionProvider, chat)
       }
 
       // Initialize execution state. Keep the record's identity: a later

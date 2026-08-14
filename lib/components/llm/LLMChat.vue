@@ -18,105 +18,148 @@
     </div>
 
     <div class="chat-messages" ref="messagesContainer" data-testid="messages-container">
-      <div
-        v-for="(message, index) in visibleMessages"
-        :key="index"
-        class="message"
-        :class="[
-          message.role,
-          {
-            'has-artifact': message.artifact,
-            'tool-only': isToolOnlyAssistantMessage(message),
-            'harness-error': message.error,
-          },
-        ]"
-        :data-testid="`message-${message.role}-${index}`"
-      >
-        <span
-          v-if="message.role === 'assistant' && !isToolOnlyAssistantMessage(message)"
-          class="message-avatar assistant-avatar"
+      <template v-for="(message, index) in visibleMessages" :key="index">
+        <!-- Compaction marker: everything above it was summarized and is no
+             longer in the agent's context. -->
+        <div
+          v-if="message.compaction"
+          class="compaction-divider"
+          :data-testid="`compaction-divider-${index}`"
         >
-          <i :class="message.error ? 'mdi mdi-alert' : 'mdi mdi-robot-outline'"></i>
-        </span>
-        <div class="message-content">
-          <!-- Render artifacts inline if renderArtifacts is enabled -->
-          <template v-if="message.artifact && renderArtifacts">
-            <div class="message-text" v-if="getMessageTextWithoutArtifact(message)">
-              <markdown-renderer
-                v-if="message.role === 'assistant'"
-                :markdown="getMessageTextWithoutArtifact(message)"
-              />
-              <pre v-else>{{ getMessageTextWithoutArtifact(message) }}</pre>
-            </div>
-            <slot name="artifact" :artifact="message.artifact" :message="message">
-              <div class="artifact-placeholder">[Artifact: {{ message.artifact.type }}]</div>
-            </slot>
-          </template>
-          <!-- Assistant message with markdown (also handles artifact messages when renderArtifacts is false) -->
-          <template v-else-if="message.role === 'assistant'">
-            <markdown-renderer :markdown="message.content" />
-          </template>
-          <!-- User messages rendered as plain text -->
-          <pre v-else>{{ message.content }}</pre>
-
-          <!-- Tool calls display (uses executedToolCalls which has result info for UI) -->
-          <div
-            v-if="message.executedToolCalls && message.executedToolCalls.length > 0"
-            class="tool-calls"
-            :class="{ summarized: shouldSummarizeToolCalls(message) }"
+          <button
+            type="button"
+            class="compaction-summary-toggle"
+            :aria-expanded="isCompactionExpanded(message)"
+            :title="
+              isCompactionExpanded(message) ? 'Hide the summary' : 'Show the summary the agent sees'
+            "
+            :data-testid="`compaction-toggle-${index}`"
+            @click="toggleCompaction(message)"
           >
-            <div
-              v-if="shouldSummarizeToolCalls(message)"
-              class="tool-call-summary"
-              :title="getToolCallSummaryTitle(message)"
-            >
-              <i class="mdi mdi-check-circle"></i>
-              <span>{{ getToolCallSummary(message) }}</span>
-            </div>
-            <template v-else>
-              <div
-                v-for="toolCall in getCondensedToolCalls(message.executedToolCalls)"
-                :key="toolCall.key"
-                class="tool-call"
-                :class="{ success: toolCall.success, error: !toolCall.success }"
-                :title="toolCall.error || toolCall.label"
+            <i class="mdi mdi-archive-arrow-down-outline"></i>
+            <span class="compaction-label">
+              Context compacted<template v-if="getArchivedCount(message)">
+                — {{ getArchivedCount(message) }} earlier
+                {{ getArchivedCount(message) === 1 ? 'message' : 'messages' }} summarized</template
               >
-                <span class="tool-icon">
-                  <i
-                    :class="toolCall.success ? 'mdi mdi-check-circle' : 'mdi mdi-alert-circle'"
-                  ></i>
-                </span>
-                <span class="tool-name">
-                  {{ toolCall.label }}
-                  <span v-if="toolCall.count > 1" class="tool-count">(x{{ toolCall.count }})</span>
-                </span>
-                <span v-if="toolCall.error" class="tool-error">{{ toolCall.error }}</span>
-                <button
-                  v-for="subchatId in toolCall.subchatIds"
-                  :key="subchatId"
-                  type="button"
-                  class="tool-call-subchat"
-                  title="View subagent chat"
-                  @click.stop="$emit('open-subchat', subchatId)"
-                >
-                  <i class="mdi mdi-forum-outline"></i>
-                </button>
-                <button
-                  type="button"
-                  class="tool-call-inspect"
-                  title="View tool call details"
-                  @click.stop="openToolCallInspector(toolCall)"
-                >
-                  <i class="mdi mdi-eye-outline"></i>
-                </button>
-              </div>
-            </template>
+            </span>
+            <i
+              class="mdi"
+              :class="isCompactionExpanded(message) ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+            ></i>
+          </button>
+          <div
+            v-if="isCompactionExpanded(message)"
+            class="compaction-summary"
+            :data-testid="`compaction-summary-${index}`"
+          >
+            <markdown-renderer :markdown="getCompactionSummary(message)" />
           </div>
         </div>
-        <div v-if="message.modelInfo" class="message-meta">
-          {{ message.modelInfo.totalTokens }} tokens
+
+        <div
+          v-else
+          class="message"
+          :class="[
+            message.role,
+            {
+              'has-artifact': message.artifact,
+              'tool-only': isToolOnlyAssistantMessage(message),
+              'harness-error': message.error,
+              archived: message.archived,
+            },
+          ]"
+          :title="message.archived ? 'Summarized — no longer in the agent\'s context' : undefined"
+          :data-testid="`message-${message.role}-${index}`"
+        >
+          <span
+            v-if="message.role === 'assistant' && !isToolOnlyAssistantMessage(message)"
+            class="message-avatar assistant-avatar"
+          >
+            <i :class="message.error ? 'mdi mdi-alert' : 'mdi mdi-robot-outline'"></i>
+          </span>
+          <div class="message-content">
+            <!-- Render artifacts inline if renderArtifacts is enabled -->
+            <template v-if="message.artifact && renderArtifacts">
+              <div class="message-text" v-if="getMessageTextWithoutArtifact(message)">
+                <markdown-renderer
+                  v-if="message.role === 'assistant'"
+                  :markdown="getMessageTextWithoutArtifact(message)"
+                />
+                <pre v-else>{{ getMessageTextWithoutArtifact(message) }}</pre>
+              </div>
+              <slot name="artifact" :artifact="message.artifact" :message="message">
+                <div class="artifact-placeholder">[Artifact: {{ message.artifact.type }}]</div>
+              </slot>
+            </template>
+            <!-- Assistant message with markdown (also handles artifact messages when renderArtifacts is false) -->
+            <template v-else-if="message.role === 'assistant'">
+              <markdown-renderer :markdown="message.content" />
+            </template>
+            <!-- User messages rendered as plain text -->
+            <pre v-else>{{ message.content }}</pre>
+
+            <!-- Tool calls display (uses executedToolCalls which has result info for UI) -->
+            <div
+              v-if="message.executedToolCalls && message.executedToolCalls.length > 0"
+              class="tool-calls"
+              :class="{ summarized: shouldSummarizeToolCalls(message) }"
+            >
+              <div
+                v-if="shouldSummarizeToolCalls(message)"
+                class="tool-call-summary"
+                :title="getToolCallSummaryTitle(message)"
+              >
+                <i class="mdi mdi-check-circle"></i>
+                <span>{{ getToolCallSummary(message) }}</span>
+              </div>
+              <template v-else>
+                <div
+                  v-for="toolCall in getCondensedToolCalls(message.executedToolCalls)"
+                  :key="toolCall.key"
+                  class="tool-call"
+                  :class="{ success: toolCall.success, error: !toolCall.success }"
+                  :title="toolCall.error || toolCall.label"
+                >
+                  <span class="tool-icon">
+                    <i
+                      :class="toolCall.success ? 'mdi mdi-check-circle' : 'mdi mdi-alert-circle'"
+                    ></i>
+                  </span>
+                  <span class="tool-name">
+                    {{ toolCall.label }}
+                    <span v-if="toolCall.count > 1" class="tool-count"
+                      >(x{{ toolCall.count }})</span
+                    >
+                  </span>
+                  <span v-if="toolCall.error" class="tool-error">{{ toolCall.error }}</span>
+                  <button
+                    v-for="subchatId in toolCall.subchatIds"
+                    :key="subchatId"
+                    type="button"
+                    class="tool-call-subchat"
+                    title="View subagent chat"
+                    @click.stop="$emit('open-subchat', subchatId)"
+                  >
+                    <i class="mdi mdi-forum-outline"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="tool-call-inspect"
+                    title="View tool call details"
+                    @click.stop="openToolCallInspector(toolCall)"
+                  >
+                    <i class="mdi mdi-eye-outline"></i>
+                  </button>
+                </div>
+              </template>
+            </div>
+          </div>
+          <div v-if="message.modelInfo" class="message-meta">
+            {{ message.modelInfo.totalTokens }} tokens
+          </div>
         </div>
-      </div>
+      </template>
 
       <div v-if="isLoading" class="message assistant loading-row">
         <span class="message-avatar assistant-avatar" aria-hidden="true">
@@ -254,6 +297,7 @@ import {
   isToolOnlyAssistantMessage,
   type CondensedToolCallDisplay,
 } from './toolCallDisplay'
+import { stripPromptWrapperTags } from '../../llm/toolLoopCore'
 
 // Re-export for backwards compatibility
 export type { ChatMessage, ChatArtifact, ChatToolCall }
@@ -391,11 +435,56 @@ export default defineComponent({
     const visibleMessages = computed(() => {
       // Artifact-carrier messages (artifact, no text) only make sense when
       // artifacts render inline; otherwise they'd show as empty bubbles.
+      // Compaction summaries are hidden from the *model's* perspective of a
+      // user turn, but the reader needs to see where context was dropped —
+      // they render as a divider, not a bubble.
       const shown = internalMessages.value.filter(
-        (m) => !m.hidden && !(m.artifact && !m.content && !props.renderArtifacts),
+        (m) => (!m.hidden || m.compaction) && !(m.artifact && !m.content && !props.renderArtifacts),
       )
       return mergeContiguousToolCallMessages(shown)
     })
+
+    /** Archived messages preceding each compaction marker, keyed by message
+     *  identity (the prop array is copied shallowly, so references hold). */
+    const archivedCounts = computed(() => {
+      const counts = new Map<ChatMessage, number>()
+      let archivedSoFar = 0
+      for (const message of internalMessages.value) {
+        if (message.compaction) {
+          counts.set(message, archivedSoFar)
+          archivedSoFar = 0
+        } else if (message.archived) {
+          archivedSoFar++
+        }
+      }
+      return counts
+    })
+
+    const getArchivedCount = (message: ChatMessage): number =>
+      archivedCounts.value.get(message) ?? 0
+
+    const expandedCompactions = ref<Set<ChatMessage>>(new Set())
+
+    const isCompactionExpanded = (message: ChatMessage): boolean =>
+      expandedCompactions.value.has(message)
+
+    const toggleCompaction = (message: ChatMessage) => {
+      // Reassign so the template re-renders — Set mutation isn't reactive.
+      const next = new Set(expandedCompactions.value)
+      if (next.has(message)) {
+        next.delete(message)
+      } else {
+        next.add(message)
+      }
+      expandedCompactions.value = next
+    }
+
+    /** The summary as written for the model, minus the wrapper tags and the
+     *  machine-facing preamble. */
+    const getCompactionSummary = (message: ChatMessage): string =>
+      stripPromptWrapperTags(message.content)
+        .replace(/^\s*\[Conversation compacted\.[^\]]*\]\s*/i, '')
+        .trim()
 
     // Sync with external messages prop
     watch(
@@ -605,6 +694,10 @@ export default defineComponent({
     return {
       internalMessages,
       visibleMessages,
+      getArchivedCount,
+      isCompactionExpanded,
+      toggleCompaction,
+      getCompactionSummary,
       userInput,
       isLoading,
       messagesContainer,
@@ -773,6 +866,69 @@ export default defineComponent({
 .message.assistant:has(.tool-calls):not(:has(p)):not(:has(pre)):not(:has(.markdown-renderer)) {
   background-color: transparent;
   padding: 2px 8px;
+}
+
+/* Summarized history: still readable scrollback, visibly out of the agent's
+   context so nobody wonders why it "forgot" what is right there on screen. */
+.message.archived {
+  opacity: 0.5;
+}
+
+.compaction-divider {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.compaction-summary-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 2px 0;
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-family: inherit;
+  font-size: var(--small-font-size);
+  cursor: pointer;
+}
+
+/* The rule is drawn by the label row itself so the text sits inside the line */
+.compaction-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compaction-label::before,
+.compaction-label::after {
+  content: '';
+  flex: 1 1 0;
+  min-width: 8px;
+  height: 1px;
+  background-color: var(--border-light);
+}
+
+.compaction-summary-toggle:hover {
+  color: var(--text-color);
+}
+
+.compaction-summary {
+  align-self: center;
+  max-width: 95%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background-color: rgba(148, 163, 184, 0.08);
+  font-size: var(--small-font-size);
+  color: var(--sidebar-font);
 }
 
 .message-content pre {

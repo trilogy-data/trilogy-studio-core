@@ -1,4 +1,5 @@
 import { OpenRouterProvider } from './openrouter'
+import { normalizeCompactionThreshold } from './base'
 import type { LLMRequestOptions, LLMResponse, LLMMessage } from './base'
 
 // URL for the demo token minting service.
@@ -97,6 +98,7 @@ export class DemoProvider extends OpenRouterProvider {
       name: this.name,
       model: this.model,
       fastModel: this.fastModel,
+      compactionThresholdTokens: this.compactionThresholdTokens,
       type: 'demo',
       apiKey: null, // never persisted — always re-fetched from the token service
       saveCredential: false,
@@ -108,6 +110,9 @@ export class DemoProvider extends OpenRouterProvider {
     const instance = new DemoProvider(json.name, json.model || '')
     instance.isDefault = json.isDefault || false
     instance.fastModel = json.fastModel || null
+    instance.compactionThresholdTokens = normalizeCompactionThreshold(
+      json.compactionThresholdTokens,
+    )
     return instance
   }
 }

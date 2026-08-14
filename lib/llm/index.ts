@@ -24,6 +24,18 @@ export type { ChatAgentPromptOptions, TrilogyPromptContext } from './chatAgentPr
 export { PROVIDERS, PROVIDER_LABELS, KEY_PLACEHOLDERS } from './consts'
 export type { ProviderValue } from './consts'
 
+// Conversation compaction
+export {
+  compactHistory,
+  compactChat,
+  maybeCompactChat,
+  shouldCompact,
+  DEFAULT_COMPACTION_THRESHOLD_TOKENS,
+  DEFAULT_KEEP_RECENT_TOKENS,
+} from './compaction'
+export type { CompactableHistory, CompactionOptions, CompactionResult } from './compaction'
+export { estimateTextTokens, estimateMessageTokens, estimateHistoryTokens } from './tokenEstimate'
+
 // Editor refinement tools
 export { EDITOR_REFINEMENT_TOOLS, buildEditorRefinementPrompt } from './editorRefinementTools'
 export type { EditorRefinementContext } from './editorRefinementTools'
