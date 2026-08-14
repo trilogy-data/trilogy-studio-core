@@ -51,7 +51,7 @@
         <connection-list-item
           :key="item.id"
           :item="item"
-          :is-collapsed="collapsed[item.id]"
+          :is-collapsed="isCollapsed(item.id)"
           :isSelected="item.id === activeConnectionKey"
           :isMobile="isMobile"
           :testTag="testTag"
@@ -112,6 +112,7 @@ import {
   CONNECTION_BRANCH_NODE_TYPES,
 } from '../../connections'
 import { useIsMobile } from '../useIsMobile'
+import { useCollapseState } from './collapseState'
 import MobileTreeList from './MobileTreeList.vue'
 
 export default {
@@ -237,7 +238,14 @@ export default {
       emit('toggle-mobile-menu')
     }
 
-    const collapsed = ref<Record<string, boolean>>({})
+    // Connections, databases, schemas and tables all start closed; their children
+    // are fetched on demand when one is opened, so there is nothing to reveal.
+    const {
+      overrides: collapsed,
+      isCollapsed,
+      open: openKey,
+      toggle: toggleKey,
+    } = useCollapseState()
 
     const refreshId = async (id: string, connectionKey: string, type: string) => {
       try {
@@ -254,11 +262,7 @@ export default {
         }
         if (type === 'connection') {
           console.log('getting databases')
-          let databases = await conn.getDatabases()
-          for (let db of databases) {
-            let dbid = `${conn.id}${KeySeparator}${db.name}`
-            collapsed.value[dbid] = true
-          }
+          await conn.getDatabases()
         }
         if (type === 'database') {
           console.log('getting schemas')
@@ -316,27 +320,24 @@ export default {
         connectionStore.connections[connectionKey] ||
         connectionStore.connectionByName(connectionKey)
       if (!conn) return
-      if (
-        type === 'connection' &&
-        (collapsed.value[id] === undefined || collapsed.value[id] === true)
-      ) {
+      if (type === 'connection' && isCollapsed(id)) {
         // open now see the refresh
-        collapsed.value[id] = false
+        openKey(id)
         if (conn.databases?.length === 0 || conn.databases?.length === undefined) {
           await refreshId(id, connectionKey, type)
         }
-      } else if (type === 'database' && collapsed.value[id] !== false) {
+      } else if (type === 'database' && isCollapsed(id)) {
         // open now see the refresh
-        collapsed.value[id] = false
+        openKey(id)
         let dbid = id.split(KeySeparator)[1]
         let db = conn.databases?.find((db) => db.name === dbid)
 
         if (db && db.schemas?.length === 0) {
           await refreshId(id, connectionKey, type)
         }
-      } else if (type === 'schema' && collapsed.value[id] !== false) {
+      } else if (type === 'schema' && isCollapsed(id)) {
         // open now see the refresh
-        collapsed.value[id] = false
+        openKey(id)
         let dbid = id.split(KeySeparator)[1]
         let schemaid = id.split(KeySeparator)[2]
         let schema = conn.databases
@@ -347,7 +348,7 @@ export default {
         }
       }
       // keep this to refresh, but we won't actually add them to the display
-      else if (type === 'table' && collapsed.value[id] !== false) {
+      else if (type === 'table' && isCollapsed(id)) {
         let dbid = id.split(KeySeparator)[1]
         let tableid = id.split(KeySeparator)[3]
         let schemaid = id.split(KeySeparator)[2]
@@ -364,35 +365,15 @@ export default {
         }
       }
       // expand first, so we can see the loading view
-      else if (collapsed.value[id] === undefined) {
-        collapsed.value[id] = false
-      } else {
-        collapsed.value[id] = !collapsed.value[id]
+      else {
+        toggleKey(id)
       }
     }
-
-    // hydrate the initial collapse list
-    Object.values(connectionStore.connections).forEach((item) => {
-      let connectionKey = `${item.name}`
-      collapsed.value[connectionKey] = true
-      item.databases?.forEach((db) => {
-        let dbKey = `${connectionKey}${KeySeparator}${db.name}`
-        collapsed.value[dbKey] = true
-        db.schemas.forEach((schema) => {
-          let schemaKey = `${dbKey}${KeySeparator}${schema.name}`
-          collapsed.value[schemaKey] = true
-          for (let table of schema.tables) {
-            let tableKey = `${dbKey}${KeySeparator}${table.schema}${KeySeparator}${table.name}`
-            collapsed.value[tableKey] = true
-          }
-        })
-      })
-    })
 
     const contentList = computed(() => {
       return buildConnectionTree(
         Object.values(connectionStore.connections),
-        collapsed.value,
+        isCollapsed,
         isLoading.value,
         isErrored.value,
       )
@@ -410,7 +391,7 @@ export default {
     const isConnectionConfig = (item: any) => CONNECTION_CONFIG_NODE_TYPES.has(item.type)
     const isConnectionBranch = (item: any) => CONNECTION_BRANCH_NODE_TYPES.has(item.type)
     const expandMobileBranch = async (item: any) => {
-      if (collapsed.value[item.id] !== false) {
+      if (isCollapsed(item.id)) {
         await toggleCollapse(item.id, item.connection?.id || item.connection?.name, item.type)
       }
     }
@@ -429,6 +410,7 @@ export default {
       handleItemClick,
       toggleMobileMenu,
       collapsed,
+      isCollapsed,
       saveConnections,
       saveEditors,
       saveDashboards,

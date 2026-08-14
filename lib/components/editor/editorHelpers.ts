@@ -566,6 +566,29 @@ export const setValue = (context: string, value: string): void => {
   }
 }
 
+// Sync Monaco with a content change that originated outside of Monaco (the chat
+// agent writing to editor.contents, drilldowns, etc). No-op when the model already
+// matches, so the user's own keystrokes don't round-trip back through here.
+export const syncExternalContent = (context: string, value: string): void => {
+  const editorInstance = editorMap.get(context)
+  const model = editorInstance?.getModel()
+  if (!editorInstance || !model) return
+  if (model.getValue() === value) return
+
+  const position = editorInstance.getPosition()
+
+  // pushEditOperations rather than setValue so the undo stack survives
+  model.pushEditOperations([], [{ range: model.getFullModelRange(), text: value }], () => null)
+
+  if (position) {
+    const lineNumber = Math.min(position.lineNumber, model.getLineCount())
+    editorInstance.setPosition({
+      lineNumber,
+      column: Math.min(position.column, model.getLineMaxColumn(lineNumber)),
+    })
+  }
+}
+
 export const executeEdits = (
   context: string,
   source: string,

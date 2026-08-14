@@ -99,9 +99,14 @@
               />
             </div>
             <div class="editor-bottom">
+              <!-- Hosts without the global chat panel (mobile) open an inline
+                   refinement session; swap the pane to it while one is active. -->
               <results-view
                 :editorData="editorStore.editors[demoEditorId]"
                 :containerHeight="500"
+                :display-mode="
+                  editorStore.editors[demoEditorId]?.hasActiveRefinement() ? 'chat' : 'results'
+                "
               />
             </div>
           </div>

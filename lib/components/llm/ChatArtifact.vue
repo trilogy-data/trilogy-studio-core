@@ -24,7 +24,8 @@
       </div>
     </div>
 
-    <div v-show="isExpanded" class="artifact-content">
+    <!-- v-if (not v-show): collapsed artifacts skip mounting heavy tables/charts -->
+    <div v-if="isExpanded" class="artifact-content">
       <!-- Results/Table Display -->
       <template v-if="artifact.type === 'results' && results">
         <div class="artifact-tabs">
@@ -330,6 +331,7 @@ export default defineComponent({
 .artifact-tab {
   padding: 6px 12px;
   border: none;
+  border-radius: 0 !important;
   background: transparent;
   color: var(--text-color);
   font-size: var(--small-font-size);

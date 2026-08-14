@@ -124,6 +124,10 @@ test('test-create-dashboard-and-pixels', async ({ page, isMobile }) => {
   await openSidebarScreen(page, 'community-models', isMobile)
   if (isMobile) {
     await drillMobileTree(page, ['Trilogy Public Models', 'duckdb'])
+  } else {
+    // The store lists five engines, so none of them is opened for you. Desktop
+    // has to walk down to duckdb the same way drillMobileTree does above.
+    await page.getByTestId('community-trilogy-data-trilogy-public-models-main+duckdb').click()
   }
   // await page.getByTestId('trilogy-data-trilogy-public-models-main').click({ force: true })
   // await page.getByTestId('community-model-search').click()

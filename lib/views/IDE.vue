@@ -68,6 +68,11 @@
           :activeDashboardKey="activeDashboard"
         />
       </template>
+      <!-- Persistent AI panel: sibling of the tab content, so it survives the
+           full unmount/remount that screen switches trigger below. -->
+      <template #right-panel>
+        <global-chat-panel v-if="globalChatOpen" />
+      </template>
       <template v-if="showingCredentialPrompt">
         <CredentialBackgroundPage />
       </template>
@@ -97,13 +102,12 @@
               <results-view
                 :editorData="activeEditorData"
                 :containerHeight="containerHeight"
-                :canOpenChat="canOpenChat"
                 :runEditorQuery="runQuery"
+                display-mode="results"
                 @llm-query-accepted="runQuery"
                 @refresh-click="runQuery"
                 @drilldown-click="drilldownClick"
                 @content-change="handleEditorContentChange"
-                @open-chat="handleOpenChat"
               >
               </results-view>
             </template>
@@ -240,6 +244,7 @@ import {
 import type { Ref } from 'vue'
 import { preloadAllScreensWhenIdle } from '../utility/screenPreloader'
 import useScreenNavigation from '../stores/useScreenNavigation.ts'
+import useGlobalChatPanel from '../stores/useGlobalChatPanel.ts'
 import { getDefaultValueFromHash, removeHashFromUrl, URL_HASH_KEYS } from '../stores/urlStore.ts'
 import type { ModalItem } from '../data/tips.ts'
 
@@ -284,6 +289,7 @@ const ChatCreatorModal = defineAsyncComponent(
 const ConnectionErrorPopup = defineAsyncComponent(
   () => import('../components/ConnectionErrorPopup.vue'),
 )
+const GlobalChatPanel = defineAsyncComponent(() => import('../components/llm/GlobalChatPanel.vue'))
 
 // Lazy load utility components
 const ErrorMessage = defineAsyncComponent(() => import('../components/ErrorMessage.vue'))
@@ -338,6 +344,7 @@ const IDEComponent: Component = defineComponent({
     'asset-auto-importer': AssetAutoImporter,
     ChatCreatorModal,
     'connection-error-popup': ConnectionErrorPopup,
+    'global-chat-panel': GlobalChatPanel,
 
     // Utility components (may not be used in template but included for completeness)
     'error-message': ErrorMessage,
@@ -421,6 +428,23 @@ const IDEComponent: Component = defineComponent({
     onInitialLoad()
     addBackListeners()
 
+    const globalChatPanel = useGlobalChatPanel()
+    const hasLLMConnections = () =>
+      !!llmConnectionStore && Object.keys(llmConnectionStore.connections || {}).length > 0
+    globalChatPanel.onInitialLoad()
+    globalChatPanel.addKeyListener(hasLLMConnections)
+    // Default-open decision needs hydrated stores: connections load async, and
+    // deciding before they land would treat every reload as "no connections".
+    if (storesLoaded.value) {
+      globalChatPanel.applyDefaultOpenState(hasLLMConnections())
+    } else {
+      const stopDefaultOpenWatch = watch(storesLoaded, (loaded) => {
+        if (!loaded) return
+        stopDefaultOpenWatch()
+        globalChatPanel.applyDefaultOpenState(hasLLMConnections())
+      })
+    }
+
     // Warm the remaining screen chunks once the initial screen has settled,
     // so navigation doesn't flash a blank pane while a chunk downloads.
     onMounted(() => {
@@ -430,9 +454,13 @@ const IDEComponent: Component = defineComponent({
     // on unmount, remove back listeners
     onBeforeUnmount(() => {
       removeBacklisteners()
+      globalChatPanel.removeKeyListener()
     })
 
     provide('navigationStore', screenNavigation)
+    // Editors mounted under this host route AI requests to the persistent
+    // global chat panel instead of opening an inline refinement session.
+    provide('hasGlobalChatPanel', true)
 
     const markTipRead = userSettingsStore.markTipRead
     const handleTipRead = (id: string) => {
@@ -559,6 +587,7 @@ const IDEComponent: Component = defineComponent({
       handleChatCreated,
       storesLoaded,
       sidebarCollapsed: ref(false),
+      globalChatOpen: globalChatPanel.isOpen,
     }
   },
   async mounted() {
@@ -601,12 +630,6 @@ const IDEComponent: Component = defineComponent({
       // Update the Monaco editor directly when content changes from refinement
       if (this.editorRef) {
         this.editorRef.setContent(content)
-      }
-    },
-    handleOpenChat() {
-      // Open LLM refinement chat on the editor
-      if (this.editorRef) {
-        this.editorRef.openLLMRefinement()
       }
     },
     waitForStoresLoaded(): Promise<void> {
@@ -677,12 +700,6 @@ const IDEComponent: Component = defineComponent({
       if (!this.activeEditor) return null
       let r = this.editorStore.editors[this.activeEditor]
       return r
-    },
-    canOpenChat(): boolean {
-      // Check if LLM connections are available
-      return !!(
-        this.llmConnectionStore && Object.keys(this.llmConnectionStore.connections || {}).length > 0
-      )
     },
     editorList() {
       return Object.keys(this.editors).map((editor) => this.editors[editor])

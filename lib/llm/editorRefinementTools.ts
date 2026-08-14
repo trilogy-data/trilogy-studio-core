@@ -104,6 +104,11 @@ ${chartConfigGuidance}`,
           type: 'string',
           description: 'The new content to write to the editor',
         },
+        replaceSelection: {
+          type: 'boolean',
+          description:
+            "When true and the user has an active selection, replace only the selected text with the content instead of overwriting the whole document. Only use when the user's request targets their selection.",
+        },
       },
       required: ['content'],
     },
@@ -222,6 +227,11 @@ export const SQL_EDITOR_REFINEMENT_TOOLS = [
         content: {
           type: 'string',
           description: 'The new SQL content to write to the editor',
+        },
+        replaceSelection: {
+          type: 'boolean',
+          description:
+            "When true and the user has an active selection, replace only the selected text with the content instead of overwriting the whole document. Only use when the user's request targets their selection.",
         },
       },
       required: ['content'],

@@ -29,9 +29,9 @@ import type QueryExecutionService from '../stores/queryExecutionService'
  * Shared runtime for the dashboard/report agent — everything needed to run
  * the agent from stores alone, with no mounted dashboard component.
  *
- * The mounted chat panel (DashboardChatPanel) layers component-bound
- * capabilities on top: a live-rendered query executor, item refresh, and
- * screenshots. Headless runs (e.g. the overseer's create_report firing the
+ * Mounted dashboard components layer component-bound capabilities on top via
+ * the screenBridge (a live-rendered query executor, item refresh, and
+ * screenshots). Headless runs (e.g. the overseer's create_report firing the
  * brief immediately) fall back to store-backed equivalents — refresh is a
  * no-op (items render fresh from specs on mount) and the screenshot tool
  * reports itself unavailable.
@@ -232,6 +232,97 @@ export function buildHeadlessToolExecutor(
   })
 }
 
+// Tools that mutate dashboard state — these trigger an auto-fork on first use
+// so a chat session never modifies the user's original dashboard in place.
+export const MUTATING_DASHBOARD_TOOLS = new Set([
+  'add_dashboard_item',
+  'update_dashboard_item',
+  'remove_dashboard_item',
+  'move_dashboard_item',
+  'update_dashboard_info',
+  'set_dashboard_title',
+  'set_executive_memo',
+  'add_claim_section',
+  'add_appendix_header',
+  'set_report_layout',
+])
+
+// Chat+dashboard pairs that have committed to mutating in place. Populated the
+// first time a fork is skipped, so items the agent itself added don't trigger
+// a fork on the next mutating call.
+const inPlaceKeys = new Set<string>()
+
+/** Test-only: forget in-place decisions. */
+export function resetForkGuardForTests(): void {
+  inPlaceKeys.clear()
+}
+
+/**
+ * Fork-on-first-mutation guard, shared by every surface that lets an agent
+ * mutate a dashboard. Returns the dashboard id the mutation should target —
+ * the original when editing in place is safe, or a fresh fork otherwise.
+ *
+ * In-place is allowed when: the dashboard is already a derived fork, this
+ * chat already claimed it, this dashboard-bound chat has prior successful
+ * mutations on it (reconstructed after reopen), or the dashboard is empty.
+ * A global (non-bound) conversation mutating a populated original always
+ * forks first — deliberately more eager than the old bound-chat behavior.
+ */
+export async function ensureChatForkForMutation(opts: {
+  dashboard: DashboardModel
+  chatId: string
+  chatStore: ChatStoreType
+  dashboardStore: DashboardStoreType
+  setActiveDashboard?: (dashboardId: string | null) => void
+}): Promise<string> {
+  const { dashboard, chatId, chatStore, dashboardStore, setActiveDashboard } = opts
+
+  if (dashboard.parentDashboardId) return dashboard.id
+
+  const key = `${chatId}:${dashboard.id}`
+  if (inPlaceKeys.has(key)) return dashboard.id
+
+  const chat = chatStore.chats[chatId]
+
+  // Reconstruct the in-place decision after a reopen: a chat bound to this
+  // dashboard that already mutated it successfully owns it.
+  const hasPriorMutation =
+    chat?.sourceRefId === dashboard.id &&
+    chat?.messages.some((m) =>
+      m.executedToolCalls?.some((c) => MUTATING_DASHBOARD_TOOLS.has(c.name) && c.result?.success),
+    )
+  if (hasPriorMutation) {
+    inPlaceKeys.add(key)
+    return dashboard.id
+  }
+
+  // Nothing to preserve on an empty dashboard.
+  if (Object.keys(dashboard.gridItems).length === 0) {
+    inPlaceKeys.add(key)
+    return dashboard.id
+  }
+
+  const stamp = new Date().toISOString().slice(11, 19).replace(/:/g, '')
+  try {
+    const fork = dashboardStore.forkDashboard(dashboard.id, `chat-${stamp}`)
+    // A dashboard-bound chat moves with its dashboard so reopening the panel
+    // on the fork resumes the conversation. Global conversations leave the
+    // original dashboard's chat pointer untouched.
+    if (chat && chat.sourceRefId === dashboard.id) {
+      dashboard.setChatId(null)
+      fork.setChatId(chatId)
+      chat.sourceRefId = fork.id
+      chat.changed = true
+    }
+    inPlaceKeys.add(`${chatId}:${fork.id}`)
+    setActiveDashboard?.(fork.id)
+    return fork.id
+  } catch (err) {
+    console.error('Failed to auto-fork dashboard for chat mutation:', err)
+    return dashboard.id
+  }
+}
+
 /** Seed a brand-new dashboard chat with a synthetic select_active_import
  *  tool call + result so the agent starts with the chosen import's field
  *  list in context. Without this, the agent guesses field names before it
@@ -304,8 +395,8 @@ export async function seedInitialImportContext(opts: {
  *
  * No fork-on-mutate here: headless runs target freshly created (empty)
  * dashboards, where edit-in-place is the intended behavior. Interactive
- * sessions on populated dashboards go through DashboardChatPanel, which
- * retains the fork guard.
+ * sessions on populated dashboards go through the global chat's dashboard
+ * tools, which call ensureChatForkForMutation.
  */
 export async function startDashboardAgentRun(opts: {
   dashboardId: string

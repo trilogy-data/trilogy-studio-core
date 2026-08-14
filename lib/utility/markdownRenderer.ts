@@ -49,6 +49,55 @@ export function escapeHtml(text: string): string {
 }
 
 /**
+ * Inline styles the sanitizer lets through. The renderer's own output only
+ * needs cosmetic properties; positioning/stacking properties are excluded so
+ * LLM- or user-authored raw HTML can't paint a viewport-covering overlay
+ * (fixed-position fake UI over the app — a phishing vector, not script XSS).
+ */
+const SAFE_STYLE_PROPS = new Set([
+  'display',
+  'width',
+  'height',
+  'max-width',
+  'max-height',
+  'text-align',
+  'color',
+  'background-color',
+  'font-weight',
+  'font-style',
+  'font-size',
+  'line-height',
+  'margin',
+  'padding',
+  'border',
+  'border-radius',
+  'white-space',
+  'overflow',
+  'vertical-align',
+  'filter',
+])
+
+DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+  const el = node as Element
+  if (typeof el.getAttribute !== 'function') return
+  const style = el.getAttribute('style')
+  if (!style) return
+  const safe = style
+    .split(';')
+    .map((decl) => decl.trim())
+    .filter((decl) => {
+      const prop = decl.split(':')[0]?.trim().toLowerCase()
+      return !!prop && SAFE_STYLE_PROPS.has(prop)
+    })
+    .join('; ')
+  if (safe) {
+    el.setAttribute('style', safe)
+  } else {
+    el.removeAttribute('style')
+  }
+})
+
+/**
  * Sanitize HTML with predefined safe tags and attributes
  */
 export function sanitizeHtml(html: string): string {

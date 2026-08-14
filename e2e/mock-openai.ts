@@ -19,10 +19,13 @@ interface OpenAIMockOptions {
 }
 
 /**
- * Interface for response map in custom completion handler
+ * Interface for response map in custom completion handler.
+ * Values may be a static response or a function of the full request body —
+ * use a function when the response must reference dynamic state from the
+ * conversation (e.g. an editor id surfaced in a context note).
  */
 interface ResponseMap {
-  [key: string]: string | ToolCallResponse
+  [key: string]: string | ToolCallResponse | ((requestBody: any) => string | ToolCallResponse)
 }
 
 /**
@@ -151,7 +154,7 @@ export function createCompletionHandler(
 
     for (const [key, value] of Object.entries(responseMap)) {
       if (prompt.includes(key)) {
-        response = value
+        response = typeof value === 'function' ? value(requestBody) : value
         break
       }
     }

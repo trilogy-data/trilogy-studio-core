@@ -14,7 +14,6 @@
     >
       <template #input-actions>
         <button
-          v-if="!isMobile"
           class="action-btn accept-btn"
           @click="handleAccept"
           :disabled="isLoading"
@@ -58,7 +57,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject, computed, type PropType, type Ref } from 'vue'
+import { defineComponent, ref, inject, computed, type PropType } from 'vue'
 import LLMChat from './LLMChat.vue'
 import ResultsComponent from '../editor/Results.vue'
 import type { ChatMessage, ChatArtifact } from '../../chats/chat'
@@ -66,8 +65,10 @@ import type { LLMConnectionStoreType } from '../../stores/llmStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type QueryExecutionService from '../../stores/queryExecutionService'
 import type { EditorStoreType } from '../../stores/editorStore'
+import type { ChatStoreType } from '../../stores/chatStore'
 import { Results } from '../../editors/results'
 import type { QueryExecutionResult } from '../../llm/editorRefinementToolExecutor'
+import { sendRefinementMessage } from '../../llm/editorRefinementRuntime'
 
 export default defineComponent({
   name: 'LLMEditorRefinement',
@@ -96,11 +97,17 @@ export default defineComponent({
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const queryExecutionService = inject<QueryExecutionService>('queryExecutionService')
     const editorStore = inject<EditorStoreType>('editorStore')
-    const isMobile = inject<Ref<boolean> | boolean>('isMobile', false)
+    const chatStore = inject<ChatStoreType>('chatStore')
 
-    if (!llmConnectionStore || !connectionStore || !queryExecutionService || !editorStore) {
+    if (
+      !llmConnectionStore ||
+      !connectionStore ||
+      !queryExecutionService ||
+      !editorStore ||
+      !chatStore
+    ) {
       throw new Error(
-        'LLMEditorRefinement requires llmConnectionStore, connectionStore, queryExecutionService, and editorStore to be provided',
+        'LLMEditorRefinement requires llmConnectionStore, connectionStore, queryExecutionService, editorStore, and chatStore to be provided',
       )
     }
 
@@ -108,14 +115,20 @@ export default defineComponent({
     const editor = computed(() => editorStore.editors[props.editorId])
     const session = computed(() => editor.value?.refinementSession)
 
-    // Get execution state from store
-    const execution = computed(() => editorStore.getRefinementExecution(props.editorId))
-    const isLoading = computed(() => execution.value?.isLoading ?? false)
-    const activeToolName = computed(() => execution.value?.activeToolName ?? '')
-
-    // Get messages and artifacts from session
-    const messages = computed(() => session.value?.messages ?? [])
-    const artifacts = computed(() => session.value?.artifacts ?? [])
+    // The session's backing ephemeral chat in chatStore owns messages,
+    // artifacts, and execution state.
+    const refinementChat = computed(() => {
+      const chatId = session.value?.refinementChatId
+      return chatId ? chatStore.chats[chatId] || null : null
+    })
+    const isLoading = computed(() =>
+      refinementChat.value ? chatStore.isChatExecuting(refinementChat.value.id) : false,
+    )
+    const activeToolName = computed(() =>
+      refinementChat.value ? chatStore.getChatActiveToolName(refinementChat.value.id) : '',
+    )
+    const messages = computed(() => refinementChat.value?.messages ?? [])
+    const artifacts = computed(() => refinementChat.value?.artifacts ?? [])
 
     // Connection info for display
     const connectionInfo = computed(() => {
@@ -139,15 +152,17 @@ export default defineComponent({
 
     // Handle sending messages
     const handleSendMessage = async (message: string, _msgs: ChatMessage[]) => {
-      await editorStore.executeRefinementMessage(
-        props.editorId,
+      await sendRefinementMessage({
+        editorId: props.editorId,
         message,
-        {
+        stores: { editorStore, chatStore, llmConnectionStore },
+        deps: {
           llmConnectionStore,
           connectionStore,
           queryExecutionService,
+          editorStore,
         },
-        {
+        callbacks: {
           onContentChange: (content, replaceSelection) => {
             emit('content-change', content, replaceSelection)
           },
@@ -159,7 +174,7 @@ export default defineComponent({
           },
           onRunActiveEditorQuery: props.runEditorQuery,
         },
-      )
+      })
     }
 
     // Handle messages update from LLMChat
@@ -193,7 +208,9 @@ export default defineComponent({
 
     // Handle stop button
     const handleStop = () => {
-      editorStore.stopRefinementExecution(props.editorId)
+      if (refinementChat.value) {
+        chatStore.stopExecution(refinementChat.value.id)
+      }
     }
 
     // Convert artifact data to Results for display
@@ -213,7 +230,6 @@ export default defineComponent({
 
     return {
       chatRef,
-      isMobile,
       messages,
       artifacts,
       isLoading,

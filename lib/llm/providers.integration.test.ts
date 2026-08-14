@@ -195,7 +195,7 @@ describe.skipIf(!GOOGLE_KEY)('Google Provider Integration', () => {
   let provider: GoogleProvider
 
   beforeAll(() => {
-    provider = new GoogleProvider('test-google', GOOGLE_KEY!, 'gemini-2.0-flash')
+    provider = new GoogleProvider('test-google', GOOGLE_KEY!, 'gemini-2.5-flash')
   })
 
   it('should connect and fetch models', async () => {

@@ -1,5 +1,6 @@
 import { KeySeparator } from '../data/constants'
 import type { GenericModelStore } from './models'
+import type { CollapsePredicate } from '../components/sidebar/collapseState'
 
 export interface StoreDirectoryListing {
   directory: string
@@ -110,7 +111,7 @@ const appendDirectoryContentsToTree = (
   tree: JobsTreeNode[],
   storeId: string,
   directoryNode: JobsDirectoryTreeNode,
-  collapsed: Record<string, boolean>,
+  isCollapsed: CollapsePredicate,
   indent: number,
 ): void => {
   appendFilesToTree(tree, storeId, directoryNode.files, directoryNode.path, indent)
@@ -128,14 +129,14 @@ const appendDirectoryContentsToTree = (
         target: child.path,
       })
 
-      if (!collapsed[directoryKey]) {
-        appendDirectoryContentsToTree(tree, storeId, child, collapsed, indent + 1)
+      if (!isCollapsed(directoryKey)) {
+        appendDirectoryContentsToTree(tree, storeId, child, isCollapsed, indent + 1)
       }
     })
 }
 
 export const buildJobsTree = (
-  collapsed: Record<string, boolean> = {},
+  isCollapsed: CollapsePredicate,
   stores: GenericModelStore[] = [],
   filesByStore: Record<string, StoreFilesResponse> = {},
 ): JobsTreeNode[] => {
@@ -151,7 +152,7 @@ export const buildJobsTree = (
       store,
     })
 
-    if (collapsed[store.id]) {
+    if (isCollapsed(store.id)) {
       return
     }
 
@@ -163,7 +164,7 @@ export const buildJobsTree = (
       node.files = sortStrings(entry.files)
     })
 
-    appendDirectoryContentsToTree(tree, store.id, root, collapsed, 1)
+    appendDirectoryContentsToTree(tree, store.id, root, isCollapsed, 1)
   })
 
   return tree

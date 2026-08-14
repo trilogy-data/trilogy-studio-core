@@ -12,6 +12,9 @@ export { type EditorType, normalizeRemoteEditorPath } from './fileTypes'
  * Allows users to tab away and return to an ongoing refinement session.
  */
 export interface EditorRefinementSession {
+  /** Backing chat record in chatStore ('ephemeral' storage — never persisted).
+   *  Owns the session's messages/artifacts; the arrays below are legacy. */
+  refinementChatId?: string
   messages: ChatMessage[]
   artifacts: ChatArtifact[]
   originalContent: string

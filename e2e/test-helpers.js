@@ -582,16 +582,27 @@ export async function runEditorQueryAndExpectCount(page, expectedCount, timeout 
  */
 export async function replaceEditorContent(page, text, testId = 'simple-editor-content') {
   const container = page.getByTestId(testId)
-  const monaco = container.locator('.monaco-editor').first()
-  await expect(monaco).toBeVisible()
+  await expect(container.locator('.monaco-editor').first()).toBeVisible()
   await container.click()
 
-  const isMacMode = await monaco.evaluate((el) => el.classList.contains('mac'))
-  await page.keyboard.press(isMacMode ? 'Meta+a' : 'Control+a')
+  await selectAllInEditor(page, testId)
   await page.keyboard.press('Delete')
   await expect(container.locator('.view-lines')).toHaveText(/^\s*$/)
 
   await page.keyboard.type(text)
+}
+
+/**
+ * Send the select-all chord the focused monaco is actually listening for. See
+ * `replaceEditorContent` above for why the chord cannot be hardcoded or left to
+ * `ControlOrMeta`. Callers that need the selection itself (rather than just
+ * clearing) use this directly.
+ */
+export async function selectAllInEditor(page, testId = 'simple-editor-content') {
+  const monaco = page.getByTestId(testId).locator('.monaco-editor').first()
+  await expect(monaco).toBeVisible()
+  const isMacMode = await monaco.evaluate((el) => el.classList.contains('mac'))
+  await page.keyboard.press(isMacMode ? 'Meta+a' : 'Control+a')
 }
 
 export async function openDashboardItemEditor(page, itemId) {

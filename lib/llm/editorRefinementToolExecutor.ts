@@ -49,26 +49,43 @@ export interface EditorContext {
   getCurrentResults?: () => Results | null | undefined
 }
 
+/** Session-scoped executor state. The runtime constructs a fresh executor per
+ *  tool call (so editor context stays live), but artifacts and last results
+ *  must survive across calls — get_artifact_rows on a truncated result from
+ *  an earlier call is guaranteed to fail otherwise. */
+export interface RefinementSessionState {
+  artifactRegistry: Map<string, ChatArtifact>
+  lastQueryResults: { value: Results | null }
+}
+
+export function createRefinementSessionState(): RefinementSessionState {
+  return { artifactRegistry: new Map(), lastQueryResults: { value: null } }
+}
+
 export class EditorRefinementToolExecutor {
   private queryExecutionService: QueryExecutionService
   private connectionStore: ConnectionStoreType
   private editorStore: EditorStoreType | null
   private editorContext: EditorContext
   /** Artifacts created during this session — used by get_artifact_rows */
-  private artifactRegistry = new Map<string, ChatArtifact>()
-  /** Most recent Results object produced by run_query in this session, used as a fallback for chart config validation */
-  private lastQueryResults: Results | null = null
+  private artifactRegistry: Map<string, ChatArtifact>
+  /** Most recent Results produced by run_query in this session, used as a fallback for chart config validation */
+  private lastQueryResults: { value: Results | null }
 
   constructor(
     queryExecutionService: QueryExecutionService,
     connectionStore: ConnectionStoreType,
     editorContext: EditorContext,
     editorStore?: EditorStoreType,
+    sessionState?: RefinementSessionState,
   ) {
     this.queryExecutionService = queryExecutionService
     this.connectionStore = connectionStore
     this.editorContext = editorContext
     this.editorStore = editorStore || null
+    const state = sessionState ?? createRefinementSessionState()
+    this.artifactRegistry = state.artifactRegistry
+    this.lastQueryResults = state.lastQueryResults
   }
 
   async executeToolCall(toolName: string, toolInput: Record<string, any>): Promise<ToolCallResult> {
@@ -84,7 +101,7 @@ export class EditorRefinementToolExecutor {
       case 'edit_chart_config':
         return this.editChartConfig(toolInput.chartConfig)
       case 'edit_editor':
-        return this.editEditor(toolInput.content, false)
+        return this.editEditor(toolInput.content, toolInput.replaceSelection === true)
       case 'run_active_editor_query':
         return this.runActiveEditorQuery()
       case 'request_close':
@@ -352,7 +369,7 @@ export class EditorRefinementToolExecutor {
       // Track latest results so edit_chart_config can validate against them
       const resultsForValidation = queryResult.results as unknown as Results
       if (resultsForValidation && resultsForValidation.headers) {
-        this.lastQueryResults = resultsForValidation
+        this.lastQueryResults.value = resultsForValidation
       }
       return {
         success: true,
@@ -432,7 +449,7 @@ export class EditorRefinementToolExecutor {
     // Validate against current results if we have them. Prefer the editor-provided
     // accessor (live editor state); fall back to results from a recent run_query call.
     const results: Results | null =
-      this.editorContext.getCurrentResults?.() ?? this.lastQueryResults ?? null
+      this.editorContext.getCurrentResults?.() ?? this.lastQueryResults.value ?? null
 
     if (results && results.headers) {
       const validation = validateChartConfigForData(results.data, results.headers, chartConfig)

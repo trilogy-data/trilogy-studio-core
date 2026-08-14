@@ -171,7 +171,7 @@ customStoreDescribe('Custom Model Store', () => {
 
     await openSidebarScreen(page, 'community-models', isMobile)
 
-    await page.getByRole('button', { name: 'Add Store' }).click()
+    await page.getByTestId('community-store-add').click()
 
     await page.waitForSelector('[data-testid="add-store-modal"]', { timeout: 5000 })
 
@@ -247,7 +247,7 @@ customStoreDescribe('Custom Model Store', () => {
 
     await openSidebarScreen(page, 'community-models', isMobile)
 
-    await page.getByRole('button', { name: 'Add Store' }).click()
+    await page.getByTestId('community-store-add').click()
 
     await page.waitForSelector('[data-testid="add-store-modal"]', { timeout: 5000 })
 
@@ -286,7 +286,7 @@ customStoreDescribe('Custom Model Store', () => {
 
     await openSidebarScreen(page, 'community-models', isMobile)
 
-    await page.getByRole('button', { name: 'Add Store' }).click()
+    await page.getByTestId('community-store-add').click()
 
     await page.waitForSelector('[data-testid="add-store-modal"]', { timeout: 5000 })
 
@@ -316,7 +316,7 @@ customStoreDescribe('Custom Model Store', () => {
 
     await openSidebarScreen(page, 'community-models', isMobile)
 
-    await page.getByRole('button', { name: 'Add Store' }).click()
+    await page.getByTestId('community-store-add').click()
 
     await page.waitForSelector('[data-testid="add-store-modal"]', { timeout: 5000 })
 

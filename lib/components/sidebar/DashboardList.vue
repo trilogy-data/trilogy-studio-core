@@ -51,7 +51,7 @@
           :key="item.key"
           :item="item"
           :is-active="activeDashboardKey === item.id"
-          :is-collapsed="collapsed[item.key]"
+          :is-collapsed="isCollapsed(item.key)"
           @click="handleDashboardTreeClick(item)"
           @toggle="handleDashboardTreeToggle(item)"
           @delete="showDeleteConfirmation"
@@ -73,7 +73,8 @@
 </template>
 
 <script lang="ts">
-import { inject, ref, computed, onMounted } from 'vue'
+import { inject, ref, computed } from 'vue'
+import { useCollapseState, type CollapsePredicate } from './collapseState'
 import type { DashboardStoreType } from '../../stores/dashboardStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { ChatStoreType } from '../../stores/chatStore'
@@ -92,7 +93,7 @@ import MobileTreeList from './MobileTreeList.vue'
 // Helper function to build dashboard tree
 function buildDashboardTree(
   dashboards: any[],
-  collapsed: Record<string, boolean>,
+  isCollapsed: CollapsePredicate,
   connectionStore: ConnectionStoreType,
 ) {
   const tree: any[] = []
@@ -134,7 +135,7 @@ function buildDashboardTree(
     })
 
     // If not collapsed, add connections
-    if (!collapsed[storageKey]) {
+    if (!isCollapsed(storageKey)) {
       // Group by connection
       const connectionMap: Record<string, { label: string; dashboards: any[] }> = {}
 
@@ -166,7 +167,7 @@ function buildDashboardTree(
         })
 
         // If not collapsed, add dashboards and their investigations
-        if (!collapsed[connectionKey]) {
+        if (!isCollapsed(connectionKey)) {
           entry.dashboards.forEach((dashboard) => {
             const hasInvestigations = (investigationsByParent[dashboard.id] || []).length > 0
             const dashboardKey = `d-${dashboard.id}`
@@ -181,7 +182,7 @@ function buildDashboardTree(
             })
 
             // Add investigations nested under the dashboard
-            if (hasInvestigations && !collapsed[dashboardKey]) {
+            if (hasInvestigations && !isCollapsed(dashboardKey)) {
               investigationsByParent[dashboard.id].forEach((investigation: any) => {
                 tree.push({
                   type: 'investigation',
@@ -211,7 +212,7 @@ export default {
       default: '',
     },
   },
-  setup() {
+  setup(props: { activeDashboardKey?: string }) {
     const dashboardStore = inject<DashboardStoreType>('dashboardStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const chatStore = inject<ChatStoreType>('chatStore', null as any)
@@ -221,58 +222,54 @@ export default {
       throw new Error('Dashboard or connection store is not provided!')
     }
 
-    const collapsed = ref<Record<string, boolean>>({})
     const creatorVisible = ref(false)
     const importPopupVisible = ref(false)
     const isMobile = useIsMobile()
     const mobileTree = ref<any>(null)
     const mobileTreeAtRoot = ref(true)
 
-    const toggleCollapse = (key: string) => {
-      if (collapsed.value[key] === undefined) {
-        collapsed.value[key] = false
-      }
-      collapsed.value[key] = !collapsed.value[key]
-    }
-
     const current = getDefaultValueFromHash(URL_HASH_KEYS.DASHBOARD) || ''
 
-    onMounted(() => {
-      let anyOpen = false
-      Object.values(dashboardStore.dashboards).forEach((item) => {
-        let storageKey = `s-${item.storage}`
-        let connectionKeyPart = item.connectionId || item.connection
-        let connectionKey = `c-${item.storage}-${connectionKeyPart}`
+    const containerKeys = (dashboard: any) => {
+      const storage = dashboard.storage || 'local'
+      const connectionId = dashboard.connectionId || dashboard.connection || 'default'
+      return [`s-${storage}`, `c-${storage}-${connectionId}`]
+    }
 
-        if (current === item.id) {
-          collapsed.value[storageKey] = false
-          collapsed.value[connectionKey] = false
-        } else {
-          // if it's not in collapsed, default to true
-          // but if it is, keep it false if it's false
-          if (collapsed.value[storageKey] === undefined) {
-            collapsed.value[storageKey] = true
-          } else if (collapsed.value[storageKey] === false) {
-            collapsed.value[storageKey] = false
-          }
-
-          if (collapsed.value[connectionKey] === undefined) {
-            collapsed.value[connectionKey] = true
-          } else if (collapsed.value[connectionKey] === false) {
-            collapsed.value[connectionKey] = false
-          }
-        }
-      })
-      if (!anyOpen && Object.keys(dashboardStore.dashboards).length > 0) {
-        const firstDashboard = Object.values(dashboardStore.dashboards)[0]
-        collapsed.value[`s-${firstDashboard.storage}`] = false
+    // Containers that start open. A computed rather than a seeded map, so it
+    // re-derives as dashboards hydrate — see useCollapseState.
+    const openContainers = computed(() => {
+      const dashboards = Object.values(dashboardStore.dashboards).filter((item) => !item.deleted)
+      // Live selection first, URL hash only as the pre-hydration fallback —
+      // creating a dashboard selects it without touching the hash, so a
+      // snapshot would leave the new row inside a shut connection.
+      const selected = props.activeDashboardKey || current
+      const active = selected ? dashboards.find((item) => item.id === selected) : undefined
+      if (active) {
+        return new Set(containerKeys(active))
       }
+      // Nothing selected: reveal the storage only when it is the only one, so
+      // the sidebar never opens on an arbitrary "first" record.
+      const storages = new Set(dashboards.map((item) => `s-${item.storage || 'local'}`))
+      return storages.size === 1 ? storages : new Set<string>()
     })
+
+    const openByDefault = (key: string) =>
+      // Investigations are few and belong to a dashboard the user already
+      // expanded to, so they ride along with their parent rather than needing a
+      // second click. Stated here rather than inherited from an unseeded map.
+      key.startsWith('d-') || openContainers.value.has(key)
+
+    const {
+      overrides: collapsed,
+      isCollapsed,
+      toggle: toggleCollapse,
+    } = useCollapseState(openByDefault)
 
     const contentList = computed(() => {
       return buildDashboardTree(
         Object.values(dashboardStore.dashboards),
-        collapsed.value,
+        isCollapsed,
         connectionStore,
       )
     })
@@ -297,6 +294,7 @@ export default {
       contentList,
       toggleCollapse,
       collapsed,
+      isCollapsed,
       creatorVisible,
       importPopupVisible,
       saveDashboards,
@@ -331,7 +329,7 @@ export default {
       )
     },
     expandMobileBranch(item: any) {
-      if (this.collapsed[item.key]) this.toggleCollapse(item.key)
+      if (this.isCollapsed(item.key)) this.toggleCollapse(item.key)
     },
     selectMobileItem(item: any) {
       this.clickAction(item)

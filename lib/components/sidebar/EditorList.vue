@@ -17,6 +17,7 @@
       <editor-creator-inline
         :visible="creatorVisible"
         @close="creatorVisible = !creatorVisible"
+        @editor-selected="revealEditor"
         :testTag="testTag"
       />
       <div ref="filterDropdown" class="tag-filter-dropdown">
@@ -56,7 +57,7 @@
         <editor-list-item
           :item="item"
           :active-editor="activeEditor"
-          :is-collapsed="collapsed[item.key]"
+          :is-collapsed="isCollapsed(item.key)"
           :is-mobile="isMobile"
           @item-click="handleTreeItemClick(item)"
           @delete-editor="showDeleteConfirmation"
@@ -80,6 +81,7 @@
 
 <script lang="ts">
 import { inject, ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useCollapseState, EXPAND_ALL } from './collapseState'
 import type { EditorStoreType } from '../../stores/editorStore'
 import type { ConnectionStoreType } from '../../stores/connectionStore'
 import type { ModelConfigStoreType } from '../../stores/modelStore'
@@ -128,17 +130,10 @@ export default {
     const remoteStorage = storageSources.find((source) => source.type === 'remote') as
       RemoteStoreStorage | undefined
 
-    const collapsed = ref<Record<string, boolean>>({})
     const hiddenTags = ref<Set<string>>(new Set([]))
     const creatorVisible = ref(false)
     const filterMenuOpen = ref(false)
     const filterDropdown = ref<HTMLElement | null>(null)
-    const toggleCollapse = (key: string) => {
-      if (collapsed.value[key] === undefined) {
-        collapsed.value[key] = false
-      }
-      collapsed.value[key] = !collapsed.value[key]
-    }
 
     const toggleTagFilter = (tag: string) => {
       hiddenTags.value.has(tag) ? hiddenTags.value.delete(tag) : hiddenTags.value.add(tag)
@@ -191,56 +186,59 @@ export default {
       return folderPaths
     }
 
-    onMounted(() => {
-      let anyOpen = false
-      const editorsArray = Object.values(editorStore.editors)
-
-      editorsArray.forEach((editor) => {
-        const storageKey = `s-${editor.storage}`
-        const connectionKeyPart = editor.connectionId || editor.connection
-        const connectionKey = `c-${editor.storage}-${connectionKeyPart}`
-        const folderPaths = getFolderPaths(editor.name, editor.storage, connectionKeyPart)
-        if (current === editor.id) {
-          // If this is the current editor, open all parent containers
-          collapsed.value[storageKey] = false
-          collapsed.value[connectionKey] = false
-          folderPaths.forEach((folderPath) => {
-            collapsed.value[folderPath] = false
-          })
-          anyOpen = true
-        } else {
-          // Set default states for storage and connection
-          if (collapsed.value[storageKey] === undefined) {
-            collapsed.value[storageKey] = true
-          }
-          if (collapsed.value[connectionKey] === undefined) {
-            collapsed.value[connectionKey] = true
-          }
-
-          // Set default states for folders (collapsed by default)
-          folderPaths.forEach((folderPath) => {
-            if (collapsed.value[folderPath] === undefined) {
-              collapsed.value[folderPath] = true
-            }
-          })
-        }
-      })
-
-      // If no editor is currently selected but we have editors, open the first one's containers
-      if (!anyOpen && editorsArray.length > 0) {
-        const firstEditor = editorsArray[0]
-        const storageKey = `s-${firstEditor.storage}`
-        const connectionKeyPart = firstEditor.connectionId || firstEditor.connection
-        const connectionKey = `c-${firstEditor.storage}-${connectionKeyPart}`
-        const folderPaths = getFolderPaths(firstEditor.name, firstEditor.storage, connectionKeyPart)
-
-        collapsed.value[storageKey] = false
-        collapsed.value[connectionKey] = false
-        folderPaths.forEach((folderPath) => {
-          collapsed.value[folderPath] = false
-        })
+    // Keys that start open. A computed rather than a seeded map, so it re-derives
+    // as editors hydrate — see useCollapseState.
+    const openContainers = computed(() => {
+      const editors = Object.values(editorStore.editors)
+      // Live selection first, URL hash only as the pre-hydration fallback. This
+      // has to track the selection rather than snapshot it: creating an editor
+      // makes it active without touching the hash, and a chain that only ever
+      // reflected load-time state would file the new editor into a shut folder.
+      const selected = props.activeEditor || current
+      const active = selected ? editors.find((editor) => editor.id === selected) : undefined
+      if (active) {
+        // Reveal the whole chain down to the selected editor.
+        const connectionKeyPart = active.connectionId || active.connection
+        return new Set([
+          `s-${active.storage}`,
+          `c-${active.storage}-${connectionKeyPart}`,
+          ...getFolderPaths(active.name, active.storage, connectionKeyPart),
+        ])
       }
 
+      // Nothing selected: open the storage and connection only when there is
+      // exactly one of each, so the sidebar never opens on an arbitrary "first"
+      // editor. Folders stay shut — the choice of which one to open would be
+      // just as arbitrary.
+      const storages = new Set(editors.map((editor) => `s-${editor.storage}`))
+      const connections = new Set(
+        editors.map((editor) => `c-${editor.storage}-${editor.connectionId || editor.connection}`),
+      )
+      if (storages.size !== 1 || connections.size !== 1) return new Set<string>()
+      return new Set([...storages, ...connections])
+    })
+
+    const {
+      overrides: collapsed,
+      isCollapsed,
+      toggle: toggleCollapse,
+      open: openKey,
+    } = useCollapseState((key) => openContainers.value.has(key))
+
+    // Creating an editor does not select it, so the default-open chain above
+    // would not cover it and a new `a/b/c` editor would land inside two shut
+    // folders with no feedback that anything happened. Open its chain outright:
+    // this is a user action, so it outranks the defaults like any other toggle.
+    const revealEditor = (name: string) => {
+      const editor = editorStore.getEditorByName(name)
+      if (!editor) return
+      const connectionKeyPart = editor.connectionId || editor.connection
+      openKey(`s-${editor.storage}`)
+      openKey(`c-${editor.storage}-${connectionKeyPart}`)
+      getFolderPaths(editor.name, editor.storage, connectionKeyPart).forEach(openKey)
+    }
+
+    onMounted(() => {
       document.addEventListener('click', handleDocumentClick)
     })
 
@@ -259,7 +257,7 @@ export default {
         Object.values(editorStore.editors),
         // MobileTreeList owns disclosure on mobile and needs the complete flat
         // tree to calculate counts and navigate without expanding desktop rows.
-        isMobile.value || searchQuery.value ? {} : collapsed.value,
+        isMobile.value || searchQuery.value ? EXPAND_ALL : isCollapsed,
         hiddenTags.value,
       )
       if (!searchQuery.value) return list
@@ -308,6 +306,8 @@ export default {
       searchQuery,
       toggleCollapse,
       collapsed,
+      isCollapsed,
+      revealEditor,
       hiddenTags,
       creatorVisible,
       filterMenuOpen,
@@ -351,7 +351,7 @@ export default {
       }
     },
     expandMobileBranch(item: any) {
-      if (this.collapsed[item.key]) this.toggleCollapse(item.key)
+      if (this.isCollapsed(item.key)) this.toggleCollapse(item.key)
     },
     selectMobileItem(item: any) {
       this.clickAction(item.type, item.objectKey, item.key)

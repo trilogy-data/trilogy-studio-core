@@ -389,7 +389,12 @@ export default defineComponent({
     const isLoading = computed(() => props.externalLoading)
 
     const visibleMessages = computed(() => {
-      return mergeContiguousToolCallMessages(internalMessages.value.filter((m) => !m.hidden))
+      // Artifact-carrier messages (artifact, no text) only make sense when
+      // artifacts render inline; otherwise they'd show as empty bubbles.
+      const shown = internalMessages.value.filter(
+        (m) => !m.hidden && !(m.artifact && !m.content && !props.renderArtifacts),
+      )
+      return mergeContiguousToolCallMessages(shown)
     })
 
     // Sync with external messages prop

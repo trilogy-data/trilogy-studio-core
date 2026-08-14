@@ -7,6 +7,13 @@
       <div ref="content" class="nested-page-content" id="page-content">
         <slot></slot>
       </div>
+      <!-- Persistent right column (global chat panel). Deliberately NOT part of
+           splitElements: split.js only manages [sidebar, content], so this
+           fixed-width sibling survives untouched while those two flex-shrink
+           around it. The slotted component owns its own width and resizing. -->
+      <div v-if="$slots['right-panel']" class="right-panel">
+        <slot name="right-panel"></slot>
+      </div>
     </div>
   </div>
 </template>
@@ -55,6 +62,12 @@
   z-index: 1;
   overflow: auto;
   background: var(--main-bg-color);
+}
+.right-panel {
+  flex: 0 0 auto;
+  max-height: 100%;
+  height: 100%;
+  z-index: 50;
 }
 </style>
 

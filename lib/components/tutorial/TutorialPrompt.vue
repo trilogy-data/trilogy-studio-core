@@ -50,9 +50,12 @@
         />
       </div>
       <div class="results-section">
+        <!-- Hosts without the global chat panel (mobile) open an inline
+             refinement session; swap the pane to it while one is active. -->
         <result-component
           :editorData="editorStore.editors[editorId]"
           :containerHeight="500"
+          :display-mode="editorStore.editors[editorId]?.hasActiveRefinement() ? 'chat' : 'results'"
           @llm-query-accepted="runQuery"
         />
       </div>

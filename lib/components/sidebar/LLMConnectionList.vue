@@ -57,7 +57,7 @@
           :key="item.id"
           :item="item"
           :mobile-tree-mode="isMobile"
-          :is-collapsed="collapsed[item.id]"
+          :is-collapsed="isCollapsed(item.id)"
           :isSelected="isItemSelected(item)"
           @toggle="toggleCollapse"
           @refresh="refreshId"
@@ -89,6 +89,7 @@ import type { Chat, ChatSource } from '../../chats/chat'
 import useScreenNavigation from '../../stores/useScreenNavigation'
 import MobileTreeList from './MobileTreeList.vue'
 import { useIsMobile } from '../useIsMobile'
+import { useCollapseState } from './collapseState'
 
 const SCOPE_OPTIONS: Array<{ value: ChatSource; label: string }> = [
   { value: 'user', label: 'User Chats' },
@@ -124,11 +125,22 @@ export default {
     const creatorVisible = ref(false)
     const mobileTree = ref<any>(null)
     const isMobile = useIsMobile()
-    const collapsed = ref<Record<string, boolean>>({})
+
+    // Only the connection named in the URL starts open; settings groups always
+    // start closed.
+    const activeConnectionName = getDefaultValueFromHash(URL_HASH_KEYS.LLMS, '').split(
+      KeySeparator,
+    )[0]
+    const {
+      overrides: collapsed,
+      isCollapsed,
+      toggle: toggleKey,
+    } = useCollapseState((key) => !!activeConnectionName && key === activeConnectionName)
 
     // Scope filter — hide dashboard-owned chats by default so the sidebar stays
-    // focused on the user's own conversations.
-    const hiddenScopes = ref<Set<ChatSource>>(new Set<ChatSource>(['dashboard']))
+    // focused on the user's own conversations. Editor refinement chats are
+    // ephemeral engine records whose only UI is the inline refinement surface.
+    const hiddenScopes = ref<Set<ChatSource>>(new Set<ChatSource>(['dashboard', 'editor']))
     const filterMenuOpen = ref(false)
     const filterDropdown = ref<HTMLElement | null>(null)
 
@@ -236,10 +248,7 @@ export default {
         return
       }
 
-      if (
-        type === 'connection' &&
-        (collapsed.value[id] === undefined || collapsed.value[id] === true)
-      ) {
+      if (type === 'connection' && isCollapsed(id)) {
         const connection = llmConnectionStore.connections[connectionName] as any
         if (!connection) {
           console.log(`Connection not found ${connection}`)
@@ -250,32 +259,15 @@ export default {
         }
       }
 
-      if (collapsed.value[id] === undefined) {
-        collapsed.value[id] = false
-      } else {
-        collapsed.value[id] = !collapsed.value[id]
-      }
+      toggleKey(id)
     }
-
-    Object.entries(llmConnectionStore.connections).forEach(([name]) => {
-      collapsed.value[name] = true
-      collapsed.value[settingsId(name)] = true
-    })
 
     onMounted(() => {
       document.addEventListener('click', handleDocumentClick)
-      const currentLLMKey = getDefaultValueFromHash(URL_HASH_KEYS.LLMS, '')
-      if (!currentLLMKey) {
-        return
-      }
+      const chatId = getDefaultValueFromHash(URL_HASH_KEYS.LLMS, '').split(KeySeparator)[1]
 
-      const parts = currentLLMKey.split(KeySeparator)
-      const connectionName = parts[0]
-      const chatId = parts[1]
-
-      if (connectionName && llmConnectionStore.connections[connectionName]) {
-        collapsed.value[connectionName] = false
-        llmConnectionStore.activeConnection = connectionName
+      if (activeConnectionName && llmConnectionStore.connections[activeConnectionName]) {
+        llmConnectionStore.activeConnection = activeConnectionName
 
         if (chatId && chatStore) {
           chatStore.setActiveChat(chatId)
@@ -387,7 +379,7 @@ export default {
           })
         }
 
-        if (collapsed.value[name] !== false) {
+        if (isCollapsed(name)) {
           return
         }
 
@@ -436,7 +428,7 @@ export default {
           connection,
         })
 
-        if (collapsed.value[settingsId(name)] === false) {
+        if (!isCollapsed(settingsId(name))) {
           if (connection.type !== 'demo') {
             list.push({
               id: `${name}-api-key`,
@@ -494,7 +486,7 @@ export default {
     const isLLMConfig = (item: any) => LLM_CONFIG_NODE_TYPES.has(item.type)
     const isLLMBranch = (item: any) => LLM_BRANCH_NODE_TYPES.has(item.type)
     const expandMobileBranch = async (item: any) => {
-      if (collapsed.value[item.id] !== false) {
+      if (isCollapsed(item.id)) {
         await toggleCollapse(item.id, item.connection?.name || '', item.type)
       }
     }
@@ -513,6 +505,7 @@ export default {
       contentList,
       toggleCollapse,
       collapsed,
+      isCollapsed,
       saveConnections,
       updateApiKey,
       updateModel,

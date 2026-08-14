@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
+﻿import { describe, it, expect } from 'vitest'
 import { buildConnectionTree } from './helpers'
+import { openOnly } from '../components/sidebar/collapseState'
 import { Database, Schema, Table, AssetType } from './base'
 
 function makeConnection(overrides: {
@@ -37,8 +38,8 @@ describe('buildConnectionTree', () => {
     })
 
     it('skips the schema node and shows tables at indent 2', () => {
-      const collapsed = { 'local:sqlite-test': false, 'local:sqlite-test+main': false }
-      const tree = buildConnectionTree([conn], collapsed, {}, {})
+      const isCollapsed = openOnly('local:sqlite-test', 'local:sqlite-test+main')
+      const tree = buildConnectionTree([conn], isCollapsed, {}, {})
 
       const schemaNodes = tree.filter((n) => n.type === 'schema')
       expect(schemaNodes).toHaveLength(0)
@@ -51,8 +52,8 @@ describe('buildConnectionTree', () => {
     })
 
     it('shows table count on the database node', () => {
-      const collapsed = { 'local:sqlite-test': false, 'local:sqlite-test+main': false }
-      const tree = buildConnectionTree([conn], collapsed, {}, {})
+      const isCollapsed = openOnly('local:sqlite-test', 'local:sqlite-test+main')
+      const tree = buildConnectionTree([conn], isCollapsed, {}, {})
 
       const dbNode = tree.find((n) => n.type === 'database')
       expect(dbNode).toBeDefined()
@@ -68,8 +69,8 @@ describe('buildConnectionTree', () => {
         databases: [emptyDb],
       })
 
-      const collapsed = { 'local:sqlite-empty': false, 'local:sqlite-empty+main': false }
-      const tree = buildConnectionTree([emptyConn], collapsed, {}, {})
+      const isCollapsed = openOnly('local:sqlite-empty', 'local:sqlite-empty+main')
+      const tree = buildConnectionTree([emptyConn], isCollapsed, {}, {})
 
       const dbNode = tree.find((n) => n.type === 'database')
       expect(dbNode).toBeDefined()
@@ -77,8 +78,8 @@ describe('buildConnectionTree', () => {
     })
 
     it('hides tables when database is collapsed', () => {
-      const collapsed = { 'local:sqlite-test': false, 'local:sqlite-test+main': true }
-      const tree = buildConnectionTree([conn], collapsed, {}, {})
+      const isCollapsed = openOnly('local:sqlite-test')
+      const tree = buildConnectionTree([conn], isCollapsed, {}, {})
 
       const tableNodes = tree.filter((n) => n.type === 'table')
       expect(tableNodes).toHaveLength(0)
@@ -98,12 +99,12 @@ describe('buildConnectionTree', () => {
     })
 
     it('includes the schema node at indent 2 and tables at indent 3', () => {
-      const collapsed = {
-        'local:pg-test': false,
-        'local:pg-test+mydb': false,
-        'local:pg-test+mydb+public': false,
-      }
-      const tree = buildConnectionTree([conn], collapsed, {}, {})
+      const isCollapsed = openOnly(
+        'local:pg-test',
+        'local:pg-test+mydb',
+        'local:pg-test+mydb+public',
+      )
+      const tree = buildConnectionTree([conn], isCollapsed, {}, {})
 
       const schemaNodes = tree.filter((n) => n.type === 'schema')
       expect(schemaNodes).toHaveLength(1)
@@ -116,20 +117,16 @@ describe('buildConnectionTree', () => {
     })
 
     it('shows schema count on the database node', () => {
-      const collapsed = { 'local:pg-test': false, 'local:pg-test+mydb': false }
-      const tree = buildConnectionTree([conn], collapsed, {}, {})
+      const isCollapsed = openOnly('local:pg-test', 'local:pg-test+mydb')
+      const tree = buildConnectionTree([conn], isCollapsed, {}, {})
 
       const dbNode = tree.find((n) => n.type === 'database')
       expect(dbNode!.count).toBe(1)
     })
 
     it('hides tables when schema is collapsed', () => {
-      const collapsed = {
-        'local:pg-test': false,
-        'local:pg-test+mydb': false,
-        'local:pg-test+mydb+public': true,
-      }
-      const tree = buildConnectionTree([conn], collapsed, {}, {})
+      const isCollapsed = openOnly('local:pg-test', 'local:pg-test+mydb')
+      const tree = buildConnectionTree([conn], isCollapsed, {}, {})
 
       const tableNodes = tree.filter((n) => n.type === 'table')
       expect(tableNodes).toHaveLength(0)

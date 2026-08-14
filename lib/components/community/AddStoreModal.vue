@@ -31,11 +31,35 @@
             <input
               v-model="baseUrl"
               type="url"
-              placeholder="e.g., http://localhost:8000"
+              placeholder="e.g., http://localhost:8100"
               data-testid="store-url-input"
               required
             />
             <small>URL should serve an index.json file at /index.json</small>
+          </div>
+
+          <div class="cli-tip" data-testid="add-store-cli-tip">
+            <div class="cli-tip-title">
+              <i class="mdi mdi-lightbulb-on"></i>
+              Serving a local model?
+            </div>
+            <p class="cli-tip-body">
+              Run this in your model directory. The Trilogy CLI serves it over HTTP and prints a
+              link that opens the model back in this studio.
+            </p>
+            <div class="cli-tip-command">
+              <code data-testid="add-store-cli-command">{{ serveCommand }}</code>
+              <button
+                type="button"
+                class="cli-tip-copy"
+                :title="copiedCommand ? 'Copied' : 'Copy command'"
+                data-testid="add-store-cli-copy"
+                @click="copyServeCommand"
+              >
+                <i class="mdi" :class="copiedCommand ? 'mdi-check' : 'mdi-content-copy'"></i>
+              </button>
+            </div>
+            <small>Then paste the URL it prints above, or just follow the link.</small>
           </div>
         </template>
 
@@ -110,7 +134,7 @@
 </template>
 
 <script lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { GenericModelStore, GithubModelStore } from '../../remotes/models'
 import {
   buildGenericStoreFallbackName,
@@ -143,6 +167,28 @@ export default {
     const repo = ref('')
     const branch = ref('main')
     const error = ref<string | null>(null)
+    const copiedCommand = ref(false)
+
+    // Where this studio is served from, minus any hash route — the address the
+    // CLI needs so the link it prints comes back here rather than to the
+    // public studio it defaults to.
+    const serveCommand = computed(() => {
+      const base =
+        typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : ''
+      return base ? `trilogy serve . --studio-url ${base}` : 'trilogy serve .'
+    })
+
+    const copyServeCommand = async () => {
+      try {
+        await navigator.clipboard.writeText(serveCommand.value)
+        copiedCommand.value = true
+        setTimeout(() => {
+          copiedCommand.value = false
+        }, 2000)
+      } catch (err) {
+        console.error('Failed to copy serve command:', err)
+      }
+    }
 
     // Reset form when modal is opened
     watch(
@@ -156,6 +202,7 @@ export default {
           repo.value = ''
           branch.value = 'main'
           error.value = null
+          copiedCommand.value = false
         }
       },
     )
@@ -214,6 +261,9 @@ export default {
       branch,
       error,
       handleSubmit,
+      serveCommand,
+      copyServeCommand,
+      copiedCommand,
     }
   },
 }
@@ -256,6 +306,70 @@ export default {
   display: block;
   margin-top: 4px;
   color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.cli-tip {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--markdown-code-border);
+  border-radius: 4px;
+  background: var(--markdown-code-bg);
+}
+
+.cli-tip-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--text-color);
+}
+
+.cli-tip-body {
+  margin: 6px 0 8px;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text-faint);
+}
+
+.cli-tip-command {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.cli-tip-command code {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-color);
+  /* The URL can be long; wrap rather than widen the dialog. */
+  overflow-wrap: anywhere;
+}
+
+.cli-tip-copy {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-faint);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.cli-tip-copy:hover {
+  color: var(--text-color);
+}
+
+.cli-tip small {
+  display: block;
+  margin-top: 8px;
+  color: var(--text-faint);
   font-size: 0.75rem;
 }
 

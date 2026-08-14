@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { EditorRefinementToolExecutor, type EditorContext } from './editorRefinementToolExecutor'
+import {
+  EditorRefinementToolExecutor,
+  createRefinementSessionState,
+  type EditorContext,
+} from './editorRefinementToolExecutor'
 import type QueryExecutionService from '../stores/queryExecutionService'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 
@@ -97,8 +101,22 @@ describe('EditorRefinementToolExecutor', () => {
       expect(result.availableSymbols).toHaveLength(2)
       expect(onEditorContentChangeSpy).toHaveBeenCalledWith(
         'SELECT id, name FROM users;',
-        false, // Always replace whole editor, not selection
+        false, // Whole-editor replace unless replaceSelection is passed
       )
+    })
+
+    it('passes replaceSelection through to the content change', async () => {
+      mockQueryExecutionService.validateQuery.mockResolvedValue({
+        data: { items: [], completion_items: [] },
+      })
+
+      const result = await executor.executeToolCall('edit_editor', {
+        content: 'sum(revenue) as total_revenue',
+        replaceSelection: true,
+      })
+
+      expect(result.success).toBe(true)
+      expect(onEditorContentChangeSpy).toHaveBeenCalledWith('sum(revenue) as total_revenue', true)
     })
 
     it('should update editor and report validation errors', async () => {
@@ -587,6 +605,52 @@ describe('EditorRefinementToolExecutor', () => {
       })
       expect(result.success).toBe(false)
       expect(result.error).toContain('not found')
+    })
+
+    it('finds artifacts created by a DIFFERENT executor instance sharing session state', async () => {
+      // The runtime constructs a fresh executor per tool call; artifacts must
+      // survive through the shared session state or get_artifact_rows on a
+      // truncated result is guaranteed to fail.
+      const sessionState = createRefinementSessionState()
+      const first = new EditorRefinementToolExecutor(
+        mockQueryExecutionService as unknown as QueryExecutionService,
+        mockConnectionStore as unknown as ConnectionStoreType,
+        mockEditorContext,
+        undefined,
+        sessionState,
+      )
+      mockQueryExecutionService.executeQuery.mockReturnValue(makeLargeResultsMock(120))
+      const queryResult = await first.executeToolCall('run_query', {
+        query: 'SELECT id, value FROM t;',
+      })
+      expect(queryResult.success).toBe(true)
+
+      const second = new EditorRefinementToolExecutor(
+        mockQueryExecutionService as unknown as QueryExecutionService,
+        mockConnectionStore as unknown as ConnectionStoreType,
+        mockEditorContext,
+        undefined,
+        sessionState,
+      )
+      const rowsResult = await second.executeToolCall('get_artifact_rows', {
+        artifact_id: queryResult.artifact!.id,
+        start_row: 0,
+        end_row: 4,
+      })
+      expect(rowsResult.success).toBe(true)
+      expect(rowsResult.message).toContain('Rows 0-4 of 120 total')
+    })
+
+    it('rejects non-numeric row ranges instead of returning an empty success', async () => {
+      mockQueryExecutionService.executeQuery.mockReturnValue(makeLargeResultsMock(20))
+      const queryResult = await executor.executeToolCall('run_query', { query: 'SELECT 1;' })
+      const rowsResult = await executor.executeToolCall('get_artifact_rows', {
+        artifact_id: queryResult.artifact!.id,
+        start_row: 'abc',
+        end_row: undefined,
+      })
+      expect(rowsResult.success).toBe(false)
+      expect(rowsResult.error).toContain('must be numbers')
     })
 
     it('fetches a row range from a run_query artifact', async () => {

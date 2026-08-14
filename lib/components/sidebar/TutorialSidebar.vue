@@ -19,7 +19,7 @@
           :indent="node.indent"
           :is-selected="isActiveNode(node.id)"
           :is-collapsible="node.type === 'documentation'"
-          :is-collapsed="collapsed[node.id]"
+          :is-collapsed="isCollapsed(node.id)"
           :icon="node.type === 'article' ? 'mdi-text-box-outline' : ''"
           :extra-info="node.type === 'documentation' ? node.count : ''"
           itemType="documentation"
@@ -32,7 +32,8 @@
 </template>
 
 <script lang="ts">
-import { ref, computed, inject, onMounted } from 'vue'
+import { ref, computed, inject } from 'vue'
+import { useCollapseState } from './collapseState'
 import SidebarList from './SidebarList.vue'
 import SidebarItem from './GenericSidebarItem.vue'
 import type { EditorStoreType } from '../../stores/editorStore'
@@ -59,21 +60,16 @@ export default {
 
     const current = getDefaultValueFromHash(URL_HASH_KEYS.TUTORIAL) || ''
 
-    const collapsed = ref<Record<string, boolean>>({})
     const isMobile = useIsMobile()
     const mobileTree = ref<any>(null)
 
-    // Initialize current path and collapse states
-    onMounted(() => {
-      const splits = current.split(KeySeparator)
-      const documentationTitle = splits[1]
-      let currentPath = `documentation${KeySeparator}${documentationTitle}`
-      // Initialize all nodes as collapsed except those in current path
-      documentation.forEach((topic) => {
-        const topicId = `documentation${KeySeparator}${topic.title}`
-        collapsed.value[topicId] = !currentPath.startsWith(topicId)
-      })
-    })
+    // Only the topic containing the article named in the URL starts open.
+    const currentPath = `documentation${KeySeparator}${current.split(KeySeparator)[1]}`
+    const {
+      overrides: collapsed,
+      isCollapsed,
+      toggle: toggleCollapse,
+    } = useCollapseState((id) => currentPath.startsWith(id))
 
     const documentationNodes = computed(() => {
       const list: Array<{ id: string; name: string; indent: number; count: number; type: string }> =
@@ -89,7 +85,7 @@ export default {
           type: 'documentation',
         })
 
-        if (!collapsed.value[topicId]) {
+        if (!isCollapsed(topicId)) {
           topic.articles.forEach((article) => {
             list.push({
               id: `article${KeySeparator}${topic.title}${KeySeparator}${article.title}`,
@@ -109,11 +105,8 @@ export default {
       return id === props.activeDocumentationKey
     }
 
-    const toggleCollapse = (id: string) => {
-      collapsed.value[id] = !collapsed.value[id]
-    }
     const expandMobileBranch = (node: any) => {
-      if (collapsed.value[node.id]) toggleCollapse(node.id)
+      if (isCollapsed(node.id)) toggleCollapse(node.id)
     }
     const selectMobileNode = (node: any) => emit('documentation-key-selected', node.id)
 
@@ -121,6 +114,7 @@ export default {
       documentationNodes,
       toggleCollapse,
       collapsed,
+      isCollapsed,
       isActiveNode,
       isMobile,
       mobileTree,
