@@ -10,6 +10,7 @@ import {
   drillMobileTree,
   openSidebarScreen,
   prepareTestPage,
+  selectAllInEditor,
 } from './test-helpers.js'
 
 test.describe('LLM Connection Tests', () => {
@@ -313,8 +314,10 @@ limit 10;`
       'import lineitem;\n\n\n# get top 10 products by orders and who made them',
     )
     // Select all deterministically (triple-click can land on an empty line
-    // and select nothing) — the AI entry points capture the selection.
-    await page.keyboard.press('Control+a')
+    // and select nothing) — the AI entry points capture the selection. The
+    // chord has to come from monaco's own mode: webkit runs a mac user agent,
+    // where Ctrl+A only moves the cursor and the selection ends up empty.
+    await selectAllInEditor(page, 'editor')
 
     // Open the editor AI experience: mobile opens the inline refinement
     // session; desktop routes to the global chat panel.

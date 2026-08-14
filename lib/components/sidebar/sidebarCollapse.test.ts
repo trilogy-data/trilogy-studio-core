@@ -169,6 +169,51 @@ describe('EditorList collapse state', () => {
     expect(wrapper.vm.isCollapsed(CONNECTION_KEY)).toBe(true)
   })
 
+  it('reveals the chain of an editor selected after mount', async () => {
+    // openContainers used to read the URL hash once at setup. Selecting an
+    // editor afterwards left its folder shut, so clicking through to a nested
+    // editor never showed where it lived.
+    wrapper = mountList(false)
+    await nextTick()
+    expect(wrapper.vm.isCollapsed(FOLDER_KEY)).toBe(true)
+
+    await wrapper.setProps({ activeEditor: 'e1' })
+    await nextTick()
+
+    expect(wrapper.vm.isCollapsed(FOLDER_KEY)).toBe(false)
+    const editors = wrapper.vm.contentList.filter((item: any) => item.type === 'editor')
+    expect(editors.map((item: any) => item.label)).toContain('sales-report')
+  })
+
+  it('opens every folder above a newly created editor', async () => {
+    // Creating an editor does not select it, so nothing in the default-open
+    // chain covers it — without an explicit reveal a new `a/b/c` lands inside
+    // two shut folders and looks like nothing happened.
+    const editors: Record<string, any> = {
+      e1: makeEditor('e1', 'analysis/sales-report'),
+      e2: makeEditor('e2', 'top-level'),
+    }
+    const editorStore = reactive({
+      editors,
+      getEditorByName: (name: string) =>
+        Object.values(editors).find((editor: any) => editor.name === name),
+    })
+    wrapper = mountList(false, editorStore as any)
+    await nextTick()
+
+    editors.e3 = makeEditor('e3', 'analysis/reports/new-one')
+    await nextTick()
+    expect(wrapper.vm.isCollapsed(`f-local-${CONNECTION_ID}-analysis/reports`)).toBe(true)
+
+    wrapper.vm.revealEditor('analysis/reports/new-one')
+    await nextTick()
+
+    expect(wrapper.vm.isCollapsed(FOLDER_KEY)).toBe(false)
+    expect(wrapper.vm.isCollapsed(`f-local-${CONNECTION_ID}-analysis/reports`)).toBe(false)
+    const labels = wrapper.vm.contentList.map((item: any) => item.label)
+    expect(labels).toContain('new-one')
+  })
+
   it('flattens to matching editors while searching', async () => {
     wrapper = mountList(false)
     await wrapper.setProps({ mobileSearchQuery: 'sales' })
@@ -243,6 +288,58 @@ describe('DashboardList collapse state', () => {
     expect(keys).toContain(`c-local-${CONNECTION_ID}`)
     expect(wrapper.vm.isCollapsed(`c-local-${CONNECTION_ID}`)).toBe(true)
     expect(wrapper.vm.contentList.filter((item: any) => item.type === 'dashboard')).toHaveLength(0)
+  })
+
+  it('opens the connection holding the active dashboard', async () => {
+    // Same hash-snapshot bug as EditorList: creating a dashboard selects it
+    // without touching the hash, so the new row stayed inside a shut connection.
+    const connectionStore = useConnectionStore()
+    connectionStore.connections[CONNECTION_ID] = {
+      id: CONNECTION_ID,
+      name: 'duck',
+      storage: 'local',
+      connected: true,
+      type: 'duckdb',
+    } as any
+    const dashboardStore = reactive({
+      dashboards: {
+        d1: {
+          id: 'd1',
+          name: 'Sales',
+          storage: 'local',
+          connection: 'duck',
+          connectionId: CONNECTION_ID,
+          state: 'ready',
+          deleted: false,
+        },
+      } as Record<string, any>,
+    })
+
+    wrapper = mount(DashboardList, {
+      props: { activeDashboardKey: 'd1' },
+      global: {
+        provide: {
+          connectionStore,
+          dashboardStore,
+          chatStore: { chats: {} },
+          saveDashboards: vi.fn(),
+          isMobile: computed(() => false),
+        },
+        stubs: {
+          SidebarList: { template: '<div><slot name="actions" /><slot /></div>' },
+          MobileTreeList: true,
+          DashboardListItem: true,
+          DashboardCreatorInline: true,
+          DashboardImportPopup: true,
+          LoadingButton: true,
+          ConfirmDialog: true,
+        },
+      },
+    })
+    await nextTick()
+
+    expect(wrapper.vm.isCollapsed(`c-local-${CONNECTION_ID}`)).toBe(false)
+    expect(wrapper.vm.contentList.filter((item: any) => item.type === 'dashboard')).toHaveLength(1)
   })
 })
 

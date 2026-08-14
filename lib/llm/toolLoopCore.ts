@@ -225,7 +225,6 @@ export async function runToolLoop(
   // Wrap user message in delimiters for LLM context; display strips these automatically
   const wrappedUserMessage = `${USER_INPUT_START}${stripPromptWrapperTags(userMessage)}${USER_INPUT_END}`
   let currentPrompt = wrappedUserMessage
-  let lastResponseText = ''
   // Track whether we've added the user message to currentMessages (happens after first tool call)
   let userMessageAddedToHistory = false
   // Consecutive text-only responses. Some models keep answering in prose no
@@ -291,7 +290,6 @@ export async function runToolLoop(
     )
 
     const responseText = response.text
-    lastResponseText = responseText
 
     // Use structured tool calls from response (preserve full LLMToolCall objects)
     const toolCalls: LLMToolCall[] = response.toolCalls ?? []

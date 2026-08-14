@@ -175,7 +175,7 @@ describe('globalChatRuntime', () => {
       kind: 'user',
       source: 'user',
       updatedAt: new Date('2026-01-01'),
-      pendingContextNote: null,
+      pendingContextNote: null as string | null,
       ...overrides,
     })
 

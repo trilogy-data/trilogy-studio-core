@@ -17,6 +17,7 @@
       <editor-creator-inline
         :visible="creatorVisible"
         @close="creatorVisible = !creatorVisible"
+        @editor-selected="revealEditor"
         :testTag="testTag"
       />
       <div ref="filterDropdown" class="tag-filter-dropdown">
@@ -189,9 +190,14 @@ export default {
     // as editors hydrate — see useCollapseState.
     const openContainers = computed(() => {
       const editors = Object.values(editorStore.editors)
-      const active = current ? editors.find((editor) => editor.id === current) : undefined
+      // Live selection first, URL hash only as the pre-hydration fallback. This
+      // has to track the selection rather than snapshot it: creating an editor
+      // makes it active without touching the hash, and a chain that only ever
+      // reflected load-time state would file the new editor into a shut folder.
+      const selected = props.activeEditor || current
+      const active = selected ? editors.find((editor) => editor.id === selected) : undefined
       if (active) {
-        // Reveal the whole chain down to the editor named in the URL.
+        // Reveal the whole chain down to the selected editor.
         const connectionKeyPart = active.connectionId || active.connection
         return new Set([
           `s-${active.storage}`,
@@ -216,7 +222,21 @@ export default {
       overrides: collapsed,
       isCollapsed,
       toggle: toggleCollapse,
+      open: openKey,
     } = useCollapseState((key) => openContainers.value.has(key))
+
+    // Creating an editor does not select it, so the default-open chain above
+    // would not cover it and a new `a/b/c` editor would land inside two shut
+    // folders with no feedback that anything happened. Open its chain outright:
+    // this is a user action, so it outranks the defaults like any other toggle.
+    const revealEditor = (name: string) => {
+      const editor = editorStore.getEditorByName(name)
+      if (!editor) return
+      const connectionKeyPart = editor.connectionId || editor.connection
+      openKey(`s-${editor.storage}`)
+      openKey(`c-${editor.storage}-${connectionKeyPart}`)
+      getFolderPaths(editor.name, editor.storage, connectionKeyPart).forEach(openKey)
+    }
 
     onMounted(() => {
       document.addEventListener('click', handleDocumentClick)
@@ -287,6 +307,7 @@ export default {
       toggleCollapse,
       collapsed,
       isCollapsed,
+      revealEditor,
       hiddenTags,
       creatorVisible,
       filterMenuOpen,

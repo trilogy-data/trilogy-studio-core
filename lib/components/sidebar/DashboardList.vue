@@ -212,7 +212,7 @@ export default {
       default: '',
     },
   },
-  setup() {
+  setup(props: { activeDashboardKey?: string }) {
     const dashboardStore = inject<DashboardStoreType>('dashboardStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
     const chatStore = inject<ChatStoreType>('chatStore', null as any)
@@ -240,7 +240,11 @@ export default {
     // re-derives as dashboards hydrate — see useCollapseState.
     const openContainers = computed(() => {
       const dashboards = Object.values(dashboardStore.dashboards).filter((item) => !item.deleted)
-      const active = current ? dashboards.find((item) => item.id === current) : undefined
+      // Live selection first, URL hash only as the pre-hydration fallback —
+      // creating a dashboard selects it without touching the hash, so a
+      // snapshot would leave the new row inside a shut connection.
+      const selected = props.activeDashboardKey || current
+      const active = selected ? dashboards.find((item) => item.id === selected) : undefined
       if (active) {
         return new Set(containerKeys(active))
       }

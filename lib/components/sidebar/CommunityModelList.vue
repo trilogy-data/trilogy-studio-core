@@ -172,6 +172,10 @@ export default defineComponent({
 
     // Handle item clicks (for collapsing/expanding)
     const handleItemClick = (_: string, key: string, __: ModelRoot) => {
+      // Store and engine rows are pure containers — the only reason to click one
+      // is to get at what is inside, so reveal it. Opening rather than toggling
+      // leaves collapsing to the chevron, which is the control for it.
+      openKey(key)
       navigationStore.openTab('community-models', null, key)
     }
 

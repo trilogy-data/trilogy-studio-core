@@ -210,8 +210,9 @@ export function buildJobsPack(): RegisteredTool[] {
             error: `Timed out after ${timeoutSeconds}s: ${describeJob(job)}. It continues in the background — call await_job or get_job_status again.`,
           }
         }
-        const failed = job.status === 'failed' || job.status === 'error'
-        return failed
+        // Anything that isn't 'success' at this point ('error' or 'cancelled')
+        // means the job did not complete its work.
+        return job.status !== 'success'
           ? { success: false, error: `Job finished unsuccessfully: ${describeJob(job)}` }
           : { success: true, message: `Job finished: ${describeJob(job)}` }
       },
