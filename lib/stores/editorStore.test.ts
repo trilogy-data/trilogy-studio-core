@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import useEditorStore from './editorStore'
 import { EditorTag } from '../editors'
@@ -6,6 +6,66 @@ import { EditorTag } from '../editors'
 describe('editorStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+  })
+
+  it('getEditorByName prefers live editors over deleted same-named ones', () => {
+    const editorStore = useEditorStore()
+    const original = editorStore.newEditor('sales', 'preql', 'conn-a', 'select 1;')
+    editorStore.removeEditor(original.id)
+    const replacement = editorStore.newEditor('sales', 'preql', 'conn-a', 'select 2;')
+
+    // Soft-deleted editors stay in the map; they must not shadow the live
+    // editor recreated with the same name (chat tools resolve by name).
+    expect(editorStore.getEditorByName('sales')?.id).toBe(replacement.id)
+  })
+
+  describe('refinement sessions', () => {
+    it('startRefinementSession snapshots content and chart config', () => {
+      const editorStore = useEditorStore()
+      const editor = editorStore.newEditor('q', 'preql', 'conn-a', 'select 1;')
+      editor.setChartConfig({ chartType: 'bar' } as any)
+
+      editorStore.startRefinementSession(editor.id, {
+        selectedText: 'select 1;',
+        selectionRange: { start: 0, end: 9 },
+      })
+
+      const session = editor.refinementSession!
+      expect(session.originalContent).toBe('select 1;')
+      expect(session.originalChartConfig).toEqual({ chartType: 'bar' })
+      expect(session.selectionRange).toEqual({ start: 0, end: 9 })
+    })
+
+    it('acceptRefinement keeps the agent-edited content and clears the session', () => {
+      const editorStore = useEditorStore()
+      const editor = editorStore.newEditor('q', 'preql', 'conn-a', 'select 1;')
+      editorStore.startRefinementSession(editor.id)
+      editor.setContent('select 42;')
+
+      const onFinish = vi.fn()
+      editorStore.acceptRefinement(editor.id, { onFinish })
+
+      expect(editor.contents).toBe('select 42;')
+      expect(editor.hasActiveRefinement()).toBe(false)
+      expect(onFinish).toHaveBeenCalled()
+    })
+
+    it('discardRefinement restores content AND chart config', () => {
+      const editorStore = useEditorStore()
+      const editor = editorStore.newEditor('q', 'preql', 'conn-a', 'select 1;')
+      editor.setChartConfig({ chartType: 'bar' } as any)
+      editorStore.startRefinementSession(editor.id)
+
+      // Agent edits both during the session.
+      editor.setContent('select 42;')
+      editor.setChartConfig({ chartType: 'line' } as any)
+
+      editorStore.discardRefinement(editor.id)
+
+      expect(editor.contents).toBe('select 1;')
+      expect(editor.chartConfig).toEqual({ chartType: 'bar' })
+      expect(editor.hasActiveRefinement()).toBe(false)
+    })
   })
 
   it('keeps duplicate editor names and only suffixes ids', () => {

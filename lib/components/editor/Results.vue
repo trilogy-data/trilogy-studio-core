@@ -49,18 +49,6 @@
           <span class="tab-label">Generated SQL</span>
         </button>
       </div>
-      <div class="tabs-right">
-        <button
-          v-if="showChatButton"
-          class="chat-button"
-          @click="$emit('open-chat')"
-          aria-label="Open Chat"
-          title="Open Chat"
-        >
-          <i class="mdi mdi-creation-outline"></i>
-          <span class="chat-button-label">Chat</span>
-        </button>
-      </div>
     </div>
     <div class="tab-content">
       <drilldown-pane
@@ -179,12 +167,8 @@ export default {
       required: false,
       default: null,
     },
-    showChatButton: {
-      type: Boolean,
-      default: false,
-    },
   },
-  emits: ['config-change', 'drilldown-click', 'refresh-click', 'open-chat'],
+  emits: ['config-change', 'drilldown-click', 'refresh-click'],
   data() {
     return {
       activeTab:
@@ -303,41 +287,6 @@ export default {
   align-items: center;
 }
 
-.tabs-right {
-  display: flex;
-  align-items: center;
-  padding-right: 4px;
-}
-
-.chat-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  height: 22px;
-  padding: 0 6px;
-  border: none;
-  background: transparent;
-  color: var(--text-faint);
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.15s ease;
-}
-
-.chat-button:hover {
-  background: var(--border-light);
-  color: var(--special-text);
-}
-
-.chat-button i {
-  font-size: 14px;
-}
-
-.chat-button-label {
-  font-size: 12px;
-  font-weight: 500;
-}
-
 .tab-button {
   border: none;
   background: none;
@@ -452,15 +401,11 @@ export default {
     height: 100%;
   }
 
-  .tab-button,
-  .chat-button {
+  .tab-button {
     min-width: 48px;
     height: 48px;
     padding: 0 10px;
     font-size: 12px;
-  }
-
-  .tab-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -473,13 +418,8 @@ export default {
     font-size: 20px;
   }
 
-  .tab-label,
-  .chat-button-label {
+  .tab-label {
     display: none;
-  }
-
-  .tabs-right {
-    padding-right: 0;
   }
 }
 </style>

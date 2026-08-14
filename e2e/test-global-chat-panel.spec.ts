@@ -20,6 +20,13 @@ async function setupLLMConnection(page: any, connectionName = 'test-openai') {
   await expect(page.getByTestId(`llm-connection-${connectionName}`)).toBeVisible({ timeout: 5000 })
 }
 
+/** Persist all pending changes via the sidebar save control — the automatic
+ *  save interval is 60s, far longer than a test. */
+async function saveAllChanges(page: any) {
+  await page.getByTestId('trilogy-icon').filter({ visible: true }).first().click()
+  await page.waitForTimeout(1000)
+}
+
 test.describe('Global chat panel', () => {
   test.setTimeout(60000)
 
@@ -38,8 +45,21 @@ test.describe('Global chat panel', () => {
     })
   })
 
+  test('AI panel is unavailable without an LLM connection', async ({ page }) => {
+    await page.goto('#skipTips=true')
+
+    // The rail renders (settings icon is up) but the AI icon is absent, and
+    // the keyboard shortcut is a no-op.
+    await expect(page.getByTestId('sidebar-icon-settings')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('sidebar-icon-ai-panel')).not.toBeVisible()
+
+    await page.keyboard.press('Control+Shift+Period')
+    await expect(page.getByTestId('global-chat-panel')).not.toBeVisible()
+  })
+
   test('opens and closes via the sidebar AI icon', async ({ page }) => {
     await page.goto('#skipTips=true')
+    await setupLLMConnection(page)
 
     await expect(page.getByTestId('sidebar-icon-ai-panel')).toBeVisible({ timeout: 10000 })
     await page.getByTestId('sidebar-icon-ai-panel').click()
@@ -54,6 +74,7 @@ test.describe('Global chat panel', () => {
 
   test('toggles with the keyboard shortcut', async ({ page }) => {
     await page.goto('#skipTips=true')
+    await setupLLMConnection(page)
     await expect(page.getByTestId('sidebar-icon-ai-panel')).toBeVisible({ timeout: 10000 })
 
     await page.keyboard.press('Control+Shift+Period')
@@ -65,12 +86,60 @@ test.describe('Global chat panel', () => {
 
   test('restores open state from the URL on reload', async ({ page }) => {
     await page.goto('#skipTips=true')
+    await setupLLMConnection(page)
     await expect(page.getByTestId('sidebar-icon-ai-panel')).toBeVisible({ timeout: 10000 })
     await page.getByTestId('sidebar-icon-ai-panel').click()
     await expect(page.getByTestId('global-chat-panel')).toBeVisible({ timeout: 5000 })
 
     await page.reload()
     await expect(page.getByTestId('global-chat-panel')).toBeVisible({ timeout: 10000 })
+  })
+
+  test('defaults open on load for LLM-connected users; explicit close persists', async ({
+    page,
+  }) => {
+    await page.goto('#skipTips=true')
+    await setupLLMConnection(page)
+    // Creating a connection mid-session doesn't force the panel open...
+    await expect(page.getByTestId('global-chat-panel')).not.toBeVisible()
+
+    // ...but the next load defaults it open.
+    await saveAllChanges(page)
+    await page.reload()
+    await expect(page.getByTestId('global-chat-panel')).toBeVisible({ timeout: 15000 })
+
+    // An explicit close is remembered: no auto-reopen on the following load.
+    await page.getByTestId('global-chat-close').click()
+    await page.reload()
+    await expect(page.getByTestId('sidebar-icon-ai-panel')).toBeVisible({ timeout: 15000 })
+    await expect(page.getByTestId('global-chat-panel')).not.toBeVisible()
+  })
+
+  test('restores the active conversation (not the list) from the URL after reload', async ({
+    page,
+  }) => {
+    // Send + save + reload + hydrate is the slowest flow in this file.
+    test.setTimeout(120000)
+    await page.goto('#skipTips=true')
+    await setupLLMConnection(page)
+
+    await page.getByTestId('sidebar-icon-ai-panel').click()
+    const panel = page.getByTestId('global-chat-panel')
+    await expect(panel).toBeVisible({ timeout: 5000 })
+    await panel.getByTestId('global-chat-new-conversation').click()
+
+    await panel.getByTestId('input-textarea').fill('Hello')
+    await panel.getByTestId('send-button').click()
+    await expect(panel.getByTestId('message-assistant-1')).toBeVisible({ timeout: 10000 })
+    expect(page.url()).toContain('chatPanel=')
+
+    // Chats only persist on save (the auto-save interval is 60s).
+    await saveAllChanges(page)
+    await page.reload()
+
+    // The hash names the conversation: restore must land in conversation view
+    // with its history, not bounce to the list because chats hadn't hydrated.
+    await expect(panel.getByTestId('message-user-0')).toContainText('Hello', { timeout: 15000 })
   })
 
   test('sends a message and receives a response', async ({ page }) => {

@@ -96,4 +96,66 @@ describe('useGlobalChatPanel', () => {
     expect(clampPanelWidth(99_999)).toBe(GLOBAL_CHAT_MAX_WIDTH)
     expect(clampPanelWidth(415.6)).toBe(416)
   })
+
+  describe('applyDefaultOpenState', () => {
+    it('opens by default for users with an LLM connection', () => {
+      const panel = useGlobalChatPanel()
+      panel.applyDefaultOpenState(true)
+      expect(panel.isOpen.value).toBe(true)
+    })
+
+    it('stays hidden without an LLM connection', () => {
+      const panel = useGlobalChatPanel()
+      panel.applyDefaultOpenState(false)
+      expect(panel.isOpen.value).toBe(false)
+    })
+
+    it('respects an explicit close from a previous session', () => {
+      const panel = useGlobalChatPanel()
+      panel.openPanel()
+      panel.closePanel()
+
+      // Simulate a fresh load: new instance, same localStorage.
+      resetGlobalChatPanelForTests()
+      const fresh = useGlobalChatPanel()
+      fresh.applyDefaultOpenState(true)
+      expect(fresh.isOpen.value).toBe(false)
+    })
+
+    it('a hash deep-link decision wins (no double-apply)', () => {
+      window.location.hash = '#chatPanel=chat-42'
+      const panel = useGlobalChatPanel()
+      panel.onInitialLoad()
+      panel.applyDefaultOpenState(true)
+      expect(panel.isOpen.value).toBe(true)
+      expect(panel.activePanelChatId.value).toBe('chat-42')
+    })
+  })
+
+  describe('keyboard shortcut gating', () => {
+    const press = () =>
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { code: 'Period', ctrlKey: true, shiftKey: true }),
+      )
+
+    it('does not open when canOpen returns false, but still closes', () => {
+      const panel = useGlobalChatPanel()
+      panel.addKeyListener(() => false)
+      press()
+      expect(panel.isOpen.value).toBe(false)
+
+      panel.openPanel()
+      press()
+      expect(panel.isOpen.value).toBe(false)
+      panel.removeKeyListener()
+    })
+
+    it('opens when canOpen returns true', () => {
+      const panel = useGlobalChatPanel()
+      panel.addKeyListener(() => true)
+      press()
+      expect(panel.isOpen.value).toBe(true)
+      panel.removeKeyListener()
+    })
+  })
 })

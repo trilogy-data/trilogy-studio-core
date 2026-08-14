@@ -28,11 +28,9 @@
         :chartConfig="editorData.chartConfig"
         :error="editorData.error || undefined"
         :symbols="editorData.completionSymbols"
-        :showChatButton="canOpenChat"
         @config-change="(config: ChartConfig) => editorData.setChartConfig(config)"
         @drilldown-click="handleDrilldown"
         @refresh-click="() => $emit('refresh-click')"
-        @open-chat="handleOpenChat"
       />
       <hint-component v-else />
     </template>
@@ -67,10 +65,6 @@ export default defineComponent({
       type: Number,
       default: 0,
     },
-    canOpenChat: {
-      type: Boolean,
-      default: false,
-    },
     runEditorQuery: {
       type: Function as PropType<() => Promise<QueryExecutionResult | undefined>>,
       default: undefined,
@@ -80,7 +74,7 @@ export default defineComponent({
       default: 'results',
     },
   },
-  emits: ['llm-query-accepted', 'drilldown-click', 'refresh-click', 'content-change', 'open-chat'],
+  emits: ['llm-query-accepted', 'drilldown-click', 'refresh-click', 'content-change'],
   setup() {
     const connectionStore = inject<ConnectionStoreType>('connectionStore')
 
@@ -121,9 +115,6 @@ export default defineComponent({
     },
     handleDrilldown(data: any) {
       this.$emit('drilldown-click', data)
-    },
-    handleOpenChat() {
-      this.$emit('open-chat')
     },
     async handleRunEditorQuery(): Promise<QueryExecutionResult> {
       if (!this.runEditorQuery) {

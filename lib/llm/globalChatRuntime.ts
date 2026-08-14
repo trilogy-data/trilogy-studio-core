@@ -9,7 +9,10 @@ import { renderToolListMarkdown } from './registry'
 import { onChatRemoved } from '../stores/chatStore'
 import type { ChatStoreType, ChatExecutionDependencies } from '../stores/chatStore'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
-import { markNavigationContextDelivered, resetNavigationNoteDedupe } from './navigationContextInjector'
+import {
+  markNavigationContextDelivered,
+  resetNavigationNoteDedupe,
+} from './navigationContextInjector'
 import { SYSTEM_INPUT_START, SYSTEM_INPUT_END, stripPromptWrapperTags } from './toolLoopCore'
 import { compactChat } from './compactConversation'
 

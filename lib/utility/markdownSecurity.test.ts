@@ -54,6 +54,35 @@ describe('Security and Validation', () => {
       const htmlWithData = '<div data-test="value">Content</div>'
       expect(sanitizeHtml(htmlWithData)).toBe(htmlWithData)
     })
+
+    it('strips positioning styles that could paint a viewport-covering overlay', () => {
+      // LLM output can carry raw HTML; a fixed-position div over the app is a
+      // UI-spoofing/phishing vector even with scripts blocked.
+      const overlay =
+        '<div style="position:fixed;inset:0;top:0;left:0;z-index:9999;background-color:#fff;width:100%">Fake login</div>'
+      const sanitized = sanitizeHtml(overlay)
+      expect(sanitized).toContain('Fake login')
+      expect(sanitized).not.toContain('position')
+      expect(sanitized).not.toContain('z-index')
+      expect(sanitized).not.toContain('inset')
+      expect(sanitized).not.toContain('top:')
+      // Cosmetic properties survive.
+      expect(sanitized).toContain('background-color')
+      expect(sanitized).toContain('width')
+    })
+
+    it('keeps the renderer’s own cosmetic inline styles intact', () => {
+      const pill =
+        '<span style="display: inline-block; width: 60px; height: 1em; filter: blur(0.5px)">x</span>'
+      const sanitized = sanitizeHtml(pill)
+      expect(sanitized).toContain('display: inline-block')
+      expect(sanitized).toContain('filter: blur(0.5px)')
+    })
+
+    it('drops the style attribute entirely when nothing safe remains', () => {
+      const sanitized = sanitizeHtml('<div style="position:absolute;left:0">x</div>')
+      expect(sanitized).not.toContain('style=')
+    })
   })
 
   describe('Expression Security', () => {

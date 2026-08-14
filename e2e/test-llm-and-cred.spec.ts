@@ -186,15 +186,32 @@ limit 10;`
       return match ? match[1] : ''
     }
 
+    // Captured from the request history on the first send: the hidden context
+    // note seeded when the panel was opened from the editor.
+    let seededEditorNote = ''
+    const captureSeededNote = (requestBody: any) => {
+      for (const item of requestBody.input || []) {
+        const text =
+          typeof item.content === 'string'
+            ? item.content
+            : Array.isArray(item.content)
+              ? item.content.map((part: any) => part.text || '').join(' ')
+              : ''
+        if (text.includes('[editor]')) seededEditorNote = text
+      }
+    }
+
     const desktopResponses = {
       // First send: rewrite the editor via the global editor tool.
-      'use order.id.count as the count': (requestBody: any) =>
-        createToolCallResponse("I'll update the query to use order.id.count instead.", [
+      'use order.id.count as the count': (requestBody: any) => {
+        captureSeededNote(requestBody)
+        return createToolCallResponse("I'll update the query to use order.id.count instead.", [
           {
             name: 'update_editor_contents',
             input: { editor_ref: editorIdFromRequest(requestBody), contents: refinedQuery },
           },
-        ]),
+        ])
+      },
       'run the current query': (requestBody: any) =>
         createToolCallResponse("I'll run the current editor query.", [
           { name: 'run_editor_query', input: { editor_ref: editorIdFromRequest(requestBody) } },
@@ -295,7 +312,9 @@ limit 10;`
     await page.keyboard.type(
       'import lineitem;\n\n\n# get top 10 products by orders and who made them',
     )
-    await page.getByTestId('editor').click({ clickCount: 3 })
+    // Select all deterministically (triple-click can land on an empty line
+    // and select nothing) — the AI entry points capture the selection.
+    await page.keyboard.press('Control+a')
 
     // Open the editor AI experience: mobile opens the inline refinement
     // session; desktop routes to the global chat panel.
@@ -335,11 +354,15 @@ limit 10;`
 
       await page.getByTestId('chat-tab').click()
 
-      // Close the refinement session
+      // Discard the refinement session
       await page.getByTestId('discard-button').click()
 
-      // Verify refinement container is closed
+      // Verify refinement container is closed AND the agent's edit was
+      // reverted to the pre-refinement content.
       await expect(page.getByTestId('editor-refinement-container')).not.toBeVisible()
+      await page.getByTestId('editor-tab').click()
+      await expect(page.getByTestId('editor')).not.toContainText('order_count')
+      await expect(page.getByTestId('editor')).toContainText('get top 10 products')
     } else {
       // Desktop: the global chat panel opens (no inline refinement) with a
       // seeded context note pointing at the active editor.
@@ -354,6 +377,13 @@ limit 10;`
       await expect(page.getByTestId('messages-container')).toContainText(
         'Updated the query to use order.id.count.',
       )
+
+      // The seeded context note reached the model: it names the editor by id
+      // and carries the user's actual selection.
+      expect(seededEditorNote).toContain('asked for AI help from editor')
+      expect(seededEditorNote).toMatch(/\(id [A-Za-z0-9_-]+\)/)
+      expect(seededEditorNote).toContain('current selection')
+      expect(seededEditorNote).toContain('get top 10 products')
 
       // run_editor_query executes against the editor's own connection...
       await page.getByTestId('input-textarea').fill('run the current query')

@@ -11,9 +11,7 @@ import {
   openGlobalChatForEditor,
 } from './globalChatRuntime'
 import useScreenNavigation from '../stores/useScreenNavigation'
-import useGlobalChatPanel, {
-  resetGlobalChatPanelForTests,
-} from '../stores/useGlobalChatPanel'
+import useGlobalChatPanel, { resetGlobalChatPanelForTests } from '../stores/useGlobalChatPanel'
 import { getSharedRegistry } from './registry'
 
 const makeDeps = () =>

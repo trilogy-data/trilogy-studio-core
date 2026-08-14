@@ -8,6 +8,10 @@ import {
 import useScreenNavigation from './useScreenNavigation'
 
 const PANEL_WIDTH_STORAGE_KEY = 'trilogy-global-chat-width'
+/** The user's explicit open/close choice ('open' | 'closed'). Absent until
+ *  they interact with the panel; the default-open heuristic only applies
+ *  while it's absent. */
+const PANEL_OPEN_PREF_STORAGE_KEY = 'trilogy-global-chat-open-pref'
 export const GLOBAL_CHAT_MIN_WIDTH = 320
 export const GLOBAL_CHAT_MAX_WIDTH = 640
 export const GLOBAL_CHAT_DEFAULT_WIDTH = 380
@@ -30,13 +34,37 @@ export interface GlobalChatPanelStore {
   setActivePanelChat(chatId: string): void
   setView(view: GlobalChatPanelView): void
   setPanelWidth(width: number): void
-  addKeyListener(): void
+  /** canOpen gates opening (not closing) — hosts pass "an LLM connection
+   *  exists" so the shortcut matches the rail icon's availability. */
+  addKeyListener(canOpen?: () => boolean): void
   removeKeyListener(): void
   onInitialLoad(): void
+  /** Called once after persisted stores hydrate: open the panel by default
+   *  for users with an LLM connection, unless a hash deep-link already
+   *  decided or the user has explicitly closed it before. */
+  applyDefaultOpenState(hasLLMConnections: boolean): void
 }
 
 export function clampPanelWidth(width: number): number {
   return Math.min(GLOBAL_CHAT_MAX_WIDTH, Math.max(GLOBAL_CHAT_MIN_WIDTH, Math.round(width)))
+}
+
+function loadOpenPreference(): 'open' | 'closed' | null {
+  try {
+    const raw = localStorage.getItem(PANEL_OPEN_PREF_STORAGE_KEY)
+    if (raw === 'open' || raw === 'closed') return raw
+  } catch {
+    // localStorage unavailable — treat as no preference
+  }
+  return null
+}
+
+function storeOpenPreference(pref: 'open' | 'closed'): void {
+  try {
+    localStorage.setItem(PANEL_OPEN_PREF_STORAGE_KEY, pref)
+  } catch {
+    // best-effort persistence only
+  }
 }
 
 function loadStoredWidth(): number {
@@ -73,11 +101,13 @@ const createGlobalChatPanelStore = (): GlobalChatPanelStore => {
       view.value = 'conversation'
     }
     isOpen.value = true
+    storeOpenPreference('open')
     syncHash()
   }
 
   const closePanel = () => {
     isOpen.value = false
+    storeOpenPreference('closed')
     syncHash()
   }
 
@@ -108,7 +138,7 @@ const createGlobalChatPanelStore = (): GlobalChatPanelStore => {
     }
   }
 
-  const addKeyListener = () => {
+  const addKeyListener = (canOpen?: () => boolean) => {
     if (keyListener) return
     keyListener = (e: KeyboardEvent) => {
       // Ctrl/Cmd+Shift+Period. Match on e.code — with shift held, e.key is
@@ -117,6 +147,9 @@ const createGlobalChatPanelStore = (): GlobalChatPanelStore => {
         // Full-screen mode bypasses SidebarLayout entirely, so the panel has
         // nowhere to render; the shortcut is a no-op there.
         if (useScreenNavigation().fullScreen.value) return
+        // Closing is always allowed; opening is gated the same way as the
+        // rail icon (no LLM connection -> no panel).
+        if (!isOpen.value && canOpen && !canOpen()) return
         e.preventDefault()
         togglePanel()
       }
@@ -142,6 +175,16 @@ const createGlobalChatPanelStore = (): GlobalChatPanelStore => {
     }
   }
 
+  const applyDefaultOpenState = (hasLLMConnections: boolean) => {
+    // A hash deep-link (or anything else that already opened the panel) wins.
+    if (isOpen.value) return
+    // No LLM connection: the panel has nothing to offer; stay hidden.
+    if (!hasLLMConnections) return
+    // Respect an explicit close from a previous session.
+    if (loadOpenPreference() === 'closed') return
+    openPanel()
+  }
+
   return {
     isOpen,
     panelWidth,
@@ -156,6 +199,7 @@ const createGlobalChatPanelStore = (): GlobalChatPanelStore => {
     addKeyListener,
     removeKeyListener,
     onInitialLoad,
+    applyDefaultOpenState,
   }
 }
 

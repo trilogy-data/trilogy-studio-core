@@ -34,6 +34,10 @@ const makeStores = () => {
     updateRefinementSession: vi.fn((id: string, updates: any) => {
       sessions[id] = { ...sessions[id], ...updates }
     }),
+    acceptRefinement: vi.fn((_id: string, callbacks?: any) => {
+      callbacks?.onFinish?.('Changes accepted')
+      sessions['ed-1'] = null
+    }),
   } as any
   const chatStore = {
     chats,
@@ -109,5 +113,61 @@ describe('editorRefinementRuntime', () => {
     disposeRefinementChat('ed-1', stores)
     expect(stores.chatStore.stopExecution).toHaveBeenCalledWith(chatId)
     expect(stores.chatStore.removeChat).toHaveBeenCalledWith(chatId)
+  })
+
+  it('accepts the session after the loop when the agent calls close_session', async () => {
+    // close_session fires mid-loop via onFinish; the session must be cleared
+    // only AFTER executeMessage resolves (never mid-run), via acceptRefinement.
+    let orderLog: string[] = []
+    stores.chatStore.executeMessage.mockImplementation(
+      async (_id: string, _msg: string, _deps: any, options: any) => {
+        await options.overrides.executeToolCall('close_session', {})
+        orderLog.push('loop-finished')
+      },
+    )
+    stores.editorStore.acceptRefinement.mockImplementation((_id: string, callbacks?: any) => {
+      orderLog.push('accepted')
+      callbacks?.onFinish?.()
+    })
+
+    const onFinish = vi.fn()
+    await sendRefinementMessage({
+      editorId: 'ed-1',
+      message: 'done, close it',
+      stores,
+      deps: makeDeps(stores),
+      callbacks: { onFinish },
+    })
+
+    expect(stores.editorStore.acceptRefinement).toHaveBeenCalledTimes(1)
+    expect(orderLog).toEqual(['loop-finished', 'accepted'])
+    expect(onFinish).toHaveBeenCalled()
+  })
+
+  it('retargets the selection range after a length-changing replaceSelection edit', async () => {
+    stores.sessions['ed-1'].selectedText = 'select 1;'
+    stores.sessions['ed-1'].selectionRange = { start: 0, end: 9 }
+
+    stores.chatStore.executeMessage.mockImplementation(
+      async (_id: string, _msg: string, _deps: any, options: any) => {
+        await options.overrides.executeToolCall('edit_editor', {
+          content: 'select 42;',
+          replaceSelection: true,
+        })
+      },
+    )
+
+    await sendRefinementMessage({
+      editorId: 'ed-1',
+      message: 'change the constant',
+      stores,
+      deps: makeDeps(stores),
+    })
+
+    const session = stores.sessions['ed-1']
+    expect(session.currentContent).toBe('select 42;')
+    // Follow-up selection edits must splice against the NEW offsets.
+    expect(session.selectionRange).toEqual({ start: 0, end: 10 })
+    expect(session.selectedText).toBe('select 42;')
   })
 })

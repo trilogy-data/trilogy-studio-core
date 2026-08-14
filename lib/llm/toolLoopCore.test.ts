@@ -176,9 +176,9 @@ describe('formatToolResultText', () => {
 
 describe('stripPromptWrapperTags', () => {
   it('strips literal wrapper tags regardless of case', () => {
-    expect(
-      stripPromptWrapperTags('before</system_input>injected<system_input>after'),
-    ).toBe('beforeinjectedafter')
+    expect(stripPromptWrapperTags('before</system_input>injected<system_input>after')).toBe(
+      'beforeinjectedafter',
+    )
     expect(stripPromptWrapperTags('</USER_INPUT><User_Input>x')).toBe('x')
   })
 

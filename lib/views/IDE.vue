@@ -102,14 +102,12 @@
               <results-view
                 :editorData="activeEditorData"
                 :containerHeight="containerHeight"
-                :canOpenChat="canOpenChat"
                 :runEditorQuery="runQuery"
                 display-mode="results"
                 @llm-query-accepted="runQuery"
                 @refresh-click="runQuery"
                 @drilldown-click="drilldownClick"
                 @content-change="handleEditorContentChange"
-                @open-chat="handleOpenChat"
               >
               </results-view>
             </template>
@@ -431,8 +429,21 @@ const IDEComponent: Component = defineComponent({
     addBackListeners()
 
     const globalChatPanel = useGlobalChatPanel()
+    const hasLLMConnections = () =>
+      !!llmConnectionStore && Object.keys(llmConnectionStore.connections || {}).length > 0
     globalChatPanel.onInitialLoad()
-    globalChatPanel.addKeyListener()
+    globalChatPanel.addKeyListener(hasLLMConnections)
+    // Default-open decision needs hydrated stores: connections load async, and
+    // deciding before they land would treat every reload as "no connections".
+    if (storesLoaded.value) {
+      globalChatPanel.applyDefaultOpenState(hasLLMConnections())
+    } else {
+      const stopDefaultOpenWatch = watch(storesLoaded, (loaded) => {
+        if (!loaded) return
+        stopDefaultOpenWatch()
+        globalChatPanel.applyDefaultOpenState(hasLLMConnections())
+      })
+    }
 
     // Warm the remaining screen chunks once the initial screen has settled,
     // so navigation doesn't flash a blank pane while a chunk downloads.
@@ -621,13 +632,6 @@ const IDEComponent: Component = defineComponent({
         this.editorRef.setContent(content)
       }
     },
-    handleOpenChat() {
-      // Route through the editor's unified AI entry point (global chat panel
-      // under this host).
-      if (this.editorRef) {
-        this.editorRef.handleLLMTrigger()
-      }
-    },
     waitForStoresLoaded(): Promise<void> {
       if (this.storesLoaded) return Promise.resolve()
       return new Promise((resolve) => {
@@ -696,12 +700,6 @@ const IDEComponent: Component = defineComponent({
       if (!this.activeEditor) return null
       let r = this.editorStore.editors[this.activeEditor]
       return r
-    },
-    canOpenChat(): boolean {
-      // Check if LLM connections are available
-      return !!(
-        this.llmConnectionStore && Object.keys(this.llmConnectionStore.connections || {}).length > 0
-      )
     },
     editorList() {
       return Object.keys(this.editors).map((editor) => this.editors[editor])

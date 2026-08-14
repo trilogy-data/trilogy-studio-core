@@ -146,6 +146,7 @@
       </div>
       <div class="sidebar-bottom-icons">
         <div
+          v-if="hasLLMConnections"
           class="sidebar-icon sidebar-icon-margin ai-panel-icon"
           :class="{ selected: globalChatOpen }"
           @click="toggleGlobalChat"
@@ -311,8 +312,10 @@ export default defineComponent({
     const mobileNavigation = useMobileSidebarNavigation()
     const globalChatPanel = useGlobalChatPanel()
     const chatStore = inject<any>('chatStore', null)
+    const llmConnectionStore = inject<any>('llmConnectionStore', null)
 
     return {
+      llmConnectionStore,
       isSaving,
       previousUnSaved,
       isMobile,
@@ -449,6 +452,13 @@ export default defineComponent({
     },
     globalChatOpen(): boolean {
       return this.globalChatPanel.isOpen.value
+    },
+    // The AI panel is only offered once an LLM connection exists — a dead
+    // panel is worse than none; the LLM screen is the setup path.
+    hasLLMConnections(): boolean {
+      return !!(
+        this.llmConnectionStore && Object.keys(this.llmConnectionStore.connections || {}).length > 0
+      )
     },
     // Activity signal for the rail icon: an agent is running somewhere, even
     // with the panel closed (runs live in chatStore, not the panel).

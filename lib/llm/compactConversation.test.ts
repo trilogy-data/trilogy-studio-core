@@ -121,6 +121,52 @@ describe('compactChat', () => {
     expect(provider.model).toBe('big-model')
   })
 
+  it('compacts chats driven entirely by hidden injections (overseer wake-ups)', async () => {
+    // An overseer woken only via hiddenUserMessage injections has no visible
+    // user turns; hidden non-toolResults user messages must count as safe
+    // cuts or such chats can never compact and grow unbounded.
+    const chat = new Chat({ name: 'overseer' })
+    for (let i = 0; i < 10; i++) {
+      chat.messages.push(
+        { role: 'user', content: `[subchat ${i} completed] summary`, hidden: true },
+        { role: 'assistant', content: `dispatching next step ${i}` },
+        {
+          role: 'assistant',
+          content: '',
+          toolCalls: [{ id: `tc-${i}`, name: 'spawn_subchat', input: {} }],
+        },
+        {
+          role: 'user',
+          content: '',
+          hidden: true,
+          toolResults: [{ toolCallId: `tc-${i}`, toolName: 'spawn_subchat', result: 'ok' }],
+        },
+      )
+    }
+    const provider = makeProvider()
+    const result = await compactChat(provider, chat)
+    expect(result).not.toBeNull()
+    // The cut still never lands on a toolResults message.
+    const llmView = chat.getLLMMessages()
+    const first = llmView[1]
+    expect(first.toolResults).toBeUndefined()
+  })
+
+  it('aborts (returns null) when the chat is cleared during summarization', async () => {
+    const chat = makeChat(10)
+    const provider = makeProvider()
+    provider.generateCompletion.mockImplementation(async () => {
+      // Simulate the user clearing the conversation mid-summarize.
+      chat.clearMessages()
+      return { text: 'ghost summary', usage: { promptTokens: 1, completionTokens: 1 } }
+    })
+    const result = await compactChat(provider, chat)
+    expect(result).toBeNull()
+    // The ghost summary must not be spliced into the fresh conversation.
+    expect(chat.messages.some((m) => m.compaction)).toBe(false)
+    expect(chat.messages.some((m) => m.archived)).toBe(false)
+  })
+
   it('second compaction archives the summary of the first coherently', async () => {
     const chat = makeChat(10)
     const provider = makeProvider('first summary')
