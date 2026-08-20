@@ -178,6 +178,19 @@ describe('trilogy monarch grammar', () => {
     expect(typeOf('order by x desc nulls last;', 'nulls last')).toBe('keyword')
   })
 
+  it('tokenizes chart statement clauses', () => {
+    const chart =
+      'chart set scale_y: log layer bar (x_axis <- category, y_axis <- total) place hline at 5;'
+    expect(typeOf(chart, 'layer bar')).toBe('keyword')
+    expect(typeOf(chart, 'set scale_y: log')).toBe('keyword')
+    expect(typeOf(chart, 'place hline at')).toBe('keyword')
+    // Roles are keywords only where a binding arrow follows them; the
+    // binding-lhs `property` rule would otherwise claim them.
+    expect(typeOf(chart, 'x_axis')).toBe('keyword')
+    expect(typeOf(chart, 'y_axis')).toBe('keyword')
+    expect(typeOf('select x_axis;', 'x_axis')).not.toBe('keyword')
+  })
+
   it('has no duplicate entries in any word list', () => {
     for (const name of ['keywords', 'functions', 'typeKeywords', 'definitions'] as const) {
       const list = (trilogyMonarchLanguage as unknown as Record<string, string[]>)[name]

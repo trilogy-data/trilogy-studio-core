@@ -639,21 +639,28 @@ export default defineComponent({
             editor.generated_sql = result.generatedSql
           }
           if (result.results) {
-            // check if the result headers have changed
-            // and clear our cached chart config if so. Skip when prior
-            // results are the empty rehydrated placeholder — comparing
-            // against it would wipe a persisted chart config on first run.
-            if (
-              this.editorData.results &&
-              this.editorData.results.headers &&
-              this.editorData.results.headers.size > 0
-            ) {
-              let identical =
-                JSON.stringify(Array.from(this.editorData.results.headers.keys())) ==
-                JSON.stringify(Array.from(result.results.headers.keys()))
-              // changed is if the map keys are different
-              if (!identical) {
-                this.editorData.setChartConfig(null)
+            // A `chart ...` statement declares its own chart; that wins over
+            // both the cached config and the header-change reset below.
+            if (result.chartConfig) {
+              editor.setStatementChartConfig(result.chartConfig, result.chartWarnings || [])
+            } else {
+              editor.clearStatementChart()
+              // check if the result headers have changed
+              // and clear our cached chart config if so. Skip when prior
+              // results are the empty rehydrated placeholder — comparing
+              // against it would wipe a persisted chart config on first run.
+              if (
+                this.editorData.results &&
+                this.editorData.results.headers &&
+                this.editorData.results.headers.size > 0
+              ) {
+                let identical =
+                  JSON.stringify(Array.from(this.editorData.results.headers.keys())) ==
+                  JSON.stringify(Array.from(result.results.headers.keys()))
+                // changed is if the map keys are different
+                if (!identical) {
+                  this.editorData.setChartConfig(null)
+                }
               }
             }
             this.editorStore.setEditorResults(id, result.results)

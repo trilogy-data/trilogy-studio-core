@@ -99,7 +99,7 @@ Two ordering decisions in the grammar are load-bearing:
 ## Keeping up with the language
 
 `src/vocabulary.ts` is derived from `trilogy/parsing/trilogy.lark` in
-[pytrilogy](https://pypi.org/project/pytrilogy/), cut against **0.3.307**.
+[pytrilogy](https://pypi.org/project/pytrilogy/), cut against **0.3.335**.
 
 ## Development
 

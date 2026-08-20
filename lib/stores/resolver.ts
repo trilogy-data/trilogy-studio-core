@@ -1,4 +1,5 @@
 import { ModelConfig } from '../models'
+import type { ChartStatementSpec } from '../editors/chartStatement'
 
 import { type UserSettingsStoreType } from './userSettingsStore'
 
@@ -77,6 +78,9 @@ export interface QueryAtom {
   label?: string
   select_count?: number
   parameters?: Record<string, string | number | (string | number)[]> | null
+  /** Present when the statement was a `chart ...`; `generated_sql` is then
+   *  the first layer's query, so chart-unaware callers still get rows. */
+  chart?: ChartStatementSpec | null
 }
 
 export interface QueryResponse {

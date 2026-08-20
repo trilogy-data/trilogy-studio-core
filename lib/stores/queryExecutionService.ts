@@ -1,4 +1,6 @@
 import { Results, type ResultColumn, ColumnType } from '../editors/results'
+import type { ChartConfig } from '../editors/results'
+import { chartStatementToConfig } from '../editors/chartStatement'
 import type { EditorType } from '../editors/editor'
 import { isTrilogyType } from '../editors/fileTypes'
 import type { ContentInput } from '../stores/resolver'
@@ -40,6 +42,11 @@ export interface QueryResult {
   resultSize: number
   columnCount: number
   selectCount?: number
+  /** Set when the query was a Trilogy `chart ...` statement: the chart the
+   *  author declared, already translated into studio chart config. */
+  chartConfig?: ChartConfig
+  /** Parts of that chart statement the studio can't render. */
+  chartWarnings?: string[]
 }
 
 export interface BatchQueryResult {
@@ -566,13 +573,18 @@ export default class QueryExecutionService {
               }
 
               // Add to results
-              let resultObj = {
+              const chartResolution = chartStatementToConfig(queryResult.chart)
+              let resultObj: QueryResult = {
                 success: true,
                 generatedSql: queryResult.generated_sql,
                 results: sqlResponse,
                 resultSize: sqlResponse.data.length,
                 columnCount: sqlResponse.headers.size,
                 executionTime: new Date().getTime() - startTime,
+                chartConfig: chartResolution?.config,
+                chartWarnings: chartResolution?.warnings.length
+                  ? chartResolution.warnings
+                  : undefined,
               }
 
               if (onSuccess && queryResult.label && onSuccess[queryResult.label]) {
@@ -1230,6 +1242,10 @@ export default class QueryExecutionService {
 
       generatedSql = resolveResponse.data.generated_sql
 
+      // A `chart ...` statement carries its own rendering intent; translate it
+      // once here so every caller gets the config alongside the rows.
+      const chartResolution = chartStatementToConfig(resolveResponse.data.chart)
+
       const headers = resolveResponse.data.columns
 
       // Second step: Execute query — merge SQL-binding parameters from the resolver
@@ -1270,18 +1286,7 @@ export default class QueryExecutionService {
         })
       }
       const selectCount = resolveResponse?.data.select_count
-      if (onSuccess) {
-        onSuccess({
-          success: true,
-          generatedSql,
-          results: sqlResponse,
-          executionTime: new Date().getTime() - startTime,
-          resultSize,
-          columnCount,
-          selectCount,
-        })
-      }
-      return {
+      const successResult: QueryResult = {
         success: true,
         generatedSql,
         results: sqlResponse,
@@ -1289,7 +1294,13 @@ export default class QueryExecutionService {
         resultSize,
         columnCount,
         selectCount,
+        chartConfig: chartResolution?.config,
+        chartWarnings: chartResolution?.warnings.length ? chartResolution.warnings : undefined,
       }
+      if (onSuccess) {
+        onSuccess(successResult)
+      }
+      return successResult
     } catch (error) {
       // Diagnostic: log the raw thrown value so non-Error, non-string
       // throws don't get hidden behind 'Unknown error occurred'. Remove

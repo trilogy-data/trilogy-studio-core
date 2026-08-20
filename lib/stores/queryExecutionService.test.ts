@@ -115,6 +115,83 @@ describe('QueryExecutionService', () => {
     expect(result.results?.data).toEqual([{ value: 1 }])
   })
 
+  it('surfaces the chart a `chart ...` statement declared', async () => {
+    const resolver = {
+      resolve_query: vi.fn(async () => ({
+        data: {
+          generated_sql: 'select category, sum(value) as total_value from facts group by 1',
+          columns: [
+            { name: 'category', purpose: 'property' },
+            { name: 'total_value', purpose: 'metric' },
+          ],
+          generated_output: null,
+          select_count: 1,
+          chart: {
+            layers: [
+              {
+                chart_type: 'bar',
+                generated_sql: 'select category, sum(value) as total_value from facts group by 1',
+                x_fields: ['category'],
+                y_fields: ['total_value'],
+              },
+            ],
+            placements: [{ kind: 'hline', value: 5, label: 'target' }],
+            hide_legend: true,
+          },
+        },
+      })),
+    } as any
+    const { provider, executeSql } = makeProvider({ connected: true })
+    const service = new QueryExecutionService(resolver, provider, false)
+
+    const { resultPromise } = await service.executeQuery('worker-duckdb', {
+      text: 'chart layer bar (x_axis <- category, y_axis <- sum(value) as total_value);',
+      editorType: 'trilogy',
+      imports: [],
+    })
+
+    const result = await resultPromise
+
+    // The first layer's SQL is what actually runs, so the chart renders over
+    // the same rows the results grid shows.
+    expect(executeSql).toHaveBeenCalledWith(
+      'select category, sum(value) as total_value from facts group by 1',
+      null,
+    )
+    expect(result.chartConfig).toEqual({
+      chartType: 'bar',
+      xField: 'category',
+      yField: 'total_value',
+      hideLegend: true,
+    })
+    expect(result.chartWarnings?.[0]).toContain('hline')
+  })
+
+  it('leaves the chart config unset for an ordinary select', async () => {
+    const resolver = {
+      resolve_query: vi.fn(async () => ({
+        data: {
+          generated_sql: 'select 1 as value',
+          columns: [{ name: 'value', purpose: 'metric' }],
+          generated_output: null,
+          select_count: 1,
+        },
+      })),
+    } as any
+    const { provider } = makeProvider({ connected: true })
+    const service = new QueryExecutionService(resolver, provider, false)
+
+    const { resultPromise } = await service.executeQuery('worker-duckdb', {
+      text: 'select value;',
+      editorType: 'trilogy',
+      imports: [],
+    })
+
+    const result = await resultPromise
+    expect(result.chartConfig).toBeUndefined()
+    expect(result.chartWarnings).toBeUndefined()
+  })
+
   it('calls failure callbacks when the connection id cannot be resolved', async () => {
     const resolver = {
       resolve_query: vi.fn(),
