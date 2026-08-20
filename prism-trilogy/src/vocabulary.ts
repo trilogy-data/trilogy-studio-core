@@ -93,6 +93,8 @@ export const KEYWORDS = [
   'create',
   'chart',
   'show',
+  // call: run an external program -- `call <path|string> [from <select>]`
+  'call',
   // VALIDATE_SCOPE, used by validate/mock/publish/create
   'concept',
   'concepts',
