@@ -22,7 +22,9 @@ const compactedMessages = (summary = '## Goal\nShip the report.'): ChatMessage[]
 ]
 
 const mountChat = (messages: ChatMessage[]) =>
-  mount(LLMChat, { props: { messages, showHeader: false } })
+  mount(LLMChat, {
+    props: { messages, showHeader: false, sendHandler: async () => {} },
+  })
 
 describe('LLMChat compaction divider', () => {
   it('renders a divider where the conversation was compacted', () => {
