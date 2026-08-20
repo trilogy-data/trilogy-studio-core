@@ -74,6 +74,22 @@ export type {
   ToolLoopResult,
 } from './llm/toolLoopCore'
 
+// Conversation compaction — keeps long agentic histories inside the context window
+export {
+  compactHistory,
+  compactChat,
+  maybeCompactChat,
+  shouldCompact,
+  DEFAULT_COMPACTION_THRESHOLD_TOKENS,
+  DEFAULT_KEEP_RECENT_TOKENS,
+} from './llm/compaction'
+export type { CompactableHistory, CompactionOptions, CompactionResult } from './llm/compaction'
+export {
+  estimateTextTokens,
+  estimateMessageTokens,
+  estimateHistoryTokens,
+} from './llm/tokenEstimate'
+
 // Trilogy composables - simplified entry points
 export { useTrilogyCore } from './composables/useTrilogyCore'
 export type { TrilogyCoreOptions, TrilogyCoreReturn } from './composables/useTrilogyCore'

@@ -64,6 +64,7 @@
           @updateApiKey="updateApiKey"
           @updateModel="updateModel"
           @updateFastModel="updateFastModel"
+          @updateCompactionThreshold="updateCompactionThreshold"
           @setActive="setActiveConnection"
           @deleteConnection="deleteConnection"
           @deleteChat="deleteChat"
@@ -196,6 +197,11 @@ export default {
       saveConnections()
     }
 
+    const updateCompactionThreshold = (connection: LLMProvider, thresholdTokens: number | null) => {
+      llmConnectionStore.connections[connection.name].setCompactionThresholdTokens(thresholdTokens)
+      saveConnections()
+    }
+
     const refreshId = async (id: string, connectionName: string, type: string) => {
       if (!llmConnectionStore.connections[connectionName]) {
         isErrored.value[id] = 'Connection not found'
@@ -290,6 +296,7 @@ export default {
       'api-key',
       'model',
       'fast-model',
+      'compaction-threshold',
       'toggle-save-credential',
       'open-chat',
       'open-validation',
@@ -306,6 +313,7 @@ export default {
         type:
           | 'model'
           | 'fast-model'
+          | 'compaction-threshold'
           | 'connection'
           | 'settings-group'
           | 'toggle-save-credential'
@@ -458,6 +466,15 @@ export default {
             connection,
           })
 
+          list.push({
+            id: `${name}-compaction-threshold`,
+            name: 'Auto-Compact At',
+            indent: 2,
+            count: 0,
+            type: 'compaction-threshold',
+            connection,
+          })
+
           if (connection.type !== 'demo') {
             list.push({
               id: `${name}-toggle-save-credential`,
@@ -510,6 +527,7 @@ export default {
       updateApiKey,
       updateModel,
       updateFastModel,
+      updateCompactionThreshold,
       refreshId,
       creatorVisible,
       isItemSelected,

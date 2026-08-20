@@ -1,3 +1,11 @@
+import { DEFAULT_COMPACTION_THRESHOLD_TOKENS } from './consts'
+
+/** Persisted thresholds predate this setting (undefined) and may be hand-edited
+ *  in localStorage — anything not a finite number falls back to the default. */
+export function normalizeCompactionThreshold(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : null
+}
+
 // Structured tool call from LLM response
 export interface LLMToolCall {
   id: string
@@ -98,6 +106,13 @@ export abstract class LLMProvider {
   public name: string
   public model: string
   public fastModel: string | null = null // Used for summarization and light tasks, falls back to model if not set
+  /**
+   * Input-context size (tokens) at which conversations on this connection are
+   * automatically compacted before the next turn. null = the shared default,
+   * 0 = automatic compaction disabled. Per-connection because the right value
+   * follows the model's context window.
+   */
+  public compactionThresholdTokens: number | null = null
   public storage: string
   public type: string = 'generic'
   public connected: boolean
@@ -114,6 +129,7 @@ export abstract class LLMProvider {
     this.name = name
     this.model = model
     this.fastModel = null
+    this.compactionThresholdTokens = null
     // revisit if we load storage from any other location
     this.storage = 'local'
     this.connected = false
@@ -147,6 +163,25 @@ export abstract class LLMProvider {
     }
     this.changed = true
     this.fastModel = fastModel
+  }
+
+  /** null restores the default; anything else is clamped to a non-negative
+   *  integer, where 0 means "never auto-compact". */
+  setCompactionThresholdTokens(thresholdTokens: number | null): void {
+    const next =
+      thresholdTokens == null || !Number.isFinite(thresholdTokens)
+        ? null
+        : Math.max(0, Math.floor(thresholdTokens))
+    if (this.compactionThresholdTokens === next) {
+      return // No change, do nothing
+    }
+    this.changed = true
+    this.compactionThresholdTokens = next
+  }
+
+  /** Effective auto-compaction threshold in tokens (0 = disabled). */
+  getCompactionThresholdTokens(): number {
+    return this.compactionThresholdTokens ?? DEFAULT_COMPACTION_THRESHOLD_TOKENS
   }
 
   setSaveCredential(saveCredential: boolean): void {
@@ -190,6 +225,7 @@ export abstract class LLMProvider {
       name: this.name,
       model: this.model,
       fastModel: this.fastModel,
+      compactionThresholdTokens: this.compactionThresholdTokens,
       type: this.type,
       // redacted will trigger a fetch from the secure store
       apiKey: this.saveCredential ? 'saved' : null,
@@ -237,6 +273,9 @@ export abstract class LLMProvider {
     )
     instance.isDefault = restored.isDefault || false
     instance.fastModel = restored.fastModel || null
+    instance.compactionThresholdTokens = normalizeCompactionThreshold(
+      restored.compactionThresholdTokens,
+    )
     return instance
   }
 }

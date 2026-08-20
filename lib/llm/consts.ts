@@ -1,6 +1,10 @@
 export const DEFAULT_TEMPERATURE = 0.5
 export const DEFAULT_MAX_TOKENS = 10_000
 
+/** Input-context size at which a conversation is automatically compacted.
+ *  Overridable per LLM connection (LLMProvider.compactionThresholdTokens). */
+export const DEFAULT_COMPACTION_THRESHOLD_TOKENS = 200_000
+
 // Provider list for UI components — import these instead of maintaining your own copy
 export const PROVIDERS = [
   { value: 'demo', label: 'Demo (limited messages)' },

@@ -14,7 +14,7 @@ import {
   resetNavigationNoteDedupe,
 } from './navigationContextInjector'
 import { SYSTEM_INPUT_START, SYSTEM_INPUT_END, stripPromptWrapperTags } from './toolLoopCore'
-import { compactChat } from './compactConversation'
+import { compactChat } from './compaction'
 
 export interface ScreenChatContext {
   screen: ScreenType

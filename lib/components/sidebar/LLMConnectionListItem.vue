@@ -105,6 +105,28 @@
           </form>
         </div>
 
+        <div v-else-if="item.type === 'compaction-threshold'" class="api-key-container" @click.stop>
+          <form
+            @submit.prevent
+            class="compaction-threshold-row"
+            :data-testid="`compaction-threshold-form-${item.connection.name}`"
+            :title="`Summarize and archive older messages once a conversation's input context exceeds this many tokens. Blank uses the default (${defaultCompactionThreshold.toLocaleString()}); 0 disables automatic compaction.`"
+          >
+            <span class="compaction-threshold-label">Compact at</span>
+            <input
+              type="number"
+              min="0"
+              step="10000"
+              v-model="compactionThresholdInput"
+              @input="handleCompactionThresholdInput"
+              :placeholder="`${defaultCompactionThreshold}`"
+              class="connection-customize sidebar-control-input"
+              :data-testid="`compaction-threshold-input-${item.connection.name}`"
+            />
+            <span class="compaction-threshold-label">tokens</span>
+          </form>
+        </div>
+
         <div
           v-else-if="item.type === 'toggle-save-credential'"
           class="md-token-container"
@@ -184,6 +206,7 @@ import ConnectionStatusIcon from './ConnectionStatusIcon.vue'
 import SidebarOverflowMenu from './SidebarOverflowMenu.vue'
 import type { ContextMenuItem } from '../ContextMenu.vue'
 import type { LLMProvider } from '../../llm/base'
+import { DEFAULT_COMPACTION_THRESHOLD_TOKENS } from '../../llm/consts'
 import Tooltip from '../Tooltip.vue'
 
 export interface ListItem {
@@ -198,6 +221,7 @@ export interface ListItem {
     | 'api-key'
     | 'model'
     | 'fast-model'
+    | 'compaction-threshold'
     | 'settings-group'
     | 'toggle-save-credential'
     | 'loading'
@@ -245,6 +269,7 @@ export default defineComponent({
     'updateApiKey',
     'updateModel',
     'updateFastModel',
+    'updateCompactionThreshold',
     'toggleSaveCredential',
     'deleteConnection',
     'deleteChat',
@@ -255,8 +280,11 @@ export default defineComponent({
     const showApiKey = ref<boolean>(false)
     const selectedModel = ref<string>('')
     const selectedFastModel = ref<string>('')
+    // Empty string means "unset" — the connection falls back to the default.
+    const compactionThresholdInput = ref<string>('')
     const saveCredentialStatus = ref<'idle' | 'saving' | 'saved'>('idle')
     let apiKeySaveTimeout: ReturnType<typeof setTimeout> | null = null
+    let compactionThresholdSaveTimeout: ReturnType<typeof setTimeout> | null = null
     let saveCredentialTimeout: ReturnType<typeof setTimeout> | null = null
 
     // Initialize values on mount
@@ -271,6 +299,11 @@ export default defineComponent({
 
       if (props.item.type === 'fast-model') {
         selectedFastModel.value = props.item.connection?.fastModel || ''
+      }
+
+      if (props.item.type === 'compaction-threshold') {
+        const threshold = props.item.connection?.compactionThresholdTokens
+        compactionThresholdInput.value = threshold == null ? '' : String(threshold)
       }
     })
 
@@ -302,6 +335,17 @@ export default defineComponent({
       (newFastModel) => {
         if (props.item.type === 'fast-model') {
           selectedFastModel.value = newFastModel || ''
+        }
+      },
+      { immediate: true },
+    )
+
+    // Watch for external compaction threshold changes
+    watch(
+      () => props.item.connection?.compactionThresholdTokens,
+      (threshold) => {
+        if (props.item.type === 'compaction-threshold') {
+          compactionThresholdInput.value = threshold == null ? '' : String(threshold)
         }
       },
       { immediate: true },
@@ -356,6 +400,7 @@ export default defineComponent({
           'api-key',
           'model',
           'fast-model',
+          'compaction-threshold',
           'settings-group',
           'toggle-save-credential',
           'refresh-connection',
@@ -505,6 +550,37 @@ export default defineComponent({
       updateModel(props.item.connection, selectedModel.value)
     }
 
+    // Update auto-compaction threshold
+    const updateCompactionThreshold = (connection: LLMProvider, thresholdTokens: number | null) => {
+      emit('updateCompactionThreshold', connection, thresholdTokens)
+    }
+
+    const handleCompactionThresholdInput = () => {
+      if (props.item.type !== 'compaction-threshold' || !props.item.connection) {
+        return
+      }
+
+      const raw = compactionThresholdInput.value.trim()
+      // Blank clears the override; a half-typed "-" or "1e" parses to NaN and
+      // is ignored until it becomes a real number.
+      const parsed = raw === '' ? null : Number(raw)
+      if (parsed !== null && !Number.isFinite(parsed)) {
+        return
+      }
+      const next = parsed === null ? null : Math.max(0, Math.floor(parsed))
+      if (next === (props.item.connection.compactionThresholdTokens ?? null)) {
+        return
+      }
+
+      if (compactionThresholdSaveTimeout) {
+        clearTimeout(compactionThresholdSaveTimeout)
+      }
+
+      compactionThresholdSaveTimeout = setTimeout(() => {
+        updateCompactionThreshold(props.item.connection, next)
+      }, 500)
+    }
+
     const handleFastModelChange = () => {
       if (props.item.type !== 'fast-model' || !props.item.connection) {
         return
@@ -526,6 +602,8 @@ export default defineComponent({
       apiKeyInput,
       selectedModel,
       selectedFastModel,
+      compactionThresholdInput,
+      defaultCompactionThreshold: DEFAULT_COMPACTION_THRESHOLD_TOKENS,
       isExpandable,
       getItemName,
       handleItemClick,
@@ -536,9 +614,11 @@ export default defineComponent({
       updateApiKey,
       updateModel,
       updateFastModel,
+      updateCompactionThreshold,
       handleApiKeyInput,
       handleModelChange,
       handleFastModelChange,
+      handleCompactionThresholdInput,
       toggleSaveCredential,
       handleToggleSaveCredential,
       saveCredentialStatus,
@@ -707,6 +787,24 @@ export default defineComponent({
 
 .checkbox-label {
   white-space: nowrap;
+}
+
+.compaction-threshold-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.compaction-threshold-label {
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+.compaction-threshold-row input {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .md-token-container {

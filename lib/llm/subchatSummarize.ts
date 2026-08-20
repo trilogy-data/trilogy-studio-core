@@ -15,8 +15,8 @@
  * swap is reverted in a finally so persistence sees the original.
  */
 
-import type { Chat, ChatMessage } from '../chats/chat'
-import type { LLMProvider } from './base'
+import type { Chat } from '../chats/chat'
+import type { LLMMessage, LLMProvider } from './base'
 
 export type SummarizeContext = 'completion' | 'peek'
 
@@ -68,7 +68,7 @@ export async function summarizeSubchat(
 }
 
 /** Flatten a transcript: role + content + each tool call/result, lightly truncated. */
-export function formatTranscript(messages: ChatMessage[]): string {
+export function formatTranscript(messages: LLMMessage[]): string {
   return messages
     .map((m, i) => {
       const lines: string[] = [`[${i}] ${m.role}: ${truncate(m.content || '', 800)}`]
