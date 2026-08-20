@@ -22,6 +22,12 @@ test.beforeEach(async ({ page }) => {
  * resolves to a cursor move rather than select-all, hence the triple click.
  */
 async function selectAllEditorContent(page: Page, browser: Browser) {
+  // Mobile stacks the editor and the results into tabs and flips to results
+  // when a query starts, so the editor is off-screen after the first run.
+  const editorTab = page.getByTestId('editor-tab')
+  if (await editorTab.isVisible().catch(() => false)) {
+    await editorTab.click()
+  }
   const editor = page.getByTestId('editor')
   await editor.click()
   if (browser.browserType().name() === 'webkit') {
