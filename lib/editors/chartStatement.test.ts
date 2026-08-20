@@ -156,7 +156,12 @@ describe('a chart statement config rendered by the studio chart pipeline', () =>
 
     // A config the controls would reject gets thrown away and replaced by
     // defaults, which would silently ignore what the statement asked for.
-    const helpers = new ChromaChartHelpers()
+    const helpers = new ChromaChartHelpers({
+      onDimensionClick: () => {},
+      onPointClick: () => {},
+      onBackgroundClick: () => {},
+      onDrilldownClick: () => {},
+    })
     expect(helpers.validateConfigFields({ ...resolved.config }, columns)).toBe(true)
 
     const spec: any = generateVegaSpec(data, resolved.config, columns, null)
