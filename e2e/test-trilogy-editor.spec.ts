@@ -1,3 +1,4 @@
+import type { Browser, Page } from '@playwright/test'
 import { test, expect } from './console-capture'
 import {
   drillMobileTree,
@@ -14,6 +15,27 @@ const connectionName = 'duckdb-test2'
 test.beforeEach(async ({ page }) => {
   await prepareTestPage(page)
 })
+
+/**
+ * Focus the main editor and select everything in it, so the next keystrokes
+ * replace the content. Webkit runs a macOS monaco where `ControlOrMeta+a`
+ * resolves to a cursor move rather than select-all, hence the triple click.
+ */
+async function selectAllEditorContent(page: Page, browser: Browser) {
+  // Mobile stacks the editor and the results into tabs and flips to results
+  // when a query starts, so the editor is off-screen after the first run.
+  const editorTab = page.getByTestId('editor-tab')
+  if (await editorTab.isVisible().catch(() => false)) {
+    await editorTab.click()
+  }
+  const editor = page.getByTestId('editor')
+  await editor.click()
+  if (browser.browserType().name() === 'webkit') {
+    await editor.click({ clickCount: 3 })
+  } else {
+    await editor.press('ControlOrMeta+a')
+  }
+}
 
 test('test', async ({ page, isMobile, browser }) => {
   await page.goto('#skipTips=true')
@@ -40,13 +62,7 @@ test('test', async ({ page, isMobile, browser }) => {
     await drillMobileTree(page, ['Browser Storage', connectionName])
   }
   await page.getByTestId(`editor-e-local-${localConnectionId(connectionName)}-test-one`).click()
-  const editor = page.getByTestId('editor')
-  await editor.click()
-  if (browser.browserType().name() === 'webkit') {
-    await page.getByTestId('editor').click({ clickCount: 3 })
-  } else {
-    await page.getByTestId('editor').press('ControlOrMeta+a')
-  }
+  await selectAllEditorContent(page, browser)
 
   const testOneContent = `
 auto x <- [1,2,3,4,5];
@@ -57,6 +73,23 @@ select unnest(x) as rows;
   await page.keyboard.type(testOneContent)
 
   await runEditorQueryAndExpectCount(page, 5)
+
+  // A `chart ...` statement is an explicit request for a visualization: the
+  // editor runs the layer's query AND lands on the rendered chart rather than
+  // leaving the author on the result grid.
+  await selectAllEditorContent(page, browser)
+  await page.keyboard.type(`
+auto vals <- [1,2,3,4,5];
+auto rows <- unnest(vals);
+auto doubled <- rows * 2;
+
+chart layer bar (x_axis <- rows, y_axis <- doubled);
+`)
+
+  // The layer's rows are there behind the chart...
+  await runEditorQueryAndExpectCount(page, 5)
+  // ...and the pane opened on the chart the statement declared.
+  await expect(page.locator('.vega-active canvas').first()).toBeVisible({ timeout: 30000 })
 })
 
 test('test_demo_deep_link', async ({ page }) => {

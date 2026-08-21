@@ -10,6 +10,22 @@ from io_models import (
 )
 from studio_endpoints import _generate_query_task
 
+CHART_STATEMENT_QUERY = """
+key id int;
+property id.category string;
+property id.value float;
+
+datasource facts (
+    fact_id: id,
+    category: category,
+    value: value
+)
+grain (id)
+address raw_facts;
+
+chart layer bar (x_axis <- category, y_axis <- sum(value) as total_value);
+"""
+
 
 def test_read_main(test_client: TestClient):
     response = test_client.get("/")
@@ -159,6 +175,44 @@ select unnest(x) as rows;
     assert response.status_code == 200
     # With parameterized rendering, list constants become :x placeholders in SQL
     assert ":x" in response.json()["generated_sql"]
+
+
+def test_generate_query_returns_chart_statement_payload(test_client: TestClient):
+    """A `chart ...` statement has to come back over the wire with both runnable
+    SQL and the chart the author declared, or the studio renders a blank pane."""
+    request = QueryInSchema(
+        imports=[],
+        query=CHART_STATEMENT_QUERY,
+        dialect=Dialects.DUCK_DB,
+        current_filename="test-chart",
+        full_model=ModelInSchema(name="test_parse", sources=[]),
+    )
+
+    response = test_client.post("/generate_query", json=request.model_dump(mode="json"))
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["generated_sql"]
+    chart = body["chart"]
+    assert chart["layers"][0]["chart_type"] == "bar"
+    assert chart["layers"][0]["x_fields"] == ["category"]
+    assert chart["layers"][0]["y_fields"] == ["total_value"]
+    assert [c["name"] for c in body["columns"]] == ["category", "total_value"]
+
+
+def test_generate_query_omits_chart_for_plain_select(test_client: TestClient):
+    request = QueryInSchema(
+        imports=[],
+        query="select 1 as rows;",
+        dialect=Dialects.DUCK_DB,
+        current_filename="test-one",
+        full_model=ModelInSchema(name="test_parse", sources=[]),
+    )
+
+    response = test_client.post("/generate_query", json=request.model_dump(mode="json"))
+
+    assert response.status_code == 200
+    assert response.json()["chart"] is None
 
 
 def test_generate_query_worker_serializes_errors():

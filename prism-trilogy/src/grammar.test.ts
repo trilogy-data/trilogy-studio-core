@@ -194,6 +194,26 @@ describe('keywords', () => {
     expect(typeOf('select bar -> b;', 'bar')).not.toBe('keyword')
   })
 
+  it('tokenizes chart layer roles, but only as bindings', () => {
+    const layer = 'chart layer bar (x_axis <- category, y_axis <- total);'
+    expect(typeOf(layer, 'x_axis')).toBe('keyword')
+    expect(typeOf(layer, 'y_axis')).toBe('keyword')
+    expect(typeOf('chart layer bar (x_trellis <- quarter);', 'x_trellis')).toBe('keyword')
+    // A concept that happens to be called `x_axis` is still a plain name.
+    expect(typeOf('select x_axis;', 'x_axis')).not.toBe('keyword')
+  })
+
+  it('tokenizes chart settings, including the scale value', () => {
+    expect(typeOf('chart set hide_legend layer bar (x <- a);', 'set hide_legend')).toBe('keyword')
+    expect(typeOf('chart set scale_y: log layer bar (x <- a);', 'set scale_y: log')).toBe('keyword')
+    // `log` outside that clause is the math function, not a keyword.
+    expect(typeOf('select log(x) as y;', 'log')).toBe('function')
+  })
+
+  it('tokenizes chart placements', () => {
+    expect(typeOf('chart layer bar (x <- a) place hline at 5;', 'place hline at')).toBe('keyword')
+  })
+
   it('tokenizes infix like/ilike', () => {
     expect(typeOf(`where name like '%a%';`, 'like')).toBe('keyword')
     expect(typeOf(`where name not ilike '%a%';`, 'not ilike')).toBe('keyword')

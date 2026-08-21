@@ -175,6 +175,48 @@ class QueryOutColumn(BaseModel):
     keys: list[str] | None = None
 
 
+class ChartPlacementOut(BaseModel):
+    """A `place hline|vline at <literal> [as <label>]` reference line."""
+
+    kind: str
+    value: str | int | float | bool | None = None
+    label: str | None = None
+
+
+class ChartLayerOut(BaseModel):
+    """One `layer <type> (<role> <- <expr>, ...)` of a chart statement.
+
+    Roles keep pytrilogy's names (`x_trellis`, not the studio's
+    `trellisRowField`); the client owns the translation into its own
+    ChartConfig so this stays a faithful projection of
+    ``ProcessedChartLayer``.
+    """
+
+    chart_type: str
+    generated_sql: str | None = None
+    parameters: dict[str, str | int | float | list] | None = None
+    x_fields: list[str] = Field(default_factory=list)
+    y_fields: list[str] = Field(default_factory=list)
+    color_field: str | None = None
+    size_field: str | None = None
+    group_field: str | None = None
+    x_trellis_field: str | None = None
+    y_trellis_field: str | None = None
+    geo_field: str | None = None
+    annotation_field: str | None = None
+    # display labels for roles bound with `as`, keyed by the select output name
+    field_labels: dict[str, str] = Field(default_factory=dict)
+
+
+class ChartOut(BaseModel):
+    layers: list[ChartLayerOut] = Field(default_factory=list)
+    placements: list[ChartPlacementOut] = Field(default_factory=list)
+    hide_legend: bool = False
+    show_title: bool = False
+    scale_x: str | None = None
+    scale_y: str | None = None
+
+
 class QueryOut(BaseModel):
     generated_sql: str | None
     columns: list[QueryOutColumn] | None
@@ -183,6 +225,10 @@ class QueryOut(BaseModel):
     label: str | None = None
     select_count: int | None = None
     parameters: dict[str, str | int | float | list] | None = None
+    # Present only for `chart ...` statements. `generated_sql` above is the
+    # first layer's query, so a client that ignores this field still gets a
+    # runnable result set.
+    chart: ChartOut | None = None
 
 
 class MultiQueryOutSchema(BaseModel):

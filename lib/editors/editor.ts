@@ -111,6 +111,12 @@ export default class Editor implements EditorInterface {
   changed: boolean
   deleted: boolean
   chartConfig?: ChartConfig | null
+  /** True when `chartConfig` came from a Trilogy `chart ...` statement rather
+   *  than the chart controls. In-memory only: it describes the last run, so it
+   *  is recomputed on execution rather than restored from storage. */
+  chartFromStatement: boolean
+  /** Parts of that chart statement the studio can't render. */
+  chartStatementWarnings: string[]
   completionSymbols: CompletionItem[]
   refinementSession?: EditorRefinementSession | null
   scrollPosition?: { line: number; column: number } | null
@@ -182,6 +188,8 @@ export default class Editor implements EditorInterface {
     // default to change for save
     this.changed = true
     this.deleted = false
+    this.chartFromStatement = false
+    this.chartStatementWarnings = []
     this.completionSymbols = []
     this.remoteStoreId = remoteStoreId
     this.remotePath =
@@ -259,7 +267,28 @@ export default class Editor implements EditorInterface {
 
   setChartConfig(chartConfig: ChartConfig | null) {
     this.chartConfig = chartConfig
+    this.chartFromStatement = false
+    this.chartStatementWarnings = []
     this.changed = true
+  }
+
+  /**
+   * Adopt the chart a `chart ...` statement declared. Kept distinct from
+   * `setChartConfig` so the results pane can tell an authored chart (which
+   * should be shown straight away) from one the user built with the controls.
+   */
+  setStatementChartConfig(chartConfig: ChartConfig, warnings: string[] = []) {
+    this.chartConfig = chartConfig
+    this.chartFromStatement = true
+    this.chartStatementWarnings = warnings
+    this.changed = true
+  }
+
+  /** Called when a run produced no chart statement, so a stale authored chart
+   *  doesn't keep hijacking the results pane. */
+  clearStatementChart() {
+    this.chartFromStatement = false
+    this.chartStatementWarnings = []
   }
 
   /**

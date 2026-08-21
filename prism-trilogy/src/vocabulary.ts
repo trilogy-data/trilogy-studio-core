@@ -136,7 +136,16 @@ export const CONTEXTUAL_KEYWORD_PATTERNS = [
   // chart statement: the chart types are far too generic to match standalone
   String.raw`\blayer\s+(?:line|barh|bar|point|area|headline|donut|heatmap|boxplot|treemap)\b`,
   String.raw`\bplace\s+(?:hline|vline)\s+at\b`,
-  String.raw`\bset\s+(?:hide_legend|show_title|scale_x|scale_y)\b`,
+  String.raw`\bset\s+(?:hide_legend|show_title)\b`,
+  // `set scale_y: log` -- the scale value only reads as a keyword here, and
+  // `log` is a math function everywhere else, so it has to come along.
+  String.raw`\bset\s+(?:scale_x|scale_y)\b(?:\s*:\s*(?:linear|log|sqrt)\b)?`,
+  // Chart layer roles, gated on the binding arrow that must follow them. Only
+  // the roles no one would name a concept are here: `color`, `size`, `group`,
+  // `geo` and `annotation` are ordinary enough that matching them would light
+  // up the left-hand side of `auto color <- '#fff';`, which looks identical
+  // once the purpose word in front of it has been consumed.
+  String.raw`\b(?:x_axis|y_axis|x_trellis|y_trellis)\b(?=\s*<-)`,
 ] as const
 
 /** PURPOSE / PROPERTY / AUTO / parameter declarations -- what introduces a name. */

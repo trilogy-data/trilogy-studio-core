@@ -1,6 +1,6 @@
 {
   "name": "@trilogy-data/prism-trilogy",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Prism syntax highlighting for the Trilogy language, plus the raw language vocabulary.",
   "private": false,
   "publishConfig": {

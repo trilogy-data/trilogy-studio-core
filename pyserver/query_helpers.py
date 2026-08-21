@@ -20,8 +20,11 @@ from trilogy.authoring import (
 from trilogy.constants import Parsing
 from trilogy.core.internal import DEFAULT_CONCEPTS
 from trilogy.core.models.core import ListWrapper, TraitDataType
+from trilogy.core.statements.author import ChartStatement
 from trilogy.core.statements.execute import (
     PROCESSED_STATEMENT_TYPES,
+    ProcessedChartLayer,
+    ProcessedChartStatement,
     ProcessedCopyStatement,
     ProcessedQuery,
     ProcessedQueryPersist,
@@ -43,6 +46,9 @@ from env_helpers import (
     resolve_import_path,
 )
 from io_models import (
+    ChartLayerOut,
+    ChartOut,
+    ChartPlacementOut,
     MultiQueryInSchema,
     QueryInSchema,
     QueryOut,
@@ -249,10 +255,15 @@ def generate_single_query(
     parse_time = time.time() - parse_start
     default_return: list[QueryOutColumn] = []
     default_values: list[dict] | None = None
+    # A chart statement counts once no matter how many layers it holds: it is
+    # one statement, and consumers use this to reject multi-select input.
     select_count = sum(
         1
         for s in parsed
-        if isinstance(s, (SelectStatement, MultiSelectStatement, PersistStatement))
+        if isinstance(
+            s,
+            (SelectStatement, MultiSelectStatement, PersistStatement, ChartStatement),
+        )
     )
     # Comments are parsed as statements; a query ending in (or consisting only
     # of) comments should return results from the last real statement rather
@@ -329,7 +340,10 @@ def generate_single_query(
             validate_results.as_dict() if validate_results else None,
             select_count,
         )
-    if not isinstance(final, (SelectStatement, MultiSelectStatement, PersistStatement)):
+    if not isinstance(
+        final,
+        (SelectStatement, MultiSelectStatement, PersistStatement, ChartStatement),
+    ):
         columns: list[QueryOutColumn] = []
         if enable_performance_logging:
             total_time = time.time() - start_time
@@ -338,7 +352,27 @@ def generate_single_query(
                 f"Parse: {parse_time:.4f}s | "
             )
         return None, columns, None, select_count
-    final_select = final.select if isinstance(final, PersistStatement) else final
+
+    # A chart statement is a bundle of selects, one per layer. Everything below
+    # - column projection, extra filters, concept cleanup - runs off those layer
+    # selects, with the first layer standing in for the result grid, since the
+    # first layer's SQL is what `query_to_output` hands back as `generated_sql`.
+    final_select: SelectStatement | MultiSelectStatement
+    if isinstance(final, ChartStatement):
+        layer_selects = [
+            layer.select for layer in final.layers if layer.select is not None
+        ]
+        if not layer_selects:
+            return None, [], None, select_count
+        final_select = layer_selects[0]
+        candidates = layer_selects
+    else:
+        final_select = final.select if isinstance(final, PersistStatement) else final
+        candidates = (
+            final_select.selects
+            if isinstance(final_select, MultiSelectStatement)
+            else [final_select]
+        )
     # Process columns
     col_start = time.time()
     columns = [
@@ -356,12 +390,6 @@ def generate_single_query(
 
     # Set limits and process filters
     limit_filter_start = time.time()
-
-    candidates = (
-        final_select.selects
-        if isinstance(final_select, MultiSelectStatement)
-        else [final_select]
-    )
 
     # `where_clause` is derived (the AND fold of `where_clauses`) and memoized
     # on the stage list's identity, so extra filters are added by replacing the
@@ -394,12 +422,18 @@ def generate_single_query(
             f"Generation: {gen_time:.4f}s ({safe_percentage(gen_time, total_time):.1f}%)"
         )
     if cleanup_concepts:
-        for k in final_select.locally_derived:
-            perf_logger.info(f"Cleaning up concept: {k}")
-            env.remove_concept(k)
-            if k in pre_concepts:
-                env.add_concept(pre_concepts[k], force=True)
-                # env.concepts[k] = pre_concepts[k]
+        # A chart derives concepts in every layer select (each `<- expr as name`
+        # binding), so all of them have to be swept, not just the first.
+        cleanup_targets: list[SelectStatement | MultiSelectStatement] = (
+            list(candidates) if isinstance(final, ChartStatement) else [final_select]
+        )
+        for cleanup_target in cleanup_targets:
+            for k in cleanup_target.locally_derived:
+                perf_logger.info(f"Cleaning up concept: {k}")
+                env.remove_concept(k)
+                if k in pre_concepts:
+                    env.add_concept(pre_concepts[k], force=True)
+                    # env.concepts[k] = pre_concepts[k]
     return output_statement, columns, default_values, select_count
 
 
@@ -568,6 +602,88 @@ def generate_multi_query_core(
     return all
 
 
+def _serialize_bound_params(
+    bound_params: dict | None,
+) -> dict[str, str | int | float | list] | None:
+    """Bound SQL params, with ListWrapper flattened to a plain list."""
+    if not bound_params:
+        return None
+    return {
+        k: list(v) if isinstance(v, ListWrapper) else v
+        for k, v in bound_params.items()
+        if isinstance(v, (str, int, float, ListWrapper))
+    } or None
+
+
+def _chart_layer_to_output(
+    layer: ProcessedChartLayer, dialect: BaseDialect
+) -> ChartLayerOut:
+    sql: str | None = None
+    parameters: dict[str, str | int | float | list] | None = None
+    if layer.query is not None:
+        sql, bound_params = dialect.compile_statement_with_params(layer.query)
+        parameters = _serialize_bound_params(bound_params)
+    return ChartLayerOut(
+        chart_type=layer.layer_type.value,
+        generated_sql=sql,
+        parameters=parameters,
+        x_fields=list(layer.x_fields),
+        y_fields=list(layer.y_fields),
+        color_field=layer.color_field,
+        size_field=layer.size_field,
+        group_field=layer.group_field,
+        x_trellis_field=layer.x_trellis_field,
+        y_trellis_field=layer.y_trellis_field,
+        geo_field=layer.geo_field,
+        annotation_field=layer.annotation_field,
+        field_labels=dict(layer.field_labels),
+    )
+
+
+def chart_to_output(
+    target: ProcessedChartStatement,
+    columns: list[QueryOutColumn],
+    label: str | None,
+    dialect: BaseDialect,
+    select_count: int | None = None,
+) -> QueryOut:
+    """Project a chart statement onto QueryOut.
+
+    Each layer carries its own SQL, but `generated_sql` is the first layer's
+    so a client that knows nothing about charts still runs something useful
+    and renders the rows as a table.
+    """
+    chart = ChartOut(
+        layers=[_chart_layer_to_output(layer, dialect) for layer in target.layers],
+        placements=[
+            ChartPlacementOut(
+                kind=placement.kind.value,
+                value=(
+                    placement.value
+                    if isinstance(placement.value, (str, int, float, bool))
+                    or placement.value is None
+                    else str(placement.value)
+                ),
+                label=placement.label,
+            )
+            for placement in target.placements
+        ],
+        hide_legend=target.hide_legend,
+        show_title=target.show_title,
+        scale_x=target.scale_x,
+        scale_y=target.scale_y,
+    )
+    primary = chart.layers[0] if chart.layers else None
+    return QueryOut(
+        generated_sql=primary.generated_sql if primary else None,
+        columns=columns,
+        label=label,
+        select_count=select_count,
+        parameters=primary.parameters if primary else None,
+        chart=chart,
+    )
+
+
 def query_to_output(
     target,
     columns,
@@ -596,6 +712,8 @@ def query_to_output(
             label=label,
             select_count=select_count,
         )
+    elif isinstance(target, ProcessedChartStatement):
+        return chart_to_output(target, columns, label, dialect, select_count)
     elif (
         isinstance(target, ProcessedShowStatement)
         and DEFAULT_CONCEPTS["query_text"].address in target.output_columns
@@ -613,13 +731,7 @@ def query_to_output(
         sql, bound_params = dialect.compile_statement_with_params(target)
         compile_time = time.time() - compile_start
         # Serialize params: scalars pass through, ListWrapper exposes .data as a plain list
-        serializable_params: dict[str, str | int | float | list] | None = None
-        if bound_params:
-            serializable_params = {
-                k: list(v) if isinstance(v, ListWrapper) else v
-                for k, v in bound_params.items()
-                if isinstance(v, (str, int, float, ListWrapper))
-            } or None
+        serializable_params = _serialize_bound_params(bound_params)
 
         output = QueryOut(
             generated_sql=sql,

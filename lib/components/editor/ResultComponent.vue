@@ -26,6 +26,8 @@
         :containerHeight="containerHeight"
         :type="editorData.type"
         :chartConfig="editorData.chartConfig"
+        :chartFromStatement="editorData.chartFromStatement"
+        :chartWarnings="editorData.chartStatementWarnings"
         :error="editorData.error || undefined"
         :symbols="editorData.completionSymbols"
         @config-change="(config: ChartConfig) => editorData.setChartConfig(config)"

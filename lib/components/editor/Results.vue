@@ -61,6 +61,10 @@
       />
 
       <div v-else-if="displayTab === 'visualize'" class="sql-view">
+        <div v-if="chartWarnings && chartWarnings.length" class="chart-statement-warnings">
+          <i class="mdi mdi-alert-circle-outline" aria-hidden="true"></i>
+          <span v-for="warning in chartWarnings" :key="warning">{{ warning }}</span>
+        </div>
         <vega-lite-chart
           :data="results.data"
           :columns="results.headers"
@@ -147,6 +151,16 @@ export default {
       type: Object as PropType<ChartConfig | null>,
       required: false,
     },
+    /** The chart config came from a Trilogy `chart ...` statement, so the
+     *  author asked for a chart -- open on it rather than the result grid. */
+    chartFromStatement: {
+      type: Boolean,
+      default: false,
+    },
+    chartWarnings: {
+      type: Array as PropType<string[]>,
+      required: false,
+    },
     error: {
       type: String,
       required: false,
@@ -169,10 +183,21 @@ export default {
     },
   },
   emits: ['config-change', 'drilldown-click', 'refresh-click'],
+  watch: {
+    // Running a chart statement is an explicit request for a chart, so land on
+    // it. Only on the transition into that state -- re-running the same chart
+    // leaves whichever tab the user has since chosen alone.
+    chartFromStatement(isStatementChart: boolean) {
+      if (isStatementChart) {
+        this.switchToVisualizeTab()
+      }
+    },
+  },
   data() {
     return {
-      activeTab:
-        this.defaultTab || getDefaultValueFromHash(URL_HASH_KEYS.ACTIVE_EDITOR_TAB, 'results'),
+      activeTab: this.chartFromStatement
+        ? 'visualize'
+        : this.defaultTab || getDefaultValueFromHash(URL_HASH_KEYS.ACTIVE_EDITOR_TAB, 'results'),
       activeDrilldown: null as Drilldown | null,
       TABS_HEIGHT: 26,
     }
@@ -264,6 +289,17 @@ export default {
 </script>
 
 <style scoped>
+.chart-statement-warnings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--text-faint, #888);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
 .results-container {
   display: flex;
   flex-direction: column;

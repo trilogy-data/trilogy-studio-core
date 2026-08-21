@@ -257,3 +257,127 @@ address regions;
     assert [c.name for c in columns] == ["id", "name"]
     sql = DuckDBDialect().compile_statement(target)
     assert "select" in sql.lower()
+
+
+CHART_MODEL = """
+key id int;
+property id.category string;
+property id.state string;
+property id.value float;
+
+datasource facts (
+    fact_id: id,
+    category: category,
+    state: state,
+    value: value
+)
+grain (id)
+address raw_facts;
+"""
+
+
+def _chart_query(query: str, extra_filters: list[str] | None = None) -> QueryInSchema:
+    return QueryInSchema.model_validate(
+        {
+            "imports": [{"name": "facts", "alias": None}],
+            "query": query,
+            "dialect": "duckdb",
+            "full_model": {
+                "name": "",
+                "sources": [{"alias": "facts", "contents": CHART_MODEL}],
+            },
+            "extra_filters": extra_filters,
+        }
+    )
+
+
+def test_chart_statement_returns_layer_sql_and_roles():
+    dialect = DuckDBDialect()
+    query = _chart_query(
+        "chart layer bar (x_axis <- category, y_axis <- sum(value) as total_value)"
+        " order by total_value desc limit 10;"
+    )
+
+    target, columns, results, select_count = generate_query_core(query, dialect)
+    out = query_to_output(
+        target, columns, results, "default", dialect, False, select_count
+    )
+
+    # One statement, so one select as far as callers policing multi-select input
+    # are concerned - regardless of how many layers it holds.
+    assert select_count == 1
+    assert out.chart is not None
+    assert [c.name for c in out.columns or []] == ["category", "total_value"]
+
+    layer = out.chart.layers[0]
+    assert layer.chart_type == "bar"
+    assert layer.x_fields == ["category"]
+    assert layer.y_fields == ["total_value"]
+    assert layer.field_labels == {"total_value": "total_value"}
+    # The chart's SQL is also the top-level SQL, so a chart-unaware client
+    # still gets a runnable query back.
+    assert layer.generated_sql == out.generated_sql
+    assert "order by" in (out.generated_sql or "").lower()
+
+
+def test_chart_statement_carries_settings_and_placements():
+    dialect = DuckDBDialect()
+    query = _chart_query(
+        "chart set hide_legend set scale_y: log"
+        " layer line (x_axis <- category, y_axis <- sum(value) as tv, color <- state)"
+        " place hline at 5 as target;"
+    )
+
+    target, columns, results, select_count = generate_query_core(query, dialect)
+    out = query_to_output(
+        target, columns, results, "default", dialect, False, select_count
+    )
+
+    assert out.chart is not None
+    assert out.chart.hide_legend is True
+    assert out.chart.scale_y == "log"
+    assert out.chart.layers[0].color_field == "state"
+    placement = out.chart.placements[0]
+    assert (placement.kind, placement.value, placement.label) == ("hline", 5, "target")
+
+
+def test_chart_statement_applies_extra_filters_to_layer_selects():
+    """Cross-filters have to reach the layer select, or a filtered dashboard
+    would silently render unfiltered chart data."""
+    dialect = DuckDBDialect()
+    query = _chart_query(
+        "chart layer bar (x_axis <- category, y_axis <- total_value)"
+        " from select category, sum(value) as total_value;",
+        extra_filters=["state = 'CA'"],
+    )
+
+    target, columns, results, select_count = generate_query_core(query, dialect)
+    out = query_to_output(
+        target, columns, results, "default", dialect, False, select_count
+    )
+
+    assert out.chart is not None
+    assert "'CA'" in (out.chart.layers[0].generated_sql or "")
+
+
+def test_multi_layer_chart_reports_every_layer():
+    dialect = DuckDBDialect()
+    query = _chart_query(
+        "chart layer bar (x_axis <- category, y_axis <- sum(value) as total_value)"
+        " layer line (x_axis <- category, y_axis <- avg(value) as avg_value);"
+    )
+
+    target, columns, results, select_count = generate_query_core(query, dialect)
+    out = query_to_output(
+        target, columns, results, "default", dialect, False, select_count
+    )
+
+    assert out.chart is not None
+    assert [layer.chart_type for layer in out.chart.layers] == ["bar", "line"]
+    assert [layer.y_fields for layer in out.chart.layers] == [
+        ["total_value"],
+        ["avg_value"],
+    ]
+    # Every layer carries its own SQL even though only the first is promoted
+    # to the top-level `generated_sql`.
+    assert all(layer.generated_sql for layer in out.chart.layers)
