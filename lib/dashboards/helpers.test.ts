@@ -10,6 +10,7 @@ import {
   getColumnHasTrait,
   columHasTraitEnding,
   getGeoTraitType,
+  validateChartConfigForData,
 } from './helpers'
 import { type Row, type ResultColumn } from '../editors/results'
 import { ColumnType } from '../editors/results'
@@ -888,5 +889,65 @@ describe('Chart Utils', () => {
       const defaults = determineDefaultConfig(sampleData, numericOnlyColumns, 'geo-map')
       expect(defaults.chartType).toBe('geo-map')
     })
+  })
+})
+
+describe('validateChartConfigForData with layers', () => {
+  const columns = new Map<string, ResultColumn>([
+    ['category', { name: 'category', type: ColumnType.STRING, traits: [] }],
+    ['total', { name: 'total', type: ColumnType.NUMBER, traits: [] }],
+    ['average', { name: 'average', type: ColumnType.NUMBER, traits: [] }],
+  ])
+  const data: Row[] = [
+    { category: 'a', total: 10, average: 4 },
+    { category: 'b', total: 20, average: 6 },
+  ]
+
+  const layered = () => ({
+    chartType: 'bar' as const,
+    layers: [
+      { chartType: 'bar' as const, xField: 'category', yField: 'total' },
+      { chartType: 'line' as const, xField: 'category', yField: 'average' },
+    ],
+  })
+
+  it('validates a well-formed layered config without flattening it', () => {
+    const result = validateChartConfigForData(data, columns, layered())
+
+    expect(result.valid).toBe(true)
+    // Callers write suggestedConfig straight back to the store, so it must
+    // keep the layers rather than collapse to a single-layer default.
+    expect((result.suggestedConfig as any).layers).toHaveLength(2)
+  })
+
+  it('reports which layer references a missing column', () => {
+    const config = layered()
+    config.layers[1].yField = 'not_a_column'
+
+    const result = validateChartConfigForData(data, columns, config)
+
+    expect(result.valid).toBe(false)
+    expect(result.fieldErrors.join(' ')).toContain('Layer 2')
+    expect((result.suggestedConfig as any).layers).toHaveLength(2)
+  })
+
+  it('rejects a chart type that cannot be a layer', () => {
+    const config = layered()
+    ;(config.layers[1] as any).chartType = 'headline'
+
+    const result = validateChartConfigForData(data, columns, config)
+
+    expect(result.valid).toBe(false)
+    expect(result.fieldErrors.join(' ')).toContain('cannot be used as a layer')
+  })
+
+  it('rejects trellis combined with layers', () => {
+    const result = validateChartConfigForData(data, columns, {
+      ...layered(),
+      trellisField: 'category',
+    })
+
+    expect(result.valid).toBe(false)
+    expect(result.fieldErrors.join(' ')).toContain('Trellis roles cannot be combined')
   })
 })

@@ -156,4 +156,50 @@ describe('ChartControlsManager', () => {
       expect(manager.internalConfig.value.chartType).toBeDefined()
     })
   })
+
+  describe('layered configs', () => {
+    const layeredConfig = (): ChartConfig => ({
+      chartType: 'bar',
+      layers: [
+        { chartType: 'bar', xField: 'category', yField: 'revenue' },
+        { chartType: 'line', xField: 'category', yField: 'profit' },
+      ],
+    })
+
+    it('takes a layered config verbatim instead of merging single-chart defaults', () => {
+      manager.initializeConfig(testData, testColumns, layeredConfig())
+
+      expect(manager.internalConfig.value.layers).toHaveLength(2)
+      // Root field bindings are meaningless on a container and must not be
+      // backfilled into the config that gets persisted.
+      expect(manager.internalConfig.value.xField).toBeUndefined()
+      expect(manager.internalConfig.value.yField).toBeUndefined()
+    })
+
+    it('does not flatten a layered config on validation', () => {
+      const initial = layeredConfig()
+      manager.initializeConfig(testData, testColumns, initial)
+
+      const valid = manager.validateAndResetConfig(
+        testData,
+        testColumns,
+        (config) => configChanges.push(config),
+        initial,
+      )
+
+      expect(valid).toBe(true)
+      expect(manager.internalConfig.value.layers).toHaveLength(2)
+      // A reset would have fired onChartConfigChange with a flat config and
+      // persisted the flattened result.
+      expect(configChanges).toHaveLength(0)
+    })
+
+    it('reports invalid when a layer references a missing column', () => {
+      const initial = layeredConfig()
+      initial.layers![1].yField = 'not_a_column'
+      manager.initializeConfig(testData, testColumns, initial)
+
+      expect(manager.validateAndResetConfig(testData, testColumns, undefined, initial)).toBe(false)
+    })
+  })
 })

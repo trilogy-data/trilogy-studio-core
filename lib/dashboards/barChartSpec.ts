@@ -100,30 +100,9 @@ export const createBarChartSpec = (
     },
   }
 
-  if (!config.yField2) {
-    return barLayer
-  }
-
-  const secondaryLineLayer = {
-    mark: {
-      type: 'line',
-      point: true,
-      color: currentTheme === 'light' ? '#1D4ED8' : '#93C5FD',
-      strokeWidth: 2,
-    },
-    encoding: {
-      x: buildXEncoding(labelAngle),
-      y: createFieldEncoding(config.yField2, columns, {
-        axis: {
-          ...getFormatHint(config.yField2, columns),
-          orient: 'right',
-        },
-      }),
-      tooltip: tooltipFields,
-    },
-  }
-
-  return {
-    layer: [barLayer, secondaryLineLayer],
-  }
+  // `yField2` no longer branches here: `normalizeChartConfig` expands it into a
+  // real second layer before this builder is called, so a bar chart is always
+  // exactly one mark and the dual-axis case goes through the generic layering
+  // path like any other multi-layer chart.
+  return barLayer
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { DateTime } from 'luxon'
-import { Results, ColumnType } from './results'
+import { Results, ColumnType, migrateChartConfig } from './results'
 import type { ResultColumn } from './results'
 
 describe('Results serialization round-trip', () => {
@@ -58,5 +58,28 @@ describe('Results serialization round-trip', () => {
     const row = restored.data[0] as Record<string, any>
     expect(DateTime.isDateTime(row.ts)).toBe(true)
     expect(row.ts.toISO()).toBe('2024-06-01T00:00:00.000Z')
+  })
+})
+
+describe('migrateChartConfig with layers', () => {
+  it('migrates deprecated chart types inside sub-layers', () => {
+    const migrated = migrateChartConfig({
+      chartType: 'bar',
+      layers: [
+        { chartType: 'bar', xField: 'a', yField: 'b' },
+        { chartType: 'usa-map' as any, geoField: 'state' },
+      ],
+    })
+
+    expect(migrated?.layers?.[1].chartType).toBe('geo-map')
+    expect(migrated?.layers?.[0].chartType).toBe('bar')
+  })
+
+  it('returns the same object when nothing needs migrating', () => {
+    const config = {
+      chartType: 'bar' as const,
+      layers: [{ chartType: 'line' as const, xField: 'a', yField: 'b' }],
+    }
+    expect(migrateChartConfig(config)).toBe(config)
   })
 })

@@ -21,6 +21,15 @@ import { createBeeSwarmSpec } from './beeSwarmSpec'
 import { TRELLIS_ELIGIBLE, NO_AXES_CHARTS } from './constants'
 import { toJsonSafeRows, toJsonSafeValue } from '../utility/jsonSerialization'
 
+import {
+  normalizeChartConfig,
+  createLayerMarkSpec,
+  createPlacementLayers,
+  resolveLayerYScale,
+  layerSeriesLabel,
+  deriveChartTitle,
+} from './layerSpec'
+
 const generateTooltipFields = (config: ChartConfig, columns: Map<string, ResultColumn>): any[] => {
   const fields: any[] = []
 
@@ -102,7 +111,7 @@ const createBoxplotSpec = (
 import { compile } from 'vega-lite'
 export const generateVegaSpec = (
   data: readonly Row[] | null,
-  config: ChartConfig,
+  inputConfig: ChartConfig,
   columns: Map<string, ResultColumn>,
   chartSelection: Object[] | null,
   isMobile: boolean = false,
@@ -111,6 +120,24 @@ export const generateVegaSpec = (
   containerHeight: number = 400,
   containerWidth: number = 600,
 ) => {
+  // A config with sub-layers renders as a Vega-Lite layer array; an ordinary
+  // config resolves to exactly one layer and takes the path it always has.
+  // `config` below is layer 0 -- the interactive layer -- which for a
+  // single-layer chart is the input config itself.
+  const { root, layers } = normalizeChartConfig(inputConfig)
+  const config = layers[0]
+  const isLayered = layers.length > 1 || Boolean(root.placements?.length)
+
+  // Vega-Lite forbids facet channels inside a layered spec. Surface that rather
+  // than silently dropping a layer, mirroring pytrilogy's own renderer.
+  if (isLayered && (root.trellisField || root.trellisRowField)) {
+    throw new Error('Trellis roles cannot be combined with multiple layers or reference lines.')
+  }
+
+  // A series legend names the layers, but only when no layer drives colour from
+  // a field of its own -- two colour scales in one spec produce two legends.
+  const useSeriesLegend = layers.length > 1 && !layers.some((layer) => layer.colorField)
+
   let intChart: { [key: string]: string | number | Array<any> }[] = chartSelection
     ? (chartSelection.map((x) => toJsonSafeValue(toRaw(x))) as {
         [key: string]: string | number | Array<any>
@@ -190,20 +217,26 @@ export const generateVegaSpec = (
 
   // Set up color encoding
   let encoding: any = {}
-  encoding.color = createColorEncoding(
-    config,
-    !['heatmap'].includes(config.chartType) ? config.colorField : undefined,
-    columns,
-    isMobile,
-    currentTheme,
-    config.hideLegend,
-    localData,
-  )
+  encoding.color = useSeriesLegend
+    ? {
+        datum: layerSeriesLabel(config, columns, 0),
+        type: 'nominal',
+        ...(root.hideLegend ? { legend: null } : { legend: { title: null } }),
+      }
+    : createColorEncoding(
+        config,
+        !['heatmap'].includes(config.chartType) ? config.colorField : undefined,
+        columns,
+        isMobile,
+        currentTheme,
+        config.hideLegend,
+        localData,
+      )
 
   const tooltipFields = generateTooltipFields(config, columns)
 
   // Generate chart specification based on chart type
-  let chartSpec = {}
+  let chartSpec: any = {}
 
   switch (config.chartType) {
     case 'bar':
@@ -321,6 +354,46 @@ export const generateVegaSpec = (
       break
   }
 
+  // Stitch the remaining layers on top of layer 0. Layer 0 keeps its full
+  // per-type builder -- params, brush scaffolding and all -- so every existing
+  // interaction keeps working; layers 1..n are plain marks with suffixed param
+  // names and no selections of their own.
+  if (isLayered) {
+    const extraLayers: any[] = []
+
+    for (let i = 1; i < layers.length; i++) {
+      const layer = layers[i]
+      const layerSpec = createLayerMarkSpec(
+        layer,
+        columns,
+        generateTooltipFields(layer, columns),
+        localData,
+        {
+          layerIndex: i,
+          currentTheme,
+          isMobile,
+          seriesLabel: useSeriesLegend ? layerSeriesLabel(layer, columns, i) : undefined,
+          hideLegend: root.hideLegend,
+          scaleX: root.scaleX,
+          scaleY: root.scaleY,
+        },
+      )
+      const annotation = layerSpec.__annotationLayer
+      delete layerSpec.__annotationLayer
+      extraLayers.push(layerSpec)
+      if (annotation) extraLayers.push(annotation)
+    }
+
+    for (const placement of root.placements || []) {
+      extraLayers.push(...createPlacementLayers(placement, currentTheme))
+    }
+
+    // `chartSpec` is layer 0. If its builder already produced a layer array,
+    // keep it as one nested entry rather than flattening -- its sub-layers are
+    // a base/brush pair that must stay grouped.
+    chartSpec = { layer: [chartSpec, ...extraLayers] }
+  }
+
   // Apply chart spec to main spec
   const hasTrellis =
     (config.trellisField || config.trellisRowField) && TRELLIS_ELIGIBLE.includes(config.chartType)
@@ -330,7 +403,12 @@ export const generateVegaSpec = (
     spec = { ...spec, ...chartSpec }
   }
 
-  if (config.yField2 && !config.linkY2) {
+  if (isLayered) {
+    const yResolve = resolveLayerYScale(root, layers, columns)
+    if (yResolve === 'independent') {
+      spec.resolve = { ...spec.resolve, scale: { ...spec.resolve?.scale, y: 'independent' } }
+    }
+  } else if (config.yField2 && !config.linkY2) {
     spec.resolve = {
       scale: {
         y: 'independent',
@@ -347,12 +425,19 @@ export const generateVegaSpec = (
       stroke: null,
     },
   }
-  if (config.showTitle && title) {
-    spec.title = {
-      text: title,
-      anchor: 'start',
-      offset: 12,
-      color: currentTheme === 'dark' ? '#FFFFFF' : '#000000',
+  // `showTitle` means "show a title", not "show the title someone handed me":
+  // an explicit one wins, and otherwise we derive it from the chart's own
+  // fields. Without this, `set show_title` on a Trilogy chart statement did
+  // nothing in the editor, which never supplies a `chartTitle`.
+  if (root.showTitle || config.showTitle) {
+    const resolvedTitle = title || deriveChartTitle(layers, columns)
+    if (resolvedTitle) {
+      spec.title = {
+        text: resolvedTitle,
+        anchor: 'start',
+        offset: 12,
+        color: currentTheme === 'dark' ? '#FFFFFF' : '#000000',
+      }
     }
   }
 
@@ -415,8 +500,10 @@ export const generateVegaSpec = (
     }
   }
 
-  // Compile point charts to Vega after faceting is applied
-  if (config.chartType === 'point') {
+  // Compile point charts to Vega after faceting is applied. In a layered spec
+  // this is a property of any layer being a point layer, and the compile has to
+  // happen once at the top level rather than per layer.
+  if (layers.some((layer) => layer.chartType === 'point')) {
     const customLabelTransform = {
       type: 'label',
       anchor: ['right', 'top', 'bottom', 'left'],

@@ -77,6 +77,7 @@
           <i class="mdi mdi-undo icon"></i>
         </button>
         <button
+          v-if="!isLayeredChart"
           @click="controlsManager.toggleControls"
           class="control-btn"
           :class="{ active: controlsManager.showingControls.value }"
@@ -108,6 +109,7 @@ import {
 } from 'vue'
 import type { PropType } from 'vue'
 import type { ResultColumn, Row, ChartConfig } from '../editors/results'
+import { isLayeredConfig } from '../editors/results'
 import Tooltip from './Tooltip.vue'
 import ChartControlPanel from './ChartControlPanel.vue'
 import type { UserSettingsStoreType } from '../stores/userSettingsStore'
@@ -353,6 +355,12 @@ export default defineComponent({
       )
     }
 
+    // Layered charts are authored as a whole -- by a Trilogy `chart` statement
+    // or an agent -- and the controls panel edits a single flat config, so it
+    // has nothing coherent to offer here. Hide it rather than let it overwrite
+    // the layers.
+    const isLayeredChart = computed(() => isLayeredConfig(controlsManager.internalConfig.value))
+
     const filteredColumnsInternal = (
       type:
         'numeric' | 'categorical' | 'temporal' | 'latitude' | 'longitude' | 'geographic' | 'all',
@@ -485,6 +493,7 @@ export default defineComponent({
       controlsManager,
       renderChart,
       filteredColumnsInternal,
+      isLayeredChart,
       updateConfig,
       openInVegaEditor,
       downloadChart,
