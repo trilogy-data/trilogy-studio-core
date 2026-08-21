@@ -10,7 +10,14 @@
       :class="{ 'with-bottom-controls': isShortContainer && showControls }"
     >
       <div ref="chartContentArea" class="chart-content-area">
-        <div class="vega-swap-container" v-show="!controlsManager.showingControls.value">
+        <div v-if="specError" class="chart-spec-error" data-testid="chart-spec-error">
+          <i class="mdi mdi-alert-circle-outline" aria-hidden="true"></i>
+          <span>{{ specError }}</span>
+        </div>
+        <div
+          class="vega-swap-container"
+          v-show="!controlsManager.showingControls.value && !specError"
+        >
           <div
             ref="vegaContainer1"
             class="vega-container"
@@ -246,6 +253,17 @@ export default defineComponent({
       scheduleRender(true)
     }, 300)
 
+    /**
+     * Set when the config describes a chart that cannot be built -- a trellis
+     * combined with layers, or a chart type that can't be a Vega-Lite layer.
+     *
+     * These are authoring mistakes, not bugs: pytrilogy accepts both at parse
+     * time and only its own renderer rejects them, so the statement resolves
+     * fine and the failure surfaces here. Without this the throw escapes into a
+     * `nextTick` callback and the user gets a blank chart plus a console error.
+     */
+    const specError = ref<string | null>(null)
+
     // Generate Vega-Lite spec based on current configuration
     const generateVegaSpecInternal = () => {
       const effectiveHeight =
@@ -267,11 +285,26 @@ export default defineComponent({
       )
     }
 
+    /** `generateVegaSpecInternal`, with an unbuildable chart turned into a
+     *  message instead of an uncaught throw. Returns null when it fails. */
+    const safeGenerateVegaSpec = (): any | null => {
+      try {
+        const spec = generateVegaSpecInternal()
+        specError.value = null
+        return spec
+      } catch (error) {
+        specError.value = error instanceof Error ? error.message : String(error)
+        console.error('Failed to build chart spec:', error)
+        return null
+      }
+    }
+
     // Main render function wrapper
     const renderChart = (force: boolean = false) => {
       if (controlsManager.showingControls.value) return
 
-      const spec = generateVegaSpecInternal()
+      const spec = safeGenerateVegaSpec()
+      if (!spec) return
       return renderManager.renderChart(
         vegaContainer1.value,
         vegaContainer2.value,
@@ -350,7 +383,8 @@ export default defineComponent({
     }
 
     const openInVegaEditor = () => {
-      const spec = generateVegaSpecInternal()
+      const spec = safeGenerateVegaSpec()
+      if (!spec) return
       operationsManager.openInVegaEditor(spec)
     }
 
@@ -522,6 +556,7 @@ export default defineComponent({
       renderChart,
       filteredColumnsInternal,
       isLayeredChart,
+      specError,
       updateConfig,
       openInVegaEditor,
       downloadChart,
@@ -535,6 +570,26 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.chart-spec-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  margin: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--error-color, #b91c1c);
+  background: var(--error-bg, rgba(185, 28, 28, 0.08));
+  border: 1px solid var(--error-color, #b91c1c);
+  border-radius: 4px;
+}
+
+.chart-spec-error i {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .overflow-hidden {
   overflow-y: hidden;
 }
