@@ -90,6 +90,31 @@ chart layer bar (x_axis <- rows, y_axis <- doubled);
   await runEditorQueryAndExpectCount(page, 5)
   // ...and the pane opened on the chart the statement declared.
   await expect(page.locator('.vega-active canvas').first()).toBeVisible({ timeout: 30000 })
+
+  // A multi-layer statement renders every layer. Each one compiles to its own
+  // SELECT over its own grain, so this exercises the whole chain: per-layer
+  // columns on the wire, one execution per layer, and a Vega-Lite `layer` array
+  // with per-layer data.
+  await selectAllEditorContent(page, browser)
+  await page.keyboard.type(`
+auto vals <- [1,2,3,4,5];
+auto rows <- unnest(vals);
+auto doubled <- rows * 2;
+auto halved <- rows / 2;
+
+chart
+  set show_title
+  layer bar  (x_axis <- rows, y_axis <- doubled)
+  layer line (x_axis <- rows, y_axis <- halved)
+  place hline at 4 as target;
+`)
+
+  await runEditorQueryAndExpectCount(page, 5)
+  await expect(page.locator('.vega-active canvas').first()).toBeVisible({ timeout: 30000 })
+  // Layering is not an error path: the warnings strip that used to explain the
+  // dropped layers is gone, and the spec built cleanly.
+  await expect(page.locator('.chart-statement-warnings')).toHaveCount(0)
+  await expect(page.getByTestId('chart-spec-error')).toHaveCount(0)
 })
 
 test('test_demo_deep_link', async ({ page }) => {
