@@ -60,5 +60,14 @@ describe('Chat', () => {
       expect(chat.activeArtifactIndex).toBe(-1)
       expect(chat.lastContextTokens).toBeUndefined()
     })
+
+    it('resets the title to a placeholder so it is auto-named again', () => {
+      const chat = new Chat({ name: 'Quarterly Revenue Deep Dive' })
+      chat.addMessage({ role: 'user', content: 'hello' })
+
+      chat.clearMessages()
+
+      expect(chat.name).toMatch(/^Chat \d{1,2}:\d{2}:\d{2}/)
+    })
   })
 })

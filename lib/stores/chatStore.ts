@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { Chat } from '../chats/chat'
+import { Chat, defaultChatName } from '../chats/chat'
 import type { ChatMessage, ChatArtifact, ChatImport } from '../chats/chat'
 import type { LLMConnectionStoreType } from './llmStore'
 import type { ConnectionStoreType } from './connectionStore'
@@ -168,7 +168,7 @@ export const useChatStore = defineStore('chats', {
         llmConnectionName,
         dataConnectionName,
         dataConnectionId,
-        name: name || `Chat ${new Date().toLocaleTimeString()}`,
+        name: name || defaultChatName(),
       })
       this.chats[chat.id] = chat
       // activeChatId belongs to the llms screen; panel-driven creation passes
