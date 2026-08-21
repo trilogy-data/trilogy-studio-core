@@ -282,9 +282,15 @@ def _generate_queries_task(queries_data: dict, enable_perf_logging: bool) -> dic
         result = MultiQueryOutSchema(
             queries=[
                 query_to_output(
-                    target, columns, values, label, dialect, enable_perf_logging
+                    target,
+                    columns,
+                    values,
+                    label,
+                    dialect,
+                    enable_perf_logging,
+                    layer_columns=layer_columns,
                 )
-                for label, target, columns, values in statements
+                for label, target, columns, values, layer_columns in statements
             ]
         )
 
@@ -331,7 +337,7 @@ def _generate_query_task(query_data: dict, enable_perf_logging: bool) -> dict:
         dialect_time = time.perf_counter() - dialect_start
 
         core_start = time.perf_counter()
-        target, columns, results, select_count = generate_query_core(
+        target, columns, results, select_count, layer_columns = generate_query_core(
             query, dialect, enable_perf_logging
         )
         core_time = time.perf_counter() - core_start
@@ -345,6 +351,7 @@ def _generate_query_task(query_data: dict, enable_perf_logging: bool) -> dict:
             dialect,
             enable_perf_logging,
             select_count,
+            layer_columns,
         )
         output_time = time.perf_counter() - output_start
 

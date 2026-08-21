@@ -45,7 +45,7 @@ def test_inline_file_datasource_with_known_files_emits_sql():
             "files": ["ratings.csv"],
         }
     )
-    target, columns, _, select_count = generate_query_core(query, DuckDBDialect())
+    target, columns, _, select_count, _ = generate_query_core(query, DuckDBDialect())
     assert target is not None, "expected a processed query, got None"
     assert select_count == 1
     sql = DuckDBDialect().compile_statement(target)
@@ -70,7 +70,7 @@ def test_inline_file_datasource_without_known_files_drops_datasource():
     # ratings.csv, so the datasource is UNPOPULATED. The build phase skips it,
     # which surfaces as an inability to resolve the query.
     try:
-        target, _, _, _ = generate_query_core(query, DuckDBDialect())
+        target, _, _, _, _ = generate_query_core(query, DuckDBDialect())
     except (
         Exception  # noqa: BLE001 -- any build failure satisfies this regression case
     ):

@@ -206,6 +206,11 @@ class ChartLayerOut(BaseModel):
     annotation_field: str | None = None
     # display labels for roles bound with `as`, keyed by the select output name
     field_labels: dict[str, str] = Field(default_factory=dict)
+    # This layer's own output columns. Each layer is an independent select over
+    # its own grain, so a client needs a column map per layer to resolve field
+    # types, format hints and colour scales. `QueryOut.columns` stays the first
+    # layer's, for clients that know nothing about charts.
+    columns: list[QueryOutColumn] = Field(default_factory=list)
 
 
 class ChartOut(BaseModel):

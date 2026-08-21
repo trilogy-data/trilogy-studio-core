@@ -37,7 +37,7 @@ def test_show_statement():
             },
         }
     )
-    _target, _columns, results, _ = generate_query_core(query, DuckDBDialect())
+    _target, _columns, results, _, _ = generate_query_core(query, DuckDBDialect())
     assert len(results) == 1
 
 
@@ -54,7 +54,7 @@ def test_validate_statement_empty():
         }
     )
     dialect = DuckDBDialect()
-    target, columns, results, _ = generate_query_core(query, dialect)
+    target, columns, results, _, _ = generate_query_core(query, dialect)
     assert not results, results
     query_to_output(target, columns, results, "default", dialect, False)
 
@@ -93,7 +93,7 @@ def test_validate_statement():
         }
     )
     dialect = DuckDBDialect()
-    target, columns, results, _ = generate_query_core(query, dialect)
+    target, columns, results, _, _ = generate_query_core(query, dialect)
     assert len(results) == 19, results
     query_to_output(target, columns, results, "default", dialect, False)
 
@@ -126,7 +126,7 @@ address some_parent;
         }
     )
 
-    target, columns, _, _ = generate_query_core(query, DuckDBDialect())
+    target, columns, _, _, _ = generate_query_core(query, DuckDBDialect())
     sql = DuckDBDialect().compile_statement(target)
 
     assert "count" in sql.lower()
@@ -167,7 +167,7 @@ auto count <- parent_source.count;
         }
     )
 
-    target, columns, _, _ = generate_query_core(query, DuckDBDialect())
+    target, columns, _, _, _ = generate_query_core(query, DuckDBDialect())
     sql = DuckDBDialect().compile_statement(target)
 
     assert "count" in sql.lower()
@@ -203,7 +203,7 @@ address regions;
         }
     )
 
-    _, columns, _, _ = generate_query_core(query, DuckDBDialect())
+    _, columns, _, _, _ = generate_query_core(query, DuckDBDialect())
 
     col_by_name = {c.name: c for c in columns}
 
@@ -250,7 +250,7 @@ address regions;
         }
     )
 
-    target, columns, _, _ = generate_query_core(query, DuckDBDialect())
+    target, columns, _, _, _ = generate_query_core(query, DuckDBDialect())
 
     # We should resolve the SELECT, not the trailing comment.
     assert target is not None
@@ -298,7 +298,7 @@ def test_chart_statement_returns_layer_sql_and_roles():
         " order by total_value desc limit 10;"
     )
 
-    target, columns, results, select_count = generate_query_core(query, dialect)
+    target, columns, results, select_count, _ = generate_query_core(query, dialect)
     out = query_to_output(
         target, columns, results, "default", dialect, False, select_count
     )
@@ -328,7 +328,7 @@ def test_chart_statement_carries_settings_and_placements():
         " place hline at 5 as target;"
     )
 
-    target, columns, results, select_count = generate_query_core(query, dialect)
+    target, columns, results, select_count, _ = generate_query_core(query, dialect)
     out = query_to_output(
         target, columns, results, "default", dialect, False, select_count
     )
@@ -351,7 +351,7 @@ def test_chart_statement_applies_extra_filters_to_layer_selects():
         extra_filters=["state = 'CA'"],
     )
 
-    target, columns, results, select_count = generate_query_core(query, dialect)
+    target, columns, results, select_count, _ = generate_query_core(query, dialect)
     out = query_to_output(
         target, columns, results, "default", dialect, False, select_count
     )
@@ -367,9 +367,18 @@ def test_multi_layer_chart_reports_every_layer():
         " layer line (x_axis <- category, y_axis <- avg(value) as avg_value);"
     )
 
-    target, columns, results, select_count = generate_query_core(query, dialect)
+    target, columns, results, select_count, layer_columns = generate_query_core(
+        query, dialect
+    )
     out = query_to_output(
-        target, columns, results, "default", dialect, False, select_count
+        target,
+        columns,
+        results,
+        "default",
+        dialect,
+        False,
+        select_count,
+        layer_columns,
     )
 
     assert out.chart is not None
@@ -381,3 +390,23 @@ def test_multi_layer_chart_reports_every_layer():
     # Every layer carries its own SQL even though only the first is promoted
     # to the top-level `generated_sql`.
     assert all(layer.generated_sql for layer in out.chart.layers)
+
+    # Each layer is its own select over its own grain, so it carries its own
+    # column map; the client resolves field types and format hints against it.
+    assert [[col.name for col in layer.columns] for layer in out.chart.layers] == [
+        ["category", "total_value"],
+        ["category", "avg_value"],
+    ]
+    # The top-level columns stay the first layer's, for chart-unaware clients.
+    assert [col.name for col in (out.columns or [])] == ["category", "total_value"]
+
+
+def test_non_chart_query_has_no_layer_columns():
+    dialect = DuckDBDialect()
+    query = _chart_query("select category, sum(value) as total_value;")
+
+    _target, _columns, _results, _select_count, layer_columns = generate_query_core(
+        query, dialect
+    )
+
+    assert layer_columns is None
