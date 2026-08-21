@@ -117,6 +117,7 @@ import { useResolvedThemeMode } from '../embed/config'
 import { Charts } from '../dashboards/constants'
 import { filteredColumns, determineEligibleChartTypes } from '../dashboards/helpers'
 import { generateVegaSpec } from '../dashboards/spec'
+import type { LayerDataset } from '../dashboards/spec'
 import { debounce } from '../utility/debounce'
 import { ChromaChartHelpers, type ChartEventHandlers } from './chartHelpers'
 import { ChartRenderManager } from './chartRenderManager'
@@ -154,6 +155,13 @@ export default defineComponent({
     chartSelection: {
       type: Array as PropType<Object[]>,
       default: () => {},
+    },
+    /** One dataset per chart layer, aligned with `initialConfig.layers`. Only
+     *  set for statement-authored charts whose layers are independent selects;
+     *  every other chart leaves this null and shares `data`. */
+    layerData: {
+      type: Array as PropType<LayerDataset[] | null>,
+      default: null,
     },
     chartTitle: {
       type: String,
@@ -230,7 +238,7 @@ export default defineComponent({
 
     // Create debounced brush handler
     const debouncedBrushHandler = debounce((name: string, item: any) => {
-      chartHelpers.handleBrush(name, item, controlsManager.internalConfig.value, props.columns)
+      chartHelpers.handleBrush(name, item, interactionConfig.value, props.columns)
     }, 500)
 
     // Create debounced resize handler for live chart resizing
@@ -255,6 +263,7 @@ export default defineComponent({
         currentTheme.value,
         effectiveHeight,
         effectiveWidth,
+        props.layerData,
       )
     }
 
@@ -267,7 +276,7 @@ export default defineComponent({
         vegaContainer1.value,
         vegaContainer2.value,
         spec,
-        controlsManager.internalConfig.value,
+        interactionConfig.value,
         props.columns,
         currentTheme.value,
         isMobile.value,
@@ -361,6 +370,19 @@ export default defineComponent({
     // the layers.
     const isLayeredChart = computed(() => isLayeredConfig(controlsManager.internalConfig.value))
 
+    /**
+     * The config the interaction handlers work against.
+     *
+     * Only layer 0 declares selection params, so it is the only layer that can
+     * be brushed or clicked -- and a container config carries no field
+     * bindings of its own, so handing it to `handleBrush` / `handlePointClick`
+     * would silently no-op every cross-filter.
+     */
+    const interactionConfig = computed(() => {
+      const config = controlsManager.internalConfig.value
+      return isLayeredConfig(config) ? config.layers![0] : config
+    })
+
     const filteredColumnsInternal = (
       type:
         'numeric' | 'categorical' | 'temporal' | 'latitude' | 'longitude' | 'geographic' | 'all',
@@ -414,7 +436,13 @@ export default defineComponent({
     )
     // Watch for data/column changes
     watch(
-      () => [props.columns, props.data, props.containerHeight, props.containerWidth],
+      () => [
+        props.columns,
+        props.data,
+        props.containerHeight,
+        props.containerWidth,
+        props.layerData,
+      ],
       (newValues, oldValues) => {
         if (!hasMounted) return
         if (oldValues && safeJsonStringify(newValues) === safeJsonStringify(oldValues)) {

@@ -87,7 +87,7 @@ describe('chartStatementToConfig', () => {
     expect(resolved?.config.geoField).toBe('state')
   })
 
-  it('warns that only the first of several layers is rendered', () => {
+  it('turns several layers into a layered config, with no warnings', () => {
     const resolved = chartStatementToConfig(
       spec({
         layers: [
@@ -97,17 +97,58 @@ describe('chartStatementToConfig', () => {
       }),
     )
 
-    expect(resolved?.config.chartType).toBe('bar')
-    expect(resolved?.warnings).toHaveLength(1)
-    expect(resolved?.warnings[0]).toContain('line')
+    expect(resolved?.warnings).toEqual([])
+    expect(resolved?.config.layers).toHaveLength(2)
+    expect(resolved?.config.layers?.[0]).toMatchObject({
+      chartType: 'bar',
+      xField: 'category',
+      yField: 'total',
+    })
+    expect(resolved?.config.layers?.[1]).toMatchObject({
+      chartType: 'line',
+      xField: 'category',
+      yField: 'average',
+    })
+    // The container carries no field bindings of its own.
+    expect(resolved?.config.xField).toBeUndefined()
+    expect(resolved?.config.yField).toBeUndefined()
   })
 
-  it('warns about reference lines it cannot draw', () => {
+  it('keeps a single-layer statement flat', () => {
+    const resolved = chartStatementToConfig(
+      spec({ layers: [{ chart_type: 'bar', x_fields: ['category'], y_fields: ['total'] }] }),
+    )
+
+    expect(resolved?.config.layers).toBeUndefined()
+    expect(resolved?.config.xField).toBe('category')
+  })
+
+  it('carries reference lines onto the config, with no warnings', () => {
     const resolved = chartStatementToConfig(
       spec({ placements: [{ kind: 'hline', value: 5, label: 'target' }] }),
     )
 
-    expect(resolved?.warnings[0]).toContain('hline')
+    expect(resolved?.warnings).toEqual([])
+    expect(resolved?.config.placements).toEqual([{ kind: 'hline', value: 5, label: 'target' }])
+  })
+
+  it('names layers from their `as` alias for the series legend', () => {
+    const resolved = chartStatementToConfig(
+      spec({
+        layers: [
+          {
+            chart_type: 'bar',
+            x_fields: ['category'],
+            y_fields: ['total'],
+            field_labels: { total: 'sum_charge' },
+          },
+          { chart_type: 'line', x_fields: ['category'], y_fields: ['average'] },
+        ],
+      }),
+    )
+
+    expect(resolved?.config.layers?.[0].layerLabel).toBe('sum_charge')
+    expect(resolved?.config.layers?.[1].layerLabel).toBeUndefined()
   })
 
   it('falls back to a bar chart for an unrecognized chart type', () => {

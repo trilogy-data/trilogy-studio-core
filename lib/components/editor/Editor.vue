@@ -642,7 +642,11 @@ export default defineComponent({
             // A `chart ...` statement declares its own chart; that wins over
             // both the cached config and the header-change reset below.
             if (result.chartConfig) {
-              editor.setStatementChartConfig(result.chartConfig, result.chartWarnings || [])
+              editor.setStatementChartConfig(
+                result.chartConfig,
+                result.chartWarnings || [],
+                result.layers || null,
+              )
             } else {
               editor.clearStatementChart()
               // check if the result headers have changed

@@ -28,6 +28,7 @@
         :chartConfig="editorData.chartConfig"
         :chartFromStatement="editorData.chartFromStatement"
         :chartWarnings="editorData.chartStatementWarnings"
+        :chartLayers="editorData.chartLayers"
         :error="editorData.error || undefined"
         :symbols="editorData.completionSymbols"
         @config-change="(config: ChartConfig) => editorData.setChartConfig(config)"

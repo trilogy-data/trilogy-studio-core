@@ -1,6 +1,7 @@
 import { Results, type ResultColumn, ColumnType } from '../editors/results'
 import type { ChartConfig } from '../editors/results'
 import { chartStatementToConfig } from '../editors/chartStatement'
+import type { ChartStatementSpec } from '../editors/chartStatement'
 import type { EditorType } from '../editors/editor'
 import { isTrilogyType } from '../editors/fileTypes'
 import type { ContentInput } from '../stores/resolver'
@@ -47,6 +48,17 @@ export interface QueryResult {
   chartConfig?: ChartConfig
   /** Parts of that chart statement the studio can't render. */
   chartWarnings?: string[]
+  /**
+   * One result set per chart layer, positionally aligned with
+   * `chartConfig.layers`. Each layer of a chart statement is an independent
+   * select over its own grain, so they can't share a result set.
+   *
+   * `layers[0]` is the same object as `results` -- the first layer's SQL is
+   * what the resolver promotes to `generated_sql` -- so the results grid and
+   * every existing consumer keep working off `results` unchanged. Absent for
+   * anything that isn't a multi-layer chart.
+   */
+  layers?: Results[]
 }
 
 export interface BatchQueryResult {
@@ -574,6 +586,14 @@ export default class QueryExecutionService {
 
               // Add to results
               const chartResolution = chartStatementToConfig(queryResult.chart)
+              const chartLayers = await this.executeChartLayers(
+                conn,
+                queryResult.chart,
+                sqlResponse,
+                batchExecParams,
+                controller,
+                editorType,
+              )
               let resultObj: QueryResult = {
                 success: true,
                 generatedSql: queryResult.generated_sql,
@@ -585,6 +605,7 @@ export default class QueryExecutionService {
                 chartWarnings: chartResolution?.warnings.length
                   ? chartResolution.warnings
                   : undefined,
+                layers: chartLayers,
               }
 
               if (onSuccess && queryResult.label && onSuccess[queryResult.label]) {
@@ -1285,6 +1306,17 @@ export default class QueryExecutionService {
           extraFilters: queryInput.extraFilters,
         })
       }
+      // A multi-layer chart statement needs one result set per layer; layer 0
+      // is the query we just ran.
+      const chartLayers = await this.executeChartLayers(
+        conn,
+        resolveResponse.data.chart,
+        sqlResponse,
+        execParams,
+        controller,
+        queryInput.editorType,
+      )
+
       const selectCount = resolveResponse?.data.select_count
       const successResult: QueryResult = {
         success: true,
@@ -1296,6 +1328,7 @@ export default class QueryExecutionService {
         selectCount,
         chartConfig: chartResolution?.config,
         chartWarnings: chartResolution?.warnings.length ? chartResolution.warnings : undefined,
+        layers: chartLayers,
       }
       if (onSuccess) {
         onSuccess(successResult)
@@ -1353,6 +1386,57 @@ export default class QueryExecutionService {
         columnCount,
       }
     }
+  }
+
+  /**
+   * Run the SQL for chart layers past the first.
+   *
+   * Layer 0's query is what the resolver promotes to `generated_sql`, so it has
+   * already been executed by the time we get here and is passed in rather than
+   * re-run. The rest are independent selects over their own grains.
+   *
+   * Sequential on purpose: layers share one connection, and duckdb-wasm in
+   * particular does not benefit from overlapping these.
+   */
+  private async executeChartLayers(
+    conn: ExecutionConnection,
+    chart: ChartStatementSpec | null | undefined,
+    primary: Results,
+    baseParameters: Record<string, any>,
+    controller: AbortController,
+    editorType: EditorType,
+  ): Promise<Results[] | undefined> {
+    const specLayers = chart?.layers
+    if (!specLayers || specLayers.length < 2) {
+      return undefined
+    }
+
+    const layers: Results[] = [primary]
+    for (let i = 1; i < specLayers.length; i++) {
+      const layer = specLayers[i]
+      if (!layer.generated_sql) {
+        // Keep the array positionally aligned with `chartConfig.layers` even
+        // when a layer compiled to nothing.
+        layers.push(new Results(new Map(), []))
+        continue
+      }
+      const execParams = { ...baseParameters, ...(layer.parameters || {}) }
+      //@ts-ignore
+      const layerResults: Results = await Promise.race([
+        conn.executeSql(layer.generated_sql, Object.keys(execParams).length ? execParams : null),
+        new Promise((_, reject) => {
+          controller.signal.addEventListener('abort', () =>
+            reject(new Error('Query cancelled by user')),
+          )
+        }),
+      ])
+      if (isTrilogyType(editorType)) {
+        // Each layer resolves its fields against its own column map.
+        this.enrichTrilogyColumns(layer.columns || [], layerResults)
+      }
+      layers.push(layerResults)
+    }
+    return layers
   }
 
   private enrichTrilogyColumns(headers: any[], sqlResponse: Results): void {

@@ -30,6 +30,12 @@ import {
   deriveChartTitle,
 } from './layerSpec'
 
+/** One layer's own result set, for charts whose layers are independent selects. */
+export interface LayerDataset {
+  data: readonly Row[]
+  columns: Map<string, ResultColumn>
+}
+
 const generateTooltipFields = (config: ChartConfig, columns: Map<string, ResultColumn>): any[] => {
   const fields: any[] = []
 
@@ -119,6 +125,13 @@ export const generateVegaSpec = (
   currentTheme: 'light' | 'dark' | '' = 'light',
   containerHeight: number = 400,
   containerWidth: number = 600,
+  /**
+   * One dataset per layer, positionally aligned with `config.layers`. Each
+   * layer of a chart statement is an independent select over its own grain, so
+   * they cannot share the top-level `data`. When omitted (every non-statement
+   * chart), all layers read the single `data` argument.
+   */
+  layerData: LayerDataset[] | null = null,
 ) => {
   // A config with sub-layers renders as a Vega-Lite layer array; an ordinary
   // config resolves to exactly one layer and takes the path it always has.
@@ -363,23 +376,36 @@ export const generateVegaSpec = (
 
     for (let i = 1; i < layers.length; i++) {
       const layer = layers[i]
+      // A layer over its own select resolves fields against its own columns
+      // and carries its own data; without one it reads the shared top-level
+      // dataset, which is what a controls-authored layered chart wants.
+      const dataset = layerData?.[i]
+      const layerColumns = dataset?.columns ?? columns
+      const layerRows = dataset ? toJsonSafeRows(dataset.data) : localData
+
       const layerSpec = createLayerMarkSpec(
         layer,
-        columns,
-        generateTooltipFields(layer, columns),
-        localData,
+        layerColumns,
+        generateTooltipFields(layer, layerColumns),
+        layerRows,
         {
           layerIndex: i,
           currentTheme,
           isMobile,
-          seriesLabel: useSeriesLegend ? layerSeriesLabel(layer, columns, i) : undefined,
+          seriesLabel: useSeriesLegend ? layerSeriesLabel(layer, layerColumns, i) : undefined,
           hideLegend: root.hideLegend,
           scaleX: root.scaleX,
           scaleY: root.scaleY,
         },
       )
+      if (dataset) {
+        layerSpec.data = { values: layerRows }
+      }
       const annotation = layerSpec.__annotationLayer
       delete layerSpec.__annotationLayer
+      if (annotation && dataset) {
+        annotation.data = { values: layerRows }
+      }
       extraLayers.push(layerSpec)
       if (annotation) extraLayers.push(annotation)
     }
