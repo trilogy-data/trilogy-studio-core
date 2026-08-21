@@ -1,6 +1,7 @@
 // chartControlsManager.ts
 import { ref } from 'vue'
 import type { ChartConfig, ResultColumn, Row } from '../editors/results'
+import { isLayeredConfig } from '../editors/results'
 import { determineDefaultConfig } from '../dashboards/helpers'
 import { ChromaChartHelpers } from './chartHelpers'
 
@@ -57,6 +58,12 @@ export class ChartControlsManager {
     data: readonly Row[],
     columns: Map<string, ResultColumn>,
   ): void {
+    // A layered config binds its fields on the sub-layers; backfilling root
+    // field defaults here would write fields the renderer ignores into the
+    // persisted config.
+    if (isLayeredConfig(this.internalConfig.value)) {
+      return
+    }
     const chartType = this.internalConfig.value.chartType
     const defaults = this.getChartTypeDefaults(data, columns, chartType)
     const fieldsToBackfill: Array<keyof ChartConfig> = [
@@ -107,7 +114,13 @@ export class ChartControlsManager {
     onChartConfigChange?: (config: ChartConfig) => void,
     force: boolean = false,
   ): void {
-    if (initialConfig && !force) {
+    if (initialConfig && isLayeredConfig(initialConfig) && !force) {
+      // A layered config is authored as a whole -- by a chart statement or an
+      // agent -- and its field bindings live on the sub-layers. Merging
+      // single-chart defaults into it would only add root fields the renderer
+      // ignores, so take it verbatim.
+      this.internalConfig.value = { ...initialConfig }
+    } else if (initialConfig && !force) {
       const configDefaults = this.getChartTypeDefaults(data, columns, initialConfig.chartType)
       this.internalConfig.value = {
         ...this.internalConfig.value,

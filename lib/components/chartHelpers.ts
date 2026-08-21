@@ -396,6 +396,20 @@ export class ChromaChartHelpers {
    * Validates if configuration fields still exist in columns
    */
   validateConfigFields(config: ChartConfig, columns: Map<string, ResultColumn>): boolean {
+    // A layered config binds its fields on the sub-layers, not on itself. Fall
+    // through to the flat check and it would find nothing set, report invalid,
+    // and the caller would reset the whole chart to defaults -- silently
+    // destroying the layers and persisting the flattened result.
+    if (config.layers && config.layers.length > 0) {
+      let allValid = true
+      for (const layer of config.layers) {
+        if (!this.validateConfigFields(layer, columns)) {
+          allValid = false
+        }
+      }
+      return allValid
+    }
+
     let isValid = true
     let anySet = false
     const fieldsToCheck: FieldKey[] = [

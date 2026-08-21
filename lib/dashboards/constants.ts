@@ -16,6 +16,30 @@ export const TRELLIS_ELIGIBLE: chartTypes[] = ['line', 'area', 'bar', 'barh', 'p
 // Chart types that don't have axes (no axis labels or ticks)
 export const NO_AXES_CHARTS: chartTypes[] = ['geo-map', 'tree', 'donut', 'headline']
 
+/**
+ * Chart types whose spec builders emit a Vega-Lite unit spec that can be
+ * dropped straight into a `layer: []` array.
+ *
+ * The exclusions are a v1 scope boundary, not a permanent limitation:
+ *  - `beeswarm` emits a raw *Vega* spec (signals/scales/marks), so layering it
+ *    needs Vega-level composition rather than a Vega-Lite layer array.
+ *  - `headline` and `tree` emit ordinary Vega-Lite but own their top-level
+ *    chrome (`$schema`, container sizing, `config`) and their own `data`;
+ *    they would need unwrapping first.
+ *  - `geo-map` carries a projection and topojson base layers -- legal in a
+ *    layer, but rarely meaningful next to a cartesian chart.
+ */
+export const LAYERABLE_CHART_TYPES: chartTypes[] = [
+  'bar',
+  'barh',
+  'line',
+  'area',
+  'point',
+  'boxplot',
+  'donut',
+  'heatmap',
+]
+
 export const Controls: ChartControl[] = [
   {
     id: 'group-by',

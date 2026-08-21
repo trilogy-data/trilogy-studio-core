@@ -1,7 +1,7 @@
 import { type Row, type ResultColumn } from '../editors/results'
-import { type ChartConfig } from '../editors/results'
+import { type ChartConfig, LAYER_FIELD_KEYS } from '../editors/results'
 import { ColumnType } from '../editors/results'
-import { Charts, Controls } from './constants'
+import { Charts, Controls, LAYERABLE_CHART_TYPES } from './constants'
 import { snakeCaseToCapitalizedWords } from './formatting'
 import { type FieldEncodingOutput } from './types'
 
@@ -234,7 +234,13 @@ export const determineDefaultConfig = (
     | 'donut',
 ): Partial<ChartConfig> => {
   const defaults: Partial<ChartConfig> = {
-    showTitle: true,
+    // `showTitle` used to be a no-op wherever no `chartTitle` was supplied --
+    // which is every chart in the editor -- so defaulting it on was invisible.
+    // Now that it synthesizes a title from the chart's own fields, defaulting
+    // it on would put a title above every auto-configured chart. Titles stay
+    // opt-in: dashboards set it with the item name, `set show_title` sets it
+    // from a chart statement, and the controls panel exposes it.
+    showTitle: false,
     hideLegend: false,
   }
 
@@ -659,6 +665,59 @@ export const validateChartConfigForData = (
   const eligible = determineEligibleChartTypes(data, columns)
   const fieldErrors: string[] = []
 
+  // A layered config binds its fields on the sub-layers. Validating it flat
+  // would find no fields set, fail, and hand back a flat `suggestedConfig` that
+  // callers write straight back to the store -- silently collapsing the chart
+  // to a single layer. Validate each layer instead and keep the layers intact.
+  if (config.layers && config.layers.length > 0) {
+    const layerErrors: string[] = []
+    const availableColumns = Array.from(columns.keys())
+
+    config.layers.forEach((layer, i) => {
+      const prefix = `Layer ${i + 1}`
+
+      if (!LAYERABLE_CHART_TYPES.includes(layer.chartType)) {
+        layerErrors.push(
+          `${prefix}: chart type "${layer.chartType}" cannot be used as a layer. ` +
+            `Layerable types: ${LAYERABLE_CHART_TYPES.join(', ')}.`,
+        )
+      }
+
+      // Deliberately *not* gated on `determineEligibleChartTypes`: that is an
+      // auto-suggestion heuristic for picking a chart type from data shape, and
+      // a layered chart is an explicit authoring choice. Combining a bar and a
+      // line over a categorical axis is the language's motivating example and
+      // the heuristic would reject the line half of it.
+      for (const key of LAYER_FIELD_KEYS) {
+        const val = layer[key]
+        if (typeof val === 'string' && val !== '' && !columns.has(val)) {
+          layerErrors.push(
+            `${prefix}: field "${val}" (${key}) does not exist in the query results. ` +
+              `Available columns: ${availableColumns.join(', ')}.`,
+          )
+        }
+      }
+
+      if (!layer.xField && !layer.yField) {
+        layerErrors.push(`${prefix}: needs at least one of xField or yField.`)
+      }
+    })
+
+    if (config.trellisField || config.trellisRowField) {
+      layerErrors.push('Trellis roles cannot be combined with multiple layers or reference lines.')
+    }
+
+    return {
+      valid: layerErrors.length === 0,
+      fieldErrors: layerErrors,
+      eligibleChartTypes: eligible,
+      // No auto-correction for layered configs: the layers are authored as a
+      // unit, and handing back a flattened default would silently discard them
+      // in the callers that persist `suggestedConfig`.
+      suggestedConfig: config,
+    }
+  }
+
   // Check if the chart type is eligible for this data
   if (!eligible.includes(config.chartType)) {
     const fieldSummary = describeFieldTypes(columns)
@@ -955,21 +1014,36 @@ export const createFieldEncoding = (
 /**
  * Create standard opacity and stroke width encoding for interaction
  */
-export const createInteractionEncodings = () => {
+/**
+ * Vega param names are global to a spec, so layering two charts of the same
+ * type would otherwise emit two params called `highlight` and fail to compile.
+ * Every builder takes a layer suffix and every reference to a param name goes
+ * through these helpers.
+ *
+ * Layer 0 gets the empty suffix on purpose: it keeps the unsuffixed names that
+ * `chartHelpers.setupEventListeners` and the brush filter transforms listen
+ * for, so it stays the interactive layer and no handler needs to change.
+ */
+export const layerParamSuffix = (layerIndex: number = 0): string =>
+  layerIndex > 0 ? `_l${layerIndex}` : ''
+
+export const paramName = (base: string, suffix: string = ''): string => `${base}${suffix}`
+
+export const createInteractionEncodings = (suffix: string = '') => {
   return {
     fillOpacity: {
-      condition: { param: 'select', value: 1 },
+      condition: { param: paramName('select', suffix), value: 1 },
       value: 0.3,
     },
     strokeWidth: {
       condition: [
         {
-          param: 'select',
+          param: paramName('select', suffix),
           empty: false,
           value: 2,
         },
         {
-          param: 'highlight',
+          param: paramName('highlight', suffix),
           empty: false,
           value: 1,
         },
@@ -1014,6 +1088,13 @@ export const createColorEncoding = (
   currentTheme: string = 'light',
   hideLegend: boolean = false,
   data: readonly Row[] | null = [],
+  /**
+   * Which layer's selection params drive the highlight condition. `''` is the
+   * interactive layer 0 and keeps today's unsuffixed names; `null` emits no
+   * condition at all, which is what non-interactive layers need -- referencing
+   * a param that layer doesn't declare fails Vega-Lite compilation.
+   */
+  paramSuffix: string | null = '',
 ) => {
   let legendConfig = { tickCount: legendTicks }
   let uniqueValues: any[] = []
@@ -1089,10 +1170,14 @@ export const createColorEncoding = (
       type: fieldType,
       title: snakeCaseToCapitalizedWords(columns.get(colorField)?.description || colorField),
       scale: scale,
-      condition: [
-        { param: 'highlight', empty: false, value: HIGHLIGHT_COLOR },
-        { param: 'select', empty: false, value: HIGHLIGHT_COLOR },
-      ],
+      ...(paramSuffix === null
+        ? {}
+        : {
+            condition: [
+              { param: paramName('highlight', paramSuffix), empty: false, value: HIGHLIGHT_COLOR },
+              { param: paramName('select', paramSuffix), empty: false, value: HIGHLIGHT_COLOR },
+            ],
+          }),
       ...getFormatHint(colorField, columns),
     }
 

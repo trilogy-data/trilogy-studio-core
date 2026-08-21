@@ -82,6 +82,13 @@ export type chartTypes =
   | 'treemap'
   | 'beeswarm'
 
+/** A `place hline|vline at <value> [as <label>]` reference line. */
+export interface ChartPlacement {
+  kind: 'hline' | 'vline'
+  value: string | number
+  label?: string
+}
+
 // Chart configuration interface
 export interface ChartConfig {
   chartType: chartTypes
@@ -100,6 +107,52 @@ export interface ChartConfig {
   scaleX?: 'linear' | 'log' | 'sqrt'
   scaleY?: 'linear' | 'log' | 'sqrt'
   linkY2?: boolean
+
+  /**
+   * Sub-layers, each a chart config in its own right. Present and non-empty
+   * means this config is a *container*: its own field bindings are ignored and
+   * only its statement-level settings (title, legend, scales, placements)
+   * apply. Absent -- the overwhelmingly common case -- means this is a plain
+   * single-layer config and nothing about its handling changes.
+   */
+  layers?: ChartConfig[]
+
+  /** Reference lines drawn over every layer. Container-level only. */
+  placements?: ChartPlacement[]
+
+  /**
+   * Display name for this layer in the series legend. Set from a chart
+   * statement's `as` alias; ignored on a container.
+   */
+  layerLabel?: string
+
+  /**
+   * Force shared (`true`) or independent (`false`) y scales across layers.
+   * Unset lets the renderer decide from the layers' format hints.
+   */
+  linkLayerY?: boolean
+
+  /** Which side this layer's value axis is drawn on. Layer-level. */
+  yAxisOrient?: 'left' | 'right'
+}
+
+/** Field keys that bind a layer to data, as opposed to statement-level settings. */
+export const LAYER_FIELD_KEYS = [
+  'xField',
+  'yField',
+  'yField2',
+  'colorField',
+  'sizeField',
+  'groupField',
+  'trellisField',
+  'trellisRowField',
+  'geoField',
+  'annotationField',
+] as const
+
+/** True when this config delegates its rendering to sub-layers. */
+export function isLayeredConfig(config: ChartConfig | undefined | null): boolean {
+  return Boolean(config?.layers && config.layers.length > 0)
 }
 
 // Migration map for deprecated chart type names
@@ -109,8 +162,13 @@ const CHART_TYPE_MIGRATIONS: Record<string, chartTypes> = {
 
 /**
  * Migrates a ChartConfig from older versions to the current schema.
- * Handles renamed chart types (e.g., 'usa-map' -> 'geo-map').
+ * Handles renamed chart types (e.g., 'usa-map' -> 'geo-map'), recursing into
+ * sub-layers so a nested config gets the same treatment as a flat one.
  * Returns a new config object if migration was needed, or the original if not.
+ *
+ * Note this is *not* where `yField2` becomes a second layer: that fold happens
+ * at render time in `normalizeChartConfig`, because this function only runs on
+ * dashboard item data and would miss the editor, LLM and statement paths.
  */
 export function migrateChartConfig(
   config: ChartConfig | undefined | null,
@@ -118,14 +176,25 @@ export function migrateChartConfig(
   if (!config) return undefined
 
   const migratedType = CHART_TYPE_MIGRATIONS[config.chartType]
-  if (migratedType) {
-    return {
-      ...config,
-      chartType: migratedType,
+
+  let migratedLayers: ChartConfig[] | undefined
+  if (config.layers?.length) {
+    const next = config.layers.map((layer) => migrateChartConfig(layer) as ChartConfig)
+    // Only allocate a new array if a layer actually changed.
+    if (next.some((layer, i) => layer !== config.layers![i])) {
+      migratedLayers = next
     }
   }
 
-  return config
+  if (!migratedType && !migratedLayers) {
+    return config
+  }
+
+  return {
+    ...config,
+    ...(migratedType ? { chartType: migratedType } : {}),
+    ...(migratedLayers ? { layers: migratedLayers } : {}),
+  }
 }
 
 export class Results implements ResultsInterface {
