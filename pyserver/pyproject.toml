@@ -9,7 +9,7 @@ license = { text = "MIT" }
 dependencies = [
     # 0.3.335 is the floor for chart statements: ProcessedChartLayer only grew
     # `field_labels` (the `as` display names) there, and query_helpers reads it.
-    "pytrilogy>=0.3.335",
+    "pytrilogy==0.3.337",
     "anyio>=4.5",
     "click>=8.1.0",
     "httpx>=0.27",
