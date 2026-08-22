@@ -55,4 +55,36 @@ describe('docsIndex', () => {
     expect(getArticle('Nope/Nothing')).toBeNull()
     expect(searchDocs('')).toEqual([])
   })
+
+  describe('syntax example drilldown', () => {
+    // Upstream keeps the prompt small by listing one-line example headers and
+    // serving bodies through `trilogy agent-info syntax example <name>` -- a CLI
+    // the studio cannot call. These make read_doc the equivalent drilldown.
+    it('surfaces syntax examples in search', () => {
+      const ids = searchDocs('chart layer statement', { limit: 10, kind: 'language' }).map((hit) => hit.entry.id)
+      expect(ids.some((id) => id.includes('Example: chart'))).toBe(true)
+    })
+
+    it('reads one example, not every example', () => {
+      const article = getArticle('Trilogy Language/Example: chart')
+      expect(article).not.toBeNull()
+      expect(article!.paragraphs).toHaveLength(1)
+
+      const body = article!.paragraphs[0].content
+      expect(body).toContain('chart')
+      // The whole point of a drilldown: `getArticle` resolves on node+article,
+      // so sharing one article across all ~19 examples would return ~40KB every
+      // time. Each example is its own article; this guards that.
+      expect(body.length).toBeLessThan(20000)
+    })
+
+    it('gives every example its own article', () => {
+      const articles = new Set(
+        buildDocsIndex()
+          .filter((entry) => entry.articleTitle.startsWith('Example: '))
+          .map((entry) => entry.articleTitle),
+      )
+      expect(articles.size).toBeGreaterThan(10)
+    })
+  })
 })

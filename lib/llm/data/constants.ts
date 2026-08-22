@@ -5,4 +5,5 @@ export {
   aggFunctions,
   functions,
   datatypes,
+  syntaxExamples,
 } from './trilogySyntax.generated'

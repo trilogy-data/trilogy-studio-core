@@ -22,7 +22,10 @@ const createInteractiveLayer = (
   data: readonly Row[] | null,
   columns: Map<string, ResultColumn>,
   tooltipFields: any[],
-  encoding: any,
+  // Only the deleted `yField2` secondary branch merged these extra encodings;
+  // the main layer builds its own. Kept positionally so the two public
+  // builders' signatures stay unchanged.
+  _encoding: any,
   intChart: Array<Partial<ChartConfig>> = [],
   filtered: boolean = false,
   currentTheme: string = 'light',
@@ -119,54 +122,11 @@ const createInteractiveLayer = (
     ]
   }
 
-  // If no secondary y field is defined, return just the main layer
-  // no secondary field for area charts
-  if (!config.yField2) {
-    return [mainLayer]
-  }
-
-  // Create a secondary layer for the second y-axis
-  const secondaryLayer = {
-    ...(filtered ? { transform: [{ filter: { param: 'brush' } }] } : {}),
-    mark: {
-      type: 'line',
-      ...(filtered ? { color: 'orange' } : { color: 'lightgray' }),
-      strokeDash: [4, 2], // Add dashed line to distinguish from primary y-axis
-    },
-    transform: [{ filter: `datum.${config.yField2} != null` }],
-    encoding: {
-      x: createFieldEncoding(config.xField || '', columns),
-      y: createFieldEncoding(config.yField2, columns, {}, false, { scale: config.scaleY }),
-      tooltip: tooltipFields,
-      ...encoding,
-      ...{
-        color: createColorEncoding(
-          config,
-          config.colorField,
-          columns,
-          isMobile,
-          currentTheme,
-          config.hideLegend,
-          data,
-        ),
-      },
-    },
-    params: !filtered
-      ? [
-          {
-            name: 'highlight2',
-            select: {
-              type: 'point',
-              on: 'mouseover',
-              clear: 'mouseout',
-            },
-          },
-        ]
-      : [],
-  }
-
-  // Return an array containing both layers
-  return [mainLayer, secondaryLayer]
+  // `yField2` no longer branches here: `normalizeChartConfig` expands it into a
+  // real second layer before this builder is called, and `createLayerMarkSpec`
+  // reproduces the brush-linked base/filtered pair the secondary series needs.
+  // One series per builder, layered generically like every other chart type.
+  return [mainLayer]
 }
 
 export const createLineChartSpec = (
