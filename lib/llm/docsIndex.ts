@@ -1,6 +1,6 @@
 import { documentation } from '../data/tutorial/documentation'
 import type { Paragraph } from '../data/tutorial/docTypes'
-import { trilogySyntaxReference } from './data/constants'
+import { trilogySyntaxReference, syntaxExamples } from './data/constants'
 
 // Lightweight keyword index over the in-app documentation (tutorial tree +
 // language reference) for the agent's search_docs/read_doc tools. No
@@ -37,6 +37,8 @@ const SKIP_PARAGRAPH_TYPES = new Set([
 
 const LANGUAGE_NODES = new Set(['Trilogy Reference'])
 const SYNTAX_NODE = 'Trilogy Language'
+/** Article-title prefix for a single syntax example, so each is read_doc-able alone. */
+const EXAMPLE_ARTICLE_PREFIX = 'Example: '
 
 function stripHtml(text: string): string {
   return text
@@ -100,6 +102,31 @@ export function buildDocsIndex(): DocEntry[] {
       articleTitle: 'Syntax Reference',
       paragraphTitle: title,
       content: body,
+      kind: 'language',
+    })
+  }
+
+  // Syntax examples: upstream lists one-line headers in the reference above and
+  // serves the bodies through `trilogy agent-info syntax example <name>`, a CLI
+  // the studio has no way to call. Indexing the bodies here makes read_doc the
+  // studio's equivalent drilldown, so an agent that spots a header can actually
+  // read the example. Each body is one entry -- they are self-contained
+  // annotated scripts and splitting them on headings would strip the setup.
+  for (const example of syntaxExamples) {
+    if (!example.body?.trim()) continue
+    entries.push({
+      // One article per example, not one article holding all of them:
+      // `getArticle` resolves on node + article, so a shared article would make
+      // every read_doc return all ~40KB of bodies. A drilldown that can't
+      // narrow isn't a drilldown.
+      id: `${SYNTAX_NODE}/${EXAMPLE_ARTICLE_PREFIX}${example.name}/${example.title}`,
+      nodeTitle: SYNTAX_NODE,
+      articleTitle: `${EXAMPLE_ARTICLE_PREFIX}${example.name}`,
+      paragraphTitle: example.title,
+      // The summary carries the searchable prose; the body is mostly code.
+      content: `${example.summary}
+
+${example.body.trim()}`,
       kind: 'language',
     })
   }
