@@ -124,6 +124,7 @@ import { useResolvedThemeMode } from '../embed/config'
 import { Charts } from '../dashboards/constants'
 import { filteredColumns, determineEligibleChartTypes } from '../dashboards/helpers'
 import { generateVegaSpec } from '../dashboards/spec'
+import { normalizeChartConfig, type LayerBinding } from '../dashboards/layerSpec'
 import type { LayerDataset } from '../dashboards/spec'
 import { debounce } from '../utility/debounce'
 import { ChromaChartHelpers, type ChartEventHandlers } from './chartHelpers'
@@ -245,6 +246,8 @@ export default defineComponent({
 
     // Create debounced brush handler
     const debouncedBrushHandler = debounce((name: string, item: any) => {
+      // The brush is one shared interval owned by layer 0, so it is always
+      // interpreted against layer 0's fields.
       chartHelpers.handleBrush(name, item, interactionConfig.value, props.columns)
     }, 500)
 
@@ -316,6 +319,7 @@ export default defineComponent({
         debouncedBrushHandler,
         props.chartTitle,
         force,
+        layerBindings.value,
       )
     }
 
@@ -415,6 +419,20 @@ export default defineComponent({
     const interactionConfig = computed(() => {
       const config = controlsManager.internalConfig.value
       return isLayeredConfig(config) ? config.layers![0] : config
+    })
+
+    /**
+     * Every rendered layer with the columns its fields resolve against, so a
+     * click can be attributed to the layer it actually landed on. A layer over
+     * its own select has its own columns; otherwise it shares the chart's.
+     */
+    const layerBindings = computed<LayerBinding[] | undefined>(() => {
+      const { layers } = normalizeChartConfig(controlsManager.internalConfig.value)
+      if (layers.length < 2) return undefined
+      return layers.map((layer, i) => ({
+        config: layer,
+        columns: props.layerData?.[i]?.columns ?? props.columns,
+      }))
     })
 
     const filteredColumnsInternal = (

@@ -5,6 +5,7 @@ import {
   normalizeChartConfig,
   resolveLayerYScale,
   deriveChartTitle,
+  resolveLayerForDatum,
   UnlayerableChartTypeError,
 } from './layerSpec'
 import { ColumnType, type ChartConfig, type ResultColumn, type Row } from '../editors/results'
@@ -147,14 +148,39 @@ describe('generateVegaSpec with layers', () => {
     expect(spec.layer[1].encoding.color?.datum).toBeUndefined()
   })
 
-  it('omits selection conditions on non-interactive layers', () => {
+  it('gives every layer its own selection params', () => {
     const config = layered()
     config.layers![1].colorField = 'region'
 
     const spec: any = generateVegaSpec(data, config, columns, null)
-    // Layer 1 declares no params, so conditioning on `select`/`highlight`
-    // would reference params that do not exist in its scope.
-    expect(spec.layer[1].encoding.color.condition).toBeUndefined()
+
+    // Layer 0 keeps the unsuffixed names the event listeners bind to.
+    const layer0Params = spec.layer[0].params.map((p: any) => p.name)
+    expect(layer0Params).toContain('highlight')
+    expect(layer0Params).toContain('select')
+
+    // Layer 1 declares its own, suffixed -- param names are global to a Vega
+    // spec, so reusing layer 0's would fail to compile.
+    const layer1Params = spec.layer[1].params.map((p: any) => p.name)
+    expect(layer1Params).toContain('highlight_l1')
+    expect(layer1Params).toContain('select_l1')
+
+    // ...and conditions reference its own params, not layer 0's.
+    const conditionParams = spec.layer[1].encoding.color.condition.map((c: any) => c.param)
+    expect(conditionParams).toEqual(['highlight_l1', 'select_l1'])
+
+    expect(() => compile(spec)).not.toThrow()
+  })
+
+  it('lets every layer be highlighted independently', () => {
+    const spec: any = generateVegaSpec(data, layered(), columns, null)
+
+    // Each layer's opacity/stroke conditions point at its own params, so
+    // hovering one layer does not dim or highlight the other.
+    for (const [i, layerSpec] of spec.layer.entries()) {
+      const suffix = i === 0 ? '' : `_l${i}`
+      expect(layerSpec.encoding.fillOpacity.condition.param).toBe(`select${suffix}`)
+    }
     expect(() => compile(spec)).not.toThrow()
   })
 
@@ -308,5 +334,32 @@ describe('per-layer datasets', () => {
     const spec: any = generateVegaSpec(data, statementConfig(), columns, null)
 
     expect(spec.layer[1].data).toBeUndefined()
+  })
+})
+
+describe('resolveLayerForDatum', () => {
+  const bindings = [
+    { config: { chartType: 'bar' as const, xField: 'category', yField: 'total' }, columns },
+    { config: { chartType: 'line' as const, xField: 'category', yField: 'avg_value' }, columns },
+  ]
+
+  it('attributes a datum to the layer whose fields it carries', () => {
+    // Layers over independent selects have disjoint field sets, so the datum
+    // identifies its own layer.
+    expect(resolveLayerForDatum({ category: 'a', avg_value: 4 }, bindings)).toBe(bindings[1])
+    expect(resolveLayerForDatum({ category: 'a', total: 10 }, bindings)).toBe(bindings[0])
+  })
+
+  it('prefers layer 0 when layers share a result set', () => {
+    // A yField2-style chart puts every field on one row, so both layers match.
+    // Layer 0 is the right answer -- they describe the same row, and it owns
+    // the interaction params.
+    const datum = { category: 'a', total: 10, avg_value: 4 }
+    expect(resolveLayerForDatum(datum, bindings)).toBe(bindings[0])
+  })
+
+  it('falls back to layer 0 for a datum it cannot place', () => {
+    expect(resolveLayerForDatum({ unrelated: 1 }, bindings)).toBe(bindings[0])
+    expect(resolveLayerForDatum(null, bindings)).toBe(bindings[0])
   })
 })

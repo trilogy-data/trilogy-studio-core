@@ -4,6 +4,7 @@ import vegaEmbed from 'vega-embed'
 import type { View } from 'vega'
 import type { ChartConfig, ResultColumn } from '../editors/results'
 import { ChromaChartHelpers } from './chartHelpers'
+import type { LayerBinding } from '../dashboards/layerSpec'
 import { safeJsonStringify } from '../utility/jsonSerialization'
 
 // Type for tracking render operations
@@ -81,6 +82,8 @@ export class ChartRenderManager {
     debouncedBrushHandler: (name: string, item: any) => void,
     chartTitle: string = '',
     force: boolean = false,
+    /** Rendered layers with their own columns, for attributing clicks. */
+    layers?: LayerBinding[],
   ): Promise<void> {
     if (!spec) return
 
@@ -180,6 +183,7 @@ export class ChartRenderManager {
         columns,
         isMobile,
         debouncedBrushHandler,
+        layers,
       )
       this.eventListeners.value.set(renderOp.container, removeListener)
 
