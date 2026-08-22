@@ -68,6 +68,7 @@
         <vega-lite-chart
           :data="results.data"
           :columns="results.headers"
+          :layerData="chartLayerData"
           :containerHeight="tabContentHeight"
           :initialConfig="chartConfig"
           :onChartConfigChange="onChartChange"
@@ -115,6 +116,7 @@
 <script lang="ts">
 import DataTable from '../DataTable.vue'
 import { Results } from '../../editors/results'
+import type { Row, ResultColumn } from '../../editors/results'
 // import type {ChartConfig} from '../editors/results'
 import { inject, type PropType } from 'vue'
 import VegaLiteChart from '../VegaLiteChart.vue'
@@ -160,6 +162,14 @@ export default {
     chartWarnings: {
       type: Array as PropType<string[]>,
       required: false,
+    },
+    /** One result set per chart layer, aligned with `chartConfig.layers`. Set
+     *  only for a multi-layer `chart ...` statement, whose layers are
+     *  independent selects over their own grains. */
+    chartLayers: {
+      type: Array as PropType<Results[] | null>,
+      required: false,
+      default: null,
     },
     error: {
       type: String,
@@ -244,6 +254,10 @@ export default {
     },
   },
   computed: {
+    chartLayerData(): { data: readonly Row[]; columns: Map<string, ResultColumn> }[] | null {
+      if (!this.chartLayers || this.chartLayers.length < 2) return null
+      return this.chartLayers.map((layer) => ({ data: layer.data, columns: layer.headers }))
+    },
     tabContentHeight(): number {
       // Subtract tabs height from container height for components that need explicit heights
       return this.containerHeight

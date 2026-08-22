@@ -87,7 +87,7 @@ def _generate_sql(query_text: str, extra_filters: list[str]) -> str:
         "current_filename": None,
     }
     query = QueryInSchema.model_validate(payload)
-    target, columns, values, select_count = generate_query_core(
+    target, columns, values, select_count, _ = generate_query_core(
         query, dialect, enable_performance_logging=False
     )
     output = query_to_output(

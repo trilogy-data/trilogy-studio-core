@@ -138,6 +138,12 @@ jobs:
           pnpm run build:grammar
           pnpm run check:trilogy-vocabulary
 
+      # The AI syntax reference is generated from the installed pytrilogy and is
+      # otherwise only refreshed as a side effect of `pnpm build`, so it drifts
+      # silently whenever pytrilogy moves. Same job for the same reason as above.
+      - name: Check AI syntax reference against the installed pytrilogy
+        run: pnpm run check:trilogy-ai
+
       - name: Ensure we can build frontend
         run: pnpm run build
 

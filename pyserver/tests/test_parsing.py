@@ -149,7 +149,7 @@ def test_parse_with_variables():
     }
     query = QueryInSchema.model_validate(raw)
     dialect = get_dialect_generator(query.dialect)
-    final, _, _, _ = generate_query_core(query, dialect)
+    final, _, _, _, _ = generate_query_core(query, dialect)
     sql, params = dialect.compile_statement_with_params(final)
     assert ":param1" in sql, sql
     assert params.get("param1") == "A319-112", params
@@ -167,7 +167,7 @@ def test_parse_with_variables_injection_safety():
     }
     query = QueryInSchema.model_validate(raw)
     dialect = get_dialect_generator(query.dialect)
-    final, _, _, _ = generate_query_core(query, dialect)
+    final, _, _, _, _ = generate_query_core(query, dialect)
     sql, params = dialect.compile_statement_with_params(final)
     assert "DROP TABLE" not in sql, sql
     assert params.get("param1") == "'; DROP TABLE flight; --", params
@@ -210,7 +210,7 @@ RAW_VARIABLE_REQUEST_TWO = {
 def test_parse_with_variables_two():
     query = QueryInSchema.model_validate(RAW_VARIABLE_REQUEST_TWO)
     dialect = get_dialect_generator(query.dialect)
-    final, _, _, _ = generate_query_core(query, dialect)
+    final, _, _, _, _ = generate_query_core(query, dialect)
     generated_sql = dialect.compile_statement(final)
     assert ":param1" not in generated_sql, generated_sql
 
@@ -252,7 +252,7 @@ INVALID_PARSE_DEBUG = {
 def test_parse_error():
     query = QueryInSchema.model_validate(INVALID_PARSE_DEBUG)
     dialect = get_dialect_generator(query.dialect)
-    final, _, _, _ = generate_query_core(query, dialect)
+    final, _, _, _, _ = generate_query_core(query, dialect)
     generated_sql = dialect.compile_statement(final)
     assert ":param1" not in generated_sql, generated_sql
 
@@ -277,7 +277,7 @@ MAP_DEBUG = {
 def test_map_access():
     query = QueryInSchema.model_validate(MAP_DEBUG)
     dialect = get_dialect_generator(query.dialect)
-    _final, columns, _, _ = generate_query_core(query, dialect)
+    _final, columns, _, _, _ = generate_query_core(query, dialect)
     assert columns[0].datatype.value == "int"
 
 
@@ -333,7 +333,7 @@ address flight;
     assert len(results) == 3
 
     # Each result should have generated SQL and columns
-    for label, result, columns, values in results:
+    for label, result, columns, values, _ in results:
         assert result is not None
         assert len(columns) > 0
 
@@ -479,7 +479,7 @@ address airport;
     assert len(results) == 3
 
     # All queries should successfully compile
-    for label, result, columns, _ in results:
+    for label, result, columns, _, _ in results:
         assert result is not None
         sql = dialect.compile_statement(result)
         assert sql is not None
@@ -558,7 +558,7 @@ address airport;
     assert len(results) == 4
 
     # All queries should successfully compile
-    for label, result, columns, _ in results:
+    for label, result, columns, _, _ in results:
         assert result is not None
         sql = dialect.compile_statement(result)
         assert sql is not None

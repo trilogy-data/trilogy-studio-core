@@ -30,6 +30,15 @@ for (const candidate of candidates) {
     process.stdout.write(attempt.stdout)
     process.exit(0)
   }
+  // The generator ran and chose to fail -- `--check` on a stale file exits 1
+  // and explains itself on stdout. That is a real answer, not a broken
+  // interpreter, so surface it and stop rather than trying the next candidate
+  // and reporting "unable to import pytrilogy".
+  if (attempt.status !== null && !attempt.error) {
+    process.stdout.write(attempt.stdout)
+    process.stderr.write(attempt.stderr)
+    process.exit(attempt.status)
+  }
   failures.push(`${candidate}: ${attempt.error?.message || attempt.stderr.trim()}`)
 }
 

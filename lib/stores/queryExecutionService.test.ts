@@ -163,8 +163,84 @@ describe('QueryExecutionService', () => {
       xField: 'category',
       yField: 'total_value',
       hideLegend: true,
+      placements: [{ kind: 'hline', value: 5, label: 'target' }],
     })
-    expect(result.chartWarnings?.[0]).toContain('hline')
+    // Reference lines render now, so there is nothing left to warn about.
+    expect(result.chartWarnings).toBeUndefined()
+    // One layer means one result set; `layers` stays unset.
+    expect(result.layers).toBeUndefined()
+  })
+
+  it('runs every layer of a multi-layer chart with its own parameters', async () => {
+    const resolver = {
+      resolve_query: vi.fn(async () => ({
+        data: {
+          generated_sql: 'select category, sum(value) as total_value from facts group by 1',
+          columns: [
+            { name: 'category', purpose: 'property' },
+            { name: 'total_value', purpose: 'metric' },
+          ],
+          generated_output: null,
+          select_count: 1,
+          chart: {
+            layers: [
+              {
+                chart_type: 'bar',
+                generated_sql: 'select category, sum(value) as total_value from facts group by 1',
+                x_fields: ['category'],
+                y_fields: ['total_value'],
+                columns: [
+                  { name: 'category', purpose: 'property' },
+                  { name: 'total_value', purpose: 'metric' },
+                ],
+              },
+              {
+                chart_type: 'line',
+                generated_sql:
+                  'select category, avg(value) as avg_value from facts where region = :r group by 1',
+                parameters: { r: 'east' },
+                x_fields: ['category'],
+                y_fields: ['avg_value'],
+                columns: [
+                  { name: 'category', purpose: 'property' },
+                  { name: 'avg_value', purpose: 'metric' },
+                ],
+              },
+            ],
+            placements: [],
+          },
+        },
+      })),
+    } as any
+    const { provider, executeSql } = makeProvider({ connected: true })
+    const service = new QueryExecutionService(resolver, provider, false)
+
+    const { resultPromise } = await service.executeQuery('worker-duckdb', {
+      text: 'chart layer bar (...) layer line (...);',
+      editorType: 'trilogy',
+      imports: [],
+    })
+    const result = await resultPromise
+
+    // Each layer is its own select, so each one runs -- the second with its
+    // own bound parameters.
+    expect(executeSql).toHaveBeenCalledTimes(2)
+    expect(executeSql).toHaveBeenNthCalledWith(
+      1,
+      'select category, sum(value) as total_value from facts group by 1',
+      null,
+    )
+    expect(executeSql).toHaveBeenNthCalledWith(
+      2,
+      'select category, avg(value) as avg_value from facts where region = :r group by 1',
+      { r: 'east' },
+    )
+
+    expect(result.chartConfig?.layers).toHaveLength(2)
+    expect(result.layers).toHaveLength(2)
+    // layers[0] is the promoted query, the same object the results grid shows.
+    expect(result.layers?.[0]).toBe(result.results)
+    expect(result.chartWarnings).toBeUndefined()
   })
 
   it('leaves the chart config unset for an ordinary select', async () => {

@@ -117,6 +117,9 @@ export default class Editor implements EditorInterface {
   chartFromStatement: boolean
   /** Parts of that chart statement the studio can't render. */
   chartStatementWarnings: string[]
+  /** One result set per chart layer, aligned with `chartConfig.layers`. In
+   *  memory only -- a run repopulates it, exactly like `results`. */
+  chartLayers: Results[] | null
   completionSymbols: CompletionItem[]
   refinementSession?: EditorRefinementSession | null
   scrollPosition?: { line: number; column: number } | null
@@ -190,6 +193,7 @@ export default class Editor implements EditorInterface {
     this.deleted = false
     this.chartFromStatement = false
     this.chartStatementWarnings = []
+    this.chartLayers = null
     this.completionSymbols = []
     this.remoteStoreId = remoteStoreId
     this.remotePath =
@@ -269,6 +273,7 @@ export default class Editor implements EditorInterface {
     this.chartConfig = chartConfig
     this.chartFromStatement = false
     this.chartStatementWarnings = []
+    this.chartLayers = null
     this.changed = true
   }
 
@@ -277,10 +282,17 @@ export default class Editor implements EditorInterface {
    * `setChartConfig` so the results pane can tell an authored chart (which
    * should be shown straight away) from one the user built with the controls.
    */
-  setStatementChartConfig(chartConfig: ChartConfig, warnings: string[] = []) {
+  setStatementChartConfig(
+    chartConfig: ChartConfig,
+    warnings: string[] = [],
+    chartLayers: Results[] | null = null,
+  ) {
     this.chartConfig = chartConfig
     this.chartFromStatement = true
     this.chartStatementWarnings = warnings
+    // Not persisted: these are result sets, re-fetched on the next run like
+    // `results` itself.
+    this.chartLayers = chartLayers
     this.changed = true
   }
 
@@ -289,6 +301,7 @@ export default class Editor implements EditorInterface {
   clearStatementChart() {
     this.chartFromStatement = false
     this.chartStatementWarnings = []
+    this.chartLayers = null
   }
 
   /**

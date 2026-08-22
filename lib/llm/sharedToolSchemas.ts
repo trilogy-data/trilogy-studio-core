@@ -37,6 +37,68 @@ export const CHART_CONFIG_EXAMPLE: ChartConfig = {
   linkY2: false,
 }
 
+// Field-binding properties shared by a chart and by each of its layers.
+// Spelled out once and spread into both so a layer can't drift from the parent.
+const chartFieldProperties = {
+  chartType: {
+    type: 'string',
+    enum: CHART_TYPES,
+    description: 'Type of chart to render',
+  },
+  xField: {
+    type: 'string',
+    description: 'Field name for x-axis. Longitude for geo-map charts if geofield not provided.',
+  },
+  yField: {
+    type: 'string',
+    description: 'Field name for y-axis. Latitude for geo-map charts if geofield not provided.',
+  },
+  colorField: {
+    type: 'string',
+    description: 'Field for color encoding (optional)',
+  },
+  sizeField: {
+    type: 'string',
+    description: 'Field for size encoding (optional)',
+  },
+  annotationField: {
+    type: 'string',
+    description: 'Field for data point annotations/labels (optional)',
+  },
+} as const
+
+// One layer of a multi-layer chart. Deliberately one level deep rather than a
+// self-reference: tool input schemas handle $ref unreliably, and charts only
+// ever nest one level.
+const chartLayerSchema = {
+  type: 'object',
+  description: 'One layer of a layered chart, drawn over the same result set.',
+  properties: {
+    ...chartFieldProperties,
+    layerLabel: {
+      type: 'string',
+      description:
+        "Name for this layer in the chart's legend (optional; defaults to the y field name)",
+    },
+    yAxisOrient: {
+      type: 'string',
+      enum: ['left', 'right'],
+      description: 'Which side to draw this layer value axis on (optional)',
+    },
+  },
+} as const
+
+// Example layered ChartConfig for LLM reference
+export const LAYERED_CHART_CONFIG_EXAMPLE: ChartConfig = {
+  chartType: 'bar' as chartTypes,
+  showTitle: true,
+  layers: [
+    { chartType: 'bar' as chartTypes, xField: 'category', yField: 'revenue' },
+    { chartType: 'line' as chartTypes, xField: 'category', yField: 'avg_revenue' },
+  ],
+  placements: [{ kind: 'hline', value: 1000, label: 'target' }],
+}
+
 // Shared chart config schema for tool definitions
 export const chartConfigSchema = {
   type: 'object',
@@ -109,6 +171,36 @@ export const chartConfigSchema = {
       type: 'boolean',
       description: 'Whether to link the secondary y-axis scale to the primary y-axis (optional)',
     },
+    layers: {
+      type: 'array',
+      items: chartLayerSchema,
+      description:
+        'Draw several marks over one result set, e.g. bars for a total with a line for an average. ' +
+        'When set, the chart type and field bindings above are ignored and each layer supplies its own; ' +
+        'the settings above (title, legend, scales) still apply to the chart as a whole. ' +
+        'Only line, bar, barh, area, point, boxplot, donut and heatmap can be layers. ' +
+        'Cannot be combined with trellisField/trellisRowField. ' +
+        'Leave unset for an ordinary single-mark chart.',
+    },
+    placements: {
+      type: 'array',
+      description: 'Constant reference lines drawn over the chart (optional)',
+      items: {
+        type: 'object',
+        properties: {
+          kind: { type: 'string', enum: ['hline', 'vline'] },
+          value: { type: 'number', description: 'Where on the axis to draw the line' },
+          label: { type: 'string', description: 'Optional text label pinned to the line' },
+        },
+        required: ['kind', 'value'],
+      },
+    },
+    linkLayerY: {
+      type: 'boolean',
+      description:
+        'Force layers to share one y-axis (true) or get independent ones (false). ' +
+        'Omit to let the chart decide from the layers value formats (optional)',
+    },
   },
 } as const
 
@@ -126,6 +218,9 @@ You can also add a default available Trilogy import "import std.color;" at the t
 Do this if the user asks for specific coloring.
 
 Example chartConfig: ${JSON.stringify(CHART_CONFIG_EXAMPLE)}
+
+To draw more than one mark over the same results — bars for a total with a line for an average, say — set 'layers' instead of the top-level chart type and fields. Each layer names its own chartType and fields; title, legend and scale settings stay on the parent. Add 'placements' for constant reference lines.
+Example layered chartConfig: ${JSON.stringify(LAYERED_CHART_CONFIG_EXAMPLE)}
 
 Available chartTypes: ${CHART_TYPES_LIST}`
 

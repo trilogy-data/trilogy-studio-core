@@ -19,6 +19,7 @@
     "sync:trilogy-ai": "node scripts/generate-trilogy-ai-guidance.mjs",
     "check:trilogy-ai": "node scripts/generate-trilogy-ai-guidance.mjs --check",
     "check:trilogy-vocabulary": "node scripts/check-trilogy-vocabulary.mjs --check",
+    "check:trilogy-ai": "node scripts/generate-trilogy-ai-guidance.mjs --check",
     "preview": "vite preview",
     "test": "vitest",
     "typecheck": "vue-tsc --noEmit",

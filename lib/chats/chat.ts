@@ -105,6 +105,15 @@ export interface ChatSessionData {
   deleted: boolean
 }
 
+/**
+ * Placeholder title for a chat that has no user-chosen name yet. Auto-naming
+ * (see `maybeGenerateChatName`) only fires on names in this shape, so anything
+ * wearing this title is eligible to be renamed by the fast model.
+ */
+export function defaultChatName(): string {
+  return `Chat ${new Date().toLocaleTimeString()}`
+}
+
 export class Chat implements ChatSessionData {
   id: string
   name: string
@@ -131,7 +140,7 @@ export class Chat implements ChatSessionData {
 
   constructor(data: Partial<ChatSessionData> = {}) {
     this.id = data.id || `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    this.name = data.name || `Chat ${new Date().toLocaleTimeString()}`
+    this.name = data.name || defaultChatName()
     this.dataConnectionName = data.dataConnectionName || ''
     this.dataConnectionId = data.dataConnectionId || ''
     this.llmConnectionName = data.llmConnectionName || ''
@@ -269,6 +278,8 @@ export class Chat implements ChatSessionData {
     this.activeArtifactIndex = -1
     // Reset the compaction trigger — the context this measured is gone.
     this.lastContextTokens = undefined
+    // Back to a placeholder title so the next exchange re-generates a name.
+    this.name = defaultChatName()
     this.updatedAt = new Date()
     this.changed = true
   }

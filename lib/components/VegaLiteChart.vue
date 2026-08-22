@@ -10,7 +10,14 @@
       :class="{ 'with-bottom-controls': isShortContainer && showControls }"
     >
       <div ref="chartContentArea" class="chart-content-area">
-        <div class="vega-swap-container" v-show="!controlsManager.showingControls.value">
+        <div v-if="specError" class="chart-spec-error" data-testid="chart-spec-error">
+          <i class="mdi mdi-alert-circle-outline" aria-hidden="true"></i>
+          <span>{{ specError }}</span>
+        </div>
+        <div
+          class="vega-swap-container"
+          v-show="!controlsManager.showingControls.value && !specError"
+        >
           <div
             ref="vegaContainer1"
             class="vega-container"
@@ -117,6 +124,7 @@ import { useResolvedThemeMode } from '../embed/config'
 import { Charts } from '../dashboards/constants'
 import { filteredColumns, determineEligibleChartTypes } from '../dashboards/helpers'
 import { generateVegaSpec } from '../dashboards/spec'
+import type { LayerDataset } from '../dashboards/spec'
 import { debounce } from '../utility/debounce'
 import { ChromaChartHelpers, type ChartEventHandlers } from './chartHelpers'
 import { ChartRenderManager } from './chartRenderManager'
@@ -154,6 +162,13 @@ export default defineComponent({
     chartSelection: {
       type: Array as PropType<Object[]>,
       default: () => {},
+    },
+    /** One dataset per chart layer, aligned with `initialConfig.layers`. Only
+     *  set for statement-authored charts whose layers are independent selects;
+     *  every other chart leaves this null and shares `data`. */
+    layerData: {
+      type: Array as PropType<LayerDataset[] | null>,
+      default: null,
     },
     chartTitle: {
       type: String,
@@ -230,13 +245,24 @@ export default defineComponent({
 
     // Create debounced brush handler
     const debouncedBrushHandler = debounce((name: string, item: any) => {
-      chartHelpers.handleBrush(name, item, controlsManager.internalConfig.value, props.columns)
+      chartHelpers.handleBrush(name, item, interactionConfig.value, props.columns)
     }, 500)
 
     // Create debounced resize handler for live chart resizing
     const debouncedResizeHandler = debounce(() => {
       scheduleRender(true)
     }, 300)
+
+    /**
+     * Set when the config describes a chart that cannot be built -- a trellis
+     * combined with layers, or a chart type that can't be a Vega-Lite layer.
+     *
+     * These are authoring mistakes, not bugs: pytrilogy accepts both at parse
+     * time and only its own renderer rejects them, so the statement resolves
+     * fine and the failure surfaces here. Without this the throw escapes into a
+     * `nextTick` callback and the user gets a blank chart plus a console error.
+     */
+    const specError = ref<string | null>(null)
 
     // Generate Vega-Lite spec based on current configuration
     const generateVegaSpecInternal = () => {
@@ -255,19 +281,35 @@ export default defineComponent({
         currentTheme.value,
         effectiveHeight,
         effectiveWidth,
+        props.layerData,
       )
+    }
+
+    /** `generateVegaSpecInternal`, with an unbuildable chart turned into a
+     *  message instead of an uncaught throw. Returns null when it fails. */
+    const safeGenerateVegaSpec = (): any | null => {
+      try {
+        const spec = generateVegaSpecInternal()
+        specError.value = null
+        return spec
+      } catch (error) {
+        specError.value = error instanceof Error ? error.message : String(error)
+        console.error('Failed to build chart spec:', error)
+        return null
+      }
     }
 
     // Main render function wrapper
     const renderChart = (force: boolean = false) => {
       if (controlsManager.showingControls.value) return
 
-      const spec = generateVegaSpecInternal()
+      const spec = safeGenerateVegaSpec()
+      if (!spec) return
       return renderManager.renderChart(
         vegaContainer1.value,
         vegaContainer2.value,
         spec,
-        controlsManager.internalConfig.value,
+        interactionConfig.value,
         props.columns,
         currentTheme.value,
         isMobile.value,
@@ -341,7 +383,8 @@ export default defineComponent({
     }
 
     const openInVegaEditor = () => {
-      const spec = generateVegaSpecInternal()
+      const spec = safeGenerateVegaSpec()
+      if (!spec) return
       operationsManager.openInVegaEditor(spec)
     }
 
@@ -360,6 +403,19 @@ export default defineComponent({
     // has nothing coherent to offer here. Hide it rather than let it overwrite
     // the layers.
     const isLayeredChart = computed(() => isLayeredConfig(controlsManager.internalConfig.value))
+
+    /**
+     * The config the interaction handlers work against.
+     *
+     * Only layer 0 declares selection params, so it is the only layer that can
+     * be brushed or clicked -- and a container config carries no field
+     * bindings of its own, so handing it to `handleBrush` / `handlePointClick`
+     * would silently no-op every cross-filter.
+     */
+    const interactionConfig = computed(() => {
+      const config = controlsManager.internalConfig.value
+      return isLayeredConfig(config) ? config.layers![0] : config
+    })
 
     const filteredColumnsInternal = (
       type:
@@ -414,7 +470,13 @@ export default defineComponent({
     )
     // Watch for data/column changes
     watch(
-      () => [props.columns, props.data, props.containerHeight, props.containerWidth],
+      () => [
+        props.columns,
+        props.data,
+        props.containerHeight,
+        props.containerWidth,
+        props.layerData,
+      ],
       (newValues, oldValues) => {
         if (!hasMounted) return
         if (oldValues && safeJsonStringify(newValues) === safeJsonStringify(oldValues)) {
@@ -494,6 +556,7 @@ export default defineComponent({
       renderChart,
       filteredColumnsInternal,
       isLayeredChart,
+      specError,
       updateConfig,
       openInVegaEditor,
       downloadChart,
@@ -507,6 +570,26 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.chart-spec-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  margin: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--error-color, #b91c1c);
+  background: var(--error-bg, rgba(185, 28, 28, 0.08));
+  border: 1px solid var(--error-color, #b91c1c);
+  border-radius: 4px;
+}
+
+.chart-spec-error i {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .overflow-hidden {
   overflow-y: hidden;
 }

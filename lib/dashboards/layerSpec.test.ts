@@ -258,3 +258,55 @@ describe('chart titles', () => {
     expect(spec.title.text).toBe('Total')
   })
 })
+
+describe('per-layer datasets', () => {
+  const layerTwoColumns = new Map<string, ResultColumn>([
+    ['category', { name: 'category', type: ColumnType.STRING, description: 'Category' }],
+    ['avg_value', { name: 'avg_value', type: ColumnType.NUMBER, description: 'Avg Value' }],
+  ])
+  const layerTwoRows: Row[] = [
+    { category: 'a', avg_value: 4 },
+    { category: 'b', avg_value: 6 },
+  ]
+
+  const statementConfig = (): ChartConfig => ({
+    chartType: 'bar',
+    layers: [
+      { chartType: 'bar', xField: 'category', yField: 'total' },
+      { chartType: 'line', xField: 'category', yField: 'avg_value' },
+    ],
+  })
+
+  it('attaches each layer its own data and resolves fields against its own columns', () => {
+    const spec: any = generateVegaSpec(
+      data,
+      statementConfig(),
+      columns,
+      null,
+      false,
+      '',
+      'light',
+      400,
+      600,
+      [
+        { data, columns },
+        { data: layerTwoRows, columns: layerTwoColumns },
+      ],
+    )
+
+    // Layer 0 inherits the top-level data; layer 1 carries its own.
+    expect(spec.data.values).toHaveLength(2)
+    expect(spec.layer[0].data).toBeUndefined()
+    expect(spec.layer[1].data.values).toEqual(layerTwoRows)
+    // `avg_value` exists only in layer 1's columns, so its title proves the
+    // encoding resolved against the right column map.
+    expect(spec.layer[1].encoding.y.field).toBe('avg_value')
+    expect(spec.layer[1].encoding.y.title).toBe('Avg Value')
+  })
+
+  it('shares the top-level data when no per-layer datasets are supplied', () => {
+    const spec: any = generateVegaSpec(data, statementConfig(), columns, null)
+
+    expect(spec.layer[1].data).toBeUndefined()
+  })
+})

@@ -224,6 +224,23 @@ def filters_to_conditional(
     )
 
 
+def _select_to_columns(
+    select: "SelectStatement | MultiSelectStatement", env: Environment
+) -> list[QueryOutColumn]:
+    """Project a select's output components onto the wire column model."""
+    return [
+        QueryOutColumn(
+            name=x.name if x.namespace == DEFAULT_NAMESPACE else x.address,
+            datatype=env.concepts[x.address].datatype,
+            purpose=env.concepts[x.address].purpose,
+            traits=get_traits(env.concepts[x.address]),
+            description=env.concepts[x.address].metadata.description,
+            keys=list(env.concepts[x.address].keys or []) or None,
+        )
+        for x in select.output_components
+    ]
+
+
 def generate_single_query(
     query: str,
     env: Environment,
@@ -239,6 +256,9 @@ def generate_single_query(
     list[QueryOutColumn],
     list[dict] | None,
     int,
+    # Per-layer columns; set only for `chart ...` statements, where each layer
+    # is an independent select the client has to resolve fields against.
+    list[list[QueryOutColumn]] | None,
 ]:
     start_time = time.time()
 
@@ -274,7 +294,7 @@ def generate_single_query(
             perf_logger.debug(
                 f"No parsed statements (empty query) - Parse time: {parse_time:.4f}s"
             )
-        return None, default_return, default_values, 0
+        return None, default_return, default_values, 0, None
 
     final = meaningful[-1]
     variables = parameters or {}
@@ -292,6 +312,7 @@ def generate_single_query(
             default_return,
             default_values,
             select_count,
+            None,
         )
     elif isinstance(final, ShowStatement):
         base = dialect.generate_queries(env, [final])[-1]
@@ -314,6 +335,7 @@ def generate_single_query(
             ],
             results.as_dict(),
             select_count,
+            None,
         )
     elif isinstance(final, (ValidateStatement)):
         base = dialect.generate_queries(env, [final])[-1]
@@ -339,6 +361,7 @@ def generate_single_query(
             ),
             validate_results.as_dict() if validate_results else None,
             select_count,
+            None,
         )
     if not isinstance(
         final,
@@ -351,7 +374,7 @@ def generate_single_query(
                 f"Non-query generation - Total: {total_time:.4f}s | "
                 f"Parse: {parse_time:.4f}s | "
             )
-        return None, columns, None, select_count
+        return None, columns, None, select_count, None
 
     # A chart statement is a bundle of selects, one per layer. Everything below
     # - column projection, extra filters, concept cleanup - runs off those layer
@@ -363,7 +386,7 @@ def generate_single_query(
             layer.select for layer in final.layers if layer.select is not None
         ]
         if not layer_selects:
-            return None, [], None, select_count
+            return None, [], None, select_count, None
         final_select = layer_selects[0]
         candidates = layer_selects
     else:
@@ -375,17 +398,16 @@ def generate_single_query(
         )
     # Process columns
     col_start = time.time()
-    columns = [
-        QueryOutColumn(
-            name=x.name if x.namespace == DEFAULT_NAMESPACE else x.address,
-            datatype=env.concepts[x.address].datatype,
-            purpose=env.concepts[x.address].purpose,
-            traits=get_traits(env.concepts[x.address]),
-            description=env.concepts[x.address].metadata.description,
-            keys=list(env.concepts[x.address].keys or []) or None,
-        )
-        for x in final_select.output_components
-    ]
+    columns = _select_to_columns(final_select, env)
+    # Every chart layer is its own select over its own grain, so the client
+    # needs a column map per layer to resolve field types, format hints and
+    # colour scales. Built here, before `cleanup_concepts` sweeps the
+    # locally-derived `<- expr as name` bindings back out of the environment.
+    layer_columns: list[list[QueryOutColumn]] | None = (
+        [_select_to_columns(select, env) for select in candidates]
+        if isinstance(final, ChartStatement)
+        else None
+    )
     col_time = time.time() - col_start
 
     # Set limits and process filters
@@ -434,7 +456,7 @@ def generate_single_query(
                 if k in pre_concepts:
                     env.add_concept(pre_concepts[k], force=True)
                     # env.concepts[k] = pre_concepts[k]
-    return output_statement, columns, default_values, select_count
+    return output_statement, columns, default_values, select_count, layer_columns
 
 
 def generate_query_core(
@@ -446,6 +468,9 @@ def generate_query_core(
     list[QueryOutColumn],
     list[dict] | None,
     int,
+    # Per-layer columns; set only for `chart ...` statements, where each layer
+    # is an independent select the client has to resolve fields against.
+    list[list[QueryOutColumn]] | None,
 ]:
     if enable_performance_logging:
         start_time = time.time()
@@ -483,7 +508,7 @@ def generate_query_core(
         gen_start = time.time()
 
     # Generate query
-    target, columns, results, select_count = generate_single_query(
+    target, columns, results, select_count, layer_columns = generate_single_query(
         normalized_query,
         env,
         dialect,
@@ -501,7 +526,7 @@ def generate_query_core(
             f"Generation: {gen_time:.4f}s ({safe_percentage(gen_time, total_time):.1f}%)"
         )
 
-    return target, columns, results, select_count
+    return target, columns, results, select_count, layer_columns
 
 
 def generate_multi_query_core(
@@ -515,6 +540,7 @@ def generate_multi_query_core(
         PROCESSED_STATEMENT_TYPES | Exception | None,
         list[QueryOutColumn],
         list[dict] | None,
+        list[list[QueryOutColumn]] | None,
     ],
 ]:
     if enable_performance_logging:
@@ -558,13 +584,14 @@ def generate_multi_query_core(
             PROCESSED_STATEMENT_TYPES | Exception | None,
             list[QueryOutColumn],
             list[dict] | None,
+            list[list[QueryOutColumn]] | None,
         ]
     ] = []
     default_return: list[QueryOutColumn] = []
 
     for idx, subquery in enumerate(query.queries):
         try:
-            generated, columns, values, _ = generate_single_query(
+            generated, columns, values, _, layer_columns = generate_single_query(
                 subquery.query,
                 env,
                 dialect,
@@ -575,7 +602,7 @@ def generate_multi_query_core(
                 base_filter_idx=idx,
                 cleanup_concepts=cleanup_concepts,
             )
-            all.append((subquery.label, generated, columns, values))
+            all.append((subquery.label, generated, columns, values, layer_columns))
         except Exception as e:  # noqa: BLE001 -- isolate failure to this batch item
             perf_logger.error(f"Error generating query '{subquery.query}': {e}")
             # log full traceback
@@ -583,7 +610,7 @@ def generate_multi_query_core(
 
             traceback_str = traceback.format_exc()
             perf_logger.error(traceback_str)
-            all.append((subquery.label, e, default_return, None))
+            all.append((subquery.label, e, default_return, None, None))
             # rebuild env, as we assume that cleanup might not have happened
 
             env, conditional = build_env()
@@ -616,7 +643,9 @@ def _serialize_bound_params(
 
 
 def _chart_layer_to_output(
-    layer: ProcessedChartLayer, dialect: BaseDialect
+    layer: ProcessedChartLayer,
+    dialect: BaseDialect,
+    columns: list[QueryOutColumn] | None = None,
 ) -> ChartLayerOut:
     sql: str | None = None
     parameters: dict[str, str | int | float | list] | None = None
@@ -637,6 +666,7 @@ def _chart_layer_to_output(
         geo_field=layer.geo_field,
         annotation_field=layer.annotation_field,
         field_labels=dict(layer.field_labels),
+        columns=list(columns or []),
     )
 
 
@@ -646,6 +676,7 @@ def chart_to_output(
     label: str | None,
     dialect: BaseDialect,
     select_count: int | None = None,
+    layer_columns: list[list[QueryOutColumn]] | None = None,
 ) -> QueryOut:
     """Project a chart statement onto QueryOut.
 
@@ -653,8 +684,14 @@ def chart_to_output(
     so a client that knows nothing about charts still runs something useful
     and renders the rows as a table.
     """
+    per_layer = layer_columns or []
     chart = ChartOut(
-        layers=[_chart_layer_to_output(layer, dialect) for layer in target.layers],
+        layers=[
+            _chart_layer_to_output(
+                layer, dialect, per_layer[i] if i < len(per_layer) else None
+            )
+            for i, layer in enumerate(target.layers)
+        ],
         placements=[
             ChartPlacementOut(
                 kind=placement.kind.value,
@@ -692,6 +729,7 @@ def query_to_output(
     dialect: BaseDialect,
     enable_performance_logging: bool = True,
     select_count: int | None = None,
+    layer_columns: list[list[QueryOutColumn]] | None = None,
 ) -> QueryOut:
     if enable_performance_logging:
         start_time = time.time()
@@ -713,7 +751,9 @@ def query_to_output(
             select_count=select_count,
         )
     elif isinstance(target, ProcessedChartStatement):
-        return chart_to_output(target, columns, label, dialect, select_count)
+        return chart_to_output(
+            target, columns, label, dialect, select_count, layer_columns
+        )
     elif (
         isinstance(target, ProcessedShowStatement)
         and DEFAULT_CONCEPTS["query_text"].address in target.output_columns
