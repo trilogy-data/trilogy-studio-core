@@ -22,10 +22,12 @@ import {
   createFieldEncoding,
   createColorEncoding,
   createSizeEncoding,
+  createInteractionEncodings,
   getFormatHint,
   getSortOrder,
   hasDiscreteTimeTrait,
   layerParamSuffix,
+  paramName,
 } from './helpers'
 import { LAYERABLE_CHART_TYPES, lightDefaultColor, darkDefaultColor } from './constants'
 import { snakeCaseToCapitalizedWords } from './formatting'
@@ -124,6 +126,41 @@ export const resolveLayerYScale = (
     layers.map((layer) => JSON.stringify(getFormatHint(layer.yField, columns) || {})),
   )
   return formats.size > 1 ? 'independent' : 'shared'
+}
+
+/** A layer paired with the columns its fields resolve against. */
+export interface LayerBinding {
+  config: ChartConfig
+  columns: Map<string, ResultColumn>
+}
+
+/**
+ * Which layer did this datum come from?
+ *
+ * Interaction handlers read fields off `item.datum` by name and map them to
+ * concept addresses through a column map. With layers over independent selects
+ * those differ per layer, so handing every click layer 0's config emits filters
+ * against fields the datum does not have.
+ *
+ * Layers are tried in order and the first whose bound fields are all present
+ * wins. That resolves both cases correctly: layers sharing one result set all
+ * match, and layer 0 -- the right answer, since they describe the same row --
+ * is returned; layers over separate selects only match their own datum.
+ */
+export const resolveLayerForDatum = (
+  datum: Record<string, any> | null | undefined,
+  layers: LayerBinding[],
+): LayerBinding => {
+  if (!datum || layers.length === 0) return layers[0]
+
+  for (const layer of layers) {
+    const bound = [layer.config.xField, layer.config.yField, layer.config.geoField].filter(
+      Boolean,
+    ) as string[]
+    if (bound.length === 0) continue
+    if (bound.every((field) => field in datum)) return layer
+  }
+  return layers[0]
 }
 
 /** Display name for a layer in the series legend. */
@@ -227,6 +264,8 @@ export const createLayerMarkSpec = (
     hideLegend?: boolean
     scaleX?: ChartConfig['scaleX']
     scaleY?: ChartConfig['scaleY']
+    /** Current cross-filter selection, so a re-render keeps the highlight. */
+    selectedValues?: Array<Record<string, any>>
   },
 ): any => {
   if (!LAYERABLE_CHART_TYPES.includes(layer.chartType)) {
@@ -282,8 +321,9 @@ export const createLayerMarkSpec = (
       currentTheme,
       options.hideLegend,
       data,
-      // Only layer 0 declares selection params, so only it can condition on them.
-      layerIndex === 0 ? '' : null,
+      // Every layer declares its own suffixed selection params, so each can
+      // condition on its own.
+      suffix,
     )
   } else if (seriesLabel) {
     encoding.color = {
@@ -297,6 +337,25 @@ export const createLayerMarkSpec = (
     encoding.size = createSizeEncoding(layer.sizeField, columns, isMobile, options.hideLegend)
   }
 
+  // Each layer declares its own hover/select params under a suffix. Param names
+  // are global to a Vega spec, so the suffix is what makes N layers of the same
+  // chart type compile at all -- and giving every layer its own means a click
+  // on any of them highlights that layer rather than layer 0.
+  const params: any[] = [
+    {
+      name: paramName('highlight', suffix),
+      select: { type: 'point', on: 'mouseover', clear: 'mouseout' },
+    },
+    {
+      name: paramName('select', suffix),
+      select: { type: 'point', on: 'click,touchend' },
+      value: options.selectedValues ?? [],
+      nearest: true,
+    },
+  ]
+
+  Object.assign(encoding, createInteractionEncodings(suffix))
+
   if (tooltipFields.length) {
     encoding.tooltip = tooltipFields
   }
@@ -304,6 +363,7 @@ export const createLayerMarkSpec = (
   const spec: any = {
     mark: layerMark(layer, currentTheme, Boolean(seriesLabel)),
     encoding,
+    params,
   }
 
   if (layer.annotationField && columns.get(layer.annotationField)) {
@@ -320,10 +380,6 @@ export const createLayerMarkSpec = (
       },
     }
   }
-
-  // Suffix is unused for layers with no params today, but reserved so the
-  // interactive layer-0 builders and these stay on one naming scheme.
-  void suffix
 
   return spec
 }

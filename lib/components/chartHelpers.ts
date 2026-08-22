@@ -1,6 +1,7 @@
 // chartHelpers.ts
 import type { View } from 'vega'
 import type { ResultColumn, ChartConfig, FieldKey, BoolFieldKey } from '../editors/results'
+import { resolveLayerForDatum, type LayerBinding } from '../dashboards/layerSpec'
 import { ColumnType } from '../editors/results'
 import type { ScenegraphEvent, SignalValue } from 'vega'
 import { convertTimestampToISODate, filteredColumns, isHexColumn } from '../dashboards/helpers'
@@ -454,13 +455,32 @@ export class ChromaChartHelpers {
     columns: Map<string, ResultColumn>,
     isMobile: boolean,
     debouncedBrushHandler: (name: string, item: SignalValue) => void,
+    /**
+     * Every rendered layer with the columns its fields resolve against. A click
+     * is attributed to the layer whose datum it carries, so cross-filtering a
+     * layered chart emits the right concept addresses instead of layer 0's.
+     * Omit for a single-layer chart.
+     */
+    layers?: LayerBinding[],
   ): (() => void) | null {
-    if (['area', 'line', 'point'].includes(config.chartType)) {
-      // Create a reference to the click handler so we can remove it later
-      const clickHandler = (event: any, item: any) => {
-        this.handlePointClick(event, item, config, columns)
-      }
+    // The datum decides which layer a click belongs to; with one layer this is
+    // always the config passed in.
+    const forDatum = (item: any): LayerBinding =>
+      layers && layers.length > 1 ? resolveLayerForDatum(item?.datum, layers) : { config, columns }
 
+    const clickHandler = (event: any, item: any) => {
+      const target = forDatum(item)
+      this.handlePointClick(event, item, target.config, target.columns)
+    }
+
+    // Brushing stays a single shared interval owned by layer 0: layers past it
+    // filter on the same `brush` param rather than declaring rival ones, so
+    // there is exactly one signal to listen to however many layers there are.
+    const brushable = (layers?.map((l) => l.config.chartType) ?? [config.chartType]).some((type) =>
+      ['area', 'line', 'point'].includes(type),
+    )
+
+    if (brushable) {
       view.addSignalListener('brush', debouncedBrushHandler)
       view.addEventListener('click', clickHandler)
 
@@ -469,19 +489,13 @@ export class ChromaChartHelpers {
         view.removeEventListener('click', clickHandler)
       }
     } else if (isMobile) {
-      const touchHandler = (event: any, item: any) => {
-        this.handlePointClick(event, item, config, columns)
-      }
-      view.addEventListener('click', touchHandler)
-      view.addEventListener('touchend', touchHandler)
+      view.addEventListener('click', clickHandler)
+      view.addEventListener('touchend', clickHandler)
       return () => {
-        view.removeEventListener('touchend', touchHandler)
-        view.removeEventListener('click', touchHandler)
+        view.removeEventListener('touchend', clickHandler)
+        view.removeEventListener('click', clickHandler)
       }
     } else {
-      const clickHandler = (event: any, item: any) => {
-        this.handlePointClick(event, item, config, columns)
-      }
       view.addEventListener('click', clickHandler)
       return () => {
         view.removeEventListener('click', clickHandler)
