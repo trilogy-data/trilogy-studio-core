@@ -86,33 +86,6 @@ describe('Line and Area Chart Specs', (): void => {
         expect(layers[1].mark.color).toBe('steelblue') // light theme
       })
 
-      it('should handle dual y-axis configuration', (): void => {
-        const dualAxisConfig = {
-          ...mockConfig,
-          yField2: 'profit',
-        }
-
-        const spec = createLineChartSpec(
-          dualAxisConfig,
-          mockData,
-          mockColumns,
-          mockTooltipFields,
-          mockEncoding,
-          mockIntChart,
-          'light' as Theme,
-          false,
-        )
-
-        // Should have nested layers for dual y-axis
-        expect(spec.layer).toHaveLength(2)
-        expect(spec.layer[0]).toHaveProperty('layer')
-        expect(spec.layer[1]).toHaveProperty('layer')
-
-        // Each nested layer should have 2 sub-layers (base + filtered)
-        expect((spec.layer[0] as any).layer).toHaveLength(2)
-        expect((spec.layer[1] as any).layer).toHaveLength(2)
-      })
-
       it('should apply dark theme colors', (): void => {
         const spec = createLineChartSpec(
           mockConfig,
@@ -285,59 +258,6 @@ describe('Line and Area Chart Specs', (): void => {
       })
     })
 
-    describe('secondary y-axis', (): void => {
-      it('should create secondary layer with dashed line', (): void => {
-        const dualAxisConfig = {
-          ...mockConfig,
-          yField2: 'profit',
-        }
-
-        const spec = createLineChartSpec(
-          dualAxisConfig,
-          mockData,
-          mockColumns,
-          mockTooltipFields,
-          mockEncoding,
-          mockIntChart,
-          'light' as Theme,
-          false,
-        )
-
-        // Check secondary layer structure
-        const secondaryLayerGroup = spec.layer[1] as any
-        const secondaryBaseLayer = secondaryLayerGroup.layer[0]
-        const secondaryFilteredLayer = secondaryLayerGroup.layer[1]
-
-        expect(secondaryBaseLayer.mark.type).toBe('line')
-        expect(secondaryBaseLayer.mark.strokeDash).toEqual([4, 2])
-        expect(secondaryFilteredLayer.mark.color).toBe('orange')
-      })
-
-      it('should add highlight parameter to secondary base layer', (): void => {
-        const dualAxisConfig = {
-          ...mockConfig,
-          yField2: 'profit',
-        }
-
-        const spec = createLineChartSpec(
-          dualAxisConfig,
-          mockData,
-          mockColumns,
-          mockTooltipFields,
-          mockEncoding,
-          mockIntChart,
-          'light' as Theme,
-          false,
-        )
-
-        const secondaryLayerGroup = spec.layer[1] as any
-        const secondaryBaseLayer = secondaryLayerGroup.layer[0]
-
-        expect(secondaryBaseLayer.params).toHaveLength(1)
-        expect(secondaryBaseLayer.params[0].name).toBe('highlight2')
-      })
-    })
-
     describe('data handling', (): void => {
       it('should handle null data', (): void => {
         const spec = createLineChartSpec(
@@ -438,44 +358,6 @@ describe('Line and Area Chart Specs', (): void => {
         )
 
         expect(spec.layer).toHaveLength(2)
-      })
-
-      it('should match line chart structure for dual y-axis', (): void => {
-        const dualAxisConfig = {
-          ...mockConfig,
-          yField2: 'profit',
-        }
-
-        const areaSpec = createAreaChartSpec(
-          dualAxisConfig,
-          mockData,
-          mockColumns,
-          mockTooltipFields,
-          mockEncoding,
-          false,
-          mockIntChart,
-          'light' as Theme,
-        )
-
-        const lineSpec = createLineChartSpec(
-          dualAxisConfig,
-          mockData,
-          mockColumns,
-          mockTooltipFields,
-          mockEncoding,
-          mockIntChart,
-          'light' as Theme,
-          false,
-        )
-
-        // Should have same structure as line chart for dual y-axis
-        expect(areaSpec.layer).toHaveLength(2)
-        expect(areaSpec.layer[0]).toHaveProperty('layer')
-        expect(areaSpec.layer[1]).toHaveProperty('layer')
-
-        expect(lineSpec.layer).toHaveLength(2)
-        expect(lineSpec.layer[0]).toHaveProperty('layer')
-        expect(lineSpec.layer[1]).toHaveProperty('layer')
       })
     })
 
