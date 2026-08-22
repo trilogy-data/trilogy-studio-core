@@ -28,6 +28,7 @@ import {
   resolveLayerYScale,
   layerSeriesLabel,
   deriveChartTitle,
+  BRUSH_DECLARING_CHART_TYPES,
 } from './layerSpec'
 
 /** One layer's own result set, for charts whose layers are independent selects. */
@@ -396,6 +397,7 @@ export const generateVegaSpec = (
           hideLegend: root.hideLegend,
           scaleX: root.scaleX,
           scaleY: root.scaleY,
+          brushAvailable: BRUSH_DECLARING_CHART_TYPES.includes(layers[0].chartType),
         },
       )
       if (dataset) {
