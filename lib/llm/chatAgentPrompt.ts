@@ -8,6 +8,8 @@ import {
 import { conceptsToFieldPrompt } from './data/prompts'
 import type { ModelConceptInput } from './data/models'
 import type { ChatImport } from '../chats/chat'
+import type { LLMToolDefinition } from './base'
+import type { ToolCallResult } from './sharedToolHelpers'
 import {
   chartConfigSchema,
   chartConfigGuidance,
@@ -320,6 +322,145 @@ export interface ChatAgentPromptOptions {
   activeImports?: ChatImport[] // Currently imported data sources
   availableImportsForConnection?: ChatImport[] // All available imports for current connection
   isDataConnectionActive?: boolean // Whether the current data connection is connected
+  /**
+   * Names of chat tools the host has withheld from this conversation (see
+   * `filterDisabledTools`). Guidance that tells the model to call one of them
+   * is dropped so the prompt never asks for a tool the toolset does not carry.
+   */
+  disabledTools?: readonly string[]
+}
+
+/**
+ * Remove withheld tools from a toolset. A host whose surface makes a tool
+ * meaningless — an artifact panel that is not there to reorder, say — drops it
+ * here rather than editing CHAT_TOOLS, so the shared registry's cached
+ * toolset stays intact for every other conversation. With nothing disabled
+ * the input array is returned as-is, keeping the registry's identity contract.
+ */
+export function filterDisabledTools<T extends { name: string }>(
+  tools: T[],
+  disabledTools: readonly string[] | undefined,
+): T[] {
+  if (!disabledTools || disabledTools.length === 0) return tools
+  const disabled = new Set(disabledTools)
+  return tools.filter((tool) => !disabled.has(tool.name))
+}
+
+/**
+ * A tool the host application adds to a persistent chat: its definition for
+ * the model and the function that runs it. The natural sibling of
+ * `disabledTools`. The executor receives the model's input and returns a
+ * ToolCallResult; a throw is caught and reported to the model as an error.
+ */
+export interface HostChatTool {
+  definition: LLMToolDefinition
+  execute: (input: Record<string, any>) => Promise<ToolCallResult> | ToolCallResult
+}
+
+/**
+ * Append host tools to a toolset, keeping `return_to_user` last so the
+ * "always end with return_to_user" contract reads the same to the model.
+ * A host tool may not shadow a built-in: that is a programming error, not a
+ * runtime condition, so it throws. With no extra tools the input array is
+ * returned as-is, keeping the registry's identity contract.
+ */
+export function mergeExtraTools<T extends { name: string }>(
+  tools: T[],
+  extraTools: readonly HostChatTool[] | undefined,
+): T[] {
+  if (!extraTools || extraTools.length === 0) return tools
+  const builtin = new Set(tools.map((tool) => tool.name))
+  const seen = new Set<string>()
+  const extra = extraTools.map((tool) => {
+    const name = tool.definition.name
+    if (builtin.has(name)) {
+      throw new Error(`Host tool '${name}' shadows a built-in chat tool`)
+    }
+    if (seen.has(name)) {
+      throw new Error(`Host tool '${name}' is declared twice`)
+    }
+    seen.add(name)
+    return tool.definition as unknown as T
+  })
+  const returnIndex = tools.findIndex((tool) => tool.name === RETURN_TO_USER_TOOL.name)
+  if (returnIndex === -1) return [...tools, ...extra]
+  return [...tools.slice(0, returnIndex), ...extra, ...tools.slice(returnIndex)]
+}
+
+/** A line of prompt guidance, tagged with the tool it tells the model to use
+ *  so it can be dropped alongside that tool. */
+interface ToolGuidance {
+  tool?: string
+  text: string
+}
+
+const ARTIFACT_MANAGEMENT_GUIDANCE: readonly ToolGuidance[] = [
+  {
+    text: '- Every query and chart tool call returns an artifact ID. Use these IDs to reference, update, or remove artifacts later.',
+  },
+  {
+    tool: 'create_markdown',
+    text: `- Use create_markdown to create rich formatted content: reports, summaries, annotated insights, data-driven narratives.
+  - Markdown supports template expressions when a query is provided: {field_name}, {data[0].field}, {{#each data limit=5}} {field} {{/each}}`,
+  },
+  {
+    tool: 'list_artifacts',
+    text: '- Use list_artifacts to see all artifacts with their IDs, types, and metadata.',
+  },
+  {
+    tool: 'get_artifact',
+    text: '- Use get_artifact to inspect the full contents and configuration of a specific artifact.',
+  },
+  {
+    tool: 'update_artifact',
+    text: '- Use update_artifact to modify existing artifacts (change markdown content, title, or chart configuration).',
+  },
+  {
+    tool: 'hide_artifact',
+    text: '- Use hide_artifact to remove stale or superseded artifacts from the main view. Hidden artifacts are preserved and accessible to both you and the user — they are not deleted.',
+  },
+  {
+    tool: 'create_markdown',
+    text: '- When the user asks for a summary, report, or narrative, prefer create_markdown over just text responses - it renders in the artifacts panel.',
+  },
+]
+
+const DOCUMENTATION_GUIDANCE: readonly ToolGuidance[] = [
+  {
+    tool: 'search_docs',
+    text: '- When you are unsure how to express something in Trilogy — window functions, date handling, filtering on aggregates, an unfamiliar keyword — call search_docs (kind: language or function) and then read_doc, rather than guessing at syntax. The reference above is a summary; the docs carry the full idioms.',
+  },
+  {
+    tool: 'read_doc',
+    text: '- read_doc returns the full article for an id from search_docs; quote the relevant part back to the user when they ask how the language works.',
+  },
+]
+
+/** Numbered on render, so dropping a step keeps the list contiguous. */
+const ARTIFACT_CURATION_STEPS: readonly ToolGuidance[] = [
+  { tool: 'list_artifacts', text: 'Call list_artifacts to see everything currently in the panel.' },
+  {
+    tool: 'hide_artifact',
+    text: 'Hide stale or superseded artifacts using hide_artifact — failed queries, test runs, intermediate steps, or results from earlier questions that are no longer relevant to the current ask. Hidden artifacts are preserved (the user can restore them) and you can still reference them by ID.',
+  },
+  {
+    tool: 'update_artifact',
+    text: 'Update titles: give each remaining artifact a clear, descriptive title that explains what it shows (via update_artifact).',
+  },
+  {
+    tool: 'reorder_artifacts',
+    text: 'Reorder artifacts for maximum impact — put the most important artifact first (e.g., a summary markdown or key chart), followed by supporting detail. The artifacts panel is the primary view the user sees.',
+  },
+  {
+    text: "The artifact panel should tell a coherent story that directly answers the user's latest request — not accumulate a growing pile from every prior turn.",
+  },
+]
+
+function enabledGuidance(
+  lines: readonly ToolGuidance[],
+  disabledTools: readonly string[],
+): ToolGuidance[] {
+  return lines.filter((line) => !line.tool || !disabledTools.includes(line.tool))
 }
 
 export function buildChatAgentSystemPrompt(options: ChatAgentPromptOptions): string {
@@ -330,7 +471,20 @@ export function buildChatAgentSystemPrompt(options: ChatAgentPromptOptions): str
     activeImports = [],
     availableImportsForConnection = [],
     isDataConnectionActive = true,
+    disabledTools = [],
   } = options
+
+  const artifactManagementSection = enabledGuidance(ARTIFACT_MANAGEMENT_GUIDANCE, disabledTools)
+    .map((line) => line.text)
+    .join('\n')
+  const artifactCurationSection = enabledGuidance(ARTIFACT_CURATION_STEPS, disabledTools)
+    .map((line, index) => `${index + 1}. ${line.text}`)
+    .join('\n')
+  const documentationLines = enabledGuidance(DOCUMENTATION_GUIDANCE, disabledTools)
+  const documentationSection =
+    documentationLines.length > 0
+      ? `\n\nDOCUMENTATION:\n${documentationLines.map((line) => line.text).join('\n')}`
+      : ''
 
   const conceptsSection =
     availableConcepts && availableConcepts.length > 0
@@ -377,25 +531,14 @@ IMPORTANT GUIDELINES:
 5. Use the full field path (e.g., 'order.product.id') - never use FROM clauses
 6. Remember: No GROUP BY clause - grouping is implicit by non-aggregated fields in SELECT
 7. If the user question needs fields that are not in the same source, use select_active_import to switch to a different data source (only one can be active at a time). Always consider this when they change topics.
-8. If the data connection is not active, use connect_data_connection to establish the connection before running queries
+8. If the data connection is not active, use connect_data_connection to establish the connection before running queries${documentationSection}
 
 ARTIFACT MANAGEMENT:
-- Every query and chart tool call returns an artifact ID. Use these IDs to reference, update, or remove artifacts later.
-- Use create_markdown to create rich formatted content: reports, summaries, annotated insights, data-driven narratives.
-  - Markdown supports template expressions when a query is provided: {field_name}, {data[0].field}, {{#each data limit=5}} {field} {{/each}}
-- Use list_artifacts to see all artifacts with their IDs, types, and metadata.
-- Use get_artifact to inspect the full contents and configuration of a specific artifact.
-- Use update_artifact to modify existing artifacts (change markdown content, title, or chart configuration).
-- Use hide_artifact to remove stale or superseded artifacts from the main view. Hidden artifacts are preserved and accessible to both you and the user — they are not deleted.
-- When the user asks for a summary, report, or narrative, prefer create_markdown over just text responses - it renders in the artifacts panel.
+${artifactManagementSection}
 
 ARTIFACT CURATION (required before every return_to_user call):
 Before calling return_to_user, you MUST curate the artifact panel so it reflects a clean, coherent answer to the user's current request:
-1. Call list_artifacts to see everything currently in the panel.
-2. Hide stale or superseded artifacts using hide_artifact — failed queries, test runs, intermediate steps, or results from earlier questions that are no longer relevant to the current ask. Hidden artifacts are preserved (the user can restore them) and you can still reference them by ID.
-3. Update titles: give each remaining artifact a clear, descriptive title that explains what it shows (via update_artifact).
-4. Reorder artifacts for maximum impact — put the most important artifact first (e.g., a summary markdown or key chart), followed by supporting detail. The artifacts panel is the primary view the user sees.
-5. The artifact panel should tell a coherent story that directly answers the user's latest request — not accumulate a growing pile from every prior turn.
+${artifactCurationSection}
 
 COMPLETING YOUR RESPONSE:
 - When you have finished addressing the user's request AND curated the artifact panel, call return_to_user with a brief summary.

@@ -93,8 +93,10 @@ class TestToolInvocation:
         assert "cleared" in result.structured_content["result"]
 
     def test_unknown_connection_surfaces_as_a_tool_error(self):
-        # The tool layer wraps a raised ValueError as ToolError rather than
-        # returning is_error=True; the protocol layer above converts it.
+        # The tool raises ToolError (an anticipated failure) rather than
+        # returning is_error=True; the protocol layer above converts it. The
+        # SDK prefixes the message with "Error executing tool <name>: " and
+        # keeps ours, whereas any other exception is masked to the prefix.
         with pytest.raises(ToolError, match="Connection 'nope' does not exist"):
             run(mcp.call_tool("list_connection_fields", {"name": "nope"}))
 

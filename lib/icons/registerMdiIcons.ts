@@ -434,6 +434,22 @@ function toSvgDataUrl(path: string): string {
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`
 }
 
+/**
+ * Selector for the mask box, matching only the icons this module registers.
+ *
+ * It used to be a bare `.mdi::before`, which painted a 1em square of
+ * currentColor on *every* `.mdi` element, including classes the registry does
+ * not know. A host page that also loads the Material Design Icons webfont then
+ * saw its own icons (say `mdi-share-variant`) replaced by solid squares, since
+ * this stylesheet is appended at runtime and out-cascades the font's rules.
+ * Scoping the box to registered classes leaves an unregistered icon to whatever
+ * the host provides for it. Inside this repo that is still nothing, which is
+ * what the registration test guards.
+ */
+function registeredIconSelector(): string {
+  return `.mdi:is(${ICON_CLASS_NAMES.map((name) => `.${name}`).join(', ')})::before`
+}
+
 function buildBaseCss(): string {
   return `
 .mdi {
@@ -447,7 +463,7 @@ function buildBaseCss(): string {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.mdi::before,
+${registeredIconSelector()},
 .mdi-set {
   content: "";
   display: inline-block;
@@ -528,6 +544,11 @@ function buildIconCss(): string {
   }).join('')
 }
 
+/** The full stylesheet `registerMdiIcons` injects. Exported for tests. */
+function buildMdiStylesheet(): string {
+  return buildBaseCss() + buildIconCss()
+}
+
 function registerMdiIcons(): void {
   if (typeof document === 'undefined') {
     return
@@ -539,7 +560,7 @@ function registerMdiIcons(): void {
 
   const style = document.createElement('style')
   style.id = STYLE_ELEMENT_ID
-  style.textContent = buildBaseCss() + buildIconCss()
+  style.textContent = buildMdiStylesheet()
   document.head.appendChild(style)
 }
 
@@ -560,4 +581,4 @@ function resolveMdiIconPath(classNames: Iterable<string> | string): string | nul
   return null
 }
 
-export { ICON_CLASS_NAMES, registerMdiIcons, resolveMdiIconPath }
+export { ICON_CLASS_NAMES, buildMdiStylesheet, registerMdiIcons, resolveMdiIconPath }

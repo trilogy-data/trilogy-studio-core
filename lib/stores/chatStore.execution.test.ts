@@ -57,6 +57,87 @@ describe('chatStore.executeMessage lifecycle', () => {
     setActivePinia(createPinia())
   })
 
+  it('disabledTools withholds the tool and its guidance on the default path', async () => {
+    const store = useChatStore()
+    const chat = store.newChat('llm-1')
+    const llm = makeDeferredLLM()
+    const deps = makeDeps(llm)
+
+    const run = store.executeMessage(chat.id, 'show me launches', deps, {
+      disabledTools: ['reorder_artifacts'],
+    })
+    await vi.waitFor(() => expect(llm.calls.length).toBe(1))
+
+    const request = llm.calls[0].options
+    const toolNames = request.tools.map((t: { name: string }) => t.name)
+    expect(toolNames).toContain('list_artifacts')
+    expect(toolNames).not.toContain('reorder_artifacts')
+    expect(request.systemPrompt).not.toContain('reorder_artifacts')
+    expect(request.systemPrompt).not.toContain('Reorder artifacts')
+
+    // The default path keeps prompting until a tool is called; stop it here
+    // rather than driving the loop through the registry's real executors.
+    store.stopExecution(chat.id)
+    llm.calls[0].resolve({ text: 'done', toolCalls: [] })
+    await run
+  })
+
+  it('extraTools reach the model and run the host executor when called', async () => {
+    const store = useChatStore()
+    const chat = store.newChat('llm-1')
+    const llm = makeDeferredLLM()
+    const deps = makeDeps(llm)
+    const execute = vi.fn().mockResolvedValue({ success: true, message: 'opened rockets view' })
+
+    const run = store.executeMessage(chat.id, 'show me on the globe', deps, {
+      extraTools: [
+        {
+          definition: {
+            name: 'show_in_view',
+            description: 'Open a visualisation',
+            input_schema: { type: 'object', properties: { view: { type: 'string' } } },
+          },
+          execute,
+        },
+      ],
+    })
+    await vi.waitFor(() => expect(llm.calls.length).toBe(1))
+
+    const names = llm.calls[0].options.tools.map((t: { name: string }) => t.name)
+    expect(names.at(-1)).toBe('return_to_user')
+    expect(names.at(-2)).toBe('show_in_view')
+
+    llm.calls[0].resolve({
+      text: '',
+      toolCalls: [{ id: 'call-1', name: 'show_in_view', input: { view: 'rockets' } }],
+    })
+    await vi.waitFor(() => expect(execute).toHaveBeenCalledWith({ view: 'rockets' }))
+    // The loop feeds the result back and asks the model again.
+    await vi.waitFor(() => expect(llm.calls.length).toBe(2))
+
+    store.stopExecution(chat.id)
+    llm.calls[1].resolve({ text: 'done', toolCalls: [] })
+    await run
+  })
+
+  it('the default path sends the full toolset when nothing is disabled', async () => {
+    const store = useChatStore()
+    const chat = store.newChat('llm-1')
+    const llm = makeDeferredLLM()
+    const deps = makeDeps(llm)
+
+    const run = store.executeMessage(chat.id, 'show me launches', deps)
+    await vi.waitFor(() => expect(llm.calls.length).toBe(1))
+
+    const request = llm.calls[0].options
+    expect(request.tools.map((t: { name: string }) => t.name)).toContain('reorder_artifacts')
+    expect(request.systemPrompt).toContain('Reorder artifacts')
+
+    store.stopExecution(chat.id)
+    llm.calls[0].resolve({ text: 'done', toolCalls: [] })
+    await run
+  })
+
   it('a superseded run must not clobber the new run or leave error bubbles', async () => {
     const store = useChatStore()
     const chat = store.newChat('llm-1')

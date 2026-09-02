@@ -8,7 +8,11 @@
   >
     <div class="table-container" :class="{ 'table-container-flush': flushChrome }">
       <!-- Minimal floating action buttons -->
-      <div class="controls-toggle" :class="{ 'controls-visible': controlsVisible }">
+      <div
+        v-if="showControls"
+        class="controls-toggle"
+        :class="{ 'controls-visible': controlsVisible }"
+      >
         <button
           class="control-btn"
           @click="copyToClipboard"
@@ -459,6 +463,16 @@ export default {
     flushChrome: {
       type: Boolean,
       default: false,
+    },
+    /**
+     * Render the floating copy/download buttons over the table. A host that
+     * wants those actions somewhere else (a card header, a toolbar) sets this
+     * false and calls `copyToClipboard()` / `downloadData()` on the component
+     * through a template ref; both are public for that purpose.
+     */
+    showControls: {
+      type: Boolean,
+      default: true,
     },
   },
   setup() {

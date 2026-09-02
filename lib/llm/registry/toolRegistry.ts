@@ -8,7 +8,11 @@ import type { RegisteredTool, ToolPackId, ToolRuntime, ToolSession, ToolContext 
 export type ToolsetContextId = 'chat' | 'global' | 'editor-trilogy' | 'editor-sql' | 'dashboard'
 
 const TOOLSET_PACKS: Record<ToolsetContextId, ToolPackId[]> = {
-  chat: ['data', 'artifacts', 'base'],
+  // 'docs' gives the chat agent search_docs/read_doc so it can look up
+  // language idioms instead of guessing; open_documentation rides along but
+  // declares its own availability, so a host without app navigation gets a
+  // graceful hint (or withholds it via disabledTools).
+  chat: ['data', 'artifacts', 'docs', 'base'],
   // Placeholder compositions until their packs land; resolving a context only
   // uses packs that have registered tools, so these are safe to declare early.
   global: [

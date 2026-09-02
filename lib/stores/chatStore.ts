@@ -12,7 +12,12 @@ import { OverseerToolExecutor } from '../llm/overseerToolExecutor'
 import { ArchitectToolExecutor } from '../llm/architectToolExecutor'
 import { summarizeSubchat } from '../llm/subchatSummarize'
 import type { ToolCallResult } from '../llm/sharedToolHelpers'
-import { buildChatAgentSystemPrompt } from '../llm/chatAgentPrompt'
+import {
+  buildChatAgentSystemPrompt,
+  filterDisabledTools,
+  mergeExtraTools,
+  type HostChatTool,
+} from '../llm/chatAgentPrompt'
 import { getSharedRegistry } from '../llm/registry'
 import { maybeCompactChat } from '../llm/compaction'
 import {
@@ -418,6 +423,17 @@ export const useChatStore = defineStore('chats', {
          *  the UI as a user-typed message. Used for subchat-completion
          *  injections into the overseer. */
         hiddenUserMessage?: boolean
+        /** Chat tools to withhold from this run, by name (default path only;
+         *  `overrides` carry their own toolset). The matching prompt guidance
+         *  is dropped with them. Keep the list stable across a conversation:
+         *  the toolset is part of the provider's prompt-cache prefix, so
+         *  changing it mid-conversation costs one cache miss. */
+        disabledTools?: readonly string[]
+        /** Host-defined tools added to this run (default path only). Their
+         *  definitions go to the model after the built-ins, ahead of
+         *  return_to_user, and calls to them run the host's executor instead
+         *  of the registry. Same prompt-cache caveat as disabledTools. */
+        extraTools?: readonly HostChatTool[]
       } = {},
     ): Promise<{ response?: string; artifacts?: ChatArtifact[] } | void> {
       const chat = this.chats[chatId]
@@ -587,7 +603,30 @@ export const useChatStore = defineStore('chats', {
                     },
                     { chatId, cache: new Map() },
                   )
-                  return { getToolExecutor: () => toolExecutor }
+                  const hostTools = new Map(
+                    (options.extraTools ?? []).map((tool) => [tool.definition.name, tool]),
+                  )
+                  if (hostTools.size === 0) {
+                    return { getToolExecutor: () => toolExecutor }
+                  }
+                  // Host tools take the call when the name is theirs; the
+                  // registry keeps everything else, including unknown names.
+                  const withHostTools = {
+                    executeToolCall: async (
+                      toolName: string,
+                      toolInput: Record<string, any>,
+                    ): Promise<ToolCallResult> => {
+                      const hostTool = hostTools.get(toolName)
+                      if (!hostTool) return toolExecutor.executeToolCall(toolName, toolInput)
+                      try {
+                        return await hostTool.execute(toolInput)
+                      } catch (err) {
+                        const message = err instanceof Error ? err.message : String(err)
+                        return { success: false, error: `Tool '${toolName}' failed: ${message}` }
+                      }
+                    },
+                  }
+                  return { getToolExecutor: () => withHostTools }
                 })()
 
         const stateUpdater: ExecutionStateUpdater = {
@@ -599,7 +638,7 @@ export const useChatStore = defineStore('chats', {
         // Build system prompt function (called each iteration for freshness)
         const buildSystemPrompt = options.overrides
           ? options.overrides.buildSystemPrompt
-          : () => this.buildSystemPrompt(chatId, deps)
+          : () => this.buildSystemPrompt(chatId, deps, options.disabledTools)
 
         // Handle symbol refresh on tool results (default path only)
         const onToolResult = options.overrides
@@ -616,7 +655,13 @@ export const useChatStore = defineStore('chats', {
             ? OVERSEER_TOOLS
             : chat.kind === 'architect'
               ? ARCHITECT_TOOLS
-              : getSharedRegistry().getToolsetForContext('chat')
+              : mergeExtraTools(
+                  filterDisabledTools(
+                    getSharedRegistry().getToolsetForContext('chat'),
+                    options.disabledTools,
+                  ),
+                  options.extraTools,
+                )
 
         const loopResult = await runToolLoop(
           message,
@@ -760,7 +805,11 @@ export const useChatStore = defineStore('chats', {
     },
 
     /** Build the system prompt for a chat based on its current state */
-    buildSystemPrompt(chatId: string, deps: ChatExecutionDependencies): string {
+    buildSystemPrompt(
+      chatId: string,
+      deps: ChatExecutionDependencies,
+      disabledTools?: readonly string[],
+    ): string {
       const chat = this.chats[chatId]
       if (!chat) return ''
 
@@ -811,6 +860,7 @@ export const useChatStore = defineStore('chats', {
         activeImports: chat.imports,
         availableImportsForConnection: availableImports,
         isDataConnectionActive,
+        disabledTools,
       })
 
       // Analyst subchats still ride on the generic CHAT_TOOLS for now —

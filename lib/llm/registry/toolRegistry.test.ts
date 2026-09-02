@@ -26,12 +26,23 @@ describe('ToolRegistry', () => {
     resetSharedRegistryForTests()
   })
 
-  it('golden: chat context toolset deep-equals the legacy CHAT_TOOLS array', () => {
+  it('golden: chat context toolset is CHAT_TOOLS plus the docs pack, return_to_user last', () => {
     // This is the release gate for "the tool union changed": any drift here
     // means the tool array sent to providers changed, which busts the
     // Anthropic prompt-cache prefix for every existing conversation.
     const registry = buildDefaultRegistry()
-    expect(registry.getToolsetForContext('chat')).toEqual([...CHAT_TOOLS])
+    const chatToolNames = CHAT_TOOLS.map((tool) => tool.name)
+    expect(registry.getToolNames('chat')).toEqual([
+      ...chatToolNames.filter((name) => name !== 'return_to_user'),
+      'search_docs',
+      'read_doc',
+      'open_documentation',
+      'return_to_user',
+    ])
+    // The legacy definitions keep their identity; only the docs pack is new.
+    for (const tool of CHAT_TOOLS) {
+      expect(registry.getToolsetForContext('chat')).toContain(tool)
+    }
   })
 
   it('returns the same array instance per context (memoized identity)', () => {
