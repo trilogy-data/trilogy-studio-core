@@ -47,10 +47,6 @@ export interface ExecuteMessageOverrides {
   executeToolCall: (toolName: string, toolInput: Record<string, any>) => Promise<ToolCallResult>
   buildSystemPrompt: () => string
   noToolCallReminder?: string
-  /** System note attached to failed results once a failure streak reaches the
-   *  loop's nudge threshold; name the toolset's completion tool. Defaults to
-   *  the generic text in toolLoopCore. */
-  consecutiveFailureReminder?: string
   terminateOnNoToolCall?: boolean
   /** Cap on tool-loop iterations for this run (default 50). */
   maxIterations?: number
@@ -680,9 +676,6 @@ export const useChatStore = defineStore('chats', {
             noToolCallReminder:
               options.overrides?.noToolCallReminder ??
               'You must call a tool to proceed. If you are finished, call return_to_user with a summary of what was done. Do not respond with text only.',
-            consecutiveFailureReminder:
-              options.overrides?.consecutiveFailureReminder ??
-              'Do not retry the same call with small variations. Either take a materially different approach, or call return_to_user now: explain the error, what you tried, and what you need from the user.',
             terminateOnNoToolCall: options.overrides?.terminateOnNoToolCall,
             buildSystemPrompt,
             onToolResult,

@@ -163,25 +163,6 @@ down: instead of telling the model to connect, it says to tell the user and retu
 opens its own connection must actually open it — a model told to call a tool it cannot see goes
 looking for it rather than reporting the problem.
 
-## Returning Control on Failure
-
-A turn ends when the agent calls `return_to_user`. Left to itself, a model whose query keeps
-failing tends to re-run it with small edits, or search the docs again, until the iteration cap
-(50 for persistent chats) is spent — one paid call per attempt, with the user watching a spinner.
-Two things guard against that:
-
-- **The prompt says when to stop.** The chat agent prompt caps query corrections at two attempts,
-  after which the model is told to call `return_to_user` with the error and what it tried, and to
-  return rather than explore when a request is already answered or cannot be answered from the
-  available sources.
-- **The loop counts failures.** `runToolLoop` tracks consecutive failed tool calls (results with
-  `success: false`; any success resets the streak). From the third failure in a row
-  (`failureNudgeAfter`), each failed result carries a `<system_input>` note telling the model to
-  change approach or hand control back; at the eighth (`maxConsecutiveFailures`, `0` to disable)
-  the loop stops itself and persists a notice carrying the last error as the final assistant
-  message. Both thresholds and the note's text (`consecutiveFailureReminder`) are `ToolLoopConfig`
-  options; `ExecuteMessageOverrides` accepts the reminder text for custom toolsets.
-
 ## Styling Prerequisites
 
 The package stylesheet (`@trilogy-data/trilogy-studio-components/style.css`) carries the

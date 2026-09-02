@@ -109,25 +109,6 @@ describe('buildChatAgentSystemPrompt connect_data_connection', () => {
   })
 })
 
-describe('buildChatAgentSystemPrompt return-control guidance', () => {
-  // A model with no exit rule for failure re-runs a broken query with small
-  // edits until the loop's iteration cap. The prompt has to say when to stop.
-  it('caps query retries and tells the model to return with the error', () => {
-    const prompt = buildChatAgentSystemPrompt(baseOptions)
-    expect(prompt).toContain('at most twice')
-    expect(prompt).toContain(
-      'If the third attempt also fails, stop: call return_to_user with the error',
-    )
-  })
-
-  it('tells the model to return rather than explore when stuck or already done', () => {
-    const prompt = buildChatAgentSystemPrompt(baseOptions)
-    expect(prompt).toContain('A simple question is one query and a return_to_user')
-    expect(prompt).toContain('If you are stuck')
-    expect(prompt).toContain('rather than retrying or searching further')
-  })
-})
-
 describe('mergeExtraTools', () => {
   const hostTool = (name: string): HostChatTool => ({
     definition: {
