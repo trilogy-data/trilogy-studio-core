@@ -1,15 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { ICON_CLASS_NAMES, resolveMdiIconPath } from './registerMdiIcons'
+import { ICON_CLASS_NAMES, buildMdiStylesheet, resolveMdiIconPath } from './registerMdiIcons'
 
 /**
  * Icons are an explicit allowlist: a class only renders if it appears in
- * ICON_CLASS_NAMES *and* ICON_PATH_MAP. An unregistered one fails silently and
- * badly — `.mdi::before` still paints a 1em box filled with currentColor, just
- * with no mask — so the UI shows a solid black square rather than nothing at
- * all. That reads as a styling quirk, not a missing registration, which is why
- * it needs a test rather than review attention.
+ * ICON_CLASS_NAMES *and* ICON_PATH_MAP. An unregistered one fails silently:
+ * this repo loads no icon font, so the element renders as nothing at all. That
+ * reads as a styling quirk, not a missing registration, which is why it needs
+ * a test rather than review attention.
  */
 
 const REPO_ROOT = resolve(__dirname, '../..')
@@ -77,6 +76,49 @@ describe('MDI icon registration', () => {
     // and produces the same filled square as an unregistered class.
     const missingPaths = ICON_CLASS_NAMES.filter((name) => !resolveMdiIconPath(name))
     expect(missingPaths).toEqual([])
+  })
+
+  /*
+    The stylesheet is appended to <head> at runtime, so it out-cascades any
+    icon font a host page loads. A bare `.mdi::before` rule therefore replaced
+    every host icon the registry did not know with a solid currentColor square;
+    the mask box must only ever apply to registered classes.
+  */
+  describe('generated stylesheet', () => {
+    const css = buildMdiStylesheet()
+    const maskBoxRules = css
+      .split('}')
+      .filter((rule) => rule.includes('background-color: currentColor'))
+      .map((rule) => rule.split('{')[0].trim())
+
+    it('scopes the mask box to registered icon classes', () => {
+      expect(maskBoxRules).toHaveLength(1)
+      const [selector] = maskBoxRules
+      expect(selector).not.toMatch(/(^|,)\s*\.mdi::before/)
+      expect(selector).toContain('.mdi:is(')
+      for (const name of ICON_CLASS_NAMES) {
+        expect(selector).toContain(`.${name}`)
+      }
+    })
+
+    it('does not paint a box for an unregistered class', () => {
+      // Every rule that could reach `.mdi-not-registered::before` must come
+      // from the base sizing/spin modifiers, none of which set content.
+      const reaching = css.split('}').filter((rule) => {
+        const selector = rule.split('{')[0]
+        return (
+          /(^|[\s,])\.mdi(\.mdi-spin|\.mdi-\d+px)?::before/.test(selector) &&
+          !selector.includes(':is(')
+        )
+      })
+      expect(reaching.some((rule) => rule.includes('content:'))).toBe(false)
+    })
+
+    it('emits a mask image for every registered icon', () => {
+      for (const name of ICON_CLASS_NAMES) {
+        expect(css).toContain(`.${name}::before {`)
+      }
+    })
   })
 
   it('resolves the icon class out of a full class attribute', () => {

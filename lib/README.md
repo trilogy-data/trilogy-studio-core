@@ -104,6 +104,26 @@ the host app's `public/` assets or another static host. Importing DuckDB files w
 multiple Vite build graphs can still emit duplicate hashed files even when they resolve to the same
 source package.
 
+## Styling Prerequisites
+
+The package stylesheet (`@trilogy-data/trilogy-studio-components/style.css`) carries the
+components' own styles only. Two things come from the host page:
+
+- **Tabulator's base stylesheet.** `DataTable` is built on
+  [Tabulator](https://tabulator.info/) and relies on its layout rules (nowrap headers, inline
+  column and cell widths). Import one of Tabulator's sheets before the package stylesheet, e.g.
+  `import 'tabulator-tables/dist/css/tabulator.min.css'`, and put any theme overrides after it.
+  Without it the table renders with no layout at all — header columns wrap and cells lose their
+  widths.
+- **Icons beyond the registered set.** The package registers the Material Design Icons it uses
+  itself as SVG masks (`lib/icons/registerMdiIcons.ts`), so those `mdi-*` classes need no icon
+  font. A class outside that set is left untouched and renders with whatever the host provides,
+  typically the `@mdi/font` webfont; with no font loaded it renders as nothing.
+
+`DataTable` also takes `showControls` (default `true`). Set it `false` to drop the floating
+copy/download buttons and call `copyToClipboard()` / `downloadData()` on the component through a
+template ref from controls of your own.
+
 ## Embedding Themes
 
 Embedded consumers can now provide theme information without wiring the full Studio `userSettingsStore`.
