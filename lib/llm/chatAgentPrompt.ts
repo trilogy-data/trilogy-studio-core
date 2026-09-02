@@ -336,9 +336,9 @@ export interface ChatAgentPromptOptions {
  * the input array is returned as-is, keeping the registry's identity contract.
  */
 export function filterDisabledTools<T extends { name: string }>(
-  tools: readonly T[],
+  tools: T[],
   disabledTools: readonly string[] | undefined,
-): readonly T[] {
+): T[] {
   if (!disabledTools || disabledTools.length === 0) return tools
   const disabled = new Set(disabledTools)
   return tools.filter((tool) => !disabled.has(tool.name))

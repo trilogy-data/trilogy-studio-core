@@ -9,12 +9,13 @@ const baseOptions = {
 describe('filterDisabledTools', () => {
   it('returns the same array when nothing is disabled', () => {
     // The shared registry's toolset identity is part of its cache contract.
-    expect(filterDisabledTools(CHAT_TOOLS, undefined)).toBe(CHAT_TOOLS)
-    expect(filterDisabledTools(CHAT_TOOLS, [])).toBe(CHAT_TOOLS)
+    const tools = [...CHAT_TOOLS]
+    expect(filterDisabledTools(tools, undefined)).toBe(tools)
+    expect(filterDisabledTools(tools, [])).toBe(tools)
   })
 
   it('drops only the named tools, in order', () => {
-    const names = filterDisabledTools(CHAT_TOOLS, ['reorder_artifacts']).map((t) => t.name)
+    const names = filterDisabledTools([...CHAT_TOOLS], ['reorder_artifacts']).map((t) => t.name)
     expect(names).not.toContain('reorder_artifacts')
     expect(names).toEqual(CHAT_TOOLS.map((t) => t.name).filter((n) => n !== 'reorder_artifacts'))
   })
