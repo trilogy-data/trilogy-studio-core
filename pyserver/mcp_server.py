@@ -3,6 +3,7 @@ from functools import wraps
 
 import httpx
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from trilogy import Dialects, Environment
 from trilogy.authoring import Concept
 from trilogy.core.models.core import (
@@ -303,7 +304,10 @@ def create_connection(name: str, model_name: str) -> str:
 def list_connection_fields(name: str) -> list[dict]:
     """List datasets in a connection"""
     if name not in CONNECTIONS:
-        raise ValueError(f"Connection '{name}' does not exist.")
+        # An anticipated failure the model should read and correct. mcp>=2.1
+        # masks anything but ToolError as a crash ("Error executing tool
+        # <name>"), so a ValueError here would hide the connection name.
+        raise ToolError(f"Connection '{name}' does not exist.")
     executor = CONNECTIONS[name]
     return [
         process_concept(c)
