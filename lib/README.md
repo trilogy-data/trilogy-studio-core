@@ -104,6 +104,24 @@ the host app's `public/` assets or another static host. Importing DuckDB files w
 multiple Vite build graphs can still emit duplicate hashed files even when they resolve to the same
 source package.
 
+## Withholding Chat Tools
+
+`useTrilogyChat` (and `useChatWithTools` for persistent chats) takes `disabledTools`, a list of
+chat tool names — or a ref/getter for one — to keep out of the conversation. The tools are removed
+from the request and the prompt guidance that asks for them is dropped, so the model is never told
+to call something it cannot see. Use it when a host surface makes a tool pointless: a layout with
+no artifact panel has nothing for `reorder_artifacts` to reorder.
+
+```ts
+const chat = useTrilogyChat({
+  dataConnectionName: 'my-database',
+  disabledTools: () => (isNarrowScreen.value ? ['reorder_artifacts'] : []),
+})
+```
+
+The toolset is part of the provider's prompt-cache prefix, so keep the list stable within a
+conversation where you can; each change costs one cache miss.
+
 ## Styling Prerequisites
 
 The package stylesheet (`@trilogy-data/trilogy-studio-components/style.css`) carries the

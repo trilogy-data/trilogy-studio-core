@@ -12,7 +12,7 @@ import { OverseerToolExecutor } from '../llm/overseerToolExecutor'
 import { ArchitectToolExecutor } from '../llm/architectToolExecutor'
 import { summarizeSubchat } from '../llm/subchatSummarize'
 import type { ToolCallResult } from '../llm/sharedToolHelpers'
-import { buildChatAgentSystemPrompt } from '../llm/chatAgentPrompt'
+import { buildChatAgentSystemPrompt, filterDisabledTools } from '../llm/chatAgentPrompt'
 import { getSharedRegistry } from '../llm/registry'
 import { maybeCompactChat } from '../llm/compaction'
 import {
@@ -418,6 +418,12 @@ export const useChatStore = defineStore('chats', {
          *  the UI as a user-typed message. Used for subchat-completion
          *  injections into the overseer. */
         hiddenUserMessage?: boolean
+        /** Chat tools to withhold from this run, by name (default path only;
+         *  `overrides` carry their own toolset). The matching prompt guidance
+         *  is dropped with them. Keep the list stable across a conversation:
+         *  the toolset is part of the provider's prompt-cache prefix, so
+         *  changing it mid-conversation costs one cache miss. */
+        disabledTools?: readonly string[]
       } = {},
     ): Promise<{ response?: string; artifacts?: ChatArtifact[] } | void> {
       const chat = this.chats[chatId]
@@ -599,7 +605,7 @@ export const useChatStore = defineStore('chats', {
         // Build system prompt function (called each iteration for freshness)
         const buildSystemPrompt = options.overrides
           ? options.overrides.buildSystemPrompt
-          : () => this.buildSystemPrompt(chatId, deps)
+          : () => this.buildSystemPrompt(chatId, deps, options.disabledTools)
 
         // Handle symbol refresh on tool results (default path only)
         const onToolResult = options.overrides
@@ -616,7 +622,10 @@ export const useChatStore = defineStore('chats', {
             ? OVERSEER_TOOLS
             : chat.kind === 'architect'
               ? ARCHITECT_TOOLS
-              : getSharedRegistry().getToolsetForContext('chat')
+              : filterDisabledTools(
+                  getSharedRegistry().getToolsetForContext('chat'),
+                  options.disabledTools,
+                )
 
         const loopResult = await runToolLoop(
           message,
@@ -760,7 +769,11 @@ export const useChatStore = defineStore('chats', {
     },
 
     /** Build the system prompt for a chat based on its current state */
-    buildSystemPrompt(chatId: string, deps: ChatExecutionDependencies): string {
+    buildSystemPrompt(
+      chatId: string,
+      deps: ChatExecutionDependencies,
+      disabledTools?: readonly string[],
+    ): string {
       const chat = this.chats[chatId]
       if (!chat) return ''
 
@@ -811,6 +824,7 @@ export const useChatStore = defineStore('chats', {
         activeImports: chat.imports,
         availableImportsForConnection: availableImports,
         isDataConnectionActive,
+        disabledTools,
       })
 
       // Analyst subchats still ride on the generic CHAT_TOOLS for now —

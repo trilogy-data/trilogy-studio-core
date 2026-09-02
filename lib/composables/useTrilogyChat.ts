@@ -1,6 +1,7 @@
 import { useTrilogyCore, type TrilogyCoreOptions } from './useTrilogyCore'
 import { useChatWithTools, type UseChatWithToolsReturn } from './useChatWithTools'
 import type { NavigationStore } from '../stores/useScreenNavigation'
+import type { MaybeRefOrGetter } from 'vue'
 
 export interface TrilogyChatOptions extends TrilogyCoreOptions {
   /**
@@ -31,6 +32,11 @@ export interface TrilogyChatOptions extends TrilogyCoreOptions {
    * If not provided, one will be created internally.
    */
   navigationStore?: NavigationStore | null
+  /**
+   * Chat tools to withhold from the model, by name, along with the prompt
+   * guidance that asks for them. See `UseChatWithToolsOptions.disabledTools`.
+   */
+  disabledTools?: MaybeRefOrGetter<readonly string[]>
 }
 
 /**
@@ -73,6 +79,7 @@ export function useTrilogyChat(options: TrilogyChatOptions = {}): UseChatWithToo
     persistChat = true,
     onTitleUpdate,
     navigationStore: providedNavigationStore,
+    disabledTools,
   } = options
 
   // Initialize all core stores and services
@@ -95,6 +102,7 @@ export function useTrilogyChat(options: TrilogyChatOptions = {}): UseChatWithToo
     dataConnectionName,
     initialTitle,
     onTitleUpdate,
+    disabledTools,
   })
 }
 

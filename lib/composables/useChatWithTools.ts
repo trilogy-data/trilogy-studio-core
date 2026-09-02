@@ -1,5 +1,5 @@
-import { ref, computed, watch } from 'vue'
-import type { Ref, ComputedRef } from 'vue'
+import { ref, computed, watch, toValue } from 'vue'
+import type { Ref, ComputedRef, MaybeRefOrGetter } from 'vue'
 import type { LLMConnectionStoreType } from '../stores/llmStore'
 import type { ConnectionStoreType } from '../stores/connectionStore'
 import type QueryExecutionService from '../stores/queryExecutionService'
@@ -60,6 +60,16 @@ export interface UseChatWithToolsOptions {
    * Return a string result to feed back to the LLM.
    */
   onCustomToolCall?: (toolName: string, toolInput: Record<string, unknown>) => Promise<string>
+
+  /**
+   * Chat tools to withhold from the model, by name, with their prompt guidance
+   * (persistent chats only). For a host whose surface makes a tool pointless:
+   * a layout with no artifact panel has nothing for `reorder_artifacts` to
+   * reorder. Accepts a ref or getter and is read at send time, but keep it
+   * stable within a conversation — the toolset is part of the provider's
+   * prompt-cache prefix, so each change costs a cache miss.
+   */
+  disabledTools?: MaybeRefOrGetter<readonly string[]>
 }
 
 export interface UseChatWithToolsReturn {
@@ -107,6 +117,7 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
     dataConnectionName: initialDataConnectionName,
     initialTitle = 'Chat',
     customTools,
+    disabledTools,
     onCustomToolCall,
   } = options
 
@@ -364,6 +375,7 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
       activeImports: activeImportsForChat.value,
       availableImportsForConnection: availableImportsForChat.value,
       isDataConnectionActive,
+      disabledTools: toValue(disabledTools),
     })
   })
 
@@ -449,6 +461,7 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
         },
         {
           onSymbolsRefresh: refreshChatSymbols,
+          disabledTools: toValue(disabledTools),
         },
       )
     }

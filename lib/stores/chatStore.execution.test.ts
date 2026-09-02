@@ -57,6 +57,49 @@ describe('chatStore.executeMessage lifecycle', () => {
     setActivePinia(createPinia())
   })
 
+  it('disabledTools withholds the tool and its guidance on the default path', async () => {
+    const store = useChatStore()
+    const chat = store.newChat('llm-1')
+    const llm = makeDeferredLLM()
+    const deps = makeDeps(llm)
+
+    const run = store.executeMessage(chat.id, 'show me launches', deps, {
+      disabledTools: ['reorder_artifacts'],
+    })
+    await vi.waitFor(() => expect(llm.calls.length).toBe(1))
+
+    const request = llm.calls[0].options
+    const toolNames = request.tools.map((t: { name: string }) => t.name)
+    expect(toolNames).toContain('list_artifacts')
+    expect(toolNames).not.toContain('reorder_artifacts')
+    expect(request.systemPrompt).not.toContain('reorder_artifacts')
+    expect(request.systemPrompt).not.toContain('Reorder artifacts')
+
+    // The default path keeps prompting until a tool is called; stop it here
+    // rather than driving the loop through the registry's real executors.
+    store.stopExecution(chat.id)
+    llm.calls[0].resolve({ text: 'done', toolCalls: [] })
+    await run
+  })
+
+  it('the default path sends the full toolset when nothing is disabled', async () => {
+    const store = useChatStore()
+    const chat = store.newChat('llm-1')
+    const llm = makeDeferredLLM()
+    const deps = makeDeps(llm)
+
+    const run = store.executeMessage(chat.id, 'show me launches', deps)
+    await vi.waitFor(() => expect(llm.calls.length).toBe(1))
+
+    const request = llm.calls[0].options
+    expect(request.tools.map((t: { name: string }) => t.name)).toContain('reorder_artifacts')
+    expect(request.systemPrompt).toContain('Reorder artifacts')
+
+    store.stopExecution(chat.id)
+    llm.calls[0].resolve({ text: 'done', toolCalls: [] })
+    await run
+  })
+
   it('a superseded run must not clobber the new run or leave error bubbles', async () => {
     const store = useChatStore()
     const chat = store.newChat('llm-1')

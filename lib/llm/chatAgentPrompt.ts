@@ -320,6 +320,93 @@ export interface ChatAgentPromptOptions {
   activeImports?: ChatImport[] // Currently imported data sources
   availableImportsForConnection?: ChatImport[] // All available imports for current connection
   isDataConnectionActive?: boolean // Whether the current data connection is connected
+  /**
+   * Names of chat tools the host has withheld from this conversation (see
+   * `filterDisabledTools`). Guidance that tells the model to call one of them
+   * is dropped so the prompt never asks for a tool the toolset does not carry.
+   */
+  disabledTools?: readonly string[]
+}
+
+/**
+ * Remove withheld tools from a toolset. A host whose surface makes a tool
+ * meaningless — an artifact panel that is not there to reorder, say — drops it
+ * here rather than editing CHAT_TOOLS, so the shared registry's cached
+ * toolset stays intact for every other conversation. With nothing disabled
+ * the input array is returned as-is, keeping the registry's identity contract.
+ */
+export function filterDisabledTools<T extends { name: string }>(
+  tools: readonly T[],
+  disabledTools: readonly string[] | undefined,
+): readonly T[] {
+  if (!disabledTools || disabledTools.length === 0) return tools
+  const disabled = new Set(disabledTools)
+  return tools.filter((tool) => !disabled.has(tool.name))
+}
+
+/** A line of prompt guidance, tagged with the tool it tells the model to use
+ *  so it can be dropped alongside that tool. */
+interface ToolGuidance {
+  tool?: string
+  text: string
+}
+
+const ARTIFACT_MANAGEMENT_GUIDANCE: readonly ToolGuidance[] = [
+  {
+    text: '- Every query and chart tool call returns an artifact ID. Use these IDs to reference, update, or remove artifacts later.',
+  },
+  {
+    tool: 'create_markdown',
+    text: `- Use create_markdown to create rich formatted content: reports, summaries, annotated insights, data-driven narratives.
+  - Markdown supports template expressions when a query is provided: {field_name}, {data[0].field}, {{#each data limit=5}} {field} {{/each}}`,
+  },
+  {
+    tool: 'list_artifacts',
+    text: '- Use list_artifacts to see all artifacts with their IDs, types, and metadata.',
+  },
+  {
+    tool: 'get_artifact',
+    text: '- Use get_artifact to inspect the full contents and configuration of a specific artifact.',
+  },
+  {
+    tool: 'update_artifact',
+    text: '- Use update_artifact to modify existing artifacts (change markdown content, title, or chart configuration).',
+  },
+  {
+    tool: 'hide_artifact',
+    text: '- Use hide_artifact to remove stale or superseded artifacts from the main view. Hidden artifacts are preserved and accessible to both you and the user — they are not deleted.',
+  },
+  {
+    tool: 'create_markdown',
+    text: '- When the user asks for a summary, report, or narrative, prefer create_markdown over just text responses - it renders in the artifacts panel.',
+  },
+]
+
+/** Numbered on render, so dropping a step keeps the list contiguous. */
+const ARTIFACT_CURATION_STEPS: readonly ToolGuidance[] = [
+  { tool: 'list_artifacts', text: 'Call list_artifacts to see everything currently in the panel.' },
+  {
+    tool: 'hide_artifact',
+    text: 'Hide stale or superseded artifacts using hide_artifact — failed queries, test runs, intermediate steps, or results from earlier questions that are no longer relevant to the current ask. Hidden artifacts are preserved (the user can restore them) and you can still reference them by ID.',
+  },
+  {
+    tool: 'update_artifact',
+    text: 'Update titles: give each remaining artifact a clear, descriptive title that explains what it shows (via update_artifact).',
+  },
+  {
+    tool: 'reorder_artifacts',
+    text: 'Reorder artifacts for maximum impact — put the most important artifact first (e.g., a summary markdown or key chart), followed by supporting detail. The artifacts panel is the primary view the user sees.',
+  },
+  {
+    text: "The artifact panel should tell a coherent story that directly answers the user's latest request — not accumulate a growing pile from every prior turn.",
+  },
+]
+
+function enabledGuidance(
+  lines: readonly ToolGuidance[],
+  disabledTools: readonly string[],
+): ToolGuidance[] {
+  return lines.filter((line) => !line.tool || !disabledTools.includes(line.tool))
 }
 
 export function buildChatAgentSystemPrompt(options: ChatAgentPromptOptions): string {
@@ -330,7 +417,15 @@ export function buildChatAgentSystemPrompt(options: ChatAgentPromptOptions): str
     activeImports = [],
     availableImportsForConnection = [],
     isDataConnectionActive = true,
+    disabledTools = [],
   } = options
+
+  const artifactManagementSection = enabledGuidance(ARTIFACT_MANAGEMENT_GUIDANCE, disabledTools)
+    .map((line) => line.text)
+    .join('\n')
+  const artifactCurationSection = enabledGuidance(ARTIFACT_CURATION_STEPS, disabledTools)
+    .map((line, index) => `${index + 1}. ${line.text}`)
+    .join('\n')
 
   const conceptsSection =
     availableConcepts && availableConcepts.length > 0
@@ -380,22 +475,11 @@ IMPORTANT GUIDELINES:
 8. If the data connection is not active, use connect_data_connection to establish the connection before running queries
 
 ARTIFACT MANAGEMENT:
-- Every query and chart tool call returns an artifact ID. Use these IDs to reference, update, or remove artifacts later.
-- Use create_markdown to create rich formatted content: reports, summaries, annotated insights, data-driven narratives.
-  - Markdown supports template expressions when a query is provided: {field_name}, {data[0].field}, {{#each data limit=5}} {field} {{/each}}
-- Use list_artifacts to see all artifacts with their IDs, types, and metadata.
-- Use get_artifact to inspect the full contents and configuration of a specific artifact.
-- Use update_artifact to modify existing artifacts (change markdown content, title, or chart configuration).
-- Use hide_artifact to remove stale or superseded artifacts from the main view. Hidden artifacts are preserved and accessible to both you and the user — they are not deleted.
-- When the user asks for a summary, report, or narrative, prefer create_markdown over just text responses - it renders in the artifacts panel.
+${artifactManagementSection}
 
 ARTIFACT CURATION (required before every return_to_user call):
 Before calling return_to_user, you MUST curate the artifact panel so it reflects a clean, coherent answer to the user's current request:
-1. Call list_artifacts to see everything currently in the panel.
-2. Hide stale or superseded artifacts using hide_artifact — failed queries, test runs, intermediate steps, or results from earlier questions that are no longer relevant to the current ask. Hidden artifacts are preserved (the user can restore them) and you can still reference them by ID.
-3. Update titles: give each remaining artifact a clear, descriptive title that explains what it shows (via update_artifact).
-4. Reorder artifacts for maximum impact — put the most important artifact first (e.g., a summary markdown or key chart), followed by supporting detail. The artifacts panel is the primary view the user sees.
-5. The artifact panel should tell a coherent story that directly answers the user's latest request — not accumulate a growing pile from every prior turn.
+${artifactCurationSection}
 
 COMPLETING YOUR RESPONSE:
 - When you have finished addressing the user's request AND curated the artifact panel, call return_to_user with a brief summary.
