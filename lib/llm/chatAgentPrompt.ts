@@ -491,10 +491,19 @@ export function buildChatAgentSystemPrompt(options: ChatAgentPromptOptions): str
       ? `\n\nAVAILABLE FIELDS FOR QUERIES:\n${conceptsToFieldPrompt(availableConcepts)}`
       : ''
 
+  // A host that opens its own connection withholds connect_data_connection;
+  // telling the model to call a tool it cannot see sends it searching for it
+  // instead of reporting the problem.
+  const canConnect = !disabledTools.includes('connect_data_connection')
   const connectionStatusNote =
     dataConnectionName && !isDataConnectionActive
-      ? ' (NOT CONNECTED - use connect_data_connection tool to connect before running queries)'
+      ? canConnect
+        ? ' (NOT CONNECTED - use connect_data_connection tool to connect before running queries)'
+        : ' (NOT CONNECTED - queries will fail; tell the user the data connection is not available and call return_to_user)'
       : ''
+  const connectGuideline = canConnect
+    ? '\n8. If the data connection is not active, use connect_data_connection to establish the connection before running queries'
+    : ''
 
   const connectionInfo = dataConnectionName
     ? `ACTIVE DATA CONNECTION: ${dataConnectionName}${connectionStatusNote}`
@@ -530,8 +539,7 @@ IMPORTANT GUIDELINES:
 4. When showing data, prefer tables for detailed exploration and charts for trends/comparisons
 5. Use the full field path (e.g., 'order.product.id') - never use FROM clauses
 6. Remember: No GROUP BY clause - grouping is implicit by non-aggregated fields in SELECT
-7. If the user question needs fields that are not in the same source, use select_active_import to switch to a different data source (only one can be active at a time). Always consider this when they change topics.
-8. If the data connection is not active, use connect_data_connection to establish the connection before running queries${documentationSection}
+7. If the user question needs fields that are not in the same source, use select_active_import to switch to a different data source (only one can be active at a time). Always consider this when they change topics.${connectGuideline}${documentationSection}
 
 ARTIFACT MANAGEMENT:
 ${artifactManagementSection}

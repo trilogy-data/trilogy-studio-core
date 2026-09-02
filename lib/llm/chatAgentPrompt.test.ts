@@ -85,6 +85,30 @@ describe('buildChatAgentSystemPrompt disabledTools', () => {
   })
 })
 
+describe('buildChatAgentSystemPrompt connect_data_connection', () => {
+  it('tells the model to connect when the tool is available', () => {
+    const prompt = buildChatAgentSystemPrompt({ ...baseOptions, isDataConnectionActive: false })
+    expect(prompt).toContain('NOT CONNECTED - use connect_data_connection tool')
+    expect(prompt).toContain('8. If the data connection is not active, use connect_data_connection')
+  })
+
+  it('never names the tool when the host withholds it', () => {
+    // A host that opens its own connection disables the tool; a model told to
+    // call it anyway goes looking for it (search_docs, retries) rather than
+    // reporting the problem.
+    const prompt = buildChatAgentSystemPrompt({
+      ...baseOptions,
+      isDataConnectionActive: false,
+      disabledTools: ['connect_data_connection'],
+    })
+    expect(prompt).not.toContain('connect_data_connection')
+    expect(prompt).toContain(
+      'NOT CONNECTED - queries will fail; tell the user the data connection is not available and call return_to_user',
+    )
+    expect(prompt).not.toContain('\n8. ')
+  })
+})
+
 describe('buildChatAgentSystemPrompt return-control guidance', () => {
   // A model with no exit rule for failure re-runs a broken query with small
   // edits until the loop's iteration cap. The prompt has to say when to stop.

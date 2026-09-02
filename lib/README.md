@@ -158,6 +158,11 @@ const chat = useTrilogyChat({
 The toolset is part of the provider's prompt-cache prefix, so keep the list stable within a
 conversation where you can; each change costs one cache miss.
 
+Disabling `connect_data_connection` also changes what the prompt says when the data connection is
+down: instead of telling the model to connect, it says to tell the user and return. A host that
+opens its own connection must actually open it — a model told to call a tool it cannot see goes
+looking for it rather than reporting the problem.
+
 ## Returning Control on Failure
 
 A turn ends when the agent calls `return_to_user`. Left to itself, a model whose query keeps
