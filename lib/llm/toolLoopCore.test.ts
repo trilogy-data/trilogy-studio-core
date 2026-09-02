@@ -1,8 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   MAX_TOOL_RESULT_ROWS,
+  DEFAULT_FAILURE_NUDGE_AFTER,
+  DEFAULT_MAX_CONSECUTIVE_FAILURES,
   truncateResultRows,
   formatToolResultText,
+  formatConsecutiveFailureNote,
   stripPromptWrapperTags,
   runToolLoop,
 } from './toolLoopCore'
@@ -291,5 +294,121 @@ describe('runToolLoop', () => {
     // must not re-persist the final iteration's text.
     expect(textOccurrences).toHaveLength(2)
     expect(persisted[persisted.length - 1].content).toBe('(Max tool iterations reached)')
+  })
+
+  describe('consecutive tool failures', () => {
+    // One failing call per iteration, the shape of a model re-running a broken
+    // query with cosmetic edits.
+    const failingRun = (overrides: Record<string, unknown> = {}) => {
+      const { persisted, persistence } = makeHarness()
+      const llmAdapter = {
+        generateCompletion: vi.fn().mockResolvedValue({
+          text: '',
+          toolCalls: [{ id: 'c', name: 'run_trilogy_query', input: { query: 'select 1' } }],
+        }),
+      }
+      const executor = {
+        executeToolCall: vi.fn().mockResolvedValue({ success: false, error: 'parse error' }),
+      }
+      const run = () =>
+        runToolLoop(
+          'do the thing',
+          'conn',
+          llmAdapter,
+          persistence,
+          { getToolExecutor: () => executor },
+          { setActiveToolName: () => {}, checkAborted: () => false },
+          { tools: [], buildSystemPrompt: () => 'sys', maxIterations: 50, ...overrides },
+        )
+      return { persisted, llmAdapter, executor, run }
+    }
+
+    const resultTexts = (persisted: ChatMessage[]) =>
+      persisted.flatMap((m) => m.toolResults ?? []).map((r) => r.result)
+
+    it('attaches the nudge to failed results once the streak reaches the threshold', async () => {
+      const { persisted, run } = failingRun({ maxConsecutiveFailures: 0 })
+      await run()
+      const texts = resultTexts(persisted)
+      // Early failures are plain — a first error is normal and the prompt's
+      // own retry guidance covers it.
+      expect(texts[0]).toBe('Error: parse error')
+      expect(texts[DEFAULT_FAILURE_NUDGE_AFTER - 2]).not.toContain('<system_input>')
+      const nudged = texts[DEFAULT_FAILURE_NUDGE_AFTER - 1]
+      expect(nudged.startsWith('Error: parse error')).toBe(true)
+      expect(nudged).toContain(
+        `<system_input>This is failed tool call ${DEFAULT_FAILURE_NUDGE_AFTER} in a row.`,
+      )
+      expect(nudged).toContain('call the completion tool to return control')
+      expect(nudged.endsWith('</system_input>')).toBe(true)
+    })
+
+    it('uses the caller-supplied reminder text', async () => {
+      const { persisted, run } = failingRun({
+        maxConsecutiveFailures: 0,
+        consecutiveFailureReminder: 'Call return_to_user now.',
+      })
+      await run()
+      const nudged = resultTexts(persisted)[DEFAULT_FAILURE_NUDGE_AFTER - 1]
+      expect(nudged).toContain(
+        formatConsecutiveFailureNote(DEFAULT_FAILURE_NUDGE_AFTER, 'Call return_to_user now.'),
+      )
+      expect(nudged).not.toContain('completion tool')
+    })
+
+    it('stops the loop at the failure cap with a notice carrying the last error', async () => {
+      const { persisted, llmAdapter, run } = failingRun()
+      const result = await run()
+      expect(llmAdapter.generateCompletion).toHaveBeenCalledTimes(DEFAULT_MAX_CONSECUTIVE_FAILURES)
+      expect(result.terminated).toBe(false)
+      const last = persisted[persisted.length - 1]
+      expect(last.role).toBe('assistant')
+      expect(last.content).toBe(
+        `(Stopped after ${DEFAULT_MAX_CONSECUTIVE_FAILURES} failed tool calls in a row — last error: parse error)`,
+      )
+      // The final batch is persisted as call + results before the notice, so
+      // the next turn's history has no dangling tool call.
+      const beforeNotice = persisted[persisted.length - 2]
+      expect(beforeNotice.toolResults).toHaveLength(1)
+    })
+
+    it('resets the streak on any success', async () => {
+      const { persisted, persistence } = makeHarness()
+      const llmAdapter = {
+        generateCompletion: vi.fn().mockResolvedValue({
+          text: '',
+          toolCalls: [{ id: 'c', name: 'tool_a', input: {} }],
+        }),
+      }
+      let calls = 0
+      const executor = {
+        executeToolCall: vi.fn().mockImplementation(async () => {
+          calls += 1
+          // Fail twice, succeed, then fail again: the streak never reaches 3.
+          return calls % 3 === 0 ? { success: true, message: 'ok' } : { success: false, error: 'x' }
+        }),
+      }
+      await runToolLoop(
+        'do the thing',
+        'conn',
+        llmAdapter,
+        persistence,
+        { getToolExecutor: () => executor },
+        { setActiveToolName: () => {}, checkAborted: () => false },
+        { tools: [], buildSystemPrompt: () => 'sys', maxIterations: 9 },
+      )
+      expect(llmAdapter.generateCompletion).toHaveBeenCalledTimes(9)
+      expect(resultTexts(persisted).some((t) => t.includes('<system_input>'))).toBe(false)
+      expect(persisted[persisted.length - 1].content).toBe('(Max tool iterations reached)')
+    })
+
+    it('honours a custom nudge threshold', async () => {
+      const { persisted, run } = failingRun({ failureNudgeAfter: 1, maxConsecutiveFailures: 2 })
+      await run()
+      const texts = resultTexts(persisted)
+      expect(texts).toHaveLength(2)
+      expect(texts[0]).toContain('This is failed tool call 1 in a row.')
+      expect(persisted[persisted.length - 1].content).toContain('Stopped after 2 failed tool calls')
+    })
   })
 })

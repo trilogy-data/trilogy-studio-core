@@ -79,6 +79,38 @@ export interface ToolLoopConfig {
    * LLM's plain text response is the final answer.
    */
   terminateOnNoToolCall?: boolean
+  /**
+   * Number of consecutive failed tool calls after which every further failed
+   * result carries a system note telling the model to change approach or hand
+   * control back. Defaults to DEFAULT_FAILURE_NUDGE_AFTER. A failed call is
+   * one whose result has `success: false`; any success resets the streak.
+   */
+  failureNudgeAfter?: number
+  /**
+   * Number of consecutive failed tool calls at which the loop stops on its
+   * own, persisting a notice as the final assistant message. Defaults to
+   * DEFAULT_MAX_CONSECUTIVE_FAILURES. Pass 0 to disable the stop.
+   */
+  maxConsecutiveFailures?: number
+  /**
+   * Text of the system note appended to a failed result once the streak
+   * reaches `failureNudgeAfter`. Name the completion tool of the toolset in
+   * use; the default refers to it generically.
+   */
+  consecutiveFailureReminder?: string
+}
+
+/** Failed tool calls in a row before the nudge is attached to results. */
+export const DEFAULT_FAILURE_NUDGE_AFTER = 3
+/** Failed tool calls in a row at which the loop stops by itself. */
+export const DEFAULT_MAX_CONSECUTIVE_FAILURES = 8
+export const DEFAULT_CONSECUTIVE_FAILURE_REMINDER =
+  'Do not retry the same call with small variations. Either take a materially different approach, or stop and call the completion tool to return control to the user: explain the error, what you tried, and what you need from them.'
+
+/** The system note attached to a failed tool result once a failure streak
+ *  reaches the nudge threshold. Exported so hosts and tests can match it. */
+export function formatConsecutiveFailureNote(streak: number, reminder: string): string {
+  return `${SYSTEM_INPUT_START}This is failed tool call ${streak} in a row. ${reminder}${SYSTEM_INPUT_END}`
 }
 
 /** Result from running the tool loop */
@@ -190,12 +222,20 @@ function describeToolExecutionError(error: unknown): string {
  * - A tool returns terminatesLoop: true (agent explicitly signals done)
  * - A tool returns awaitsUserInput: true (agent pauses for user input)
  * - Max iterations reached (safety limit)
+ * - Too many failed tool calls in a row (safety limit, see maxConsecutiveFailures)
  * - Abort signal triggered
  * - An error occurs
  *
  * If the LLM responds with text and no tool calls, it is re-prompted with a
  * reminder to call a tool. The agent must explicitly call a termination tool
  * (e.g. return_to_user, request_close) to return control to the user.
+ *
+ * Failed tool calls are counted as a streak. Once the streak reaches
+ * `failureNudgeAfter`, each further failed result carries a system note
+ * telling the model to change approach or hand control back; at
+ * `maxConsecutiveFailures` the loop stops itself. Models otherwise tend to
+ * re-run a failing query with cosmetic edits until maxIterations is spent,
+ * one paid call per attempt, with the user staring at a spinner.
  */
 export async function runToolLoop(
   userMessage: string,
@@ -232,6 +272,11 @@ export async function runToolLoop(
   // burns one paid LLM call per iteration up to maxIterations.
   let consecutiveNoToolCalls = 0
   const MAX_NO_TOOL_CALL_REPROMPTS = 3
+  // Consecutive failed tool calls, across iterations. Reset by any success.
+  let consecutiveFailures = 0
+  const FAILURE_NUDGE_AFTER = config.failureNudgeAfter ?? DEFAULT_FAILURE_NUDGE_AFTER
+  const MAX_CONSECUTIVE_FAILURES = config.maxConsecutiveFailures ?? DEFAULT_MAX_CONSECUTIVE_FAILURES
+  const failureReminder = config.consecutiveFailureReminder ?? DEFAULT_CONSECUTIVE_FAILURE_REMINDER
 
   for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
     // Check for abort before starting iteration. On iteration > 0 the
@@ -417,6 +462,7 @@ export async function runToolLoop(
         },
       }
       executedToolCalls.push(chatToolCall)
+      consecutiveFailures = result.success ? 0 : consecutiveFailures + 1
 
       // Notify caller of tool result
       config.onToolResult?.(toolCall.name, result)
@@ -484,8 +530,14 @@ export async function runToolLoop(
         return { terminated: false, finalMessage: result.message }
       }
 
-      // Build result text for LLM
-      const resultText = formatToolResultText(result)
+      // Build result text for LLM. A failure streak past the nudge threshold
+      // gets a system note inside the result itself, so it reaches the model
+      // in the same turn without adding a message the providers might reject
+      // between a tool call and its results.
+      let resultText = formatToolResultText(result)
+      if (!result.success && consecutiveFailures >= FAILURE_NUDGE_AFTER) {
+        resultText += `\n\n${formatConsecutiveFailureNote(consecutiveFailures, failureReminder)}`
+      }
       toolResults.push({
         toolCallId: toolCall.id,
         toolName: toolCall.name,
@@ -534,6 +586,19 @@ export async function runToolLoop(
     userMessageAddedToHistory = true
 
     currentPrompt = '' // No extra prompt needed - tool results speak for themselves
+
+    // Stop a run that keeps failing. The batch above is already persisted
+    // with its results, so the history stays valid for the next turn; the
+    // notice carries the last error so the user sees why it stopped.
+    if (MAX_CONSECUTIVE_FAILURES > 0 && consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+      const lastError = executedToolCalls[executedToolCalls.length - 1]?.result?.error
+      const notice =
+        `(Stopped after ${consecutiveFailures} failed tool calls in a row` +
+        `${lastError ? ` — last error: ${lastError}` : ''})`
+      console.log('[toolLoopCore] Consecutive tool failures reached the limit — ending turn')
+      messagePersistence.addMessage({ role: 'assistant', content: notice })
+      return { terminated: false, finalMessage: notice }
+    }
 
     // Safety check for last iteration. responseText was already persisted
     // above with its tool calls — only add the notice, not the text again.

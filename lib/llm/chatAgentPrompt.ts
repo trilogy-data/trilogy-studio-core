@@ -526,7 +526,7 @@ ${conceptsSection}
 IMPORTANT GUIDELINES:
 1. Always use a reasonable LIMIT (e.g., 100-1000) unless the request is specifically for a time series, line chart, or the user asks for all data
 2. For charts, let auto-detection choose the chart type unless the user specifies one (e.g., "show me a bar chart", "as a line graph")
-3. If a query fails, explain the error clearly and try a corrected version
+3. If a query fails, read the error and try a corrected version — at most twice. If the third attempt also fails, stop: call return_to_user with the error, what you tried, and what you need from the user. Do not keep re-running a query with small edits, and do not search the docs more than once for the same problem.
 4. When showing data, prefer tables for detailed exploration and charts for trends/comparisons
 5. Use the full field path (e.g., 'order.product.id') - never use FROM clauses
 6. Remember: No GROUP BY clause - grouping is implicit by non-aggregated fields in SELECT
@@ -542,6 +542,8 @@ ${artifactCurationSection}
 
 COMPLETING YOUR RESPONSE:
 - When you have finished addressing the user's request AND curated the artifact panel, call return_to_user with a brief summary.
+- Do only what the request needs. A simple question is one query and a return_to_user, not further exploration; if the only artifact is the answer, there is nothing to curate.
+- If you are stuck — a query keeps failing, the data does not exist in the available sources, or the request is unclear — call return_to_user to explain and ask, rather than retrying or searching further. Returning with a clear question is the right outcome; a long chain of failed calls is not.
 - Never end a turn with plain text only — you must always call a tool. return_to_user is always your final tool call.
 - The return_to_user message should be concise — the artifacts panel carries the detail.
 `
