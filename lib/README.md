@@ -104,6 +104,14 @@ the host app's `public/` assets or another static host. Importing DuckDB files w
 multiple Vite build graphs can still emit duplicate hashed files even when they resolve to the same
 source package.
 
+## Chat Documentation Tools
+
+The chat toolset carries the docs pack: `search_docs` and `read_doc` let the agent look up Trilogy
+idioms (window functions, date handling, filtering on aggregates) from the in-app documentation
+instead of guessing at syntax, and the system prompt tells it to. `open_documentation` is in the
+same pack; it needs app navigation and reports itself unavailable without it, so an embedding
+host typically withholds it with `disabledTools` (below).
+
 ## Withholding Chat Tools
 
 `useTrilogyChat` (and `useChatWithTools` for persistent chats) takes `disabledTools`, a list of

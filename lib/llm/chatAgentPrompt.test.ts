@@ -58,6 +58,19 @@ describe('buildChatAgentSystemPrompt disabledTools', () => {
     expect(prompt).toContain('1. Call list_artifacts')
   })
 
+  it('drops the whole documentation section when both docs tools are disabled', () => {
+    expect(buildChatAgentSystemPrompt(baseOptions)).toContain(
+      'DOCUMENTATION:\n- When you are unsure',
+    )
+    const prompt = buildChatAgentSystemPrompt({
+      ...baseOptions,
+      disabledTools: ['search_docs', 'read_doc'],
+    })
+    expect(prompt).not.toContain('DOCUMENTATION:')
+    expect(prompt).not.toContain('search_docs')
+    expect(prompt).not.toContain('read_doc')
+  })
+
   it('leaves the prompt byte-identical for an empty list', () => {
     expect(buildChatAgentSystemPrompt({ ...baseOptions, disabledTools: [] })).toBe(
       buildChatAgentSystemPrompt(baseOptions),

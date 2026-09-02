@@ -382,6 +382,17 @@ const ARTIFACT_MANAGEMENT_GUIDANCE: readonly ToolGuidance[] = [
   },
 ]
 
+const DOCUMENTATION_GUIDANCE: readonly ToolGuidance[] = [
+  {
+    tool: 'search_docs',
+    text: '- When you are unsure how to express something in Trilogy — window functions, date handling, filtering on aggregates, an unfamiliar keyword — call search_docs (kind: language or function) and then read_doc, rather than guessing at syntax. The reference above is a summary; the docs carry the full idioms.',
+  },
+  {
+    tool: 'read_doc',
+    text: '- read_doc returns the full article for an id from search_docs; quote the relevant part back to the user when they ask how the language works.',
+  },
+]
+
 /** Numbered on render, so dropping a step keeps the list contiguous. */
 const ARTIFACT_CURATION_STEPS: readonly ToolGuidance[] = [
   { tool: 'list_artifacts', text: 'Call list_artifacts to see everything currently in the panel.' },
@@ -426,6 +437,11 @@ export function buildChatAgentSystemPrompt(options: ChatAgentPromptOptions): str
   const artifactCurationSection = enabledGuidance(ARTIFACT_CURATION_STEPS, disabledTools)
     .map((line, index) => `${index + 1}. ${line.text}`)
     .join('\n')
+  const documentationLines = enabledGuidance(DOCUMENTATION_GUIDANCE, disabledTools)
+  const documentationSection =
+    documentationLines.length > 0
+      ? `\n\nDOCUMENTATION:\n${documentationLines.map((line) => line.text).join('\n')}`
+      : ''
 
   const conceptsSection =
     availableConcepts && availableConcepts.length > 0
@@ -472,7 +488,7 @@ IMPORTANT GUIDELINES:
 5. Use the full field path (e.g., 'order.product.id') - never use FROM clauses
 6. Remember: No GROUP BY clause - grouping is implicit by non-aggregated fields in SELECT
 7. If the user question needs fields that are not in the same source, use select_active_import to switch to a different data source (only one can be active at a time). Always consider this when they change topics.
-8. If the data connection is not active, use connect_data_connection to establish the connection before running queries
+8. If the data connection is not active, use connect_data_connection to establish the connection before running queries${documentationSection}
 
 ARTIFACT MANAGEMENT:
 ${artifactManagementSection}
