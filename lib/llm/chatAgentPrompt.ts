@@ -8,6 +8,8 @@ import {
 import { conceptsToFieldPrompt } from './data/prompts'
 import type { ModelConceptInput } from './data/models'
 import type { ChatImport } from '../chats/chat'
+import type { LLMToolDefinition } from './base'
+import type { ToolCallResult } from './sharedToolHelpers'
 import {
   chartConfigSchema,
   chartConfigGuidance,
@@ -342,6 +344,47 @@ export function filterDisabledTools<T extends { name: string }>(
   if (!disabledTools || disabledTools.length === 0) return tools
   const disabled = new Set(disabledTools)
   return tools.filter((tool) => !disabled.has(tool.name))
+}
+
+/**
+ * A tool the host application adds to a persistent chat: its definition for
+ * the model and the function that runs it. The natural sibling of
+ * `disabledTools`. The executor receives the model's input and returns a
+ * ToolCallResult; a throw is caught and reported to the model as an error.
+ */
+export interface HostChatTool {
+  definition: LLMToolDefinition
+  execute: (input: Record<string, any>) => Promise<ToolCallResult> | ToolCallResult
+}
+
+/**
+ * Append host tools to a toolset, keeping `return_to_user` last so the
+ * "always end with return_to_user" contract reads the same to the model.
+ * A host tool may not shadow a built-in: that is a programming error, not a
+ * runtime condition, so it throws. With no extra tools the input array is
+ * returned as-is, keeping the registry's identity contract.
+ */
+export function mergeExtraTools<T extends { name: string }>(
+  tools: T[],
+  extraTools: readonly HostChatTool[] | undefined,
+): T[] {
+  if (!extraTools || extraTools.length === 0) return tools
+  const builtin = new Set(tools.map((tool) => tool.name))
+  const seen = new Set<string>()
+  const extra = extraTools.map((tool) => {
+    const name = tool.definition.name
+    if (builtin.has(name)) {
+      throw new Error(`Host tool '${name}' shadows a built-in chat tool`)
+    }
+    if (seen.has(name)) {
+      throw new Error(`Host tool '${name}' is declared twice`)
+    }
+    seen.add(name)
+    return tool.definition as unknown as T
+  })
+  const returnIndex = tools.findIndex((tool) => tool.name === RETURN_TO_USER_TOOL.name)
+  if (returnIndex === -1) return [...tools, ...extra]
+  return [...tools.slice(0, returnIndex), ...extra, ...tools.slice(returnIndex)]
 }
 
 /** A line of prompt guidance, tagged with the tool it tells the model to use

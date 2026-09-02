@@ -2,6 +2,7 @@ import { useTrilogyCore, type TrilogyCoreOptions } from './useTrilogyCore'
 import { useChatWithTools, type UseChatWithToolsReturn } from './useChatWithTools'
 import type { NavigationStore } from '../stores/useScreenNavigation'
 import type { MaybeRefOrGetter } from 'vue'
+import type { HostChatTool } from '../llm/chatAgentPrompt'
 
 export interface TrilogyChatOptions extends TrilogyCoreOptions {
   /**
@@ -37,6 +38,11 @@ export interface TrilogyChatOptions extends TrilogyCoreOptions {
    * guidance that asks for them. See `UseChatWithToolsOptions.disabledTools`.
    */
   disabledTools?: MaybeRefOrGetter<readonly string[]>
+  /**
+   * Host-defined tools added to the conversation. See
+   * `UseChatWithToolsOptions.extraTools`.
+   */
+  extraTools?: MaybeRefOrGetter<readonly HostChatTool[]>
 }
 
 /**
@@ -80,6 +86,7 @@ export function useTrilogyChat(options: TrilogyChatOptions = {}): UseChatWithToo
     onTitleUpdate,
     navigationStore: providedNavigationStore,
     disabledTools,
+    extraTools,
   } = options
 
   // Initialize all core stores and services
@@ -103,6 +110,7 @@ export function useTrilogyChat(options: TrilogyChatOptions = {}): UseChatWithToo
     initialTitle,
     onTitleUpdate,
     disabledTools,
+    extraTools,
   })
 }
 

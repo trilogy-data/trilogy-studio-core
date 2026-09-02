@@ -112,6 +112,34 @@ instead of guessing at syntax, and the system prompt tells it to. `open_document
 same pack; it needs app navigation and reports itself unavailable without it, so an embedding
 host typically withholds it with `disabledTools` (below).
 
+## Adding Host Tools to a Chat
+
+`useTrilogyChat` (and `useChatWithTools` for persistent chats) also takes `extraTools`: tools the
+host application defines, each a definition for the model plus the function that runs it. They
+are sent after the built-ins and ahead of `return_to_user`, and a call to one runs the host's
+executor instead of the library's registry. A host tool may not reuse a built-in name.
+
+```ts
+const chat = useTrilogyChat({
+  dataConnectionName: 'my-database',
+  extraTools: [
+    {
+      definition: {
+        name: 'show_in_view',
+        description: 'Open the launches map filtered to a launch site.',
+        input_schema: { type: 'object', properties: { site: { type: 'string' } }, required: ['site'] },
+      },
+      execute: async ({ site }) => {
+        router.push({ name: 'rockets', query: { site } })
+        return { success: true, message: `Opened the launches map for ${site}.` }
+      },
+    },
+  ],
+})
+```
+
+`customTools` remains the standalone-mode (no chat store) equivalent.
+
 ## Withholding Chat Tools
 
 `useTrilogyChat` (and `useChatWithTools` for persistent chats) takes `disabledTools`, a list of

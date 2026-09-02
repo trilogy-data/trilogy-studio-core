@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { CHAT_TOOLS, buildChatAgentSystemPrompt, filterDisabledTools } from './chatAgentPrompt'
+import {
+  CHAT_TOOLS,
+  buildChatAgentSystemPrompt,
+  filterDisabledTools,
+  mergeExtraTools,
+  type HostChatTool,
+} from './chatAgentPrompt'
 
 const baseOptions = {
   dataConnectionName: 'duckdb',
@@ -76,5 +82,43 @@ describe('buildChatAgentSystemPrompt disabledTools', () => {
     expect(buildChatAgentSystemPrompt({ ...baseOptions, disabledTools: [] })).toBe(
       buildChatAgentSystemPrompt(baseOptions),
     )
+  })
+})
+
+describe('mergeExtraTools', () => {
+  const hostTool = (name: string): HostChatTool => ({
+    definition: {
+      name,
+      description: `host ${name}`,
+      input_schema: { type: 'object', properties: {} },
+    },
+    execute: async () => ({ success: true, message: 'ok' }),
+  })
+
+  it('returns the same array when there is nothing to add', () => {
+    const tools = [...CHAT_TOOLS]
+    expect(mergeExtraTools(tools, undefined)).toBe(tools)
+    expect(mergeExtraTools(tools, [])).toBe(tools)
+  })
+
+  it('inserts host tools after the built-ins and ahead of return_to_user', () => {
+    const names = mergeExtraTools([...CHAT_TOOLS], [hostTool('show_in_view')]).map((t) => t.name)
+    expect(names.at(-1)).toBe('return_to_user')
+    expect(names.at(-2)).toBe('show_in_view')
+    expect(names.slice(0, -2)).toEqual(
+      CHAT_TOOLS.map((t) => t.name).filter((n) => n !== 'return_to_user'),
+    )
+  })
+
+  it('appends when the toolset has no return_to_user', () => {
+    const names = mergeExtraTools([{ name: 'a' }], [hostTool('b')]).map((t) => t.name)
+    expect(names).toEqual(['a', 'b'])
+  })
+
+  it('refuses a host tool that shadows a built-in or repeats a name', () => {
+    expect(() => mergeExtraTools([...CHAT_TOOLS], [hostTool('run_trilogy_query')])).toThrow(
+      /shadows/,
+    )
+    expect(() => mergeExtraTools([...CHAT_TOOLS], [hostTool('x'), hostTool('x')])).toThrow(/twice/)
   })
 })

@@ -8,7 +8,7 @@ import type { EditorStoreType } from '../stores/editorStore'
 import type { NavigationStore } from '../stores/useScreenNavigation'
 import { KeySeparator } from '../data/constants'
 import type { ChatMessage, ChatArtifact, ChatImport } from '../chats/chat'
-import { buildChatAgentSystemPrompt } from '../llm/chatAgentPrompt'
+import { buildChatAgentSystemPrompt, type HostChatTool } from '../llm/chatAgentPrompt'
 import { completionItemsToConcepts } from '../llm/editorRefinementTools'
 import type { ModelConceptInput } from '../llm/data/models'
 import type { ContentInput, CompletionItem } from '../stores/resolver'
@@ -70,6 +70,14 @@ export interface UseChatWithToolsOptions {
    * prompt-cache prefix, so each change costs a cache miss.
    */
   disabledTools?: MaybeRefOrGetter<readonly string[]>
+
+  /**
+   * Host-defined tools for persistent chats: a definition for the model plus
+   * the function that runs it. The counterpart of `customTools`, which only
+   * the standalone path honours. Read at send time like `disabledTools`, with
+   * the same prompt-cache caveat.
+   */
+  extraTools?: MaybeRefOrGetter<readonly HostChatTool[]>
 }
 
 export interface UseChatWithToolsReturn {
@@ -118,6 +126,7 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
     initialTitle = 'Chat',
     customTools,
     disabledTools,
+    extraTools,
     onCustomToolCall,
   } = options
 
@@ -462,6 +471,7 @@ export function useChatWithTools(options: UseChatWithToolsOptions): UseChatWithT
         {
           onSymbolsRefresh: refreshChatSymbols,
           disabledTools: toValue(disabledTools),
+          extraTools: toValue(extraTools),
         },
       )
     }

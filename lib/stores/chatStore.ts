@@ -12,7 +12,12 @@ import { OverseerToolExecutor } from '../llm/overseerToolExecutor'
 import { ArchitectToolExecutor } from '../llm/architectToolExecutor'
 import { summarizeSubchat } from '../llm/subchatSummarize'
 import type { ToolCallResult } from '../llm/sharedToolHelpers'
-import { buildChatAgentSystemPrompt, filterDisabledTools } from '../llm/chatAgentPrompt'
+import {
+  buildChatAgentSystemPrompt,
+  filterDisabledTools,
+  mergeExtraTools,
+  type HostChatTool,
+} from '../llm/chatAgentPrompt'
 import { getSharedRegistry } from '../llm/registry'
 import { maybeCompactChat } from '../llm/compaction'
 import {
@@ -424,6 +429,11 @@ export const useChatStore = defineStore('chats', {
          *  the toolset is part of the provider's prompt-cache prefix, so
          *  changing it mid-conversation costs one cache miss. */
         disabledTools?: readonly string[]
+        /** Host-defined tools added to this run (default path only). Their
+         *  definitions go to the model after the built-ins, ahead of
+         *  return_to_user, and calls to them run the host's executor instead
+         *  of the registry. Same prompt-cache caveat as disabledTools. */
+        extraTools?: readonly HostChatTool[]
       } = {},
     ): Promise<{ response?: string; artifacts?: ChatArtifact[] } | void> {
       const chat = this.chats[chatId]
@@ -593,7 +603,30 @@ export const useChatStore = defineStore('chats', {
                     },
                     { chatId, cache: new Map() },
                   )
-                  return { getToolExecutor: () => toolExecutor }
+                  const hostTools = new Map(
+                    (options.extraTools ?? []).map((tool) => [tool.definition.name, tool]),
+                  )
+                  if (hostTools.size === 0) {
+                    return { getToolExecutor: () => toolExecutor }
+                  }
+                  // Host tools take the call when the name is theirs; the
+                  // registry keeps everything else, including unknown names.
+                  const withHostTools = {
+                    executeToolCall: async (
+                      toolName: string,
+                      toolInput: Record<string, any>,
+                    ): Promise<ToolCallResult> => {
+                      const hostTool = hostTools.get(toolName)
+                      if (!hostTool) return toolExecutor.executeToolCall(toolName, toolInput)
+                      try {
+                        return await hostTool.execute(toolInput)
+                      } catch (err) {
+                        const message = err instanceof Error ? err.message : String(err)
+                        return { success: false, error: `Tool '${toolName}' failed: ${message}` }
+                      }
+                    },
+                  }
+                  return { getToolExecutor: () => withHostTools }
                 })()
 
         const stateUpdater: ExecutionStateUpdater = {
@@ -622,9 +655,12 @@ export const useChatStore = defineStore('chats', {
             ? OVERSEER_TOOLS
             : chat.kind === 'architect'
               ? ARCHITECT_TOOLS
-              : filterDisabledTools(
-                  getSharedRegistry().getToolsetForContext('chat'),
-                  options.disabledTools,
+              : mergeExtraTools(
+                  filterDisabledTools(
+                    getSharedRegistry().getToolsetForContext('chat'),
+                    options.disabledTools,
+                  ),
+                  options.extraTools,
                 )
 
         const loopResult = await runToolLoop(

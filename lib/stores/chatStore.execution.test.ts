@@ -82,6 +82,44 @@ describe('chatStore.executeMessage lifecycle', () => {
     await run
   })
 
+  it('extraTools reach the model and run the host executor when called', async () => {
+    const store = useChatStore()
+    const chat = store.newChat('llm-1')
+    const llm = makeDeferredLLM()
+    const deps = makeDeps(llm)
+    const execute = vi.fn().mockResolvedValue({ success: true, message: 'opened rockets view' })
+
+    const run = store.executeMessage(chat.id, 'show me on the globe', deps, {
+      extraTools: [
+        {
+          definition: {
+            name: 'show_in_view',
+            description: 'Open a visualisation',
+            input_schema: { type: 'object', properties: { view: { type: 'string' } } },
+          },
+          execute,
+        },
+      ],
+    })
+    await vi.waitFor(() => expect(llm.calls.length).toBe(1))
+
+    const names = llm.calls[0].options.tools.map((t: { name: string }) => t.name)
+    expect(names.at(-1)).toBe('return_to_user')
+    expect(names.at(-2)).toBe('show_in_view')
+
+    llm.calls[0].resolve({
+      text: '',
+      toolCalls: [{ id: 'call-1', name: 'show_in_view', input: { view: 'rockets' } }],
+    })
+    await vi.waitFor(() => expect(execute).toHaveBeenCalledWith({ view: 'rockets' }))
+    // The loop feeds the result back and asks the model again.
+    await vi.waitFor(() => expect(llm.calls.length).toBe(2))
+
+    store.stopExecution(chat.id)
+    llm.calls[1].resolve({ text: 'done', toolCalls: [] })
+    await run
+  })
+
   it('the default path sends the full toolset when nothing is disabled', async () => {
     const store = useChatStore()
     const chat = store.newChat('llm-1')
