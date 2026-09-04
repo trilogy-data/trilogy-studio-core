@@ -1,7 +1,20 @@
 # fly.toml app configuration file generated for trilogy-service on 2025-02-05T04:14:19-05:00
 #
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+# See https://fly.io/docs/reference/configuration/ for information about its
+# structure and available settings.
 #
+# CPU model (2026-09-04): dedicated cores, scaled to zero when idle.
+#
+# Every request is CPU-bound Python (parse + plan), and a dashboard fan-out is a
+# burst of them. On shared CPUs that burst spends the machine's burst quota and
+# the host then throttles it hard for a long time: Fly's own metrics on
+# 2026-09-04 showed ~92% CPU steal (184/200) for over an hour after one fan-out,
+# during which a 1 ms compile took seconds and every request hit the 120s
+# deadline. Steal on a performance VM is zero by construction. To keep the cost
+# in line with the old always-on shared machine, nothing runs while idle:
+# `min_machines_running = 0` lets the proxy stop every machine and start one on
+# the first request (boot + app import is a few seconds on a dedicated core;
+# the studio client already sends a warm-up request on load).
 
 app = 'trilogy-service'
 primary_region = 'ewr'
@@ -13,10 +26,22 @@ primary_region = 'ewr'
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
-  min_machines_running = 1
+  min_machines_running = 0
   processes = ['app']
+
+  # Count in-flight requests, not connections, so a fan-out on one machine
+  # wakes the second (soft_limit) before the app's own queue (see
+  # TRILOGY_MAX_QUEUED_REQUESTS in the Dockerfile) has to shed load.
+  [http_service.concurrency]
+    type = 'requests'
+    soft_limit = 8
+    hard_limit = 100
 
 [[vm]]
   memory = '2gb'
-  cpu_kind = 'shared'
-  cpus = 2
+  cpu_kind = 'performance'
+  # One dedicated core. performance-2x requires 4gb, and the workload is
+  # GIL-bound per process anyway; the Dockerfile's two gunicorn workers
+  # share this core, which costs nothing when idle and keeps one worker
+  # serving while the other recycles.
+  cpus = 1
