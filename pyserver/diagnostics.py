@@ -1,7 +1,7 @@
+import re
 from logging import getLogger
 from typing import Any
 
-from lark import UnexpectedToken
 from trilogy.authoring import (
     ArrayType,
     Concept,
@@ -13,9 +13,7 @@ from trilogy.authoring import (
 from trilogy.constants import DEFAULT_NAMESPACE
 from trilogy.core.models.core import NumericType, TraitDataType
 from trilogy.core.statements.author import ImportStatement
-from trilogy.parsing.parse_engine_v2 import TopLevelStatementParser
-from trilogy.parsing.v2.lark_backend import PARSER
-from trilogy.parsing.v2.syntax import syntax_document_from_parser
+from trilogy.parsing.parse_engine_v2 import TopLevelStatementParser, parse_syntax
 
 from common import concept_to_derivation, concept_to_description
 from env_helpers import (
@@ -34,6 +32,9 @@ from io_models import (
 
 logger = getLogger("diagnostics")
 
+# pest reports the failure point as ` --> line:col` in its raw error text.
+_PEST_POS_RE = re.compile(r"-->\s*(\d+):(\d+)")
+
 
 def address_to_display(address: str) -> str:
     if address.startswith(DEFAULT_NAMESPACE):
@@ -42,14 +43,10 @@ def address_to_display(address: str) -> str:
         return address
 
 
-def user_repr(error: UnexpectedToken | Exception) -> str:
-    if isinstance(error, UnexpectedToken):
-        expected = ", ".join(error.accepts or error.expected)
-        return (
-            f"Unexpected token {str(error.token)!r}. Expected one of:\n{{{expected}}}"
-        )
-    else:
-        return str(error)
+def user_repr(error: Exception) -> str:
+    # pytrilogy's syntax errors append a "Location:" excerpt of the source;
+    # the editor already points at the position, so keep only the message.
+    return str(error).split("\nLocation:", 1)[0]
 
 
 def truncate_to_last_semicolon(text: str) -> str:
@@ -60,6 +57,30 @@ def truncate_to_last_semicolon(text: str) -> str:
         return text[: last_semicolon_index + 1]
     else:
         return text  # Return original string if no semicolon is found
+
+
+def syntax_error_position(text: str) -> tuple[int, int]:
+    """1-based (line, column) at which the Rust parser rejects `text`, or
+    (0, 0) if it cannot say.
+
+    `parse_syntax` raises an InvalidSyntaxException that carries only a
+    message, so this re-runs the raw pest parse (sub-millisecond, error path
+    only) to recover the position from its ` --> line:col` marker."""
+    try:
+        from _preql_import_resolver import (  # type: ignore[import-untyped]
+            parse_trilogy_syntax_tuple,
+        )
+    except ImportError:
+        return 0, 0
+    try:
+        parse_trilogy_syntax_tuple(text)
+    except ValueError as exc:
+        match = _PEST_POS_RE.search(str(exc))
+        if match:
+            return int(match.group(1)), int(match.group(2))
+    except Exception:  # position is best-effort
+        logger.debug("could not recover syntax error position", exc_info=True)
+    return 0, 0
 
 
 def datatype_to_display(
@@ -104,62 +125,66 @@ def get_diagnostics(
     current_filename: str | None = None,
     files: list[str] | None = None,
     working_path: str | None = None,
+    env: Environment | None = None,
+    include_completions: bool = True,
 ) -> ValidateResponse:
+    """Syntax diagnostics, import list and completions for an editor buffer.
+
+    `env` lets a caller validating several fragments against one model build
+    the environment once; it is parsed INTO, so pass a duplicate if it must
+    stay clean. `include_completions=False` skips the per-concept completion
+    projection, which is most of the cost when only the diagnostics are read.
+    """
     diagnostics: list[ValidateItem] = []
     completions: list[CompletionItem] = []
     imports: list[Import] = []
 
-    def on_error(e: UnexpectedToken) -> Any:
-        diagnostics.append(
-            ValidateItem(
-                startLineNumber=e.line,
-                startColumn=e.column,
-                endLineNumber=e.line,
-                endColumn=e.column + len(e.token),
-                severity=Severity.Error,
-                message=user_repr(e),
-            )
-        )
-        return True
-
     parse_fragment = normalize_relative_imports(doctext, current_filename)
     document = None
     loops = 0
+    # The parser has no error recovery, so a broken statement fails the whole
+    # buffer. Report the first failure at its position, then retry on
+    # progressively shorter prefixes (cut at statement boundaries) so imports
+    # and declarations ahead of the error still feed completions.
     while parse_fragment.count(";") > 0:
         loops += 1
         try:
-            tree = PARSER.parse(parse_fragment, on_error=on_error)  # type: ignore
-            document = syntax_document_from_parser(text=parse_fragment, tree=tree)
+            document = parse_syntax(parse_fragment)
             break
-        except Exception:  # noqa: BLE001 -- retry progressively shorter user input
-            parse_fragment = truncate_to_last_semicolon(parse_fragment)
-            logger.info(parse_fragment)
-            diagnostics.append(
-                ValidateItem(
-                    startLineNumber=0,
-                    startColumn=0,
-                    endLineNumber=0,
-                    endColumn=0,
-                    severity=Severity.Error,
-                    message="Parse error",
+        except Exception as exc:  # noqa: BLE001 -- retry on shorter input
+            if not diagnostics:
+                line, column = syntax_error_position(parse_fragment)
+                diagnostics.append(
+                    ValidateItem(
+                        startLineNumber=line,
+                        startColumn=column,
+                        endLineNumber=line,
+                        endColumn=column + 1,
+                        severity=Severity.Error,
+                        message=user_repr(exc),
+                    )
                 )
-            )
+            parse_fragment = truncate_to_last_semicolon(parse_fragment)
         if loops > 20:
             break
     if not document:
         return ValidateResponse(items=diagnostics, completion_items=completions)
     try:
-        env = parse_env_from_full_model(sources, files=files, working_path=working_path)
+        if env is None:
+            env = parse_env_from_full_model(
+                sources, files=files, working_path=working_path
+            )
         seen: set[str] = set()
-        for k, v in env.concepts.items():
-            if v.name.startswith("_") or v.namespace.startswith("_"):
-                continue
-            if v.namespace == DEFAULT_NAMESPACE:
-                label = v.name
-            else:
-                label = k
-            completions.append(concept_to_completion(label, v, env))
-            seen.add(k)
+        if include_completions:
+            for k, v in env.concepts.items():
+                if v.name.startswith("_") or v.namespace.startswith("_"):
+                    continue
+                if v.namespace == DEFAULT_NAMESPACE:
+                    label = v.name
+                else:
+                    label = k
+                completions.append(concept_to_completion(label, v, env))
+                seen.add(k)
         try:
             # get a partial parse tree
             parser = TopLevelStatementParser(environment=env)
@@ -171,15 +196,16 @@ def get_diagnostics(
 
         except Exception:
             logger.exception("text parse error, may have partial results")
-        for k, v in env.concepts.items():
-            if v.name.startswith("_") or v.namespace.startswith("_"):
-                continue
-            if v.namespace == DEFAULT_NAMESPACE:
-                label = v.name
-            else:
-                label = k
-            if k not in seen:
-                completions.append(concept_to_completion(label, v, env))
+        if include_completions:
+            for k, v in env.concepts.items():
+                if v.name.startswith("_") or v.namespace.startswith("_"):
+                    continue
+                if v.namespace == DEFAULT_NAMESPACE:
+                    label = v.name
+                else:
+                    label = k
+                if k not in seen:
+                    completions.append(concept_to_completion(label, v, env))
 
     except Exception:
         logger.exception("completion generation raised exception")

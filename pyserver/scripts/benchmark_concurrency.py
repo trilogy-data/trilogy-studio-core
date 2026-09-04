@@ -10,8 +10,8 @@ import httpx
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_PAYLOAD_FILES = [
-    SCRIPT_DIR / "payloads" / "small_names.json",
-    SCRIPT_DIR / "payloads" / "tpch_large_duckdb.json",
+    SCRIPT_DIR.parent / "tests" / "payloads" / "small_names.json",
+    SCRIPT_DIR.parent / "tests" / "payloads" / "tpch_large_duckdb.json",
 ]
 DEFAULT_ENDPOINTS = ["generate_query"]
 

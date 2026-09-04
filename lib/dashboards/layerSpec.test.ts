@@ -1,10 +1,22 @@
 import { describe, it, expect } from 'vitest'
 import { compile } from 'vega-lite'
+import { parse as vegaParse } from 'vega'
+
+/**
+ * Compile all the way to a Vega dataflow.
+ *
+ * `compile()` alone is too weak a guard: a layer filtering on a `brush` param
+ * that nothing declares compiles cleanly and only fails at `vega.parse` with
+ * "Unrecognized signal name". Anything asserting that a layered spec is
+ * renderable has to go this far.
+ */
+const parseToVega = (spec: any) => vegaParse(compile(spec).spec)
 import { generateVegaSpec } from './spec'
 import {
   normalizeChartConfig,
   resolveLayerYScale,
   deriveChartTitle,
+  resolveLayerForDatum,
   UnlayerableChartTypeError,
 } from './layerSpec'
 import { ColumnType, type ChartConfig, type ResultColumn, type Row } from '../editors/results'
@@ -74,14 +86,22 @@ describe('normalizeChartConfig', () => {
     expect(root.linkLayerY).toBe(true)
   })
 
-  it('leaves line charts owning their own yField2 handling', () => {
-    const config: ChartConfig = {
-      chartType: 'line',
-      xField: 'category',
-      yField: 'total',
-      yField2: 'pct',
+  it('folds yField2 on line and area too, keeping the primary type', () => {
+    // Held back while layers past 0 were inert marks: a line's secondary series
+    // is a brush-linked pair, which a plain mark cannot reproduce.
+    for (const chartType of ['line', 'area'] as const) {
+      const { layers } = normalizeChartConfig({
+        chartType,
+        xField: 'category',
+        yField: 'total',
+        yField2: 'pct',
+      })
+      expect(layers).toHaveLength(2)
+      expect(layers[0].yField2).toBeUndefined()
+      // A secondary on a line stays a line; only bar's becomes one.
+      expect(layers[1].chartType).toBe(chartType)
+      expect(layers[1].yField).toBe('pct')
     }
-    expect(normalizeChartConfig(config).layers).toHaveLength(1)
   })
 
   it('pushes statement-level settings down onto every layer', () => {
@@ -129,7 +149,7 @@ describe('generateVegaSpec with layers', () => {
     const spec: any = generateVegaSpec(data, sameType, columns, null)
     // Duplicate Vega param names are a compile-time failure, not a shape
     // problem, so this has to go all the way through vega-lite.
-    expect(() => compile(spec)).not.toThrow()
+    expect(() => parseToVega(spec)).not.toThrow()
   })
 
   it('gives the layers a shared series legend naming each one', () => {
@@ -147,15 +167,56 @@ describe('generateVegaSpec with layers', () => {
     expect(spec.layer[1].encoding.color?.datum).toBeUndefined()
   })
 
-  it('omits selection conditions on non-interactive layers', () => {
+  it('gives every layer its own selection params', () => {
     const config = layered()
     config.layers![1].colorField = 'region'
 
     const spec: any = generateVegaSpec(data, config, columns, null)
-    // Layer 1 declares no params, so conditioning on `select`/`highlight`
-    // would reference params that do not exist in its scope.
-    expect(spec.layer[1].encoding.color.condition).toBeUndefined()
-    expect(() => compile(spec)).not.toThrow()
+
+    // Layer 0 keeps the unsuffixed names the event listeners bind to.
+    const layer0Params = spec.layer[0].params.map((p: any) => p.name)
+    expect(layer0Params).toContain('highlight')
+    expect(layer0Params).toContain('select')
+
+    // Layer 1 declares its own, suffixed -- param names are global to a Vega
+    // spec, so reusing layer 0's would fail to compile.
+    const layer1Params = spec.layer[1].params.map((p: any) => p.name)
+    expect(layer1Params).toContain('highlight_l1')
+    expect(layer1Params).toContain('select_l1')
+
+    // ...and conditions reference its own params, not layer 0's.
+    const conditionParams = spec.layer[1].encoding.color.condition.map((c: any) => c.param)
+    expect(conditionParams).toEqual(['highlight_l1', 'select_l1'])
+
+    expect(() => parseToVega(spec)).not.toThrow()
+  })
+
+  it('restores the committed selection on every layer, not just layer 0', () => {
+    // Layer 0's builder has always seeded `select` with the current
+    // cross-filter so a re-render keeps the highlight. Layers past it are
+    // interactive now too, so they need the same seed or their highlight is
+    // dropped on every re-render.
+    const selection = [{ category: 'a' }]
+    const spec: any = generateVegaSpec(data, layered(), columns, selection)
+
+    const selectParam = (layerSpec: any, name: string) =>
+      layerSpec.params.find((p: any) => p.name === name)
+
+    expect(selectParam(spec.layer[0], 'select').value).toEqual(selection)
+    expect(selectParam(spec.layer[1], 'select_l1').value).toEqual(selection)
+    expect(() => parseToVega(spec)).not.toThrow()
+  })
+
+  it('lets every layer be highlighted independently', () => {
+    const spec: any = generateVegaSpec(data, layered(), columns, null)
+
+    // Each layer's opacity/stroke conditions point at its own params, so
+    // hovering one layer does not dim or highlight the other.
+    for (const [i, layerSpec] of spec.layer.entries()) {
+      const suffix = i === 0 ? '' : `_l${i}`
+      expect(layerSpec.encoding.fillOpacity.condition.param).toBe(`select${suffix}`)
+    }
+    expect(() => parseToVega(spec)).not.toThrow()
   })
 
   it('renders placements as labelled rule layers', () => {
@@ -309,4 +370,94 @@ describe('per-layer datasets', () => {
 
     expect(spec.layer[1].data).toBeUndefined()
   })
+})
+
+describe('resolveLayerForDatum', () => {
+  const bindings = [
+    { config: { chartType: 'bar' as const, xField: 'category', yField: 'total' }, columns },
+    { config: { chartType: 'line' as const, xField: 'category', yField: 'avg_value' }, columns },
+  ]
+
+  it('attributes a datum to the layer whose fields it carries', () => {
+    // Layers over independent selects have disjoint field sets, so the datum
+    // identifies its own layer.
+    expect(resolveLayerForDatum({ category: 'a', avg_value: 4 }, bindings)).toBe(bindings[1])
+    expect(resolveLayerForDatum({ category: 'a', total: 10 }, bindings)).toBe(bindings[0])
+  })
+
+  it('prefers layer 0 when layers share a result set', () => {
+    // A yField2-style chart puts every field on one row, so both layers match.
+    // Layer 0 is the right answer -- they describe the same row, and it owns
+    // the interaction params.
+    const datum = { category: 'a', total: 10, avg_value: 4 }
+    expect(resolveLayerForDatum(datum, bindings)).toBe(bindings[0])
+  })
+
+  it('falls back to layer 0 for a datum it cannot place', () => {
+    expect(resolveLayerForDatum({ unrelated: 1 }, bindings)).toBe(bindings[0])
+    expect(resolveLayerForDatum(null, bindings)).toBe(bindings[0])
+  })
+})
+
+describe('brush-linked layers', () => {
+  const withPrimary = (primary: 'bar' | 'line'): ChartConfig => ({
+    chartType: primary,
+    layers: [
+      { chartType: primary, xField: 'category', yField: 'total' },
+      { chartType: 'line', xField: 'category', yField: 'average' },
+    ],
+  })
+
+  it('renders a line layer as a brush-linked pair when a brush exists', () => {
+    // A line primary declares the shared `brush`, so the secondary series can
+    // filter on it and gets the same grey-context/coloured-selection treatment.
+    const spec: any = generateVegaSpec(data, withPrimary('line'), columns, null)
+    const secondary = spec.layer[1]
+
+    expect(secondary.layer).toHaveLength(2)
+    expect(secondary.layer[0].mark.color).toBe('lightgray')
+    expect(secondary.layer[1].transform).toContainEqual({ filter: { param: 'brush' } })
+    expect(() => parseToVega(spec)).not.toThrow()
+  })
+
+  it('renders a plain line layer when no brush exists', () => {
+    // A bar primary declares no brush. Emitting the pair anyway compiles fine
+    // and then dies at vega.parse with "Unrecognized signal name: brush".
+    const spec: any = generateVegaSpec(data, withPrimary('bar'), columns, null)
+
+    expect(spec.layer[1].mark.type).toBe('line')
+    expect(spec.layer[1].layer).toBeUndefined()
+    expect(() => parseToVega(spec)).not.toThrow()
+  })
+})
+
+describe('dual-axis line and area (folded yField2)', () => {
+  // These assertions used to live on createLineChartSpec's secondary-layer
+  // branch. That branch is gone: the fold happens in normalizeChartConfig and
+  // the secondary series is built by createLayerMarkSpec like any other layer.
+  for (const chartType of ['line', 'area'] as const) {
+    it(`renders a dual-axis ${chartType} chart as two brush-linked pairs`, () => {
+      const spec: any = generateVegaSpec(
+        data,
+        { chartType, xField: 'category', yField: 'total', yField2: 'pct' },
+        columns,
+        null,
+      )
+
+      expect(spec.layer).toHaveLength(2)
+      // Primary and secondary are each a base/filtered pair.
+      expect(spec.layer[0].layer).toHaveLength(2)
+      expect(spec.layer[1].layer).toHaveLength(2)
+
+      // The secondary declares its own hover/select params rather than reusing
+      // the primary's, and filters on the primary's shared brush.
+      const secondaryBase = spec.layer[1].layer[0]
+      expect(secondaryBase.params.map((p: any) => p.name)).toEqual(['highlight_l1', 'select_l1'])
+      expect(spec.layer[1].layer[1].transform).toContainEqual({ filter: { param: 'brush' } })
+
+      // Differing formats (pct is a percent) put the series on its own axis.
+      expect(spec.resolve.scale.y).toBe('independent')
+      expect(() => parseToVega(spec)).not.toThrow()
+    })
+  }
 })

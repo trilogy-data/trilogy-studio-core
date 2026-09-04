@@ -44,19 +44,31 @@ contract, so never make `layers` required or default it to an array.
 Everything goes through `normalizeChartConfig` (`lib/dashboards/layerSpec.ts`), which resolves any
 config to `{root, layers[]}`. Load-bearing rules:
 
-- **Layer 0 is the interactive layer.** It keeps its full per-type builder and the _unsuffixed_
-  `highlight` / `select` / `brush` param names, which `chartHelpers.setupEventListeners` and the
-  brush filter transforms listen for by literal name. Layers 1..n are plain marks
-  (`createLayerMarkSpec`) with no selection params, so duplicate Vega param names are structurally
-  impossible. Suffix helpers (`layerParamSuffix`, `paramName`, `createInteractionEncodings(suffix)`,
-  `createColorEncoding`'s `paramSuffix`) exist for when a layer past 0 needs interactivity —
-  `paramSuffix: null` means "emit no interaction conditions at all", which is what a layer that
-  declares no params requires.
+- **Every layer declares its own params, under a suffix.** Vega param names are global to a spec,
+  so `highlight` / `select` are suffixed per layer (`layerParamSuffix`, `paramName`,
+  `createInteractionEncodings(suffix)`, `createColorEncoding`'s `paramSuffix`) — that suffix is what
+  lets N layers of the same chart type compile at all. **Layer 0 keeps the unsuffixed names**,
+  because `chartHelpers.setupEventListeners` and the brush filter transforms reference them by
+  literal name.
+- **Brushing is one shared interval, owned by layer 0.** Layers past it _filter on_ the same `brush`
+  param rather than declaring rival ones, so there is exactly one signal to listen to. Only
+  `BRUSH_DECLARING_CHART_TYPES` (`line`/`area`/`point`) declare it: a layer filtering on `brush`
+  under a `bar` primary produces a spec that **Vega-Lite compiles cleanly** and then dies at
+  `vega.parse` with `Unrecognized signal name`. Tests that assert a layered spec is renderable must
+  therefore go all the way to `vega.parse`, not stop at `compile()`. The same rule binds the
+  listener side: `setupEventListeners` subscribes to `brush` on layer 0's chart type alone, because
+  `view.addSignalListener` on a signal the spec never declared throws and the chart never renders.
+  "Any layer is a line" is the wrong test.
+- **Clicks are attributed by datum, not assumed to be layer 0.** Handlers read fields off
+  `item.datum` and map them to concept addresses through a column map, and those differ per layer
+  when layers are independent selects. `resolveLayerForDatum` picks the first layer whose bound
+  fields are all present — layers sharing a result set all match and layer 0 wins (same row), while
+  layers over separate selects match only their own datum.
 - **`yField2` is folded at render time, not in persistence.** `migrateChartConfig` only runs on
   dashboard item data and would miss the editor, LLM and statement paths. `yField2` stays a valid
-  _authoring_ shape (controls panel, LLM schema); layering is the _rendering_ model. Currently
-  folded for `bar` only — `line`/`area` build their secondary series as a brush-linked base/filtered
-  pair the generic machinery does not reproduce.
+  _authoring_ shape (controls panel, LLM schema); layering is the _rendering_ model. Folded for
+  `bar`, `line` and `area`; a bar's secondary becomes a line, a line/area's keeps the primary's
+  type.
 - **`LAYERABLE_CHART_TYPES`** (`lib/dashboards/constants.ts`) is a deliberate v1 scope boundary, not
   a permanent limit. `beeswarm` emits a raw _Vega_ spec; `headline`/`tree` own their top-level
   chrome and data; `geo-map` carries a projection. Adding one means unwrapping, not just editing the

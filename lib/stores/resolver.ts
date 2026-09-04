@@ -215,9 +215,37 @@ export default class TrilogyResolver {
     return `${baseUrl}/${path}`
   }
 
+  // The resolver sheds load with a 503 + Retry-After once its request queue
+  // is full. That is transient by construction, so wait and try again a few
+  // times before surfacing it as an error.
+  private static readonly RETRY_STATUSES = new Set([503])
+  private static readonly MAX_RETRIES = 3
+  private static readonly MAX_RETRY_DELAY_MS = 5000
+
+  protected delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
+  private retryDelayMs(response: Response, attempt: number): number {
+    const header = Number(response.headers?.get?.('retry-after'))
+    const base = Number.isFinite(header) && header > 0 ? header * 1000 : 500 * 2 ** attempt
+    // jitter so a burst of clients does not retry in lockstep
+    return Math.min(base, TrilogyResolver.MAX_RETRY_DELAY_MS) * (0.75 + Math.random() * 0.5)
+  }
+
   private async fetchWithErrorHandling(url: string, options: RequestInit): Promise<any> {
     try {
-      const response = await fetch(url, options)
+      let response = await fetch(url, options)
+      for (
+        let attempt = 0;
+        !response.ok &&
+        TrilogyResolver.RETRY_STATUSES.has(response.status) &&
+        attempt < TrilogyResolver.MAX_RETRIES;
+        attempt++
+      ) {
+        await this.delay(this.retryDelayMs(response, attempt))
+        response = await fetch(url, options)
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))

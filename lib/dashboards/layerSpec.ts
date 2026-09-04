@@ -22,10 +22,12 @@ import {
   createFieldEncoding,
   createColorEncoding,
   createSizeEncoding,
+  createInteractionEncodings,
   getFormatHint,
   getSortOrder,
   hasDiscreteTimeTrait,
   layerParamSuffix,
+  paramName,
 } from './helpers'
 import { LAYERABLE_CHART_TYPES, lightDefaultColor, darkDefaultColor } from './constants'
 import { snakeCaseToCapitalizedWords } from './formatting'
@@ -58,10 +60,11 @@ export interface NormalizedChartConfig {
  * controls panel and the LLM tool schema keep it) while layering is the
  * *rendering* model.
  *
- * The fold is deliberately limited to `bar`: it is the only chart type whose
- * secondary series is a plain mark. `line`/`area` build their secondary series
- * with their own brush-linked base/filtered pair, which the generic layer
- * machinery does not reproduce, so they keep owning `yField2` for now.
+ * Applies to every chart type that can carry a secondary series. `line` and
+ * `area` were held back while layers past 0 were inert marks -- their secondary
+ * series is a brush-linked base/filtered pair, which a plain mark cannot
+ * reproduce. Now that `createLayerMarkSpec` builds that pair and every layer
+ * declares its own params, they fold like the rest.
  */
 export const normalizeChartConfig = (config: ChartConfig): NormalizedChartConfig => {
   if (isLayeredConfig(config)) {
@@ -80,14 +83,17 @@ export const normalizeChartConfig = (config: ChartConfig): NormalizedChartConfig
     }
   }
 
-  if (config.yField2 && config.chartType === 'bar') {
+  const FOLDABLE_SECONDARY: ChartConfig['chartType'][] = ['bar', 'line', 'area']
+  if (config.yField2 && FOLDABLE_SECONDARY.includes(config.chartType)) {
     const independent = !config.linkY2
     return {
       root: { ...config, linkLayerY: !independent },
       layers: [
         { ...config, yField2: undefined },
         {
-          chartType: 'line',
+          // A secondary series on a bar chart reads best as a line; on a
+          // line/area chart it stays the same type as the primary.
+          chartType: config.chartType === 'bar' ? 'line' : config.chartType,
           xField: config.xField,
           yField: config.yField2,
           hideLegend: config.hideLegend,
@@ -124,6 +130,47 @@ export const resolveLayerYScale = (
     layers.map((layer) => JSON.stringify(getFormatHint(layer.yField, columns) || {})),
   )
   return formats.size > 1 ? 'independent' : 'shared'
+}
+
+/**
+ * Chart types whose spec builder declares the shared `brush` interval param.
+ * A layer may only filter on `brush` when layer 0 is one of these.
+ */
+export const BRUSH_DECLARING_CHART_TYPES: ChartConfig['chartType'][] = ['line', 'area', 'point']
+
+/** A layer paired with the columns its fields resolve against. */
+export interface LayerBinding {
+  config: ChartConfig
+  columns: Map<string, ResultColumn>
+}
+
+/**
+ * Which layer did this datum come from?
+ *
+ * Interaction handlers read fields off `item.datum` by name and map them to
+ * concept addresses through a column map. With layers over independent selects
+ * those differ per layer, so handing every click layer 0's config emits filters
+ * against fields the datum does not have.
+ *
+ * Layers are tried in order and the first whose bound fields are all present
+ * wins. That resolves both cases correctly: layers sharing one result set all
+ * match, and layer 0 -- the right answer, since they describe the same row --
+ * is returned; layers over separate selects only match their own datum.
+ */
+export const resolveLayerForDatum = (
+  datum: Record<string, any> | null | undefined,
+  layers: LayerBinding[],
+): LayerBinding => {
+  if (!datum || layers.length === 0) return layers[0]
+
+  for (const layer of layers) {
+    const bound = [layer.config.xField, layer.config.yField, layer.config.geoField].filter(
+      Boolean,
+    ) as string[]
+    if (bound.length === 0) continue
+    if (bound.every((field) => field in datum)) return layer
+  }
+  return layers[0]
 }
 
 /** Display name for a layer in the series legend. */
@@ -227,6 +274,15 @@ export const createLayerMarkSpec = (
     hideLegend?: boolean
     scaleX?: ChartConfig['scaleX']
     scaleY?: ChartConfig['scaleY']
+    /** Current cross-filter selection, so a re-render keeps the highlight. */
+    selectedValues?: Array<Record<string, any>>
+    /**
+     * Whether layer 0 declared a `brush` interval. Only line/area/point
+     * builders do; a bar primary has none, and filtering on a param nothing
+     * declares fails at Vega parse time with "Unrecognized signal name" --
+     * which Vega-Lite's own `compile()` does not catch.
+     */
+    brushAvailable?: boolean
   },
 ): any => {
   if (!LAYERABLE_CHART_TYPES.includes(layer.chartType)) {
@@ -282,8 +338,9 @@ export const createLayerMarkSpec = (
       currentTheme,
       options.hideLegend,
       data,
-      // Only layer 0 declares selection params, so only it can condition on them.
-      layerIndex === 0 ? '' : null,
+      // Every layer declares its own suffixed selection params, so each can
+      // condition on its own.
+      suffix,
     )
   } else if (seriesLabel) {
     encoding.color = {
@@ -297,33 +354,93 @@ export const createLayerMarkSpec = (
     encoding.size = createSizeEncoding(layer.sizeField, columns, isMobile, options.hideLegend)
   }
 
+  // Each layer declares its own hover/select params under a suffix. Param names
+  // are global to a Vega spec, so the suffix is what makes N layers of the same
+  // chart type compile at all -- and giving every layer its own means a click
+  // on any of them highlights that layer rather than layer 0.
+  const params: any[] = [
+    {
+      name: paramName('highlight', suffix),
+      select: { type: 'point', on: 'mouseover', clear: 'mouseout' },
+    },
+    {
+      name: paramName('select', suffix),
+      select: { type: 'point', on: 'click,touchend' },
+      value: options.selectedValues ?? [],
+      nearest: true,
+    },
+  ]
+
+  Object.assign(encoding, createInteractionEncodings(suffix))
+
   if (tooltipFields.length) {
     encoding.tooltip = tooltipFields
   }
 
+  // Annotations ride along as a sibling text mark rather than mutating this
+  // layer, so the caller can splice both into the top-level layer array.
+  const annotationLayer = {
+    mark: { type: 'text', align: 'left', baseline: 'middle', dx: 5, fontSize: 8 },
+    encoding: {
+      ...(isHorizontal
+        ? { y: categoryEncoding, x: valueEncoding }
+        : { x: categoryEncoding, y: valueEncoding }),
+      text: { field: layer.annotationField, type: 'nominal' },
+      color: { value: currentTheme === 'light' ? '#333333' : '#dddddd' },
+    },
+  }
+
+  const mark = layerMark(layer, currentTheme, Boolean(seriesLabel))
+
+  // `line` and `area` render as a brush-linked pair: a grey base showing the
+  // whole series for context, and a coloured copy filtered to the brushed
+  // interval. That is how a single-layer line chart already looks, so building
+  // it here is what lets a statement's `layer line` and a folded `yField2`
+  // secondary series match the primary instead of rendering as a flat line.
+  const isBrushLinked =
+    (layer.chartType === 'line' || layer.chartType === 'area') && options.brushAvailable === true
+
+  if (isBrushLinked) {
+    const notNull = valueField ? [{ filter: `datum.${valueField} != null` }] : []
+    const { color: seriesColor, ...contextEncoding } = encoding
+
+    const spec: any = {
+      layer: [
+        {
+          transform: notNull,
+          mark: { ...mark, color: 'lightgray' },
+          encoding: {
+            ...contextEncoding,
+            // Keep the series in the colour scale's domain so the legend still
+            // lists it, without painting the grey context layer.
+            ...(seriesColor?.datum ? { detail: { datum: seriesColor.datum } } : {}),
+          },
+          // Params live on the unit, not the group; siblings in the same layer
+          // group can still reference them.
+          params,
+        },
+        {
+          transform: [...notNull, { filter: { param: 'brush' } }],
+          mark,
+          encoding,
+        },
+      ],
+    }
+    if (layer.annotationField && columns.get(layer.annotationField)) {
+      spec.__annotationLayer = annotationLayer
+    }
+    return spec
+  }
+
   const spec: any = {
-    mark: layerMark(layer, currentTheme, Boolean(seriesLabel)),
+    mark,
     encoding,
+    params,
   }
 
   if (layer.annotationField && columns.get(layer.annotationField)) {
-    // Annotations ride along as a sibling text mark rather than mutating this
-    // layer, so the caller can splice both into the top-level layer array.
-    spec.__annotationLayer = {
-      mark: { type: 'text', align: 'left', baseline: 'middle', dx: 5, fontSize: 8 },
-      encoding: {
-        ...(isHorizontal
-          ? { y: categoryEncoding, x: valueEncoding }
-          : { x: categoryEncoding, y: valueEncoding }),
-        text: { field: layer.annotationField, type: 'nominal' },
-        color: { value: currentTheme === 'light' ? '#333333' : '#dddddd' },
-      },
-    }
+    spec.__annotationLayer = annotationLayer
   }
-
-  // Suffix is unused for layers with no params today, but reserved so the
-  // interactive layer-0 builders and these stay on one naming scheme.
-  void suffix
 
   return spec
 }

@@ -197,7 +197,7 @@ def filters_to_conditional(
     extra_filters: list[str],
     parameters: dict[str, str | int | float],
     env: Environment,
-    base_filter_idx: int = 0,
+    filter_scope: str = "q0",
 ) -> WhereClause | None:
     param_declarations, cleaned, param_kwargs = prepare_filter_params(
         extra_filters, parameters, env
@@ -215,7 +215,11 @@ def filters_to_conditional(
     final_conditions = " AND ".join(final)
     idx = len(cleaned) - 1
     _, fparsed = parse_text(
-        f"{param_declarations}\nWHERE {final_conditions} SELECT 1 as __ftest_{base_filter_idx * 100 + idx};",
+        # The throwaway select alias must be unique per (scope, filter): a
+        # batch of dashboard queries parses its batch-level filter and every
+        # per-query filter into ONE environment, and a repeated name is a
+        # redeclaration error that fails the query.
+        f"{param_declarations}\nWHERE {final_conditions} SELECT 1 as __ftest_{filter_scope}_{idx};",
         env,
         parse_config=PARSE_CONFIG,
     )
@@ -249,7 +253,7 @@ def generate_single_query(
     parameters: dict[str, str | int | float] | None = None,
     enable_performance_logging: bool = True,
     extra_conditional: WhereClause | None = None,
-    base_filter_idx: int = 0,
+    filter_scope: str = "q0",
     cleanup_concepts: bool = False,
 ) -> tuple[
     PROCESSED_STATEMENT_TYPES | None,
@@ -418,7 +422,7 @@ def generate_single_query(
     # list with an extended copy - never by mutating the fold or the list.
     if extra_filters:
         conditional = filters_to_conditional(
-            extra_filters, variables, env, base_filter_idx=base_filter_idx
+            extra_filters, variables, env, filter_scope=filter_scope
         )
         if conditional:
             for candidate in candidates:
@@ -569,7 +573,9 @@ def generate_multi_query_core(
         parse_text(imp_string, benv, parse_config=PARSE_CONFIG)
         conditional = None
         if extra_filters:
-            conditional = filters_to_conditional(extra_filters, variables, benv)
+            conditional = filters_to_conditional(
+                extra_filters, variables, benv, filter_scope="batch"
+            )
         return benv, conditional
 
     env, conditional = build_env()
@@ -599,7 +605,7 @@ def generate_multi_query_core(
                 parameters=subquery.parameters,
                 enable_performance_logging=enable_performance_logging,
                 extra_conditional=conditional,
-                base_filter_idx=idx,
+                filter_scope=f"q{idx}",
                 cleanup_concepts=cleanup_concepts,
             )
             all.append((subquery.label, generated, columns, values, layer_columns))

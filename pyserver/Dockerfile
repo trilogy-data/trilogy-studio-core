@@ -49,6 +49,18 @@ ENV IN_DOCKER_IMAGE=1 \
     PORT=8080 \
     HOST=0.0.0.0
 
+# Concurrency model. Every request is CPU-bound Python, so one worker process
+# saturates one core; match WEB_CONCURRENCY (gunicorn's worker count) to the
+# machine's vCPUs (fly.toml: 2). Inside each worker, studio_endpoints runs
+# requests on TRILOGY_WORKER_THREADS threads and lets up to
+# TRILOGY_MAX_QUEUED_REQUESTS more wait; beyond that it answers 503 at once
+# instead of queueing without bound. TRILOGY_REQUEST_TIMEOUT_S caps a single
+# request (504) so a runaway plan can't hold a slot forever.
+ENV WEB_CONCURRENCY=2 \
+    TRILOGY_WORKER_THREADS=2 \
+    TRILOGY_MAX_QUEUED_REQUESTS=64 \
+    TRILOGY_REQUEST_TIMEOUT_S=120
+
 # Production dependencies from the clean `deps` stage.
 COPY --from=deps /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=deps /usr/local/bin /usr/local/bin
@@ -70,4 +82,10 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
 
 # exec form for correct signal handling; --preload imports the app once in the
 # master process so the heavy trilogy import is not repeated per worker.
-CMD ["gunicorn", "main:app", "-k", "uvicorn.workers.UvicornWorker", "-w", "4", "-b", "0.0.0.0:8080", "--preload"]
+# Worker count comes from WEB_CONCURRENCY above. --timeout is the heartbeat
+# grace: the uvicorn worker pings the arbiter from its event loop every
+# timeout/2 seconds and is SIGABRT'd (dropping every in-flight request as a
+# 502) if it misses the window, so this must comfortably exceed any event-loop
+# stall the request gate can't prevent. --max-requests recycles workers to
+# bound long-run memory growth.
+CMD ["gunicorn", "main:app", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8080", "--preload", "--timeout", "120", "--graceful-timeout", "30", "--max-requests", "2000", "--max-requests-jitter", "200"]

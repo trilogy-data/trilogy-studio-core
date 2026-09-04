@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { parse as vegaParse, View } from 'vega'
+import { compile } from 'vega-lite'
 import { ChromaChartHelpers } from './chartHelpers'
-import { type ResultColumn, type ChartConfig, ColumnType } from '../editors/results'
+import { generateVegaSpec } from '../dashboards/spec'
+import type { LayerBinding } from '../dashboards/layerSpec'
+import { type ResultColumn, type ChartConfig, ColumnType, type Row } from '../editors/results'
 
 describe('ChromaChartHelpers', () => {
   let chartHelpers: ChromaChartHelpers
@@ -347,6 +351,116 @@ describe('ChromaChartHelpers', () => {
       const call = onDimensionClick.mock.calls[0][0]
       // region_name must NOT be pruned — its key is absent from filters
       expect(call.filters).toHaveProperty('order.customer.nation.region.name')
+    })
+  })
+
+  describe('setupEventListeners', () => {
+    // A real Vega view, not a stub: the failure this guards against is Vega's
+    // own `Unrecognized signal name` throw, which only a real view raises.
+    const layerColumns = new Map<string, ResultColumn>([
+      ['category', { name: 'category', type: ColumnType.STRING, address: 'local.category' }],
+      ['revenue', { name: 'revenue', type: ColumnType.FLOAT, address: 'local.revenue' }],
+      ['forecast', { name: 'forecast', type: ColumnType.FLOAT, address: 'local.forecast' }],
+      ['period', { name: 'period', type: ColumnType.STRING, address: 'local.period' }],
+    ])
+    const layerData: Row[] = [
+      { category: 'a', revenue: 10, period: 'q1', forecast: 12 },
+      { category: 'b', revenue: 20, period: 'q2', forecast: 18 },
+    ]
+
+    // Layers over independent selects: disjoint fields, so a datum identifies
+    // the layer it came from.
+    const twoLayers = (primary: 'bar' | 'line'): ChartConfig => ({
+      chartType: primary,
+      layers: [
+        { chartType: primary, xField: 'category', yField: 'revenue' },
+        { chartType: 'line', xField: 'period', yField: 'forecast' },
+      ],
+    })
+
+    const bindingsFor = (config: ChartConfig): LayerBinding[] =>
+      config.layers!.map((layer) => ({ config: layer, columns: layerColumns }))
+
+    const viewFor = (config: ChartConfig) => {
+      const spec = generateVegaSpec(layerData, config, layerColumns, null)
+      return new View(vegaParse(compile(spec as any).spec), { renderer: 'none' })
+    }
+
+    it('binds the brush signal when layer 0 declares one', () => {
+      const config = twoLayers('line')
+      const view = viewFor(config)
+      const spy = vi.spyOn(view, 'addSignalListener')
+
+      const remove = chartHelpers.setupEventListeners(
+        view,
+        config.layers![0],
+        layerColumns,
+        false,
+        vi.fn(),
+        bindingsFor(config),
+      )
+
+      expect(spy).toHaveBeenCalledWith('brush', expect.any(Function))
+      expect(() => remove?.()).not.toThrow()
+    })
+
+    it('does not bind a brush a bar primary never declared', () => {
+      // Only line/area/point builders declare `brush`. A line layer *over* a
+      // bar primary filters on layer 0's brush and declares none of its own, so
+      // keying off "any layer is a line" asks Vega for a signal that does not
+      // exist and throws before the chart is ever shown.
+      const config = twoLayers('bar')
+      const view = viewFor(config)
+      const spy = vi.spyOn(view, 'addSignalListener')
+
+      expect(() =>
+        chartHelpers.setupEventListeners(
+          view,
+          config.layers![0],
+          layerColumns,
+          false,
+          vi.fn(),
+          bindingsFor(config),
+        ),
+      ).not.toThrow()
+      expect(spy).not.toHaveBeenCalled()
+    })
+
+    it('attributes a click to the layer whose datum it carries', () => {
+      const onDimensionClick = vi.fn()
+      chartHelpers = new ChromaChartHelpers({
+        onDimensionClick,
+        onPointClick: () => {},
+        onBackgroundClick: () => {},
+        onDrilldownClick: () => {},
+      })
+
+      const config = twoLayers('bar')
+      const view = viewFor(config)
+      const handlers: Array<(event: any, item: any) => void> = []
+      vi.spyOn(view, 'addEventListener').mockImplementation((_type: any, handler: any) => {
+        handlers.push(handler)
+        return view
+      })
+
+      chartHelpers.setupEventListeners(
+        view,
+        config.layers![0],
+        layerColumns,
+        false,
+        vi.fn(),
+        bindingsFor(config),
+      )
+
+      // A datum carrying only layer 1's fields must filter on layer 1's
+      // concepts. Attributing it to layer 0 would look for `category`, which
+      // this datum does not have, and emit the wrong filter set.
+      handlers[0]({ shiftKey: false, ctrlKey: false }, { datum: { period: 'q2', forecast: 18 } })
+
+      expect(onDimensionClick).toHaveBeenCalledTimes(1)
+      expect(onDimensionClick.mock.calls[0][0].filters).toEqual({
+        'local.period': { op: 'eq', value: 'q2' },
+      })
     })
   })
 })

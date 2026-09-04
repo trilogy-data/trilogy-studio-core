@@ -22,6 +22,10 @@ from io_models import (
 
 
 def flatten_array(input: Any, depth: int = 0) -> list[LineageItem]:
+    # A FunctionCallWrapper argument can be a bare ConceptRef rather than a
+    # list; treat any non-sequence as a one-element sequence.
+    if not isinstance(input, (list, tuple)):
+        return flatten_lineage(input, depth)
     arr_len = len(input)
     output = []
     for idx, val in enumerate(input):
