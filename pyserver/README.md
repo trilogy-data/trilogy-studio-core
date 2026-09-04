@@ -27,8 +27,8 @@ Use the benchmark script to compare the current implementation with any concurre
 ```
 
 The script now benchmarks multiple payload sizes by default:
-- `pyserver/scripts/payloads/small_names.json`
-- `pyserver/scripts/payloads/tpch_large_duckdb.json`
+- `pyserver/tests/payloads/small_names.json`
+- `pyserver/tests/payloads/tpch_large_duckdb.json`
 
 Baseline recorded on 2026-03-24 before process-pool changes:
 

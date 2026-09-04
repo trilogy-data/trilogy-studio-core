@@ -22,6 +22,9 @@ from pathlib import Path
 from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+# Payloads live with the tests so they are part of the Docker build context
+# (.dockerignore drops scripts/) and the test suite can use them as fixtures.
+PAYLOAD_DIR = SCRIPT_DIR.parent / "tests" / "payloads"
 sys.path.insert(0, str(SCRIPT_DIR.parent))
 logging.disable(logging.CRITICAL)
 
@@ -133,9 +136,7 @@ def main() -> None:
     parser.add_argument("--iterations", type=int, default=20)
     parser.add_argument("--json", help="Write results to this path as JSON")
     args = parser.parse_args()
-    files = [Path(p) for p in args.payload_file] or sorted(
-        (SCRIPT_DIR / "payloads").glob("*.json")
-    )
+    files = [Path(p) for p in args.payload_file] or sorted(PAYLOAD_DIR.glob("*.json"))
     rows = run(files, args.iterations)
     width = max(len(r["case"]) for r in rows)
     print(f"{'payload':20s} {'case':{width}s} {'median':>9s} {'p95':>9s} {'err':>4s}")

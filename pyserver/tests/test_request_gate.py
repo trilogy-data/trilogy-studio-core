@@ -18,9 +18,9 @@ from io_models import ModelInSchema, ModelSourceInSchema, MultiQueryInSchema
 from query_helpers import generate_multi_query_core
 
 PAYLOAD = json.loads(
-    (
-        Path(__file__).parent.parent / "scripts" / "payloads" / "tpch_large_duckdb.json"
-    ).read_text(encoding="utf-8")
+    (Path(__file__).parent / "payloads" / "tpch_large_duckdb.json").read_text(
+        encoding="utf-8"
+    )
 )
 BATCH_FILTER = "part.supplier.nation.name = 'FRANCE'"
 QUERY_FILTER = "part.manufacturer = 'Manufacturer#1'"
