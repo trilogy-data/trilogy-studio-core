@@ -6,10 +6,14 @@ from trilogy import Environment
 from trilogy.authoring import (
     Concept,
 )
+from trilogy.constants import CONFIG
 from trilogy.core.enums import ConceptSource
+from trilogy.core.exceptions import InvalidSyntaxException
 from trilogy.core.models.datasource import Address
 from trilogy.core.models.environment import DictImportResolver, EnvironmentConfig
 from trilogy.parsing.exceptions import ParseError
+from trilogy.parsing.parse_engine_v2 import TopLevelStatementParser, parse_syntax
+from trilogy.parsing.v2.import_service import ImportEnvCacheKey
 
 from common import concept_to_description, flatten_lineage
 from io_models import (
@@ -131,14 +135,43 @@ def concept_to_ui_concept(concept: Concept) -> UIConcept:
     )
 
 
+def parse_source_into_env(
+    env: Environment,
+    text: str,
+    environment_lookup: dict[ImportEnvCacheKey, Environment] | None = None,
+    text_lookup: dict | None = None,
+) -> list:
+    """`parse_text(text, env)` with the hydrator's import caches supplied by the
+    caller, so several parses over the same model share one hydration of each
+    imported file instead of re-hydrating the whole import tree per parse."""
+    parser = TopLevelStatementParser(
+        environment=env, import_keys=["root"], parse_config=CONFIG.parsing
+    )
+    # Set directly: the constructor only adopts a lookup when it is non-empty,
+    # which would leave a caller's fresh dict unshared on the first parse.
+    if environment_lookup is not None:
+        parser.hydrator.parsed_environments = environment_lookup
+    if text_lookup is not None:
+        parser.hydrator.text_lookup = text_lookup
+    try:
+        parsed = parser.parse(parse_syntax(text))
+    except SyntaxError as e:
+        raise InvalidSyntaxException(str(e)).with_traceback(e.__traceback__)
+    env.concepts.fail_on_missing = True
+    return parsed
+
+
 def source_to_model_source(
-    source: ModelSourceInSchema, sources: list[ModelSourceInSchema]
+    source: ModelSourceInSchema,
+    sources: list[ModelSourceInSchema],
+    environment_lookup: dict[ImportEnvCacheKey, Environment] | None = None,
+    text_lookup: dict | None = None,
 ) -> ModelSource:
     final_concepts: list[UIConcept] = []
     final_datasources: list[UIDatasource] = []
     env = parse_env_from_full_model(sources)
     try:
-        env.parse(source.contents)
+        parse_source_into_env(env, source.contents, environment_lookup, text_lookup)
     except Exception as e:
         raise ParseError(
             f"Unable to process file '{source.alias}', parsing error: {e}"
@@ -190,9 +223,18 @@ def source_to_model_source(
 
 
 def model_to_response(model: ModelInSchema) -> Model:
+    # Every source is parsed against the same model, so the imported files
+    # each one pulls in are identical: hydrate each once and share. Sources
+    # here are only read after parsing, so the shared child environments are
+    # never mutated behind another source's back.
+    environment_lookup: dict[ImportEnvCacheKey, Environment] = {}
+    text_lookup: dict = {}
     return Model(
         name=model.name,
         sources=[
-            source_to_model_source(source, model.sources) for source in model.sources
+            source_to_model_source(
+                source, model.sources, environment_lookup, text_lookup
+            )
+            for source in model.sources
         ],
     )

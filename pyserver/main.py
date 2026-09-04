@@ -74,6 +74,25 @@ def setup_performance_logging():
 # Call this early to set up logging
 setup_performance_logging()
 
+
+def _report_parser_backend() -> str:
+    """Which syntax parser pytrilogy will use, and whether the Rust module it
+    needs is importable. Printed at startup so a deployment that silently
+    lost the compiled wheel is visible in the logs rather than as a hard
+    ImportError on the first request."""
+    from trilogy.constants import CONFIG
+
+    try:
+        import _preql_import_resolver  # type: ignore[import-untyped]  # noqa: F401
+
+        rust = "available"
+    except ImportError:
+        rust = "MISSING"
+    return f"Trilogy parser backend: {CONFIG.parser_backend.value} (rust module {rust})"
+
+
+print(_report_parser_backend())
+
 PORT = 5678
 
 
@@ -111,9 +130,14 @@ app.add_middleware(
 server_router = APIRouter()
 
 
+class TerminateServer(HTTPException):
+    """Raised only by /terminate. Distinct from a plain 503 so load-shedding
+    responses from the request gate don't shut the server down."""
+
+
 @server_router.get("/terminate")
 async def terminate():
-    raise HTTPException(503, "Terminating server")
+    raise TerminateServer(503, "Terminating server")
 
 
 @server_router.get("/health")
@@ -142,7 +166,7 @@ async def exit_app():
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc: HTTPException):
     """Overdrive the default exception handler to allow for graceful shutdowns"""
-    if exc.status_code == 503:
+    if isinstance(exc, TerminateServer):
         # here is where we terminate all running processes
         task = BackgroundTask(exit_app)
         return PlainTextResponse(
@@ -159,6 +183,8 @@ async def http_exception_handler(request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
         content=jsonable_encoder({"detail": exc.detail}),
+        # e.g. Retry-After on a load-shedding 503 from the request gate
+        headers=exc.headers,
     )
 
 

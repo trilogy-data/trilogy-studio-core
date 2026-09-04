@@ -130,3 +130,73 @@ describe('TrilogyResolver', () => {
     })
   })
 })
+
+describe('TrilogyResolver load-shedding retries', () => {
+  const busy = () => ({
+    ok: false,
+    status: 503,
+    headers: { get: (name: string) => (name === 'retry-after' ? '1' : null) },
+    json: async () => ({ detail: 'Server busy' }),
+  })
+  const okResponse = () => ({ ok: true, json: async () => ({ generated_sql: 'select 1' }) })
+
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('retries a 503 after the Retry-After delay and returns the eventual result', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(busy())
+      .mockResolvedValueOnce(busy())
+      .mockResolvedValueOnce(okResponse())
+    vi.stubGlobal('fetch', fetchMock)
+    const resolver = new TrilogyResolver({
+      settings: { trilogyResolver: 'http://localhost:5678' },
+    } as any)
+    const delay = vi.spyOn(resolver as any, 'delay').mockResolvedValue(undefined)
+
+    const result = await resolver.resolve_query('select 1;', 'duckdb', 'preql')
+
+    expect(result.data.generated_sql).toBe('select 1')
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(delay).toHaveBeenCalledTimes(2)
+    // Retry-After: 1 second, with jitter between 0.75x and 1.25x
+    for (const [ms] of delay.mock.calls) {
+      expect(ms).toBeGreaterThanOrEqual(750)
+      expect(ms).toBeLessThanOrEqual(1250)
+    }
+  })
+
+  it('gives up after the retry budget and surfaces the server detail', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(busy())
+    vi.stubGlobal('fetch', fetchMock)
+    const resolver = new TrilogyResolver({
+      settings: { trilogyResolver: 'http://localhost:5678' },
+    } as any)
+    vi.spyOn(resolver as any, 'delay').mockResolvedValue(undefined)
+
+    await expect(resolver.resolve_query('select 1;', 'duckdb', 'preql')).rejects.toThrow(
+      'Server busy',
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+  })
+
+  it('does not retry other error statuses', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 422,
+      headers: { get: () => null },
+      json: async () => ({ detail: 'Parsing error' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const resolver = new TrilogyResolver({
+      settings: { trilogyResolver: 'http://localhost:5678' },
+    } as any)
+
+    await expect(resolver.resolve_query('select 1;', 'duckdb', 'preql')).rejects.toThrow(
+      'Parsing error',
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})
