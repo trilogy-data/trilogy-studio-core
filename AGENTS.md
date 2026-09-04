@@ -55,7 +55,10 @@ config to `{root, layers[]}`. Load-bearing rules:
   `BRUSH_DECLARING_CHART_TYPES` (`line`/`area`/`point`) declare it: a layer filtering on `brush`
   under a `bar` primary produces a spec that **Vega-Lite compiles cleanly** and then dies at
   `vega.parse` with `Unrecognized signal name`. Tests that assert a layered spec is renderable must
-  therefore go all the way to `vega.parse`, not stop at `compile()`.
+  therefore go all the way to `vega.parse`, not stop at `compile()`. The same rule binds the
+  listener side: `setupEventListeners` subscribes to `brush` on layer 0's chart type alone, because
+  `view.addSignalListener` on a signal the spec never declared throws and the chart never renders.
+  "Any layer is a line" is the wrong test.
 - **Clicks are attributed by datum, not assumed to be layer 0.** Handlers read fields off
   `item.datum` and map them to concept addresses through a column map, and those differ per layer
   when layers are independent selects. `resolveLayerForDatum` picks the first layer whose bound

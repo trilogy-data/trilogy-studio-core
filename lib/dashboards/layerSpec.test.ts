@@ -191,6 +191,22 @@ describe('generateVegaSpec with layers', () => {
     expect(() => parseToVega(spec)).not.toThrow()
   })
 
+  it('restores the committed selection on every layer, not just layer 0', () => {
+    // Layer 0's builder has always seeded `select` with the current
+    // cross-filter so a re-render keeps the highlight. Layers past it are
+    // interactive now too, so they need the same seed or their highlight is
+    // dropped on every re-render.
+    const selection = [{ category: 'a' }]
+    const spec: any = generateVegaSpec(data, layered(), columns, selection)
+
+    const selectParam = (layerSpec: any, name: string) =>
+      layerSpec.params.find((p: any) => p.name === name)
+
+    expect(selectParam(spec.layer[0], 'select').value).toEqual(selection)
+    expect(selectParam(spec.layer[1], 'select_l1').value).toEqual(selection)
+    expect(() => parseToVega(spec)).not.toThrow()
+  })
+
   it('lets every layer be highlighted independently', () => {
     const spec: any = generateVegaSpec(data, layered(), columns, null)
 

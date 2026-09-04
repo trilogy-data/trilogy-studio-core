@@ -1,7 +1,11 @@
 // chartHelpers.ts
 import type { View } from 'vega'
 import type { ResultColumn, ChartConfig, FieldKey, BoolFieldKey } from '../editors/results'
-import { resolveLayerForDatum, type LayerBinding } from '../dashboards/layerSpec'
+import {
+  resolveLayerForDatum,
+  BRUSH_DECLARING_CHART_TYPES,
+  type LayerBinding,
+} from '../dashboards/layerSpec'
 import { ColumnType } from '../editors/results'
 import type { ScenegraphEvent, SignalValue } from 'vega'
 import { convertTimestampToISODate, filteredColumns, isHexColumn } from '../dashboards/helpers'
@@ -476,11 +480,12 @@ export class ChromaChartHelpers {
     // Brushing stays a single shared interval owned by layer 0: layers past it
     // filter on the same `brush` param rather than declaring rival ones, so
     // there is exactly one signal to listen to however many layers there are.
-    const brushable = (layers?.map((l) => l.config.chartType) ?? [config.chartType]).some((type) =>
-      ['area', 'line', 'point'].includes(type),
-    )
+    // That also means only layer 0's type decides whether the signal exists --
+    // a `line` layer over a `bar` primary declares no brush, and asking Vega
+    // for one it never built throws `Unrecognized signal name: "brush"`.
+    const primaryType = layers?.[0]?.config.chartType ?? config.chartType
 
-    if (brushable) {
+    if (BRUSH_DECLARING_CHART_TYPES.includes(primaryType)) {
       view.addSignalListener('brush', debouncedBrushHandler)
       view.addEventListener('click', clickHandler)
 

@@ -370,8 +370,8 @@ export const generateVegaSpec = (
 
   // Stitch the remaining layers on top of layer 0. Layer 0 keeps its full
   // per-type builder -- params, brush scaffolding and all -- so every existing
-  // interaction keeps working; layers 1..n are plain marks with suffixed param
-  // names and no selections of their own.
+  // interaction keeps working; layers 1..n get the same hover/select params
+  // under a suffix, so a click lands on whichever layer it hit.
   if (isLayered) {
     const extraLayers: any[] = []
 
@@ -397,6 +397,11 @@ export const generateVegaSpec = (
           hideLegend: root.hideLegend,
           scaleX: root.scaleX,
           scaleY: root.scaleY,
+          // The same committed selection layer 0's builder receives, so a
+          // re-render restores the highlight on every layer rather than only
+          // the first. Fields that belong to another layer simply match
+          // nothing.
+          selectedValues: intChart,
           brushAvailable: BRUSH_DECLARING_CHART_TYPES.includes(layers[0].chartType),
         },
       )
