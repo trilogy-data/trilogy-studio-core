@@ -54,12 +54,12 @@ ENV IN_DOCKER_IMAGE=1 \
 # machine's vCPUs (fly.toml: 2). Inside each worker, studio_endpoints runs
 # requests on TRILOGY_WORKER_THREADS threads and lets up to
 # TRILOGY_MAX_QUEUED_REQUESTS more wait; beyond that it answers 503 at once
-# instead of queueing without bound. TRILOGY_REQUEST_TIMEOUT_S caps a single
-# request (504) so a runaway plan can't hold a slot forever.
+# instead of queueing without bound. There is no per-request deadline: an
+# accepted request runs to completion (see the request gate in
+# studio_endpoints.py for why a 504 that cannot stop the work only doubles it).
 ENV WEB_CONCURRENCY=2 \
     TRILOGY_WORKER_THREADS=2 \
-    TRILOGY_MAX_QUEUED_REQUESTS=64 \
-    TRILOGY_REQUEST_TIMEOUT_S=120
+    TRILOGY_MAX_QUEUED_REQUESTS=64
 
 # Production dependencies from the clean `deps` stage.
 COPY --from=deps /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages

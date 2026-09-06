@@ -104,12 +104,22 @@ def _env_int(name: str, default: int) -> int:
 #
 # So: a SMALL pool of worker threads actually runs tasks, a bounded number of
 # further requests wait in line for one, and anything past that is refused
-# immediately with a 503 rather than queued without limit. A per-request
-# deadline turns a runaway plan into a 504 instead of a hung connection.
+# immediately with a 503 rather than queued without limit.
+#
+# There is deliberately NO per-request deadline. An accepted request runs to
+# completion and the client waits for it. The 120s deadline this used to have
+# only cut the response: a thread cannot be interrupted and pytrilogy has no
+# planning-time cancellation, so the compile kept running, its slot stayed
+# held, and the 504 told the client to give up on work the server was still
+# doing. Clients retried, and each retry compiled the same batch a second time
+# on a box that was already over capacity (2026-09-05: every 504 window on
+# Fly was a CI compile suite retrying its own timeouts). A 504 that cannot
+# stop the work is not a limit, it is a duplicate-work generator. If a
+# runaway plan ever needs a cap, it has to be one that actually kills the
+# work (a process pool), not a status code.
 # ---------------------------------------------------------------------------
 WORKER_THREADS = _env_int("TRILOGY_WORKER_THREADS", 2) or 1
 MAX_QUEUED_REQUESTS = _env_int("TRILOGY_MAX_QUEUED_REQUESTS", 64)
-REQUEST_TIMEOUT_S = float(os.environ.get("TRILOGY_REQUEST_TIMEOUT_S", "120") or 120)
 
 _executor: ThreadPoolExecutor | None = None
 _executor_pid: int | None = None
@@ -181,24 +191,11 @@ async def _run_gated(task_name: str, task: Callable[..., dict], *args: Any) -> d
     # hasn't started.
     wrapped.add_done_callback(lambda f: None if f.cancelled() else f.exception())
     try:
-        payload = await asyncio.wait_for(asyncio.shield(wrapped), REQUEST_TIMEOUT_S)
-    except asyncio.TimeoutError:
-        if future.cancel():
-            # Still waiting for a thread: it will never run, so `_work` will
-            # never release the slot.
-            slots.release()
-        logger.warning(
-            "Timing out %s after %.0fs (%d slots free)",
-            task_name,
-            REQUEST_TIMEOUT_S,
-            _slots_available(),
-        )
-        raise HTTPException(
-            status_code=504,
-            detail=f"Request timed out after {REQUEST_TIMEOUT_S:.0f}s",
-        )
+        payload = await asyncio.shield(wrapped)
     except asyncio.CancelledError:
-        # Client went away. Drop the request if it hasn't started.
+        # Client went away. Drop the request if it hasn't started: it will
+        # never run, so `_work` will never release its slot. A request that
+        # has started runs to completion and releases the slot itself.
         if future.cancel():
             slots.release()
         raise

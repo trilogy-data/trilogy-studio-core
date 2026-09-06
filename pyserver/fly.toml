@@ -38,10 +38,12 @@ primary_region = 'ewr'
     hard_limit = 100
 
 [[vm]]
-  memory = '2gb'
+  memory = '4gb'
   cpu_kind = 'performance'
-  # One dedicated core. performance-2x requires 4gb, and the workload is
-  # GIL-bound per process anyway; the Dockerfile's two gunicorn workers
-  # share this core, which costs nothing when idle and keeps one worker
-  # serving while the other recycles.
-  cpus = 1
+  # Two dedicated cores, one per gunicorn worker (WEB_CONCURRENCY=2 in the
+  # Dockerfile): each worker is GIL-bound, so a second core only pays off as a
+  # second process. performance-2x requires 4gb. This is the per-machine
+  # ceiling: a compile batch is one thread's worth of CPU for as long as it
+  # takes, and past two concurrent batches the proxy's soft_limit wakes the
+  # second machine rather than this one working harder.
+  cpus = 2
