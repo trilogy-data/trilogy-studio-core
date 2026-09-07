@@ -7,7 +7,6 @@ import time
 from pathlib import Path
 
 import pytest
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from trilogy.render import get_dialect_generator
 
@@ -69,27 +68,24 @@ def test_gate_refuses_with_503_when_full(monkeypatch, test_client: TestClient):
     assert test_client.get("/health").status_code == 200
 
 
-def test_gate_times_out_and_frees_slot(monkeypatch):
-    monkeypatch.setattr(studio_endpoints, "REQUEST_TIMEOUT_S", 0.05)
+def test_gate_lets_slow_work_finish_and_frees_slot():
+    """There is no per-request deadline: an accepted request runs to
+    completion and the caller gets its result, however long it took."""
     studio_endpoints._gate()
     before = studio_endpoints._slots_available()
 
     def slow() -> dict:
         time.sleep(0.3)
-        return {}
+        return {"done": True}
 
-    with pytest.raises(HTTPException) as excinfo:
-        asyncio.run(studio_endpoints._run_gated("slow", slow))
-    assert excinfo.value.status_code == 504
-    # The thread is still running; its slot comes back when it finishes.
-    time.sleep(0.4)
+    payload = asyncio.run(studio_endpoints._run_gated("slow", slow))
+    assert payload == {"done": True}
     assert studio_endpoints._slots_available() == before
 
 
-def test_gate_frees_slot_for_queued_request_that_times_out(monkeypatch):
-    """A request that times out while still waiting for a thread never runs
+def test_gate_frees_slot_for_queued_request_whose_client_disconnects():
+    """A request cancelled while still waiting for a thread never runs
     `_work`, so the gate itself has to give the slot back."""
-    monkeypatch.setattr(studio_endpoints, "REQUEST_TIMEOUT_S", 0.05)
     executor, _ = studio_endpoints._gate()
     before = studio_endpoints._slots_available()
     release = threading.Event()
@@ -97,10 +93,17 @@ def test_gate_frees_slot_for_queued_request_that_times_out(monkeypatch):
     blockers = [
         executor.submit(release.wait) for _ in range(studio_endpoints.WORKER_THREADS)
     ]
+
+    async def disconnect_while_queued() -> None:
+        task = asyncio.create_task(studio_endpoints._run_gated("queued", dict))
+        await asyncio.sleep(0.05)
+        assert studio_endpoints._slots_available() == before - 1
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
     try:
-        with pytest.raises(HTTPException) as excinfo:
-            asyncio.run(studio_endpoints._run_gated("queued", dict))
-        assert excinfo.value.status_code == 504
+        asyncio.run(disconnect_while_queued())
         assert studio_endpoints._slots_available() == before
     finally:
         release.set()
