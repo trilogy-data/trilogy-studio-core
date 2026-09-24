@@ -10,10 +10,38 @@
         <div class="form-group">
           <label>Store Type: <span class="required">*</span></label>
           <select v-model="storeType" data-testid="store-type-select">
-            <option value="generic">Generic</option>
-            <option value="github">GitHub Repository</option>
+            <option value="generic">Trilogy serve (API)</option>
+            <option value="static">Static files (URL)</option>
+            <option value="github">GitHub repository</option>
           </select>
         </div>
+
+        <!-- Static catalog: flat files from any HTTP origin -->
+        <template v-if="storeType === 'static'">
+          <div class="form-group">
+            <label>Store Name:</label>
+            <input
+              v-model="storeName"
+              type="text"
+              placeholder="Optional, defaults to the store URL"
+              data-testid="store-name-input"
+            />
+          </div>
+          <div class="form-group">
+            <label>Base URL: <span class="required">*</span></label>
+            <input
+              v-model="baseUrl"
+              type="url"
+              placeholder="e.g., https://storage.googleapis.com/my-bucket/models"
+              data-testid="store-url-input"
+              required
+            />
+            <small
+              >Any origin serving index.json plus model files: a GCS or S3 bucket, a CDN, GitHub
+              Pages. Models are browsed and imported as local copies.</small
+            >
+          </div>
+        </template>
 
         <!-- Generic Store Fields -->
         <template v-if="storeType === 'generic'">
@@ -66,13 +94,12 @@
         <!-- GitHub Store Fields -->
         <template v-if="storeType === 'github'">
           <div class="form-group">
-            <label>Display Name: <span class="required">*</span></label>
+            <label>Display Name:</label>
             <input
               v-model="storeName"
               type="text"
-              placeholder="e.g., My Custom Models"
+              placeholder="Optional, defaults to owner/repo"
               data-testid="store-name-input"
-              required
             />
           </div>
           <div class="form-group">
@@ -104,6 +131,7 @@
               data-testid="github-branch-input"
               required
             />
+            <small>Reads the repository's studio/index.json. Public repositories only.</small>
           </div>
         </template>
 
@@ -135,7 +163,8 @@
 
 <script lang="ts">
 import { computed, ref, watch } from 'vue'
-import type { GenericModelStore, GithubModelStore } from '../../remotes/models'
+import type { GenericModelStore } from '../../remotes/models'
+import { buildGithubStaticStore, buildUrlStaticStore } from '../../remotes/staticStorePresets'
 import {
   buildGenericStoreFallbackName,
   buildGenericStoreId,
@@ -160,7 +189,7 @@ export default {
   },
   emits: ['close', 'add'],
   setup(props, { emit }) {
-    const storeType = ref<'generic' | 'github'>('generic')
+    const storeType = ref<'generic' | 'static' | 'github'>('generic')
     const storeName = ref('')
     const baseUrl = ref('')
     const owner = ref('')
@@ -228,24 +257,28 @@ export default {
           }
 
           emit('add', store)
-        } else {
-          if (!storeName.value || !owner.value || !repo.value || !branch.value) {
+        } else if (storeType.value === 'static') {
+          if (!baseUrl.value) {
             error.value = 'Please fill in all required fields'
             return
           }
 
-          const id = `${owner.value}-${repo.value}-${branch.value}`
-
-          const store: GithubModelStore = {
-            type: 'github',
-            id,
-            name: storeName.value,
-            owner: owner.value,
-            repo: repo.value,
-            branch: branch.value,
+          emit('add', buildUrlStaticStore(baseUrl.value, storeName.value || undefined))
+        } else {
+          if (!owner.value || !repo.value || !branch.value) {
+            error.value = 'Please fill in all required fields'
+            return
           }
 
-          emit('add', store)
+          emit(
+            'add',
+            buildGithubStaticStore(
+              owner.value.trim(),
+              repo.value.trim(),
+              branch.value.trim(),
+              storeName.value || undefined,
+            ),
+          )
         }
       } catch (err) {
         error.value = err instanceof Error ? err.message : 'Failed to add store'

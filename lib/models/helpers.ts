@@ -9,6 +9,7 @@ import { type ModelConfigStoreType } from '../stores/modelStore'
 import { DashboardModel } from '../dashboards'
 import { computeConnectionId } from '../connections/base'
 import { normalizeGenericStoreBaseUrl } from '../remotes/genericStoreMetadata'
+import { resolveComponentUrls } from '../remotes/storeService'
 import type { EditorType } from '../editors/editor'
 
 // Maps are component.name -> created editor.id (or dashboard.id).
@@ -75,11 +76,14 @@ export class ModelImportService {
       throw new Error(`Failed to fetch model import from ${url}: ${response.statusText}`)
     }
     const content = await response.text()
+    let parsed: ModelImport
     try {
-      return JSON.parse(content)
+      parsed = JSON.parse(content)
     } catch (error) {
       throw new Error(`Invalid JSON in model import from ${url}: ${error}`)
     }
+    // Static catalogs may name components relative to the manifest.
+    return resolveComponentUrls(parsed, url)
   }
 
   /**

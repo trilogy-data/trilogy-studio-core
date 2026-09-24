@@ -4,6 +4,8 @@
 
 A remote store is an HTTP service that a Trilogy Studio client can register as a `GenericModelStore`. The store hosts the editors, model, and runtime connection config for one logical Trilogy project. The client treats it as a single unit: registering the store makes the project's contents available, and editor edits made in the client are written back to it.
 
+For a read-only catalog of flat files (a bucket, a CDN, GitHub Pages) use a **static** store instead — see [static-store-contract.md](static-store-contract.md). The two contracts are versioned independently.
+
 The authoritative implementation of this contract is `trilogy serve` (from the `pytrilogy` package); this document describes what the server emits and what the client must do with it. The studio e2e suite exercises it via fixtures under `e2e/fixtures/trilogy-serve-stores/`.
 
 **Scope note on dashboards.** Dashboards currently use a Studio-specific serialization format and are intentionally **not** part of this contract. A dashboard created against a remote-backed project is persisted to browser `localStorage` with its `connection` field pointing at the store's runtime connection — so it survives refresh and re-binds to the remote data, but it is never written to the store. A future, format-agnostic dashboard spec may promote dashboards into this contract.

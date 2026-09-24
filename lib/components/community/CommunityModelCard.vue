@@ -230,6 +230,9 @@ const copyAssetLink = async (component: any, assetType: 'dashboard' | 'editor'):
     if (props.file.store.token) {
       params.set('token', props.file.store.token)
     }
+  } else if (props.file.store?.type === 'static') {
+    params.set('store', props.file.store.baseUrl)
+    params.set('kind', 'static')
   }
 
   const importLink = `${currentBase}#${params.toString()}`

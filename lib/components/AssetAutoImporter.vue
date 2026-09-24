@@ -5,7 +5,8 @@ import { type ConnectionStoreType, connectionTypes } from '../stores/connectionS
 import { type EditorStoreType } from '../stores/editorStore'
 import { type ModelConfigStoreType } from '../stores/modelStore'
 import { type CommunityApiStoreType } from '../stores/communityApiStore'
-import { type GenericModelStore } from '../remotes/models'
+import { type AnyModelStore, type GenericModelStore } from '../remotes/models'
+import { buildUrlStaticStore } from '../remotes/staticStorePresets'
 import QueryExecutionService from '../stores/queryExecutionService'
 import { ModelImportService } from '../models/helpers'
 import useScreenNavigation from '../stores/useScreenNavigation'
@@ -65,6 +66,8 @@ const storeUrl = ref<string>('')
 // the base URL — lets the remote pick a stable id that survives URL changes
 // (dev/staging/prod) and gives e2e tests a deterministic handle to assert on.
 const storeIdOverride = ref<string>('')
+// `kind=static`: the store is a flat-file catalog, not a trilogy serve API.
+const storeKind = ref<'static' | 'generic'>('generic')
 const importToken = ref<string>('')
 const remoteImport = ref<boolean>(false)
 const assetName = ref<string>('')
@@ -256,16 +259,19 @@ const registerStoreIfNeeded = async (): Promise<void> => {
   }
 
   // Register new store
-  const newStore: GenericModelStore = {
-    type: 'generic',
-    id: storeId,
-    name:
-      remoteImport.value && modelName.value
-        ? modelName.value
-        : `Auto-registered: ${normalizedBaseUrl}`,
-    baseUrl: normalizedBaseUrl,
-    token: importToken.value || undefined,
-  }
+  const newStore: AnyModelStore =
+    storeKind.value === 'static'
+      ? { ...buildUrlStaticStore(normalizedBaseUrl), id: storeId }
+      : {
+          type: 'generic',
+          id: storeId,
+          name:
+            remoteImport.value && modelName.value
+              ? modelName.value
+              : `Auto-registered: ${normalizedBaseUrl}`,
+          baseUrl: normalizedBaseUrl,
+          token: importToken.value || undefined,
+        }
 
   try {
     await communityApiStore.addStore(newStore)
@@ -535,6 +541,7 @@ const performImport = async () => {
     removeHashFromUrl(URL_HASH_KEYS.IMPORT)
     removeHashFromUrl(URL_HASH_KEYS.STORE)
     removeHashFromUrl(URL_HASH_KEYS.STORE_ID)
+    removeHashFromUrl(URL_HASH_KEYS.STORE_KIND)
     removeHashFromUrl(URL_HASH_KEYS.TOKEN)
     removeHashFromUrl(URL_HASH_KEYS.ASSET_TYPE)
     removeHashFromUrl(URL_HASH_KEYS.ASSET_NAME)
@@ -573,6 +580,7 @@ onMounted(async () => {
     const modelUrlParam = screenNavigation.modelImport.value
     const storeUrlParam = getDefaultValueFromHash(URL_HASH_KEYS.STORE, '')
     const storeIdParam = getDefaultValueFromHash(URL_HASH_KEYS.STORE_ID, '')
+    const storeKindParam = getDefaultValueFromHash(URL_HASH_KEYS.STORE_KIND, '')
     const tokenParam = getDefaultValueFromHash(URL_HASH_KEYS.TOKEN, '')
     const remoteParam = getDefaultValueFromHash(URL_HASH_KEYS.REMOTE, '')
     const assetTypeParam = getDefaultValueFromHash(URL_HASH_KEYS.ASSET_TYPE, '') as AssetType
@@ -615,6 +623,7 @@ onMounted(async () => {
     modelUrl.value = modelUrlParam ? decodeURIComponent(modelUrlParam) : ''
     storeUrl.value = storeUrlParam ? decodeURIComponent(storeUrlParam) : ''
     storeIdOverride.value = storeIdParam ? decodeURIComponent(storeIdParam) : ''
+    storeKind.value = storeKindParam === 'static' && !isRemote ? 'static' : 'generic'
     importToken.value = tokenParam ? decodeURIComponent(tokenParam) : ''
     remoteImport.value = isRemote
     assetName.value = decodeURIComponent(finalAssetName)

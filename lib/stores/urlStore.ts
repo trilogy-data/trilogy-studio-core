@@ -34,6 +34,8 @@ export const URL_HASH_KEYS = {
   IMPORT: 'import',
   STORE: 'store',
   STORE_ID: 'storeId',
+  // `static` marks `store` as a static catalog rather than a trilogy serve API
+  STORE_KIND: 'kind',
   TOKEN: 'token',
   REMOTE: 'remote',
   ASSET_TYPE: 'assetType',

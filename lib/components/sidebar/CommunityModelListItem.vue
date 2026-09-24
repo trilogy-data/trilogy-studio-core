@@ -14,7 +14,10 @@
     <!-- Custom content slot for icons and additional elements -->
     <template #icon>
       <template v-if="item.type === 'root'">
-        <i class="mdi mdi-source-repository sidebar-icon"></i>
+        <i
+          class="mdi sidebar-icon"
+          :class="item.store?.type === 'generic' ? 'mdi-server-network' : 'mdi-source-repository'"
+        ></i>
       </template>
       <template v-else-if="item.type === 'engine'">
         <span class="right-pad"><connection-icon :connection-type="item.label" /></span>
@@ -67,8 +70,9 @@ import SidebarItem from './GenericSidebarItem.vue'
 import ConnectionIcon from './ConnectionIcon.vue'
 import StatusIcon from '../StatusIcon.vue'
 import Tooltip from '../Tooltip.vue'
-import { DEFAULT_GITHUB_STORE } from '../../remotes/models'
+import { DEFAULT_STATIC_STORE } from '../../remotes/models'
 import type { AnyModelStore } from '../../remotes/models'
+import { describeStoreOrigin } from '../../remotes/staticStorePresets'
 import { useCommunityApiStore } from '../../stores'
 import type { Status } from '../StatusIcon.vue'
 import SidebarTagChip from './SidebarTagChip.vue'
@@ -127,7 +131,7 @@ const getItemIcon = () => {
 }
 
 const isDefaultStore = (store: AnyModelStore): boolean => {
-  return store.id === DEFAULT_GITHUB_STORE.id
+  return store.id === DEFAULT_STATIC_STORE.id
 }
 
 const getStoreStatus = (store: AnyModelStore): Status => {
@@ -142,7 +146,7 @@ const getStoreStatusMessage = (store: AnyModelStore): string | undefined => {
   }
   const status = communityStore.getStoreStatus(store.id)
   if (status === 'connected') {
-    return 'Connected'
+    return `Connected: ${describeStoreOrigin(store)}`
   }
   return undefined
 }

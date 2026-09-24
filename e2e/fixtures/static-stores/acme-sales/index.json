@@ -1,0 +1,15 @@
+{
+  "contract": { "kind": "static", "version": 1 },
+  "name": "Acme Sales",
+  "updated_at": "2026-09-24T12:00:00Z",
+  "generation": 1,
+  "models": [
+    {
+      "name": "acme-sales",
+      "url": "v1/model.json",
+      "engine": "duckdb",
+      "description": "A static catalog fixture in the cloud-published layout.",
+      "tags": ["duckdb"]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "acme-sales",
+  "engine": "duckdb",
+  "description": "A static catalog fixture in the cloud-published layout. Component URLs are relative to this manifest.",
+  "link": "",
+  "tags": ["duckdb"],
+  "components": [
+    {
+      "url": "files/data/orders.preql",
+      "name": "data/orders",
+      "alias": "data/orders",
+      "purpose": "source",
+      "type": "trilogy"
+    },
+    {
+      "url": "files/entrypoint.preql",
+      "name": "entrypoint",
+      "alias": "entrypoint",
+      "purpose": "entrypoint",
+      "type": "trilogy"
+    },
+    {
+      "url": "files/examples/order_count.preql",
+      "name": "order_count",
+      "alias": "order_count",
+      "purpose": "example",
+      "type": "trilogy"
+    }
+  ]
+}

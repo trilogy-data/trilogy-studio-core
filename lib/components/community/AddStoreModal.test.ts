@@ -35,3 +35,39 @@ describe('AddStoreModal serve hint', () => {
     expect(wrapper.find('[data-testid="add-store-cli-tip"]').exists()).toBe(false)
   })
 })
+
+describe('AddStoreModal store kinds', () => {
+  it('adds a static store from a bucket URL', async () => {
+    const wrapper = mountModal()
+    await wrapper.get('[data-testid="store-type-select"]').setValue('static')
+    expect(wrapper.find('[data-testid="add-store-cli-tip"]').exists()).toBe(false)
+
+    await wrapper
+      .get('[data-testid="store-url-input"]')
+      .setValue('https://storage.googleapis.com/bucket/published/acme/sales/')
+    await wrapper.get('form').trigger('submit')
+
+    expect(wrapper.emitted('add')?.[0]?.[0]).toEqual({
+      type: 'static',
+      id: 'storage.googleapis.com-bucket-published-acme-sales',
+      name: 'storage.googleapis.com',
+      baseUrl: 'https://storage.googleapis.com/bucket/published/acme/sales',
+    })
+  })
+
+  it('turns a GitHub repository into a static store with a derived baseUrl', async () => {
+    const wrapper = mountModal()
+    await wrapper.get('[data-testid="store-type-select"]').setValue('github')
+    await wrapper.get('[data-testid="github-owner-input"]').setValue('acme')
+    await wrapper.get('[data-testid="github-repo-input"]').setValue('models')
+    await wrapper.get('form').trigger('submit')
+
+    expect(wrapper.emitted('add')?.[0]?.[0]).toEqual({
+      type: 'static',
+      id: 'acme-models-main',
+      name: 'acme/models',
+      baseUrl: 'https://raw.githubusercontent.com/acme/models/main/studio',
+      origin: { kind: 'github', owner: 'acme', repo: 'models', branch: 'main' },
+    })
+  })
+})

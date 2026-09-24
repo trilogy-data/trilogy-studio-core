@@ -3,9 +3,8 @@ import { filterModelFiles, getAvailableEngines } from '../remotes/modelApiServic
 import {
   type ModelFile,
   type AnyModelStore,
-  type GithubModelStore,
   type GenericModelStore,
-  DEFAULT_GITHUB_STORE,
+  DEFAULT_STATIC_STORE,
 } from '../remotes/models'
 import { fetchFromAllStores, fetchFromStore } from '../remotes/storeService'
 import {
@@ -13,6 +12,11 @@ import {
   buildGenericStoreId,
   normalizeGenericStoreBaseUrl,
 } from '../remotes/genericStoreMetadata'
+import {
+  buildGithubStaticStore,
+  buildUrlStaticStore,
+  migrateLegacyStore,
+} from '../remotes/staticStorePresets'
 import type { ModelConfigStoreType } from './modelStore'
 
 const STORES_STORAGE_KEY = 'trilogy-community-stores'
@@ -38,6 +42,34 @@ const applyUrlTokenDefaults = (stores: AnyModelStore[]): void => {
   }
 }
 
+// `?store=<baseUrl>&kind=static` registers a static catalog the page was
+// linked to (e.g. trilogy-cloud's "Open in Studio"). Without `kind` the
+// params keep their older meaning: pairing a token with a generic store.
+// Returns the store to add, or null when there is nothing new to register.
+const staticStoreFromUrl = (stores: AnyModelStore[]): AnyModelStore | null => {
+  const params = new URLSearchParams(window.location.search)
+  const storeParam = params.get('store')
+  if (!storeParam || params.get('kind') !== 'static') {
+    return null
+  }
+  let candidate: AnyModelStore
+  try {
+    const parsed = new URL(storeParam)
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return null
+    }
+    candidate = buildUrlStaticStore(storeParam)
+  } catch {
+    return null
+  }
+  const exists = stores.some(
+    (store) =>
+      store.id === candidate.id ||
+      normalizeGenericStoreBaseUrl(store.baseUrl) === candidate.baseUrl,
+  )
+  return exists ? null : candidate
+}
+
 export type StoreStatus = 'idle' | 'connected' | 'failed'
 
 export interface CommunityApiState {
@@ -53,7 +85,7 @@ export interface CommunityApiState {
   showAddStoreModal: boolean
   addingStore: boolean
   newStore: {
-    type: 'github' | 'generic'
+    type: 'static' | 'github' | 'generic'
     name: string
     baseUrl: string
     owner: string
@@ -65,12 +97,12 @@ export interface CommunityApiState {
 const useCommunityApiStore = defineStore('communityApi', {
   state: (): CommunityApiState => ({
     // Initialize with default store
-    stores: [DEFAULT_GITHUB_STORE],
+    stores: [DEFAULT_STATIC_STORE],
     filesByStore: {},
 
     errors: {},
     // Initialize default store status as idle
-    storeStatus: { [DEFAULT_GITHUB_STORE.id]: 'idle' },
+    storeStatus: { [DEFAULT_STATIC_STORE.id]: 'idle' },
     loading: false,
 
     // Modal state
@@ -130,8 +162,16 @@ const useCommunityApiStore = defineStore('communityApi', {
     loadStoresFromStorage(): void {
       try {
         const stored = localStorage.getItem(STORES_STORAGE_KEY)
+        let needsSave = false
         if (stored) {
-          const customStores: AnyModelStore[] = JSON.parse(stored)
+          const parsed: unknown = JSON.parse(stored)
+          const rows = Array.isArray(parsed) ? parsed : []
+          const customStores = rows
+            .map((row) => migrateLegacyStore(row))
+            .filter((store): store is AnyModelStore => store !== null)
+          // Rewrite the persisted list once if any row was upgraded or dropped.
+          needsSave =
+            rows.length !== customStores.length || rows.some((row) => row?.type === 'github')
           const existingStoresById = new Map(this.stores.map((store) => [store.id, store]))
           const mergedCustomStores = customStores.map((store) => {
             const existing = existingStoresById.get(store.id)
@@ -154,7 +194,7 @@ const useCommunityApiStore = defineStore('communityApi', {
             }
           })
           // Merge with default store, avoiding duplicates
-          const allStores = [DEFAULT_GITHUB_STORE, ...mergedCustomStores]
+          const allStores = [DEFAULT_STATIC_STORE, ...mergedCustomStores]
           const uniqueStores = allStores.filter(
             (store, index, self) => index === self.findIndex((s) => s.id === store.id),
           )
@@ -171,6 +211,16 @@ const useCommunityApiStore = defineStore('communityApi', {
         if (!stored) {
           applyUrlTokenDefaults(this.stores)
         }
+
+        const linkedStore = staticStoreFromUrl(this.stores)
+        if (linkedStore) {
+          this.stores.push(linkedStore)
+          this.storeStatus[linkedStore.id] = 'idle'
+          needsSave = true
+        }
+        if (needsSave) {
+          this.saveStoresToStorage()
+        }
       } catch (error) {
         console.error('Error loading stores from localStorage:', error)
       }
@@ -185,7 +235,7 @@ const useCommunityApiStore = defineStore('communityApi', {
         // because they're per-serve-run ephemeral auth for the store, not
         // long-lived secrets — and losing them on refresh breaks the ability
         // to refetch remote-backed editors/models.
-        const customStores = this.stores.filter((s) => s.id !== DEFAULT_GITHUB_STORE.id)
+        const customStores = this.stores.filter((s) => s.id !== DEFAULT_STATIC_STORE.id)
         localStorage.setItem(STORES_STORAGE_KEY, JSON.stringify(customStores))
       } catch (error) {
         console.error('Error saving stores to localStorage:', error)
@@ -308,19 +358,13 @@ const useCommunityApiStore = defineStore('communityApi', {
      */
     async addStore(store: AnyModelStore): Promise<boolean> {
       // Validate store configuration
-      if (store.type === 'generic') {
-        if (!store.baseUrl) {
-          throw new Error('Base URL is required for generic stores')
-        }
-
-        store.baseUrl = normalizeGenericStoreBaseUrl(store.baseUrl)
-        store.id = store.id || buildGenericStoreId(store.baseUrl)
-        store.name = store.name || buildGenericStoreFallbackName(store.baseUrl)
-      } else if (store.type === 'github') {
-        if (!store.owner || !store.repo || !store.branch) {
-          throw new Error('Owner, repo, and branch are required for GitHub stores')
-        }
+      if (!store.baseUrl) {
+        throw new Error('Base URL is required')
       }
+
+      store.baseUrl = normalizeGenericStoreBaseUrl(store.baseUrl)
+      store.id = store.id || buildGenericStoreId(store.baseUrl)
+      store.name = store.name || buildGenericStoreFallbackName(store.baseUrl)
 
       // Check if store already exists
       const exists = this.stores.some((s) => s.id === store.id)
@@ -417,7 +461,7 @@ const useCommunityApiStore = defineStore('communityApi', {
     async handleAddStore(): Promise<void> {
       const { type, name, baseUrl, owner, repo, branch } = this.newStore
 
-      if (type === 'generic') {
+      if (type === 'generic' || type === 'static') {
         if (!baseUrl) {
           throw new Error('Please fill in all required fields')
         }
@@ -425,12 +469,15 @@ const useCommunityApiStore = defineStore('communityApi', {
         const normalizedBaseUrl = normalizeGenericStoreBaseUrl(baseUrl)
         const id = buildGenericStoreId(normalizedBaseUrl)
 
-        const store: GenericModelStore = {
-          type: 'generic',
-          id,
-          name: name || buildGenericStoreFallbackName(normalizedBaseUrl),
-          baseUrl: normalizedBaseUrl,
-        }
+        const store: AnyModelStore =
+          type === 'static'
+            ? buildUrlStaticStore(normalizedBaseUrl, name)
+            : {
+                type: 'generic',
+                id,
+                name: name || buildGenericStoreFallbackName(normalizedBaseUrl),
+                baseUrl: normalizedBaseUrl,
+              }
 
         await this.addStore(store)
       } else {
@@ -438,18 +485,7 @@ const useCommunityApiStore = defineStore('communityApi', {
           throw new Error('Please fill in all required fields')
         }
 
-        const id = `${owner}-${repo}-${branch}`
-
-        const store: GithubModelStore = {
-          type: 'github',
-          id,
-          name,
-          owner,
-          repo,
-          branch,
-        }
-
-        await this.addStore(store)
+        await this.addStore(buildGithubStaticStore(owner, repo, branch, name))
       }
 
       this.closeAddStoreModal()
