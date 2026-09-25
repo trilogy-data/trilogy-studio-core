@@ -163,13 +163,8 @@
 
 <script lang="ts">
 import { computed, ref, watch } from 'vue'
-import type { GenericModelStore } from '../../remotes/models'
 import { buildGithubStaticStore, buildUrlStaticStore } from '../../remotes/staticStorePresets'
-import {
-  buildGenericStoreFallbackName,
-  buildGenericStoreId,
-  normalizeGenericStoreBaseUrl,
-} from '../../remotes/genericStoreMetadata'
+import { buildGenericStore } from '../../remotes/genericStoreMetadata'
 import ModalDialog from '../ModalDialog.vue'
 
 export default {
@@ -240,30 +235,14 @@ export default {
       error.value = null
 
       try {
-        if (storeType.value === 'generic') {
+        if (storeType.value === 'generic' || storeType.value === 'static') {
           if (!baseUrl.value) {
             error.value = 'Please fill in all required fields'
             return
           }
 
-          const normalizedBaseUrl = normalizeGenericStoreBaseUrl(baseUrl.value)
-          const id = buildGenericStoreId(normalizedBaseUrl)
-
-          const store: GenericModelStore = {
-            type: 'generic',
-            id,
-            name: storeName.value || buildGenericStoreFallbackName(normalizedBaseUrl),
-            baseUrl: normalizedBaseUrl,
-          }
-
-          emit('add', store)
-        } else if (storeType.value === 'static') {
-          if (!baseUrl.value) {
-            error.value = 'Please fill in all required fields'
-            return
-          }
-
-          emit('add', buildUrlStaticStore(baseUrl.value, storeName.value || undefined))
+          const build = storeType.value === 'static' ? buildUrlStaticStore : buildGenericStore
+          emit('add', build(baseUrl.value, storeName.value || undefined))
         } else {
           if (!owner.value || !repo.value || !branch.value) {
             error.value = 'Please fill in all required fields'

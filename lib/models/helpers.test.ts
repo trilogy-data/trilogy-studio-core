@@ -22,6 +22,39 @@ describe('ModelImportService', () => {
     vi.restoreAllMocks()
   })
 
+  it('resolves static-catalog component urls against the manifest url', async () => {
+    const service = new ModelImportService(
+      useEditorStore(),
+      useModelConfigStore(),
+      useDashboardStore(),
+    )
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          name: 'sales',
+          engine: 'duckdb',
+          components: [
+            {
+              url: 'files/entrypoint.preql',
+              name: 'entrypoint',
+              purpose: 'source',
+              type: 'trilogy',
+            },
+            { url: 'https://cdn.example/x.preql', name: 'x', purpose: 'source', type: 'trilogy' },
+          ],
+        }),
+      ),
+    )
+
+    const manifest = await service.fetchModelImportBase('https://bucket.example/acme/v1/model.json')
+
+    expect(manifest.components.map((component) => component.url)).toEqual([
+      'https://bucket.example/acme/v1/files/entrypoint.preql',
+      'https://cdn.example/x.preql',
+    ])
+  })
+
   it('uses component names for remote editor paths and keeps imported remote editors persisted', async () => {
     const editorStore = useEditorStore()
     const modelStore = useModelConfigStore()

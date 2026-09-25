@@ -12,11 +12,7 @@ import {
   buildGenericStoreId,
   normalizeGenericStoreBaseUrl,
 } from '../remotes/genericStoreMetadata'
-import {
-  buildGithubStaticStore,
-  buildUrlStaticStore,
-  migrateLegacyStore,
-} from '../remotes/staticStorePresets'
+import { buildUrlStaticStore, migrateLegacyStore } from '../remotes/staticStorePresets'
 import type { ModelConfigStoreType } from './modelStore'
 
 const STORES_STORAGE_KEY = 'trilogy-community-stores'
@@ -84,14 +80,6 @@ export interface CommunityApiState {
   // Modal state for adding stores
   showAddStoreModal: boolean
   addingStore: boolean
-  newStore: {
-    type: 'static' | 'github' | 'generic'
-    name: string
-    baseUrl: string
-    owner: string
-    repo: string
-    branch: string
-  }
 }
 
 const useCommunityApiStore = defineStore('communityApi', {
@@ -108,14 +96,6 @@ const useCommunityApiStore = defineStore('communityApi', {
     // Modal state
     showAddStoreModal: false,
     addingStore: false,
-    newStore: {
-      type: 'generic',
-      name: '',
-      baseUrl: '',
-      owner: '',
-      repo: '',
-      branch: 'main',
-    },
   }),
 
   getters: {
@@ -430,14 +410,6 @@ const useCommunityApiStore = defineStore('communityApi', {
      */
     openAddStoreModal(): void {
       this.showAddStoreModal = true
-      this.newStore = {
-        type: 'generic',
-        name: '',
-        baseUrl: '',
-        owner: '',
-        repo: '',
-        branch: 'main',
-      }
     },
 
     /**
@@ -445,50 +417,6 @@ const useCommunityApiStore = defineStore('communityApi', {
      */
     closeAddStoreModal(): void {
       this.showAddStoreModal = false
-      this.newStore = {
-        type: 'generic',
-        name: '',
-        baseUrl: '',
-        owner: '',
-        repo: '',
-        branch: 'main',
-      }
-    },
-
-    /**
-     * Handle the complete add store flow including modal management
-     */
-    async handleAddStore(): Promise<void> {
-      const { type, name, baseUrl, owner, repo, branch } = this.newStore
-
-      if (type === 'generic' || type === 'static') {
-        if (!baseUrl) {
-          throw new Error('Please fill in all required fields')
-        }
-
-        const normalizedBaseUrl = normalizeGenericStoreBaseUrl(baseUrl)
-        const id = buildGenericStoreId(normalizedBaseUrl)
-
-        const store: AnyModelStore =
-          type === 'static'
-            ? buildUrlStaticStore(normalizedBaseUrl, name)
-            : {
-                type: 'generic',
-                id,
-                name: name || buildGenericStoreFallbackName(normalizedBaseUrl),
-                baseUrl: normalizedBaseUrl,
-              }
-
-        await this.addStore(store)
-      } else {
-        if (!name || !owner || !repo || !branch) {
-          throw new Error('Please fill in all required fields')
-        }
-
-        await this.addStore(buildGithubStaticStore(owner, repo, branch, name))
-      }
-
-      this.closeAddStoreModal()
     },
 
     /**

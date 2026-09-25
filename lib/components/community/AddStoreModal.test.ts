@@ -37,6 +37,18 @@ describe('AddStoreModal serve hint', () => {
 })
 
 describe('AddStoreModal store kinds', () => {
+  it('adds a trilogy serve store as generic', async () => {
+    const wrapper = mountModal()
+    await wrapper.get('[data-testid="store-url-input"]').setValue('http://localhost:8100/')
+    await wrapper.get('form').trigger('submit')
+
+    expect(wrapper.emitted('add')?.[0]?.[0]).toMatchObject({
+      type: 'generic',
+      id: 'localhost:8100',
+      baseUrl: 'http://localhost:8100',
+    })
+  })
+
   it('adds a static store from a bucket URL', async () => {
     const wrapper = mountModal()
     await wrapper.get('[data-testid="store-type-select"]').setValue('static')
