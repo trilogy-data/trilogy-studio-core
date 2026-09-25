@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { createMapSpec } from './mapSpec'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { createMapSpec, configureCartoBasemapKey } from './mapSpec'
 import { createBaseSpec } from './spec'
 import { ColumnType } from '../editors/results'
 import type { Row, ResultColumn, ChartConfig } from '../editors/results'
@@ -424,6 +424,40 @@ describe('createMapSpec', () => {
       expect(spec.projection.center).toBeDefined()
       expect(Array.isArray(spec.projection.center)).toBe(true)
       expect(spec.projection.center.length).toBe(2)
+    })
+  })
+
+  describe('CARTO basemap key', () => {
+    const config: ChartConfig = { chartType: 'geo-map', xField: 'longitude', yField: 'latitude' }
+    const tileUrlExpr = () => {
+      const spec = createMapSpec(
+        config,
+        createWorldCoordinateData(),
+        createCoordinateColumns(),
+        false,
+        intChart,
+      ) as any
+      return spec.layer[0].transform.find((t: any) => t.as === 'url').calculate as string
+    }
+
+    afterEach(() => configureCartoBasemapKey(null))
+
+    it('omits the key when none is configured', () => {
+      expect(tileUrlExpr()).not.toContain('?key=')
+    })
+
+    it('appends the configured key to every tile URL', () => {
+      configureCartoBasemapKey('cb1_test_key')
+      const expr = tileUrlExpr()
+      expect(expr.endsWith(`'.png' + "?key=cb1_test_key"`)).toBe(true)
+      const spec = createMapSpec(
+        config,
+        createWorldCoordinateData(),
+        createCoordinateColumns(),
+        false,
+        intChart,
+      )
+      expect(validateVegaLiteSpec(spec, createWorldCoordinateData())).toBe(true)
     })
   })
 

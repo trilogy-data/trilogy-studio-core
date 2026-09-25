@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import { createPinia } from 'pinia'
 import { initializeCspTracking } from '../lib/remotes/modelApiService'
+import { configureCartoBasemapKey } from '../lib/dashboards/mapSpec'
 import '../lib/icons/registerMdiIcons'
 import './style.css'
 import './tabulator-style.css'
@@ -29,6 +30,11 @@ import '@fontsource/inter/400.css'
 import '@fontsource/inter/500.css'
 import '@fontsource/inter/600.css'
 import '@fontsource/inter/700.css'
+
+// CARTO basemap key for map tiles; public by design (it's on every tile URL).
+configureCartoBasemapKey(
+  import.meta.env.VITE_CARTO_BASEMAP_KEY || 'cb1_2qn1_2_8ce245200ab031790543f8d9',
+)
 
 // Initialize CSP violation tracking
 initializeCspTracking()
