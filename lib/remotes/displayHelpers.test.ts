@@ -1,18 +1,17 @@
-﻿import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { buildCommunityModelTree, generateRootKey } from './displayHelpers'
 import { EXPAND_ALL, openOnly } from '../components/sidebar/collapseState'
-import type { ModelRoot, ModelFile, GithubModelStore, GenericModelStore } from './models'
+import type { ModelRoot, ModelFile, StaticModelStore, GenericModelStore } from './models'
+import { buildGithubStaticStore } from './staticStorePresets'
 
 describe('buildCommunityModelTree', () => {
-  it('should build a tree with a single GitHub store', () => {
-    const store: GithubModelStore = {
-      type: 'github',
-      id: 'test-org-test-repo-main',
-      name: 'Test Store',
-      owner: 'test-org',
-      repo: 'test-repo',
-      branch: 'main',
-    }
+  it('should build a tree with a single GitHub-derived static store', () => {
+    const store: StaticModelStore = buildGithubStaticStore(
+      'test-org',
+      'test-repo',
+      'main',
+      'Test Store',
+    )
 
     const files: ModelFile[] = [
       {
@@ -80,14 +79,12 @@ describe('buildCommunityModelTree', () => {
   })
 
   it('should build a tree with multiple stores', () => {
-    const githubStore: GithubModelStore = {
-      type: 'github',
-      id: 'trilogy-data-trilogy-public-models-main',
-      name: 'Trilogy Public Models',
-      owner: 'trilogy-data',
-      repo: 'trilogy-public-models',
-      branch: 'main',
-    }
+    const githubStore: StaticModelStore = buildGithubStaticStore(
+      'trilogy-data',
+      'trilogy-public-models',
+      'main',
+      'Trilogy Public Models',
+    )
 
     const genericStore: GenericModelStore = {
       type: 'generic',
@@ -136,14 +133,12 @@ describe('buildCommunityModelTree', () => {
   })
 
   it('should respect collapsed state for stores', () => {
-    const store: GithubModelStore = {
-      type: 'github',
-      id: 'test-org-test-repo-main',
-      name: 'Test Store',
-      owner: 'test-org',
-      repo: 'test-repo',
-      branch: 'main',
-    }
+    const store: StaticModelStore = buildGithubStaticStore(
+      'test-org',
+      'test-repo',
+      'main',
+      'Test Store',
+    )
 
     const files: ModelFile[] = [
       {
@@ -167,14 +162,12 @@ describe('buildCommunityModelTree', () => {
   })
 
   it('should respect collapsed state for engines', () => {
-    const store: GithubModelStore = {
-      type: 'github',
-      id: 'test-org-test-repo-main',
-      name: 'Test Store',
-      owner: 'test-org',
-      repo: 'test-repo',
-      branch: 'main',
-    }
+    const store: StaticModelStore = buildGithubStaticStore(
+      'test-org',
+      'test-repo',
+      'main',
+      'Test Store',
+    )
 
     const files: ModelFile[] = [
       {
@@ -196,14 +189,12 @@ describe('buildCommunityModelTree', () => {
   })
 
   it('should group models by engine correctly', () => {
-    const store: GithubModelStore = {
-      type: 'github',
-      id: 'test-org-test-repo-main',
-      name: 'Test Store',
-      owner: 'test-org',
-      repo: 'test-repo',
-      branch: 'main',
-    }
+    const store: StaticModelStore = buildGithubStaticStore(
+      'test-org',
+      'test-repo',
+      'main',
+      'Test Store',
+    )
 
     const files: ModelFile[] = [
       {

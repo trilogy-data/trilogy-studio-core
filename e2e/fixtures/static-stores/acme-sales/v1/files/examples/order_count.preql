@@ -1,0 +1,6 @@
+import data.orders as orders;
+
+select
+    count(orders.order_id) as order_count,
+    sum(orders.amount) as total_amount
+;

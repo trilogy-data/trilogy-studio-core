@@ -22,6 +22,21 @@ export const buildGenericStoreFallbackName = (baseUrl: string): string => {
   }
 }
 
+export const buildGenericStore = (
+  baseUrl: string,
+  name?: string,
+  token?: string,
+): GenericModelStore => {
+  const normalized = normalizeGenericStoreBaseUrl(baseUrl.trim())
+  return {
+    type: 'generic',
+    id: buildGenericStoreId(normalized),
+    name: name || buildGenericStoreFallbackName(normalized),
+    baseUrl: normalized,
+    token: token || undefined,
+  }
+}
+
 export const buildGenericStoreResourceName = (store: GenericModelStore): string =>
   sanitizeSegment(store.name || buildGenericStoreFallbackName(store.baseUrl))
 

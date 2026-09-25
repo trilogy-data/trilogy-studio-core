@@ -1,8 +1,10 @@
 import type {
   AnyModelStore,
-  GithubModelStore,
   GenericModelStore,
   ModelFile,
+  StaticModelStore,
+  StaticStoreIndex,
+  StaticStoreModelRef,
   StoreIndex,
 } from './models'
 import { fetchWithBackoff } from './modelApiService'
@@ -81,13 +83,99 @@ export const fetchFromGenericStore = async (
   return { files, error }
 }
 
+// Resolve `url` against the document that named it. Absolute URLs pass
+// through; a base that is not itself absolute leaves `url` untouched.
+const resolveUrl = (url: string, base: string): string => {
+  try {
+    return new URL(url, base).toString()
+  } catch {
+    return url
+  }
+}
+
+// Legacy public-models index: `{count, files: [{filename, name, ...}]}`.
+interface LegacyStaticIndex {
+  count?: number
+  files: {
+    filename: string
+    name?: string
+    engine?: string
+    description?: string
+    tags?: string[]
+  }[]
+}
+
+export interface NormalizedStaticIndex {
+  name?: string
+  updated_at?: string
+  generation?: number
+  models: StaticStoreModelRef[] // urls absolute
+}
+
 /**
- * Fetch models from a GitHub store
- * @param store The GitHub store configuration
+ * Normalize either static index shape into `models[]` with absolute URLs.
+ * Relative model URLs resolve against the index document itself.
+ */
+export const normalizeStaticIndex = (raw: unknown, indexUrl: string): NormalizedStaticIndex => {
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('Store index is not a JSON object')
+  }
+  const index = raw as Partial<StaticStoreIndex> & Partial<LegacyStaticIndex>
+
+  let models: StaticStoreModelRef[]
+  if (Array.isArray(index.models)) {
+    models = index.models
+  } else if (Array.isArray(index.files)) {
+    models = index.files
+      .filter((file) => typeof file.filename === 'string' && file.filename.endsWith('.json'))
+      .map((file) => ({
+        name: file.name || file.filename.replace(/\.json$/, ''),
+        url: file.filename,
+        engine: file.engine,
+        description: file.description,
+        tags: file.tags,
+      }))
+  } else {
+    throw new Error('Store index has neither `models` nor `files`')
+  }
+
+  return {
+    name: typeof index.name === 'string' ? index.name : undefined,
+    updated_at: typeof index.updated_at === 'string' ? index.updated_at : undefined,
+    generation: typeof index.generation === 'number' ? index.generation : undefined,
+    models: models
+      .filter((model) => model && typeof model.url === 'string')
+      .map((model) => ({ ...model, url: resolveUrl(model.url, indexUrl) })),
+  }
+}
+
+/**
+ * Make every component URL in a manifest absolute, resolved against the
+ * manifest's own URL. Absolute URLs pass through unchanged.
+ */
+export const resolveComponentUrls = <T extends { components?: { url: string }[] }>(
+  manifest: T,
+  manifestUrl: string,
+): T => {
+  if (Array.isArray(manifest.components)) {
+    manifest.components = manifest.components.map((component) => ({
+      ...component,
+      url: resolveUrl(component.url, manifestUrl),
+    }))
+  }
+  return manifest
+}
+
+export const staticStoreIndexUrl = (store: StaticModelStore): string =>
+  `${store.baseUrl.replace(/\/$/, '')}/index.json`
+
+/**
+ * Fetch models from a static catalog (any HTTP origin serving flat files)
+ * @param store The static store configuration
  * @returns Object with files array and optional error
  */
-export const fetchFromGithubStore = async (
-  store: GithubModelStore,
+export const fetchFromStaticStore = async (
+  store: StaticModelStore,
 ): Promise<{
   files: ModelFile[]
   error: string | null
@@ -96,51 +184,27 @@ export const fetchFromGithubStore = async (
   let files: ModelFile[] = []
 
   try {
-    // Determine URLs based on whether it's the default Trilogy repo
-    let contentsUrl: string
-    let baseUrl: string
+    const indexUrl = staticStoreIndexUrl(store)
+    const response = await fetchWithBackoff(indexUrl)
 
-    if (store.owner === 'trilogy-data' && store.repo === 'trilogy-public-models') {
-      contentsUrl = `https://trilogy-data.github.io/trilogy-public-models/studio/index.json`
-      baseUrl = `https://trilogy-data.github.io/trilogy-public-models/studio/`
-    } else {
-      contentsUrl = `https://api.github.com/repos/${store.owner}/${store.repo}/contents/studio/index.json?ref=${store.branch}`
-      baseUrl = `https://raw.githubusercontent.com/${store.owner}/${store.repo}/${store.branch}/studio/`
+    if (!response.ok) {
+      throw new Error(`Failed to fetch store index: ${response.status} ${response.statusText}`)
     }
 
-    const response = await fetchWithBackoff(contentsUrl)
+    const index = normalizeStaticIndex(await response.json(), indexUrl)
 
-    if (response.status !== 200) {
-      throw new Error(`Error fetching community data: ${await response.text()}`)
-    }
+    const filePromises = index.models.map(async (modelRef) => {
+      const modelResponse = await fetchWithBackoff(modelRef.url)
 
-    let data: { count: number; files: { name: string; filename: string }[] }
+      if (!modelResponse.ok) {
+        throw new Error(`Error fetching model ${modelRef.name}: ${modelResponse.statusText}`)
+      }
 
-    // Handle different response formats for GitHub Pages vs API
-    if (store.owner === 'trilogy-data' && store.repo === 'trilogy-public-models') {
-      data = await response.json()
-    } else {
-      const apiResponse = await response.json()
-      // Decode base64 content from GitHub API
-      const content = JSON.parse(atob(apiResponse.content))
-      data = content
-    }
-
-    const filePromises = data.files
-      .filter((file) => file.filename.endsWith('.json'))
-      .map(async (file) => {
-        const rawUrl = `${baseUrl}${file.filename}`
-        const fileResponse = await fetchWithBackoff(rawUrl)
-
-        if (!fileResponse.ok) {
-          throw new Error(`Error fetching file ${file.filename}: ${fileResponse.statusText}`)
-        }
-
-        const fileData: ModelFile = await fileResponse.json()
-        fileData.downloadUrl = rawUrl
-        fileData.store = store
-        return fileData
-      })
+      const modelData: ModelFile = resolveComponentUrls(await modelResponse.json(), modelRef.url)
+      modelData.downloadUrl = modelRef.url
+      modelData.store = store
+      return modelData
+    })
 
     files = await Promise.all(filePromises)
   } catch (rawError) {
@@ -149,7 +213,7 @@ export const fetchFromGithubStore = async (
     } else {
       error = 'Error fetching files'
     }
-    console.error('Error fetching from GitHub store:', rawError)
+    console.error('Error fetching from static store:', rawError)
   }
 
   return { files, error }
@@ -166,11 +230,10 @@ export const fetchFromStore = async (
   files: ModelFile[]
   error: string | null
 }> => {
-  if (store.type === 'github') {
-    return fetchFromGithubStore(store)
-  } else {
-    return fetchFromGenericStore(store)
+  if (store.type === 'static') {
+    return fetchFromStaticStore(store)
   }
+  return fetchFromGenericStore(store)
 }
 
 /**

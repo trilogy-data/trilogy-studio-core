@@ -34,10 +34,11 @@ export const buildCommunityModelTree = (
     const rootDisplayName = store.name
 
     // Create a pseudo-ModelRoot for backward compatibility with TreeNode interface
+    const githubOrigin = store.type === 'static' ? store.origin : undefined
     const pseudoModelRoot: ModelRoot = {
-      owner: store.type === 'github' ? store.owner : '',
-      repo: store.type === 'github' ? store.repo : '',
-      branch: store.type === 'github' ? store.branch : 'main',
+      owner: githubOrigin?.owner ?? '',
+      repo: githubOrigin?.repo ?? '',
+      branch: githubOrigin?.branch ?? 'main',
       displayName: rootDisplayName,
     }
 

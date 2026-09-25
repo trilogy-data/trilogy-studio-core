@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildGenericStore,
   buildGenericStoreConnectionName,
   buildGenericStoreFallbackName,
   buildGenericStoreId,
@@ -22,6 +23,20 @@ describe('genericStoreMetadata', () => {
 
     expect(buildGenericStoreConnectionName(store)).toBe('Imported Project Name-connection')
     expect(buildGenericStoreModelName(store)).toBe('Imported Project Name')
+  })
+
+  it('builds a normalized generic store, dropping an empty token', () => {
+    expect(buildGenericStore(' http://localhost:8100/ ', '', '')).toEqual({
+      type: 'generic',
+      id: 'localhost:8100',
+      name: 'localhost-8100',
+      baseUrl: 'http://localhost:8100',
+      token: undefined,
+    })
+    expect(buildGenericStore('http://localhost:8100', 'Mine', 'tok')).toMatchObject({
+      name: 'Mine',
+      token: 'tok',
+    })
   })
 
   it('falls back to a readable host name when project metadata is absent', () => {

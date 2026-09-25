@@ -58,11 +58,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import type { GenericModelStore } from '../../remotes/models'
-import {
-  buildGenericStoreFallbackName,
-  buildGenericStoreId,
-  normalizeGenericStoreBaseUrl,
-} from '../../remotes/genericStoreMetadata'
+import { buildGenericStore } from '../../remotes/genericStoreMetadata'
 import ModalDialog from '../ModalDialog.vue'
 
 const props = defineProps<{
@@ -100,15 +96,7 @@ const handleSubmit = () => {
     return
   }
 
-  const normalizedBaseUrl = normalizeGenericStoreBaseUrl(baseUrl.value)
-
-  emit('add', {
-    type: 'generic',
-    id: buildGenericStoreId(normalizedBaseUrl),
-    name: storeName.value || buildGenericStoreFallbackName(normalizedBaseUrl),
-    baseUrl: normalizedBaseUrl,
-    token: token.value || undefined,
-  })
+  emit('add', buildGenericStore(baseUrl.value, storeName.value, token.value))
 }
 </script>
 

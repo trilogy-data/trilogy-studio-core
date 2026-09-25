@@ -1,0 +1,13 @@
+key order_id int;
+property order_id.amount float;
+
+datasource orders (
+    order_id: order_id,
+    amount: amount,
+)
+grain (order_id)
+query '''
+select 1 as order_id, 10.5 as amount
+union all
+select 2 as order_id, 4.5 as amount
+''';
