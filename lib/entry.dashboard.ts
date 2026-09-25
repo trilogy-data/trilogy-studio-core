@@ -12,6 +12,7 @@ export { default as DashboardDataSelector } from './components/dashboard/Dashboa
 export { default as DataTable } from './components/DataTable.vue'
 export { default as MarkdownRenderer } from './components/MarkdownRenderer.vue'
 export { default as VegaLiteChart } from './components/VegaLiteChart.vue'
+export { configureCartoBasemapKey } from './dashboards/mapSpec'
 export { useTrilogyCore } from './composables/useTrilogyCore'
 export { useTrilogyChat } from './composables/useTrilogyChat'
 export { useCrossFilterEligibility } from './composables/useCrossFilterEligibility'

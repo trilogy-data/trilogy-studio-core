@@ -128,6 +128,23 @@ const createUSBaseLayer = () => ({
   mark: { type: 'geoshape', fill: '#e5e5e5', stroke: 'white' },
 })
 
+/**
+ * CARTO basemap API key (https://carto.com/basemaps/apikey/). Tiles requested
+ * without one are served with a "request a key" overlay. The key rides on every
+ * tile URL, so it is public by design; it is set by the host app rather than
+ * baked into lib because CARTO asks that a key not be shared across projects.
+ */
+let cartoBasemapKey: string | null = null
+
+export function configureCartoBasemapKey(key: string | null): void {
+  cartoBasemapKey = key
+}
+
+// The URL is built inside a Vega expression, so the suffix is spliced in as a
+// string literal; JSON.stringify quotes and escapes it for that context.
+const cartoKeySuffix = (): string =>
+  cartoBasemapKey ? ` + ${JSON.stringify(`?key=${encodeURIComponent(cartoBasemapKey)}`)}` : ''
+
 const createWorldBaseLayer = () => {
   return {
     data: {
@@ -150,7 +167,8 @@ const createWorldBaseLayer = () => {
       { flatten: ['b'] },
       {
         calculate:
-          "'https://a.basemaps.cartocdn.com/light_all/' + zoom_ceil + '/' + ((datum.a + dii_floor + max_one_side_tiles_count) % max_one_side_tiles_count) + '/' + (datum.b + djj_floor) + '.png'",
+          "'https://a.basemaps.cartocdn.com/light_all/' + zoom_ceil + '/' + ((datum.a + dii_floor + max_one_side_tiles_count) % max_one_side_tiles_count) + '/' + (datum.b + djj_floor) + '.png'" +
+          cartoKeySuffix(),
         as: 'url',
       },
       { calculate: 'datum.a * tile_size + dx + (tile_size / 2)', as: 'x' },
