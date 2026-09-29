@@ -1,5 +1,6 @@
 <template>
   <div class="main mobile-ide-root" :style="{ '--mobile-viewport-height': mobileViewportHeight }">
+    <ConnectionErrorPopup />
     <ChatCreatorModal
       :visible="showChatCreatorModal"
       :preselectedConnection="chatCreatorPreselectedConnection"
@@ -212,6 +213,9 @@ const WelcomePage = asyncPage(() => import('./WelcomePage.vue'))
 const MobileDashboard = asyncPage(() => import('../components/dashboard/DashboardMobile.vue'))
 const ResultsView = defineAsyncComponent(() => import('../components/editor/ResultComponent.vue'))
 const LLMView = asyncPage(() => import('./LLMView.vue'))
+const ConnectionErrorPopup = defineAsyncComponent(
+  () => import('../components/ConnectionErrorPopup.vue'),
+)
 const ChatCreatorModal = defineAsyncComponent(
   () => import('../components/llm/ChatCreatorModal.vue'),
 )
@@ -251,6 +255,7 @@ const MobileIDEComponent: Component = defineComponent({
     ResultsView,
     LLMView,
     ChatCreatorModal,
+    ConnectionErrorPopup,
   },
   setup() {
     type ResolverType = typeof TrilogyResolver
