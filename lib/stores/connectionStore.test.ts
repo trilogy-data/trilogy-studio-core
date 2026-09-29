@@ -175,38 +175,68 @@ describe('connectionStore', () => {
       await expect(store.connectConnection('test-connection')).rejects.toThrow('Connection failed')
     }, 10000) // Increase timeout since we're racing with a 60s timeout
 
-    it('stamps the connection error when a startup script fails', async () => {
-      // Regression: background connects (demo setup, model imports) used to
-      // swallow startup-script failures — the connection just died silently
-      // with no error recorded for the UI to surface.
-      const startupEditor = {
-        id: 'startup',
-        name: 'startup',
-        connectionId: 'test-connection',
-        contents: 'SELECT * FROM broken',
-        tags: [EditorTag.STARTUP_SCRIPT],
-      }
-      mockEditorStoreState.getConnectionEditors = vi.fn(() => [startupEditor])
+    it.each(['connectConnection', 'resetConnection'] as const)(
+      '%s identifies the failed startup script and preserves the database error',
+      async (operation) => {
+        // Regression: background connects (demo setup, model imports) used to
+        // swallow startup-script failures — the connection just died silently
+        // with no error recorded for the UI to surface.
+        const startupEditor = {
+          id: 'startup',
+          name: 'setup/load_sales.sql',
+          connectionId: 'test-connection',
+          contents: 'SELECT * FROM broken',
+          tags: [EditorTag.STARTUP_SCRIPT],
+        }
+        mockEditorStoreState.getConnectionEditors = vi.fn(() => [
+          { ...startupEditor, id: 'healthy', name: 'setup/healthy.sql', contents: 'SELECT 1' },
+          startupEditor,
+        ])
 
+        const store = useConnectionStore()
+        const setErrorMock = vi.fn()
+        const databaseError = new Error('CORS blocked the parquet fetch')
+        store.connections['test-connection'] = {
+          id: 'test-connection',
+          name: 'test-connection',
+          connected: false,
+          running: false,
+          error: null,
+          model: null,
+          changed: false,
+          reset: vi.fn().mockResolvedValue(undefined),
+          runScript: vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(databaseError),
+          setError: setErrorMock,
+        } as any
+
+        const message =
+          'Startup script "setup/load_sales.sql" failed on connection "test-connection":\nCORS blocked the parquet fetch'
+        await expect(store[operation]('test-connection')).rejects.toMatchObject({
+          message,
+          cause: databaseError,
+        })
+        expect(setErrorMock).toHaveBeenCalledWith(message)
+      },
+    )
+
+    it('uses the remote path to disambiguate scripts and handles string rejections', async () => {
+      mockEditorStoreState.getConnectionEditors = vi.fn(() => [
+        { name: 'setup.sql', remotePath: 'sales/setup.sql', contents: 'SALES' },
+        { name: 'setup.sql', remotePath: 'inventory/setup.sql', contents: 'INVENTORY' },
+      ])
       const store = useConnectionStore()
-      const setErrorMock = vi.fn()
-      store.connections['test-connection'] = {
-        id: 'test-connection',
-        name: 'test-connection',
-        connected: false,
-        running: false,
-        error: null,
-        model: null,
-        changed: false,
-        reset: vi.fn().mockResolvedValue(undefined),
-        runScript: vi.fn().mockRejectedValue(new Error('CORS blocked the parquet fetch')),
-        setError: setErrorMock,
-      } as any
+      const connection = store.newConnection('remote-startup', 'duckdb', {})
+      connection.model = null
+      connection.reset = vi.fn().mockResolvedValue(undefined)
+      connection.runScript = vi.fn(async (sql) => {
+        if (sql === 'INVENTORY') throw 'Permission denied'
+      })
 
-      await expect(store.connectConnection('test-connection')).rejects.toThrow(
-        'CORS blocked the parquet fetch',
+      await expect(store.connectConnection(connection.id)).rejects.toThrow(
+        'Startup script "inventory/setup.sql" failed on connection "remote-startup":\nPermission denied',
       )
-      expect(setErrorMock).toHaveBeenCalledWith('CORS blocked the parquet fetch')
+      expect(store.connections[connection.id].error).toContain('inventory/setup.sql')
+      expect(store.connectionStateToStatus(store.connections[connection.id])).toBe('failed')
     })
   })
 
