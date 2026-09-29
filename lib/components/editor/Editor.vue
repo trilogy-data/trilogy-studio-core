@@ -330,9 +330,11 @@ export default defineComponent({
           }
         }
       }
-      this.editorData.tags = this.editorData.tags.includes(tag)
-        ? this.editorData.tags.filter((t) => t !== tag)
-        : [...this.editorData.tags, tag]
+      if (this.editorData.tags.includes(tag)) {
+        this.editorData.removeTag(tag)
+      } else {
+        this.editorData.addTag(tag)
+      }
     },
 
     // New method to handle content changes from the CodeEditor

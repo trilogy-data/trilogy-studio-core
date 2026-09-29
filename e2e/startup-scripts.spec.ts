@@ -1,4 +1,5 @@
 import { test, expect } from './console-capture'
+import type { Page } from '@playwright/test'
 import {
   drillMobileTree,
   openSidebarScreen,
@@ -6,6 +7,14 @@ import {
   refreshConnection,
   replaceEditorContent,
 } from './test-helpers.js'
+
+async function saveEditor(page: Page) {
+  // Saving writes IndexedDB asynchronously; wait for completion before reload.
+  await Promise.all([
+    page.waitForEvent('console', (message) => message.text() === 'Editors saved'),
+    page.getByTestId('editor-save-button').click(),
+  ])
+}
 
 test('startup failure identifies the script and database error in the connection popup', async ({
   page,
@@ -36,14 +45,19 @@ test('startup failure identifies the script and database error in the connection
     }
     await page.getByTestId(`editor-e-local-local:startup-test-${name}`).click()
     await replaceEditorContent(page, sql, 'editor')
+    await saveEditor(page)
+    // Enabling Startup on an already saved file must itself be persisted.
     await page.getByTestId('editor-set-startup-script').click()
     await expect(page.getByTestId('editor-set-startup-script')).toHaveAttribute(
       'aria-pressed',
       'true',
     )
-    await page.getByTestId('editor-save-button').click()
+    await saveEditor(page)
   }
 
+  // Reopen the saved configuration so this is a fresh connection even if
+  // editor metadata loading connected it while the scripts were being edited.
+  await page.reload({ waitUntil: 'domcontentloaded' })
   await openSidebarScreen(page, 'connections', isMobile)
   await refreshConnection(page, 'startup-test')
 
