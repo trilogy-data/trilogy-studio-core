@@ -28,7 +28,16 @@ async function runStartup(connection: Connection) {
       // runScript routes through the engine's batch path so multi-statement
       // DDL works; query() goes through prepare() which is single-statement
       // on the Tauri remote worker.
-      await connection.runScript(editor.contents)
+      try {
+        await connection.runScript(editor.contents)
+      } catch (error) {
+        const scriptName = editor.remotePath || editor.name
+        const message = error instanceof Error ? error.message : String(error)
+        throw new Error(
+          `Startup script "${scriptName}" failed on connection "${connection.name}":\n${message}`,
+          { cause: error },
+        )
+      }
     }),
   )
 }

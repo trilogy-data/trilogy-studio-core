@@ -5,6 +5,7 @@ import { IntroTutorial } from './introTutorial.ts'
 import { llmTutorial } from './llmTutorial.ts'
 import { Reference } from './reference.ts'
 import { TOS } from './terms_of_service.ts'
+import { StartupScripts } from './startupScripts'
 
 export const documentation: DocumentationNode[] = [
   new DocumentationNode('Studio', [
@@ -63,7 +64,12 @@ export const documentation: DocumentationNode[] = [
         "You can view current connections below. Edit the model associated with a connection by clicking the model name next to it (or 'set model' if not set). Connections will not automatically connect on startup by default; click the connection button to connect. This connection view is always accessible through the connections page on the left side.",
       ),
       new Paragraph('ConnectionList', '', 'connections'),
+      new Paragraph(
+        'Startup Scripts',
+        'To prepare a connection automatically on connect or reset, enable Startup on a SQL editor associated with it. See Studio → Startup Scripts for setup instructions, examples, and troubleshooting.',
+      ),
     ]),
+    StartupScripts,
     new Article('Scheduling', [
       new Paragraph(
         'Scheduling',
