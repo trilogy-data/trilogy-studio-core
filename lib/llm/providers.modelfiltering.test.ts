@@ -120,6 +120,17 @@ describe('OpenAI Model Filtering', () => {
   })
 
   describe('OpenAIProvider.getDefaultModel', () => {
+    it('prefers GPT-6 Luna over unsuffixed and other GPT-6 models', () => {
+      const models = OpenAIProvider.filterModels([
+        'gpt-5.3',
+        'gpt-6-astra',
+        'gpt-6-luna',
+        'gpt-6.1-sol',
+      ])
+      expect(models).toContain('gpt-6-luna')
+      expect(OpenAIProvider.getDefaultModel(models)).toBe('gpt-6-luna')
+    })
+
     it('should return the latest non-mini model', () => {
       const models = ['gpt-5.2', 'gpt-5.2-mini', 'gpt-5.1', 'gpt-5.1-mini']
       const defaultModel = OpenAIProvider.getDefaultModel(models)
