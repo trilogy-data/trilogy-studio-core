@@ -24,7 +24,9 @@ test('app shell boots without a fatal browser error', async ({ page, diagnostics
   // origin root is the trilogydata.dev docs site — so this spec, whose entire
   // job is to catch a studio that failed to boot, was asserting against VuePress
   // (no #loading-screen, a populated #app, and its 503s reported as ours).
-  await page.goto('./')
+  // Check Vue readiness below; an optional image/script must not prevent the
+  // boot diagnostics from running just because window.load is still pending.
+  await page.goto('./', { waitUntil: 'domcontentloaded' })
 
   // Don't let the assertion be the thing that times out — poll ourselves so a
   // failure carries the browser errors rather than a bare locator message.
@@ -65,7 +67,7 @@ test('no browser console errors during a cold load', async ({ page, diagnostics 
   // origin root is the trilogydata.dev docs site — so this spec, whose entire
   // job is to catch a studio that failed to boot, was asserting against VuePress
   // (no #loading-screen, a populated #app, and its 503s reported as ours).
-  await page.goto('./')
+  await page.goto('./', { waitUntil: 'domcontentloaded' })
   await expect(page.locator('#loading-screen')).toHaveCount(0, { timeout: BOOT_TIMEOUT })
 
   // Give async work kicked off at mount (monaco config, connection restore,

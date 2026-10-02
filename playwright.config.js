@@ -6,6 +6,7 @@ const usePreview = process.env.PLAYWRIGHT_USE_PREVIEW === 'true'
 
 export default defineConfig({
   testDir: './e2e',
+  globalSetup: './e2e/replay-cache-setup.js',
   timeout: 60000,
   // ~53 test blocks across 5 projects is ~265 runs; at one worker with retries
   // that has no practical ceiling, so a single hung worker can run until the

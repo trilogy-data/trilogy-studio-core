@@ -3,6 +3,11 @@ on:
   push:
     branches:
       - 'main'
+# FTP updates a shared directory in place. Keep another upload from replacing
+# chunks while a previous run is still verifying or packaging its deployment.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
 jobs:
   setup-build-deploy:
     name: Deploy Production
