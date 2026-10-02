@@ -63,6 +63,17 @@ RUN pnpm run build:frontend
 # Stage 3: Production - Nginx + Python
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS production
 
+# Describe Studio rather than inheriting uv's package metadata. CI supplies
+# the actual revision/version; local builds leave those values unspecified.
+LABEL org.opencontainers.image.title="Trilogy Studio" \
+    org.opencontainers.image.description="An open-source IDE for exploring Trilogy, with a web frontend and FastAPI language server." \
+    org.opencontainers.image.url="https://trilogydata.dev/trilogy-studio-core/" \
+    org.opencontainers.image.source="https://github.com/trilogy-data/trilogy-studio-core" \
+    org.opencontainers.image.licenses="MIT" \
+    org.opencontainers.image.created="" \
+    org.opencontainers.image.revision="" \
+    org.opencontainers.image.version=""
+
 # Install Python, curl, nginx, and supervisor for process management
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
