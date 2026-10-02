@@ -155,7 +155,7 @@ jobs:
   # app never requests (see Package bundle). A red deploy blocks the release.
   release-studio:
     name: Publish Studio Bundle
-    needs: [check-studio-version, setup-build-deploy]
+    needs: [check-studio-version, setup-build-deploy, publish-docker]
     if: needs.check-studio-version.outputs.needs_release == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -206,3 +206,17 @@ jobs:
               trilogy-studio.tgz
               trilogy-studio.tgz.sha256
               manifest.json
+
+  # Call directly: releases created with GITHUB_TOKEN do not trigger another
+  # release/push workflow. Every main build gets a SHA tag; a version bump also
+  # gets a release tag, and the Studio bundle waits for container validation.
+  publish-docker:
+    name: Publish Docker Image
+    needs: check-studio-version
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker.yml
+    with:
+      publish: true
+      version: ${{ needs.check-studio-version.outputs.needs_release == 'true' && needs.check-studio-version.outputs.version || '' }}

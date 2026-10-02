@@ -19,26 +19,49 @@ It also hosts a sibling app: **[explorer/](./explorer/)**, an AI-native desktop 
 
 ## Docker
 
-The suggested local execution option.
+The suggested local execution option. The image includes the Studio frontend and
+FastAPI resolution service. No telemetry is enabled by default.
 
-A docker container is available in the base repo. Image runs resolution service [FastAPI] + statically serves frontend. 
+### Quick start
 
-No telemetry enabled by default.
+Run the prebuilt image (no clone or local build required):
 
-
-### Quick Start
-
-From repo root:
 ```bash
-docker build -t trilogy-studio:latest && docker run -p 8080:80 trilogy-studio:latest   
+docker run --rm -p 8080:80 ghcr.io/trilogy-data/trilogy-studio-core:latest
 ```
 
-### Powershell
-```powershell
-docker build -t trilogy-studio:latest . ; docker run  -p 8080:80 trilogy-studio:latest   
+Open http://localhost:8080. Images currently target Linux x86-64 (`linux/amd64`).
+ARM hosts need Docker's amd64 emulation (`--platform linux/amd64`).
+
+`latest` follows tested builds of `main`. New Studio releases also publish a
+matching version tag (for example, `:0.1.2`); every published build has a
+`:sha-<full-commit-sha>` tag. Pull again to update a locally cached image:
+
+```bash
+docker pull ghcr.io/trilogy-data/trilogy-studio-core:latest
 ```
 
-Access on http://localhost:8080 (or alternative port used).
+### Build locally
+
+From the repository root (run each command separately in PowerShell):
+
+```bash
+docker build -t trilogy-studio:local .
+docker run --rm -p 8080:80 trilogy-studio:local
+```
+
+### Publishing
+
+The production workflow builds the image, checks frontend and backend health,
+and runs Playwright before pushing that same image to GHCR. Pull requests run
+the same validation without registry write permissions. A version bump in the
+root `package.json` publishes a version tag alongside the Studio bundle release.
+Rerun the failed publishing job to retry a failed upload.
+
+Publishing uses the repository's `GITHUB_TOKEN` with `packages: write`; no Docker
+Hub account or registry secret is needed. After the first publication, an
+organization administrator must set the `trilogy-studio-core` container package's
+visibility to **Public** in GitHub package settings to allow anonymous pulls.
 
 ## Creating Direct Links
 
