@@ -13,7 +13,7 @@ ENV UV_CACHE_DIR=/tmp/uv-cache
 COPY pyserver/requirements.txt pyserver/requirements-test.txt ./
 
 # Install test dependencies and run tests
-RUN uv pip install -r requirements-test.txt --no-cache-dir --system
+RUN uv pip install -r requirements.txt -r requirements-test.txt --no-cache-dir --system
 
 # Copy backend source
 COPY pyserver/ ./
@@ -22,10 +22,7 @@ COPY pyserver/ ./
 RUN python scripts/generate_ai_guidance.py --output /tmp/trilogySyntax.generated.ts
 
 # Run backend tests
-RUN pytest tests || echo "No tests found, continuing..."
-
-# Install production dependencies
-RUN uv pip install -r requirements.txt --no-cache-dir --system
+RUN pytest tests
 
 # Stage 2: Build Frontend
 FROM node:24-alpine AS frontend-builder
@@ -48,9 +45,7 @@ RUN pnpm -C prism-trilogy install --frozen-lockfile
 # Copy the rest of the source code
 COPY ./src ./src
 COPY ./lib ./lib
-# Grammar sources only. There is no .dockerignore, so copying the directory
-# wholesale would drop a host node_modules (with host-platform binaries) on top
-# of the one just installed above.
+# Copy grammar sources separately to preserve the cached dependency install.
 COPY ./prism-trilogy/src ./prism-trilogy/src
 COPY ./prism-trilogy/tsconfig.json ./prism-trilogy/vite.config.ts ./prism-trilogy/vite.config.component.ts ./prism-trilogy/
 COPY --from=backend-builder /tmp/trilogySyntax.generated.ts ./lib/llm/data/trilogySyntax.generated.ts

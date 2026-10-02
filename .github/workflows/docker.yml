@@ -1,0 +1,137 @@
+name: Build, test, and publish Docker
+
+on:
+  workflow_call:
+    inputs:
+      publish:
+        description: Publish the tested image to GHCR (main only)
+        type: boolean
+        default: false
+      version:
+        description: New Studio release version, without the v prefix
+        type: string
+        default: ''
+
+# Serialize publication, including retries, without cancelling a running push.
+concurrency:
+  group: ${{ inputs.publish && 'docker-publish' || format('docker-test-{0}', github.ref) }}
+  cancel-in-progress: false
+
+jobs:
+  docker:
+    name: Integration Tests (Docker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    env:
+      ALLOWED_ORIGINS: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          platforms: linux/amd64
+          tags: trilogy-studio:test
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=studio-docker
+          cache-to: type=gha,mode=max,scope=studio-docker
+
+      - name: Run Docker container
+        run: docker run -d --name trilogy-studio-test -p 8080:80 trilogy-studio:test
+
+      - name: Wait for container to be healthy
+        run: |
+          timeout 180 bash -c '
+            while true; do
+              status=$(docker inspect --format="{{.State.Health.Status}}" trilogy-studio-test)
+              echo "Container health: $status"
+              case "$status" in
+                healthy) exit 0 ;;
+                unhealthy) exit 1 ;;
+              esac
+              sleep 5
+            done
+          '
+          curl --fail http://localhost:8080/api/health
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps
+
+      - name: Run Playwright tests against Docker
+        run: pnpm exec playwright test
+        env:
+          PLAYWRIGHT_USE_PREVIEW: 'true'
+          TEST_ENV: docker
+          BASE_URL: http://localhost:8080
+
+      - name: Log in to GHCR
+        if: inputs.publish && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Tag and push the locally loaded image that passed the tests. Rebuilding
+      # here could resolve different dependencies and publish an untested image.
+      - name: Publish tested image
+        if: inputs.publish && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          tags=("sha-${GITHUB_SHA}")
+          if [[ -n "$RELEASE_VERSION" ]]; then
+            [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid release version"; exit 1; }
+            tags+=("$RELEASE_VERSION")
+          fi
+          # A slow build or rerun of an older commit must not roll latest back.
+          main_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          if [[ "$main_sha" == "$GITHUB_SHA" ]]; then
+            tags+=(latest)
+          fi
+          for tag in "${tags[@]}"; do
+            docker tag trilogy-studio:test "$image:$tag"
+            docker push "$image:$tag"
+            echo "Published \`$image:$tag\`" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Capture container logs
+        if: failure()
+        run: |
+          docker logs trilogy-studio-test || true
+          docker exec trilogy-studio-test sh -c 'cat /var/log/backend*.log' || true
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f trilogy-studio-test || true
+
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: playwright-report-docker
+          path: playwright-report/
+          retention-days: 30

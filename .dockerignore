@@ -1,0 +1,15 @@
+# Keep local dependencies, credentials and build output out of the image.
+.git
+**/node_modules
+**/.venv
+**/venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.env
+**/.env.*
+**/dist
+**/target
+playwright-report
+test-results
