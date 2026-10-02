@@ -1,4 +1,6 @@
 import http from 'node:http'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { test, expect, isCancellationSentinel, attachConsoleCapture } from './console-capture'
 import { cacheDeployedAssets, retryShedNavigations } from './test-helpers.js'
 import {
@@ -89,9 +91,9 @@ test.describe('prod host load shedding', () => {
   // test can make the host shed.
   async function startHost(respond = () => 200) {
     const hits = []
-    const server = http.createServer((req, res) => {
+    const server = http.createServer(async (req, res) => {
       hits.push(req.url)
-      const status = respond(req.url, hits)
+      const status = await respond(req.url, hits)
       if (status !== 200) {
         res.writeHead(status, { 'content-type': 'text/plain' })
         res.end('shedding')
@@ -137,6 +139,131 @@ test.describe('prod host load shedding', () => {
     } finally {
       await host.close()
     }
+  })
+
+  test('a real response is reused after the worker process exits', async ({ browser }) => {
+    const host = await startHost()
+    try {
+      // Populate from another process, as the preceding browser project or a
+      // failed worker would. The parent has no in-memory entry for this URL.
+      await promisify(execFile)(process.execPath, [
+        '--input-type=module',
+        '-e',
+        `
+        import { chromium } from '@playwright/test'
+        import { cacheDeployedAssets } from './e2e/test-helpers.js'
+        const browser = await chromium.launch()
+        try {
+          const page = await browser.newPage()
+          await cacheDeployedAssets(page, { TEST_ENV: 'prod' })
+          await page.goto(${JSON.stringify(host.url)})
+        } finally {
+          await browser.close()
+        }
+      `,
+      ])
+      await loadStudio(browser, host.url)
+      expect(host.hits.filter((url) => url.endsWith(ASSET))).toHaveLength(1)
+      expect(host.hits.filter((url) => url.endsWith('/trilogy-studio-core/'))).toHaveLength(2)
+    } finally {
+      await host.close()
+    }
+  })
+
+  test('a cold burst fetches at most four assets from the host at once', async ({ browser }) => {
+    let active = 0
+    let peak = 0
+    const host = await startHost(async (url) => {
+      if (url.includes('burst-')) {
+        active++
+        peak = Math.max(peak, active)
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        active--
+      }
+      return 200
+    })
+    const page = await browser.newPage()
+    try {
+      await cacheDeployedAssets(page, PROD_ENV)
+      await page.goto(host.url)
+      const bodies = await page.evaluate(() =>
+        Promise.all(
+          Array.from({ length: 12 }, (_, i) =>
+            fetch(`./assets/burst-${i}.js`).then((response) => response.text()),
+          ),
+        ),
+      )
+      expect(bodies).toHaveLength(12)
+      expect(bodies.every((body) => body.includes('__chunkLoaded'))).toBe(true)
+      expect(peak).toBeGreaterThan(1)
+      expect(peak).toBeLessThanOrEqual(4)
+    } finally {
+      await page.close()
+      await host.close()
+    }
+  })
+
+  // Simulate network timeouts without spending 30 seconds per browser waiting
+  // for a deliberately dead socket. Real routing/cache behavior is tested above.
+  async function routeWithFailures(failures) {
+    let handler
+    const page = {
+      route: async (_pattern, callback) => {
+        handler = callback
+      },
+      isClosed: () => false,
+    }
+    await retryShedNavigations(page, PROD_ENV)
+    const attempts = []
+    let fulfilled
+    let aborted
+    let continued = false
+    await handler({
+      request: () => ({
+        url: () => 'https://example.test/trilogy-studio-core/',
+        resourceType: () => 'document',
+        frame: () => ({ page: () => page }),
+      }),
+      fetch: async (options) => {
+        attempts.push(options)
+        if (attempts.length <= failures) throw new Error('Request timed out')
+        return {
+          status: () => 200,
+          headers: () => ({ 'content-type': 'text/html' }),
+          body: async () => Buffer.from('<html>ready</html>'),
+          dispose: async () => {},
+        }
+      },
+      fulfill: async (entry) => {
+        fulfilled = entry
+      },
+      abort: async (reason) => {
+        aborted = reason
+      },
+      continue: async () => {
+        continued = true
+      },
+    })
+    return { attempts, fulfilled, aborted, continued }
+  }
+
+  test('a timed-out fetch is retried with a bounded request timeout', async () => {
+    const result = await routeWithFailures(1)
+    expect(result.attempts).toEqual([
+      { timeout: 10000, maxRetries: 0 },
+      { timeout: 10000, maxRetries: 0 },
+    ])
+    expect(result.fulfilled.status).toBe(200)
+    expect(result.aborted).toBeUndefined()
+    expect(result.continued).toBe(false)
+  })
+
+  test('exhausted fetches abort instead of starting another browser request', async () => {
+    const result = await routeWithFailures(3)
+    expect(result.attempts).toHaveLength(3)
+    expect(result.fulfilled).toBeUndefined()
+    expect(result.aborted).toBe('failed')
+    expect(result.continued).toBe(false)
   })
 
   // A shed document is the one failure the cache cannot absorb, and handing it
