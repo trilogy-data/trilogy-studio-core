@@ -142,21 +142,6 @@ export const useChatStore = defineStore('chats', {
       (chatId: string): boolean =>
         state.chatExecutions[chatId]?.isLoading ?? false,
 
-    // A connection can be shared by foreground, background, and paused agents.
-    // Provider.running does not track the lifetime of these tool loops.
-    isLLMConnectionExecuting:
-      (state) =>
-      (connectionName: string, fallbackConnectionName: string = ''): boolean =>
-        !!connectionName &&
-        Object.entries(state.chatExecutions).some(([chatId, execution]) => {
-          const chat = state.chats[chatId]
-          return (
-            execution.isLoading &&
-            !!chat &&
-            (chat.llmConnectionName || fallbackConnectionName) === connectionName
-          )
-        }),
-
     /** Get the active tool name for a specific chat */
     getChatActiveToolName:
       (state) =>

@@ -63,31 +63,27 @@ describe('chat panel model selection', () => {
     wrapper.unmount()
   })
 
-  it('blocks changes during a background agent, including while paused', async () => {
-    const { wrapper, provider, chatStore, otherChat, save } = setup()
+  it('allows changes during active and paused agent responses', async () => {
+    const { wrapper, provider, chatStore, chat, otherChat, save } = setup()
+    chatStore.startExecution(chat.id)
     chatStore.startExecution(otherChat.id)
     chatStore.pauseExecution(otherChat.id)
     await flushPromises()
     expect(provider.running).toBe(false)
-    expect(wrapper.get('[data-testid="chat-model-select"]').attributes('disabled')).toBeDefined()
-    expect(wrapper.text()).toContain('Wait for chats')
-    // The handler must guard too, even if a stale UI emits a change.
-    wrapper.getComponent({ name: 'ChatModelSelect' }).vm.$emit('update:modelValue', 'gpt-6-luna')
-    await flushPromises()
-    expect(provider.model).toBe('gpt-5.3')
-    expect(save).not.toHaveBeenCalled()
-    chatStore.chatExecutions[otherChat.id].isLoading = false
-    await flushPromises()
     expect(wrapper.get('[data-testid="chat-model-select"]').attributes('disabled')).toBeUndefined()
+    await wrapper.get('[data-testid="chat-model-select"]').setValue('gpt-6-luna')
+    await flushPromises()
+    expect(provider.model).toBe('gpt-6-luna')
+    expect(save).toHaveBeenCalledOnce()
     wrapper.unmount()
   })
 
-  it('includes running chats that use the active connection as a fallback', async () => {
+  it('allows changes when a running chat uses the active connection as a fallback', async () => {
     const { wrapper, chatStore, otherChat } = setup()
     chatStore.updateChatLLMConnection(otherChat.id, '')
     chatStore.startExecution(otherChat.id)
     await flushPromises()
-    expect(wrapper.get('[data-testid="chat-model-select"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="chat-model-select"]').attributes('disabled')).toBeUndefined()
     wrapper.unmount()
   })
 
@@ -111,11 +107,11 @@ describe('chat panel model selection', () => {
     wrapper.unmount()
   })
 
-  it('disables model changes while the provider is running', async () => {
+  it('keeps the picker enabled while the provider is running', async () => {
     const { wrapper, provider } = setup()
     provider.running = true
     await flushPromises()
-    expect(wrapper.get('[data-testid="chat-model-select"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="chat-model-select"]').attributes('disabled')).toBeUndefined()
     wrapper.unmount()
   })
 })

@@ -132,29 +132,13 @@ const selectedLLMConnection = computed({
 })
 
 const selectedProvider = computed(() => llmConnectionStore.connections[selectedLLMConnection.value])
-const isModelInUse = computed(
-  () =>
-    !!selectedProvider.value?.running ||
-    chatStore.isLLMConnectionExecuting(
-      selectedLLMConnection.value,
-      llmConnectionStore.activeConnection,
-    ),
-)
 watch(selectedLLMConnection, () => {
   modelSaveError.value = ''
 })
 
 async function updateChatModel(model: string) {
   const provider = selectedProvider.value
-  if (
-    !provider ||
-    !model ||
-    provider.model === model ||
-    isModelInUse.value ||
-    isChatLoading.value ||
-    isSavingModel.value
-  )
-    return
+  if (!provider || !model || provider.model === model || isSavingModel.value) return
   const previousModel = provider.model
   isSavingModel.value = true
   modelSaveError.value = ''
@@ -340,7 +324,7 @@ onBeforeUnmount(() => {
             v-if="panel.view.value === 'conversation' && activeChat && llmConnectionNames.length"
             class="llm-connection-select"
             v-model="selectedLLMConnection"
-            :disabled="isChatLoading || isSavingModel"
+            :disabled="isSavingModel"
             title="LLM connection for this conversation"
             data-testid="global-chat-llm-select"
           >
@@ -390,12 +374,9 @@ onBeforeUnmount(() => {
         <ChatModelSelect
           :connection-name="selectedLLMConnection"
           :model-value="selectedProvider?.model || ''"
-          :disabled="isModelInUse || isSavingModel"
+          :disabled="isSavingModel"
           @update:model-value="updateChatModel"
         />
-        <small v-if="isModelInUse"
-          >Wait for chats using this connection to finish before changing its model.</small
-        >
         <small v-if="modelSaveError" role="alert">{{ modelSaveError }}</small>
       </div>
 

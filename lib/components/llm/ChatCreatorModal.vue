@@ -40,11 +40,8 @@
           class="form-group"
           :connection-name="selectedLLMConnection"
           v-model="selectedModel"
-          :disabled="isCreating || isModelInUse"
+          :disabled="isCreating"
         />
-        <small v-if="isModelInUse"
-          >Wait for chats using this connection to finish before changing its model.</small
-        >
         <p v-if="creationError" role="alert">{{ creationError }}</p>
 
         <div class="form-group">
@@ -157,14 +154,6 @@ export default defineComponent({
     const selectedModel = ref('')
     const isCreating = ref(false)
     const creationError = ref('')
-    const isModelInUse = computed(
-      () =>
-        !!llmConnectionStore?.connections[selectedLLMConnection.value]?.running ||
-        !!chatStore?.isLLMConnectionExecuting(
-          selectedLLMConnection.value,
-          llmConnectionStore?.activeConnection,
-        ),
-    )
 
     watch(
       [selectedLLMConnection, () => props.visible],
@@ -307,11 +296,6 @@ export default defineComponent({
 
       const provider = llmConnectionStore?.connections[selectedLLMConnection.value]
       if (provider && selectedModel.value && provider.model !== selectedModel.value) {
-        if (isModelInUse.value) {
-          creationError.value =
-            'Wait for this connection to finish running before changing its model.'
-          return
-        }
         isCreating.value = true
         const previousModel = provider.model
         try {
@@ -351,7 +335,6 @@ export default defineComponent({
       selectedModel,
       isCreating,
       creationError,
-      isModelInUse,
       selectedDataConnectionId,
       chatName,
       availableLLMConnections,

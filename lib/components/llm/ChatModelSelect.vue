@@ -25,7 +25,7 @@ const models = computed(() =>
     <select
       :id="id"
       :value="modelValue"
-      :disabled="disabled || connection.running"
+      :disabled="disabled"
       :aria-describedby="`${id}-notice`"
       data-testid="chat-model-select"
       @change="emit('update:modelValue', ($event.target as HTMLSelectElement).value)"

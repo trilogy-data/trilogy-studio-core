@@ -13,8 +13,6 @@ function setup(preselectedConnection = 'openai') {
   other.connected = true
   const save = vi.fn().mockResolvedValue(undefined)
   const newChat = vi.fn().mockReturnValue({ id: 'new-chat' })
-  const executionState = reactive({ running: false })
-  const isLLMConnectionExecuting = vi.fn(() => executionState.running)
   const wrapper = mount(ChatCreatorModal, {
     props: { visible: true, preselectedConnection },
     global: {
@@ -23,12 +21,12 @@ function setup(preselectedConnection = 'openai') {
           connections: { openai: provider, other },
           activeConnection: 'openai',
         }),
-        chatStore: { newChat, isLLMConnectionExecuting },
+        chatStore: { newChat },
         saveLLMConnections: save,
       },
     },
   })
-  return { wrapper, provider, other, save, newChat, executionState }
+  return { wrapper, provider, other, save, newChat }
 }
 
 describe('new chat model selection', () => {
@@ -41,16 +39,17 @@ describe('new chat model selection', () => {
     wrapper.unmount()
   })
 
-  it('rechecks running chats before applying a draft model change', async () => {
-    const { wrapper, provider, save, newChat, executionState } = setup()
+  it('allows a model change when the provider is running', async () => {
+    const { wrapper, provider, save, newChat } = setup()
+    provider.running = true
+    await flushPromises()
+    expect(wrapper.get('[data-testid="chat-model-select"]').attributes('disabled')).toBeUndefined()
     await wrapper.get('[data-testid="chat-model-select"]').setValue('gpt-6-luna')
-    executionState.running = true
     await wrapper.get('[data-testid="create-chat-btn"]').trigger('click')
     await flushPromises()
-    expect(provider.model).toBe('gpt-5.3')
-    expect(save).not.toHaveBeenCalled()
-    expect(newChat).not.toHaveBeenCalled()
-    expect(wrapper.get('[role="alert"]').text()).toContain('finish running')
+    expect(provider.model).toBe('gpt-6-luna')
+    expect(save).toHaveBeenCalledOnce()
+    expect(newChat).toHaveBeenCalledOnce()
     wrapper.unmount()
   })
 
