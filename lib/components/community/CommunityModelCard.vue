@@ -1,14 +1,5 @@
 <template>
   <div class="model-item">
-    <!-- Import/Reload button in top right -->
-    <button
-      @click="toggleCreator"
-      :data-testid="`import-${file.name}`"
-      class="action-button-topright"
-    >
-      {{ creatorIsExpanded ? 'Hide' : modelExists ? 'Reload' : 'Import' }}
-    </button>
-
     <div class="model-item-header">
       <div class="model-info">
         <div class="font-semibold flex items-center" :data-testid="`model-card-title-${file.name}`">
@@ -39,7 +30,26 @@
           >
         </button>
       </div>
+      <div class="model-actions">
+        <button
+          @click="copyModelLink"
+          :disabled="!defaultShareComponent"
+          :title="
+            defaultShareComponent
+              ? `Copy import link opening ${defaultShareComponent.name}`
+              : 'No shareable components in this model'
+          "
+          data-testid="copy-model-share-button"
+        >
+          <i class="mdi mdi-content-copy" aria-hidden="true"></i>
+          Share Model
+        </button>
+        <button @click="toggleCreator" :data-testid="`import-${file.name}`">
+          {{ creatorIsExpanded ? 'Hide' : modelExists ? 'Reload' : 'Import' }}
+        </button>
+      </div>
     </div>
+    <p v-if="shareStatus" class="share-status" role="status">{{ shareStatus }}</p>
 
     <div class="model-creator-container" v-if="creatorIsExpanded">
       <model-creator
@@ -131,7 +141,7 @@ import { ref, computed, inject } from 'vue'
 import ModelCreator from '../model/ModelCreator.vue'
 import MarkdownRenderer from '../MarkdownRenderer.vue'
 import { getDefaultConnection as getDefaultConnectionService } from '../../remotes/modelApiService'
-import type { ModelFile } from '../../remotes/models'
+import type { Component, ModelFile } from '../../remotes/models'
 import { type ModelConfigStoreType } from '../../stores/modelStore'
 
 export interface CommunityModelCardProps {
@@ -166,6 +176,18 @@ if (!modelStore) {
 const creatorIsExpanded = ref(props.initialCreatorExpanded)
 const isComponentsExpanded = ref(props.initialComponentsExpanded)
 const isDescriptionExpanded = ref(props.initialDescriptionExpanded)
+const shareStatus = ref('')
+
+const defaultShareComponent = computed(() => {
+  const components = props.file.components.filter(
+    (component) =>
+      component.name?.trim() && ['trilogy', 'sql', 'dashboard'].includes(component.type),
+  )
+  return (
+    components.find((component) => component.purpose?.trim().toLowerCase() === 'example') ??
+    components[0]
+  )
+})
 
 // Computed properties
 const modelExists = computed(() => {
@@ -212,7 +234,11 @@ const toggleDescription = () => {
   emit('description-toggled', isDescriptionExpanded.value)
 }
 
-const copyAssetLink = async (component: any, assetType: 'dashboard' | 'editor'): Promise<void> => {
+const copyAssetLink = async (
+  component: Component,
+  assetType: 'dashboard' | 'editor',
+): Promise<void> => {
+  shareStatus.value = ''
   // Get current base URL
   const currentBase = window.location.origin + window.location.pathname
 
@@ -220,7 +246,7 @@ const copyAssetLink = async (component: any, assetType: 'dashboard' | 'editor'):
     screen: 'asset-import',
     import: props.file.downloadUrl,
     assetType,
-    assetName: component.name,
+    assetName: component.name || '',
     modelName: props.file.name,
     connection: props.file.engine,
   })
@@ -238,35 +264,43 @@ const copyAssetLink = async (component: any, assetType: 'dashboard' | 'editor'):
   const importLink = `${currentBase}#${params.toString()}`
 
   try {
-    await navigator.clipboard.writeText(importLink)
+    try {
+      await navigator.clipboard.writeText(importLink)
+    } catch {
+      const textArea = document.createElement('textarea')
+      textArea.value = importLink
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      document.body.appendChild(textArea)
+      try {
+        textArea.select()
+        if (!document.execCommand('copy')) throw new Error('Copy failed')
+      } finally {
+        textArea.remove()
+      }
+    }
     if (assetType === 'dashboard') {
       emit('dashboard-link-copied', component)
     } else {
       emit('editor-link-copied', component)
     }
-    console.log(`${assetType} import link copied to clipboard:`, importLink)
-  } catch (err) {
-    console.error(`Failed to copy ${assetType} import link:`, err)
-    // Fallback: create a temporary textarea and copy from it
-    const textArea = document.createElement('textarea')
-    textArea.value = importLink
-    document.body.appendChild(textArea)
-    textArea.select()
-    document.execCommand('copy')
-    document.body.removeChild(textArea)
-    if (assetType === 'dashboard') {
-      emit('dashboard-link-copied', component)
-    } else {
-      emit('editor-link-copied', component)
-    }
+    shareStatus.value = 'Share link copied.'
+  } catch {
+    shareStatus.value = 'Unable to copy the share link. Please try again.'
   }
 }
 
-const copyDashboardLink = async (component: any): Promise<void> => {
+const copyModelLink = async (): Promise<void> => {
+  const component = defaultShareComponent.value
+  if (component)
+    await copyAssetLink(component, component.type === 'dashboard' ? 'dashboard' : 'editor')
+}
+
+const copyDashboardLink = async (component: Component): Promise<void> => {
   await copyAssetLink(component, 'dashboard')
 }
 
-const copyEditorLink = async (component: any): Promise<void> => {
+const copyEditorLink = async (component: Component): Promise<void> => {
   await copyAssetLink(component, 'editor')
 }
 
@@ -295,25 +329,34 @@ defineExpose({
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* Import/Reload button in top right */
-.action-button-topright {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  cursor: pointer;
-  z-index: 10;
+.model-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.model-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.share-status {
+  color: var(--text-faint);
+  font-size: var(--small-font-size);
 }
 
 .model-item-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 12px;
   margin-bottom: 12px;
-  padding-right: 100px; /* Make room for the top-right button */
 }
 
 .model-info {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -506,7 +549,6 @@ defineExpose({
 }
 
 .copy-import-button {
-  background-color: var(--button-bg, #2563eb);
   padding: 6px 10px;
   font-size: 12px;
   cursor: pointer;
@@ -514,11 +556,6 @@ defineExpose({
   align-items: center;
   gap: 4px;
   transition: background-color 0.2s;
-}
-
-.copy-import-button:hover {
-  background-color: var(--button-hover-bg, #1d4ed8);
-  color: white;
 }
 
 .copy-import-button i {
@@ -530,12 +567,6 @@ defineExpose({
     flex-direction: column;
     gap: 12px;
     padding-right: 0;
-  }
-
-  .action-button-topright {
-    position: static;
-    align-self: flex-start;
-    margin-bottom: 8px;
   }
 
   .expand-button {
