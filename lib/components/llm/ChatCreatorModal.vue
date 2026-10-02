@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="confirmation-overlay" @click="$emit('close')">
+  <div v-if="visible" class="confirmation-overlay" @click="!isCreating && $emit('close')">
     <div class="confirmation-dialog" data-testid="chat-creator-modal" @click.stop>
       <h3>Create New Chat</h3>
       <div class="chat-creator-form">
@@ -10,7 +10,7 @@
               id="llm-connection"
               v-model="selectedLLMConnection"
               required
-              :disabled="!!preselectedConnection"
+              :disabled="!!preselectedConnection || isCreating"
               data-testid="llm-connection-select"
             >
               <option value="" disabled>Select an LLM connection...</option>
@@ -35,12 +35,25 @@
           </small>
         </div>
 
+        <ChatModelSelect
+          v-if="selectedLLMConnection"
+          class="form-group"
+          :connection-name="selectedLLMConnection"
+          v-model="selectedModel"
+          :disabled="isCreating || isModelInUse"
+        />
+        <small v-if="isModelInUse"
+          >Wait for chats using this connection to finish before changing its model.</small
+        >
+        <p v-if="creationError" role="alert">{{ creationError }}</p>
+
         <div class="form-group">
           <label for="data-connection">Data Connection:</label>
           <div class="select-with-status">
             <select
               id="data-connection"
               v-model="selectedDataConnectionId"
+              :disabled="isCreating"
               data-testid="data-connection-select"
             >
               <option value="">None - Select later</option>
@@ -68,6 +81,7 @@
           <input
             id="chat-name"
             v-model="chatName"
+            :disabled="isCreating"
             placeholder="Auto-generated if empty"
             maxlength="100"
             data-testid="chat-name-input"
@@ -75,13 +89,18 @@
         </div>
 
         <div class="button-container">
-          <button class="cancel-btn" @click="$emit('close')" data-testid="cancel-chat-create">
+          <button
+            class="cancel-btn"
+            :disabled="isCreating"
+            @click="$emit('close')"
+            data-testid="cancel-chat-create"
+          >
             Cancel
           </button>
           <button
             class="primary-button"
             @click="createChat"
-            :disabled="!selectedLLMConnection"
+            :disabled="!selectedLLMConnection || isCreating"
             data-testid="create-chat-btn"
           >
             Create Chat
@@ -100,11 +119,13 @@ import type { ChatStoreType } from '../../stores/chatStore'
 import StatusIcon from '../StatusIcon.vue'
 import type { Status } from '../StatusIcon.vue'
 import { KeySeparator } from '../../data/constants'
+import ChatModelSelect from './ChatModelSelect.vue'
 
 export default defineComponent({
   name: 'ChatCreatorModal',
   components: {
     StatusIcon,
+    ChatModelSelect,
   },
   props: {
     visible: {
@@ -125,10 +146,35 @@ export default defineComponent({
     const llmConnectionStore = inject<LLMConnectionStoreType>('llmConnectionStore')
     const connectionStore = inject<ConnectionStoreType>('connectionStore', null as any)
     const chatStore = inject<ChatStoreType>('chatStore', null as any)
+    const saveConnections = inject<(() => unknown | Promise<unknown>) | null>(
+      'saveLLMConnections',
+      null,
+    )
 
     const selectedLLMConnection = ref(props.preselectedConnection || '')
     const selectedDataConnectionId = ref('')
     const chatName = ref('')
+    const selectedModel = ref('')
+    const isCreating = ref(false)
+    const creationError = ref('')
+    const isModelInUse = computed(
+      () =>
+        !!llmConnectionStore?.connections[selectedLLMConnection.value]?.running ||
+        !!chatStore?.isLLMConnectionExecuting(
+          selectedLLMConnection.value,
+          llmConnectionStore?.activeConnection,
+        ),
+    )
+
+    watch(
+      [selectedLLMConnection, () => props.visible],
+      () => {
+        selectedModel.value =
+          llmConnectionStore?.connections[selectedLLMConnection.value]?.model || ''
+        creationError.value = ''
+      },
+      { immediate: true },
+    )
 
     // Watch for preselectedConnection changes
     watch(
@@ -256,8 +302,29 @@ export default defineComponent({
       },
     )
 
-    const createChat = () => {
-      if (!selectedLLMConnection.value || !chatStore) return
+    const createChat = async () => {
+      if (!selectedLLMConnection.value || !chatStore || isCreating.value) return
+
+      const provider = llmConnectionStore?.connections[selectedLLMConnection.value]
+      if (provider && selectedModel.value && provider.model !== selectedModel.value) {
+        if (isModelInUse.value) {
+          creationError.value =
+            'Wait for this connection to finish running before changing its model.'
+          return
+        }
+        isCreating.value = true
+        const previousModel = provider.model
+        try {
+          provider.setModel(selectedModel.value)
+          await saveConnections?.()
+        } catch {
+          provider.setModel(previousModel)
+          creationError.value = 'Could not save the model. Please try again.'
+          return
+        } finally {
+          isCreating.value = false
+        }
+      }
 
       // Set the LLM connection as active
       if (llmConnectionStore) {
@@ -281,6 +348,10 @@ export default defineComponent({
 
     return {
       selectedLLMConnection,
+      selectedModel,
+      isCreating,
+      creationError,
+      isModelInUse,
       selectedDataConnectionId,
       chatName,
       availableLLMConnections,

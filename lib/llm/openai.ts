@@ -66,6 +66,7 @@ export function compareOpenAIModels(a: string, b: string): number {
 }
 
 export class OpenAIProvider extends LLMProvider {
+  static readonly DEFAULT_MODEL = 'gpt-6-luna'
   private baseCompletionUrl: string = 'https://api.openai.com/v1/responses'
   private baseModelUrl: string = 'https://api.openai.com/v1/models'
   public models: string[]
@@ -314,11 +315,13 @@ export class OpenAIProvider extends LLMProvider {
 
   /**
    * Get the default model to use for OpenAI.
-   * Returns the latest gpt-X.y model (not mini or other variants).
+   * Prefer GPT-6 Luna, falling back to the latest non-variant model when unavailable.
    * @param models - Array of model IDs (already filtered)
    * @returns The default model ID to use
    */
   static getDefaultModel(models: string[]): string {
+    if (models.includes(OpenAIProvider.DEFAULT_MODEL)) return OpenAIProvider.DEFAULT_MODEL
+
     // Sort models and find the first one without a variant (not mini, etc.)
     const sorted = [...models].sort(compareOpenAIModels)
     const nonVariant = sorted.find((model) => {
