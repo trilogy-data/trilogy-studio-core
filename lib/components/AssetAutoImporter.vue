@@ -688,17 +688,21 @@ const switchToManualImport = () => {
 
 <template>
   <div class="auto-import-container">
-    <div v-if="error" class="import-state error-state">
+    <div v-if="error" class="import-panel import-state error-state" role="alert">
       <div class="error-icon">⚠️</div>
       <h2 class="import-headline">{{ assetTypeDisplayName }} Load Failed</h2>
       <p class="error-message">{{ error }}</p>
       <div class="error-actions">
-        <button @click="switchToManualImport" class="manual-import-button">
+        <button @click="switchToManualImport" class="import-action manual-import-button">
           Try Manual Import
         </button>
       </div>
     </div>
-    <div v-else-if="isLoading || importSuccess" class="import-state loading-state">
+    <div
+      v-else-if="isLoading || importSuccess"
+      class="import-panel import-state loading-state"
+      role="status"
+    >
       <div class="loading-content">
         <img :src="trilogyIcon" class="trilogy-icon spinning" alt="Loading" />
         <h2 class="import-headline">{{ loadingHeadline }}</h2>
@@ -775,7 +779,7 @@ const switchToManualImport = () => {
     </div>
 
     <!-- Connection Setup Required (no spinning logo - user input needed) -->
-    <div v-else-if="requiresFields" class="import-form">
+    <div v-else-if="requiresFields" class="import-panel import-form">
       <div class="import-header">
         <h2 class="import-headline">Import Model & {{ assetTypeDisplayName }}</h2>
         <div class="import-details">
@@ -803,7 +807,7 @@ const switchToManualImport = () => {
             v-model.trim="connectionOptions.mdToken"
             id="md-token"
             placeholder="Enter your MotherDuck token"
-            class="connection-input"
+            class="sidebar-control-input connection-input"
             @input="validateForm"
           />
         </div>
@@ -817,7 +821,7 @@ const switchToManualImport = () => {
               v-model.trim="connectionOptions.projectId"
               id="project-id"
               placeholder="Enter your billing project ID"
-              class="connection-input"
+              class="sidebar-control-input connection-input"
               @input="validateForm"
             />
           </div>
@@ -831,7 +835,7 @@ const switchToManualImport = () => {
               v-model.trim="connectionOptions.username"
               id="snowflake-username"
               placeholder="Snowflake username"
-              class="connection-input"
+              class="sidebar-control-input connection-input"
               @input="validateForm"
             />
           </div>
@@ -842,7 +846,7 @@ const switchToManualImport = () => {
               v-model.trim="connectionOptions.account"
               id="snowflake-account"
               placeholder="Snowflake account identifier"
-              class="connection-input"
+              class="sidebar-control-input connection-input"
               @input="validateForm"
             />
           </div>
@@ -853,7 +857,7 @@ const switchToManualImport = () => {
               v-model.trim="connectionOptions.sshPrivateKey"
               id="snowflake-key"
               placeholder="Private key for authentication"
-              class="connection-input"
+              class="sidebar-control-input connection-input"
               @input="validateForm"
             />
           </div>
@@ -861,10 +865,14 @@ const switchToManualImport = () => {
       </div>
 
       <div class="form-actions">
-        <button @click="handleManualImport" class="import-button" :disabled="!isFormValid">
+        <button
+          @click="handleManualImport"
+          class="import-action import-button"
+          :disabled="!isFormValid"
+        >
           Import Model & {{ assetTypeDisplayName }}
         </button>
-        <button @click="switchToManualImport" class="cancel-button">Cancel</button>
+        <button @click="switchToManualImport">Cancel</button>
       </div>
     </div>
 
@@ -887,15 +895,25 @@ const switchToManualImport = () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  padding: 20px;
+  min-height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 32px 20px;
   background-color: var(--bg-color);
+  color: var(--text-color);
 }
 
-.import-form {
+.import-panel {
+  width: 100%;
   max-width: 600px;
-  padding: 30px;
-  background-color: var(--sidebar-bg);
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 32px;
+  background-color: var(--query-window-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--surface-shadow);
+  overflow-wrap: anywhere;
 }
 
 /* Trilogy icon styles */
@@ -940,15 +958,16 @@ const switchToManualImport = () => {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background-color: var(--sidebar-bg);
+  background-color: var(--panel-header-bg);
   border: 1px solid var(--border);
-  transition: all 0.3s ease;
+  border-radius: var(--radius-sm);
+  color: var(--text-faint);
 }
 
 .step.active {
-  background-color: var(--special-text);
+  background-color: var(--special-bg);
   border-color: var(--special-text);
-  color: white;
+  color: var(--special-text);
 }
 
 .step.active .step-text {
@@ -956,9 +975,11 @@ const switchToManualImport = () => {
 }
 
 .step.completed:not(.active) {
-  background-color: rgba(34, 197, 94, 0.1);
-  border-color: rgba(34, 197, 94, 0.3);
   color: var(--text-color);
+}
+
+.step.completed .step-icon {
+  color: var(--special-text);
 }
 
 .step-icon {
@@ -981,8 +1002,7 @@ const switchToManualImport = () => {
 }
 
 .import-header {
-  margin-bottom: 30px;
-  margin-top: 30px;
+  margin-bottom: 24px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 20px;
 }
@@ -1008,8 +1028,7 @@ const switchToManualImport = () => {
 
 .import-source {
   font-size: 14px;
-  color: var(--text-muted);
-  word-break: break-all;
+  color: var(--text-faint);
 }
 
 .connection-setup h3 {
@@ -1019,7 +1038,7 @@ const switchToManualImport = () => {
 
 .setup-description {
   margin-bottom: 25px;
-  color: var(--text-muted);
+  color: var(--text-faint);
   line-height: 1.5;
 }
 
@@ -1036,77 +1055,56 @@ const switchToManualImport = () => {
 
 .import-headline {
   font-weight: 500;
-  margin-top: 30px;
+  font-size: var(--title-font-size);
+  margin-top: 24px;
 }
 
 .connection-input {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid var(--border);
-  background-color: var(--sidebar-selector-bg);
-  color: var(--sidebar-selector-font);
-  font-size: 14px;
-  box-sizing: border-box;
-}
-
-.connection-input:focus {
-  outline: none;
-  border-color: var(--special-text);
+  min-height: 44px;
+  font-size: var(--font-size);
 }
 
 .form-actions {
   display: flex;
-  gap: 15px;
+  gap: 12px;
+  flex-wrap: wrap;
   justify-content: flex-end;
   margin-top: 30px;
   padding-top: 20px;
   border-top: 1px solid var(--border);
 }
 
-.import-button {
-  background-color: var(--special-text);
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  cursor: pointer;
-  font-weight: 500;
+.form-actions button,
+.error-actions button {
+  min-height: 44px;
+  padding: 10px 16px;
 }
 
-.import-button:disabled {
-  background-color: #ccc;
+.import-action {
+  background-color: var(--special-bg);
+  border-color: var(--special-text);
+  color: var(--special-text);
+}
+
+.import-action:disabled {
+  background-color: var(--panel-header-bg);
+  border-color: var(--border);
+  color: var(--text-faint);
   cursor: not-allowed;
 }
 
-.cancel-button {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--text-color);
-  padding: 12px 24px;
-  cursor: pointer;
-}
-
-.manual-import-button {
-  background-color: var(--special-text);
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  cursor: pointer;
-  font-weight: 500;
+.import-panel button:focus-visible {
+  outline: 2px solid var(--special-text);
+  outline-offset: 3px;
 }
 
 /* State-specific styling */
 .import-state {
   text-align: center;
-  max-width: 500px;
-  padding: 40px;
-  background-color: var(--editor-bg);
-  border: 1px solid var(--border);
 }
 
 .error-state {
-  border: 1px solid var(--border);
-  border-left: 4px solid #ef4444;
-  border-right: 4px solid #ef4444;
+  border-inline-start: 4px solid var(--delete-color);
 }
 
 .error-icon {
@@ -1115,7 +1113,7 @@ const switchToManualImport = () => {
 }
 
 .error-message {
-  color: #ef4444;
+  color: var(--delete-color);
   margin-bottom: 20px;
 }
 
@@ -1125,8 +1123,7 @@ const switchToManualImport = () => {
     padding: 10px;
   }
 
-  .import-form,
-  .import-state {
+  .import-panel {
     padding: 20px;
   }
 
@@ -1144,6 +1141,17 @@ const switchToManualImport = () => {
 
   .step {
     padding: 10px 12px;
+  }
+
+  .connection-input {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trilogy-icon.spinning,
+  .step.active .step-icon span {
+    animation: none;
   }
 }
 </style>
