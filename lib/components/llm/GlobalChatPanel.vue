@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
 import LLMChat from './LLMChat.vue'
+import ChatModelSelect from './ChatModelSelect.vue'
 import ChatArtifact from './ChatArtifact.vue'
 import GlobalChatConversationList from './GlobalChatConversationList.vue'
 import EditableTitle from '../EditableTitle.vue'
@@ -37,6 +38,12 @@ const projectStore = inject<ProjectStoreType | null>('projectStore', null)
 const modelStore = inject<ModelConfigStoreType | null>('modelStore', null)
 const saveEditors = inject<(() => Promise<unknown> | unknown) | null>('saveEditors', null)
 const saveModels = inject<(() => Promise<unknown> | unknown) | null>('saveModels', null)
+const saveLLMConnections = inject<(() => Promise<unknown> | unknown) | null>(
+  'saveLLMConnections',
+  null,
+)
+const isSavingModel = ref(false)
+const modelSaveError = ref('')
 
 const panel = useGlobalChatPanel()
 // Persisted chats hydrate asynchronously; falling back before they load would
@@ -109,16 +116,42 @@ const otherRunningCount = computed(
     }).length,
 )
 
-const llmConnectionNames = computed(() => Object.keys(llmConnectionStore.connections))
+const llmConnectionNames = computed(() =>
+  Object.values(llmConnectionStore.connections)
+    .filter((connection) => !connection.deleted)
+    .map((connection) => connection.name),
+)
 
 const selectedLLMConnection = computed({
-  get: () => activeChat.value?.llmConnectionName || '',
+  get: () => activeChat.value?.llmConnectionName || llmConnectionStore.activeConnection || '',
   set: (name: string) => {
     if (activeChat.value) {
       chatStore.updateChatLLMConnection(activeChat.value.id, name)
     }
   },
 })
+
+const selectedProvider = computed(() => llmConnectionStore.connections[selectedLLMConnection.value])
+watch(selectedLLMConnection, () => {
+  modelSaveError.value = ''
+})
+
+async function updateChatModel(model: string) {
+  const provider = selectedProvider.value
+  if (!provider || !model || provider.model === model || isSavingModel.value) return
+  const previousModel = provider.model
+  isSavingModel.value = true
+  modelSaveError.value = ''
+  try {
+    provider.setModel(model)
+    await saveLLMConnections?.()
+  } catch {
+    provider.setModel(previousModel)
+    modelSaveError.value = 'Could not save the model. Please try again.'
+  } finally {
+    isSavingModel.value = false
+  }
+}
 
 function handleTitleUpdate(name: string) {
   if (activeChat.value) {
@@ -291,6 +324,7 @@ onBeforeUnmount(() => {
             v-if="panel.view.value === 'conversation' && activeChat && llmConnectionNames.length"
             class="llm-connection-select"
             v-model="selectedLLMConnection"
+            :disabled="isSavingModel"
             title="LLM connection for this conversation"
             data-testid="global-chat-llm-select"
           >
@@ -336,6 +370,16 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
+      <div v-if="panel.view.value === 'conversation' && activeChat" class="panel-model-picker">
+        <ChatModelSelect
+          :connection-name="selectedLLMConnection"
+          :model-value="selectedProvider?.model || ''"
+          :disabled="isSavingModel"
+          @update:model-value="updateChatModel"
+        />
+        <small v-if="modelSaveError" role="alert">{{ modelSaveError }}</small>
+      </div>
+
       <div v-if="rateLimitBackoff?.isWaiting" class="backoff-banner">
         Rate limited — retrying (attempt {{ rateLimitBackoff.attempt }},
         {{ Math.round(rateLimitBackoff.delayMs / 1000) }}s)
@@ -352,6 +396,7 @@ onBeforeUnmount(() => {
         :messages="activeChatMessages"
         :show-header="false"
         :external-loading="isChatLoading"
+        :disabled="isSavingModel"
         :active-tool-name="activeToolName"
         :send-handler="handleSend"
         :stop-handler="handleStop"
@@ -520,6 +565,11 @@ onBeforeUnmount(() => {
   background: rgba(230, 160, 30, 0.12);
   border-bottom: 1px solid var(--border-light);
   flex-shrink: 0;
+}
+
+.panel-model-picker {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .global-chat-panel :deep(.llm-chat-container) {
