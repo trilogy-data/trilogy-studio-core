@@ -55,6 +55,7 @@ jobs:
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ inputs.version || github.sha }}
           cache-from: type=gha,scope=studio-docker
           cache-to: type=gha,mode=max,scope=studio-docker
 
