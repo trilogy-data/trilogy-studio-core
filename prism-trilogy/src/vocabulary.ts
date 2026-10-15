@@ -77,6 +77,8 @@ export const KEYWORDS = [
   'within',
   'incremental',
   'freshness',
+  'extends',
+  'assert',
   // definitions
   'def',
   'type',
@@ -131,6 +133,8 @@ export const CONTEXTUAL_KEYWORD_PATTERNS = [
   String.raw`\bif\s+not\s+exists\b`,
   String.raw`\bor\s+replace\b`,
   String.raw`\bwith\s+data\b`,
+  // `template datasource name (...)`: a reusable, never-read declaration
+  String.raw`\btemplate\b(?=\s+(?:partial\s+|~\s*)?datasource\b)`,
   // datasource status clause
   String.raw`\bstate\s+(?:published|unpublished)\b`,
   // chart statement: the chart types are far too generic to match standalone
@@ -323,6 +327,8 @@ export const GENERIC_FUNCTIONS = [
   'len',
   'bool',
   'recurse_edge',
+  // `prior(expr)`: the same expression over the asset a datasource build replaces
+  'prior',
   'struct',
   'unnest',
   'subselect',
