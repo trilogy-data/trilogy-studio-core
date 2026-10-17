@@ -20,7 +20,10 @@ interface PendingBatch {
   finish: () => void
 }
 
-function makeExecutor(itemQueries: Record<string, string>) {
+function makeExecutor(
+  itemQueries: Record<string, string>,
+  options: { maxConcurrentQueries?: number } = {},
+) {
   // Item state the executor reads and writes, standing in for the store.
   const items: Record<string, { loading: boolean; results: unknown; error: string | null }> =
     Object.fromEntries(
@@ -82,10 +85,63 @@ function makeExecutor(itemQueries: Record<string, string>) {
         if (updates.error) item.loading = false
       }
     },
+    options,
   )
 
   return { executor, items, batches }
 }
+
+describe('DashboardQueryExecutor concurrency slots', () => {
+  const twelve = Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`q${i}`, `select ${i};`]))
+
+  it('hands a freed slot to the queue when one query settles, not when its batch returns', async () => {
+    const { executor, batches } = makeExecutor(twelve, { maxConcurrentQueries: 10 })
+    executor.runBatch(Object.keys(twelve))
+    await flush()
+    expect(batches).toHaveLength(1)
+    expect(batches[0].labels).toHaveLength(10)
+
+    // One query of the first batch comes back; the other nine are still
+    // running (one of them may never return). The two queued behind the
+    // batch must not wait on it.
+    batches[0].succeed(batches[0].labels[0])
+    await flush()
+    expect(batches).toHaveLength(2)
+    expect(batches[1].labels).toHaveLength(1)
+
+    batches[0].fail(batches[0].labels[1], 'boom')
+    await flush()
+    expect(batches).toHaveLength(3)
+    expect(batches[2].labels).toHaveLength(1)
+  })
+
+  it('coalesces a burst of settles into one refill sweep', async () => {
+    const { executor, batches } = makeExecutor(twelve, { maxConcurrentQueries: 10 })
+    executor.runBatch(Object.keys(twelve))
+    await flush()
+    batches[0].succeed(batches[0].labels[0])
+    batches[0].succeed(batches[0].labels[1])
+    batches[0].succeed(batches[0].labels[2])
+    await flush()
+    expect(batches).toHaveLength(2)
+    expect(batches[1].labels).toHaveLength(2)
+  })
+
+  it('never runs more than the limit when a sweep finds no free slot', async () => {
+    const { executor, batches } = makeExecutor(twelve, { maxConcurrentQueries: 10 })
+    executor.runBatch(Object.keys(twelve))
+    await flush()
+    // A second refresh of the two queued items re-queues them while all ten
+    // slots are busy; the sweep must hold them rather than slice from the end.
+    executor.runBatch(['q10', 'q11'])
+    await flush()
+    expect(batches).toHaveLength(1)
+    batches[0].succeed(batches[0].labels[0])
+    await flush()
+    expect(batches).toHaveLength(2)
+    expect(batches[1].labels).toHaveLength(1)
+  })
+})
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
