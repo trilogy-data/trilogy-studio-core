@@ -553,14 +553,30 @@ export class DashboardQueryExecutor {
       return a.timestamp - b.timestamp
     })
 
-    // Execute queries up to concurrent limit
+    // Execute queries up to concurrent limit. A negative slot count would
+    // slice from the end and run queries the limit should hold back.
     const availableSlots = this.maxConcurrentQueries - this.activeQueries.size
+    if (availableSlots <= 0) return
     const queriesToExecute = sortedQueries.slice(0, availableSlots)
 
     this.executeBatchQueries(queriesToExecute)
-    // queriesToExecute.forEach((query) => {
-    //   this.executeQuery(query.id)
-    // })
+  }
+
+  private refillTimeout: NodeJS.Timeout | null = null
+
+  /**
+   * A query settling frees a concurrency slot; hand it to the next queued
+   * query now rather than when the whole batch it shared returns. Without
+   * this, one query that never returns holds every query queued behind its
+   * batch: the dashboard shows the first ten charts and nothing after them.
+   * Settles land in bursts, so they coalesce into one sweep per tick.
+   */
+  private refillFreedSlot(): void {
+    if (this.queryQueue.size === 0 || this.refillTimeout) return
+    this.refillTimeout = setTimeout(() => {
+      this.refillTimeout = null
+      this.processBatch()
+    }, this.batchDelay)
   }
 
   private async executeBatchQueries(queries: QueuedQuery[]): Promise<void> {
@@ -619,6 +635,7 @@ export class DashboardQueryExecutor {
             // After the delete, so a query cannot count itself as "in flight".
             this.settleQueryLoading(queryArgs.label)
             this.cleanupQueryTracking(queryArgs.label)
+            this.refillFreedSlot()
           },
         ]),
       )
@@ -634,6 +651,7 @@ export class DashboardQueryExecutor {
             this.activeQueries.delete(queryArgs.label)
             this.settleQueryLoading(queryArgs.label)
             this.cleanupQueryTracking(queryArgs.label)
+            this.refillFreedSlot()
           },
         ]),
       )
