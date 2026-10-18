@@ -39,6 +39,21 @@ export function configureDuckDBAssets(assetUrls: DuckDBAssetUrls | null): void {
   configuredDuckDBAssetUrls = assetUrls
 }
 
+// Same layout getJsDelivrBundles() produces, rooted at an arbitrary dist/ URL.
+function cdnBundlesFrom(base: string): DuckDBBundles {
+  const root = base.endsWith('/') ? base : `${base}/`
+  return {
+    mvp: {
+      mainModule: `${root}duckdb-mvp.wasm`,
+      mainWorker: `${root}duckdb-browser-mvp.worker.js`,
+    },
+    eh: {
+      mainModule: `${root}duckdb-eh.wasm`,
+      mainWorker: `${root}duckdb-browser-eh.worker.js`,
+    },
+  }
+}
+
 // use a singleton pattern to help avoid memory issues
 const connectionCache: Record<string, { db: AsyncDuckDB; connection: AsyncDuckDBConnection }> = {}
 
@@ -119,8 +134,11 @@ async function createDuckDB(
     bundle = await selectBundle(bundledAssets)
     worker = new Worker(bundle.mainWorker!)
   } else {
-    // Use CDN bundles
-    const cdnBundles = getJsDelivrBundles()
+    // Use CDN bundles. A build can point at a different CDN root -- the
+    // Haybarn distribution is over jsDelivr's 150MB package limit, so it
+    // is served from unpkg instead (see vite.config.ts).
+    const cdnBase = import.meta.env.VITE_DUCKDB_CDN_BASE
+    const cdnBundles = cdnBase ? cdnBundlesFrom(cdnBase) : getJsDelivrBundles()
     bundle = await selectBundle(cdnBundles)
     worker_url = URL.createObjectURL(
       new Blob([`importScripts("${bundle.mainWorker!}");`], { type: 'text/javascript' }),
