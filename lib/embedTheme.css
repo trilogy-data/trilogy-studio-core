@@ -1,3 +1,17 @@
+/*
+ * Charts render to canvas and read their colours off the element at render
+ * time (lib/dashboards/chartTheme.ts), so they follow the same tokens as the
+ * chrome. Set these to make charts differ from the chrome; leave them unset
+ * and each falls back to the token named beside it:
+ *
+ *   --trilogy-chart-font        -> --font
+ *   --trilogy-chart-text        -> --text-color        headline values, titles, donut labels
+ *   --trilogy-chart-text-muted  -> --text-color-muted  axis and legend labels, annotations
+ *   --trilogy-chart-axis        -> --border-color      axis domain and ticks
+ *   --trilogy-chart-grid        -> --border-light      gridlines
+ *
+ * The plot area is always transparent; the card behind it supplies the colour.
+ */
 :where(.dashboard-container, .grid-item-content, .chart-placeholder, .vega-lite-chart) {
   --trilogy-embed-text-color: var(--text-color, #1f2937);
   --trilogy-embed-text-muted: var(--text-color-muted, #64748b);

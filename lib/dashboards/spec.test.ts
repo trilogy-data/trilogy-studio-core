@@ -957,3 +957,82 @@ describe('generateVegaSpec', () => {
     })
   })
 })
+
+describe('generateVegaSpec chart theme', () => {
+  const columns = new Map<string, ResultColumn>([
+    ['category', { name: 'category', type: ColumnType.STRING, traits: [] }],
+    ['value', { name: 'value', type: ColumnType.INTEGER, traits: [] }],
+  ])
+  const data: Row[] = [
+    { category: 'a', value: 1 },
+    { category: 'b', value: 2 },
+  ]
+  const barConfig: ChartConfig = { chartType: 'bar', xField: 'category', yField: 'value' }
+  const theme = {
+    font: 'Georgia, serif',
+    text: '#303b2d',
+    textMuted: '#626757',
+    axis: '#cecdbb',
+    grid: '#e5e7d9',
+  }
+
+  it('leaves the plot area unfilled in light mode', () => {
+    const spec = generateVegaSpec(data, barConfig, columns, null, false, '', 'light')
+    expect(spec.background).toBe('transparent')
+    expect(spec.config.view.fill).toBeUndefined()
+  })
+
+  it('keeps the mode literals when no theme is passed', () => {
+    const spec = generateVegaSpec(data, barConfig, columns, null, false, '', 'light')
+    expect(spec.config.axis.labelColor).toBe('#475569')
+    expect(spec.config.font).toBeUndefined()
+  })
+
+  it('applies the theme to the axis, legend, font and title', () => {
+    const spec = generateVegaSpec(
+      data,
+      { ...barConfig, showTitle: true },
+      columns,
+      null,
+      false,
+      'Titled',
+      'light',
+      400,
+      600,
+      null,
+      theme,
+    )
+    expect(spec.config.font).toBe('Georgia, serif')
+    expect(spec.config.axis.labelColor).toBe('#626757')
+    expect(spec.config.axis.gridColor).toBe('#e5e7d9')
+    expect(spec.config.axis.domainColor).toBe('#cecdbb')
+    expect(spec.config.legend.titleColor).toBe('#303b2d')
+    expect(spec.title.color).toBe('#303b2d')
+  })
+
+  it('colours headline values and labels from the theme', () => {
+    const headlineColumns = new Map<string, ResultColumn>([
+      ['total', { name: 'total', type: ColumnType.INTEGER, traits: [] }],
+    ])
+    const spec = generateVegaSpec(
+      [{ total: 42 }],
+      { chartType: 'headline', xField: 'total' },
+      headlineColumns,
+      null,
+      false,
+      '',
+      'dark',
+      400,
+      600,
+      null,
+      theme,
+    )
+    const colors = spec.layer
+      .map((layer: any) => layer.encoding?.color?.value)
+      .filter((value: unknown) => typeof value === 'string')
+    expect(colors).toContain('#303b2d')
+    expect(colors).toContain('#626757')
+    expect(colors).not.toContain('#f0f0f0')
+    expect(colors).not.toContain('#d1d1d1')
+  })
+})

@@ -1,6 +1,7 @@
 import { type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { createFieldEncoding, createInteractionEncodings } from './helpers'
+import { chartTextColor, type ChartTheme } from './chartTheme'
 
 export const createDonutChartSpec = (
   config: ChartConfig,
@@ -9,6 +10,7 @@ export const createDonutChartSpec = (
   encoding: any,
   intChart: Array<Partial<ChartConfig>>,
   currentTheme: string = 'light',
+  chartTheme: ChartTheme = {},
 ) => {
   let donutLayer = {
     params: [
@@ -76,7 +78,7 @@ export const createDonutChartSpec = (
     mark: {
       type: 'text',
       radius: 85,
-      color: currentTheme === 'light' ? 'black' : 'white',
+      color: chartTextColor(currentTheme, chartTheme, { light: 'black', dark: 'white' }),
       fontSize: 10,
     },
     encoding: {

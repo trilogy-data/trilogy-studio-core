@@ -218,6 +218,81 @@ const firstNonCategoricalNumericColumn = (
 }
 
 // Determine default configuration based on column types
+/** Every config key that binds a result column to a role. */
+export const CHART_FIELD_ROLES = [
+  'xField',
+  'yField',
+  'yField2',
+  'colorField',
+  'sizeField',
+  'groupField',
+  'trellisField',
+  'trellisRowField',
+  'geoField',
+  'annotationField',
+] as const
+
+export type ChartFieldRole = (typeof CHART_FIELD_ROLES)[number]
+
+const FACET_ROLES: readonly ChartFieldRole[] = ['trellisField', 'trellisRowField']
+
+const boundColumn = (config: Partial<ChartConfig>, role: ChartFieldRole): string | undefined => {
+  const value = config[role]
+  return typeof value === 'string' && value !== '' ? value : undefined
+}
+
+/**
+ * Overlay an authored config on the type-scoped defaults.
+ *
+ * `determineDefaultConfig` hands every column a role without knowing what the
+ * author bound, so the defaults cannot simply be spread underneath: a column
+ * the author put on colour comes back as a facet, and a dashboard chart that
+ * asked for one bar chart renders as one row per colour value. Two rules:
+ *
+ *  - A role the author bound (non-empty) wins; an empty or missing role is
+ *    filled from the defaults, which is what lets a config omit `yField` and
+ *    still render.
+ *  - Once the author has bound anything, a default is dropped when it is a
+ *    facet role (splitting the chart is a layout decision the author makes
+ *    explicitly, never a missing binding) or when it names a column the
+ *    author already bound elsewhere.
+ *
+ * A config with no bindings at all is the auto path and takes the defaults
+ * whole, facets included.
+ */
+export const mergeAuthoredChartConfig = (
+  defaults: Partial<ChartConfig>,
+  authored: Partial<ChartConfig>,
+): Partial<ChartConfig> => {
+  const merged: Partial<ChartConfig> = { ...defaults }
+  for (const [key, value] of Object.entries(authored)) {
+    if (value === undefined || value === null) continue
+    if (typeof value === 'string' && value === '') continue
+    ;(merged as any)[key] = value
+  }
+
+  const authoredColumns = new Set<string>()
+  for (const role of CHART_FIELD_ROLES) {
+    const column = boundColumn(authored, role)
+    if (column) authoredColumns.add(column)
+  }
+  if (authoredColumns.size === 0) return merged
+
+  for (const role of CHART_FIELD_ROLES) {
+    if (boundColumn(authored, role)) continue
+    const candidate = boundColumn(merged, role)
+    if (!candidate) continue
+    if (FACET_ROLES.includes(role) || authoredColumns.has(candidate)) {
+      if (role in authored) {
+        merged[role] = ''
+      } else {
+        delete merged[role]
+      }
+    }
+  }
+  return merged
+}
+
 export const determineDefaultConfig = (
   data: readonly Row[],
   columns: Map<string, ResultColumn>,
@@ -839,12 +914,7 @@ export const validateChartConfigForData = (
 
   // Build the suggested config: start from type-scoped defaults, then overlay
   // the user's explicit (non-empty) choices so auto-correction preserves them.
-  const mergedSuggested: Partial<ChartConfig> = { ...typeDefaults }
-  for (const [k, v] of Object.entries(config)) {
-    if (v === undefined || v === null) continue
-    if (typeof v === 'string' && v === '') continue
-    ;(mergedSuggested as any)[k] = v
-  }
+  const mergedSuggested = mergeAuthoredChartConfig(typeDefaults, config)
 
   return {
     valid: fieldErrors.length === 0,

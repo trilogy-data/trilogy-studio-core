@@ -124,6 +124,7 @@ import { useResolvedThemeMode } from '../embed/config'
 import { Charts } from '../dashboards/constants'
 import { filteredColumns, determineEligibleChartTypes } from '../dashboards/helpers'
 import { generateVegaSpec } from '../dashboards/spec'
+import { resolveChartThemeFromElement } from '../dashboards/chartTheme'
 import { normalizeChartConfig, type LayerBinding } from '../dashboards/layerSpec'
 import type { LayerDataset } from '../dashboards/spec'
 import { debounce } from '../utility/debounce'
@@ -285,6 +286,10 @@ export default defineComponent({
         effectiveHeight,
         effectiveWidth,
         props.layerData,
+        // Read on every build so a host that re-themes its tokens is picked up
+        // by the next render; a computed-style read is far cheaper than the
+        // render it precedes.
+        resolveChartThemeFromElement(chartContentArea.value),
       )
     }
 

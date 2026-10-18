@@ -31,6 +31,7 @@ import {
 } from './helpers'
 import { LAYERABLE_CHART_TYPES, lightDefaultColor, darkDefaultColor } from './constants'
 import { snakeCaseToCapitalizedWords } from './formatting'
+import { chartMutedTextColor, type ChartTheme } from './chartTheme'
 
 /** Thrown when a config asks for a chart type that can't be a Vega-Lite layer. */
 export class UnlayerableChartTypeError extends Error {
@@ -269,6 +270,8 @@ export const createLayerMarkSpec = (
   options: {
     layerIndex: number
     currentTheme: 'light' | 'dark' | ''
+    /** Host colours for the annotation text; see `chartTheme.ts`. */
+    chartTheme?: ChartTheme
     isMobile: boolean
     seriesLabel?: string
     hideLegend?: boolean
@@ -289,7 +292,7 @@ export const createLayerMarkSpec = (
     throw new UnlayerableChartTypeError(layer.chartType)
   }
 
-  const { layerIndex, currentTheme, isMobile, seriesLabel } = options
+  const { layerIndex, currentTheme, chartTheme, isMobile, seriesLabel } = options
   const suffix = layerParamSuffix(layerIndex)
 
   // `barh` swaps the axis roles: its yField is the category and xField the
@@ -386,7 +389,12 @@ export const createLayerMarkSpec = (
         ? { y: categoryEncoding, x: valueEncoding }
         : { x: categoryEncoding, y: valueEncoding }),
       text: { field: layer.annotationField, type: 'nominal' },
-      color: { value: currentTheme === 'light' ? '#333333' : '#dddddd' },
+      color: {
+        value: chartMutedTextColor(currentTheme, chartTheme, {
+          light: '#333333',
+          dark: '#dddddd',
+        }),
+      },
     },
   }
 
@@ -452,11 +460,12 @@ export const createLayerMarkSpec = (
 export const createPlacementLayers = (
   placement: NonNullable<ChartConfig['placements']>[number],
   currentTheme: 'light' | 'dark' | '',
+  chartTheme: ChartTheme = {},
 ): any[] => {
   const isHline = placement.kind === 'hline'
   const datumKey = isHline ? 'y' : 'x'
   const otherKey = isHline ? 'x' : 'y'
-  const color = currentTheme === 'light' ? '#64748b' : '#94a3b8'
+  const color = chartMutedTextColor(currentTheme, chartTheme, { light: '#64748b', dark: '#94a3b8' })
 
   const layers: any[] = [
     {

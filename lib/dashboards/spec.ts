@@ -30,6 +30,7 @@ import {
   deriveChartTitle,
   BRUSH_DECLARING_CHART_TYPES,
 } from './layerSpec'
+import { buildVegaThemeConfig, chartTextColor, type ChartTheme } from './chartTheme'
 
 /** One layer's own result set, for charts whose layers are independent selects. */
 export interface LayerDataset {
@@ -133,6 +134,12 @@ export const generateVegaSpec = (
    * chart), all layers read the single `data` argument.
    */
   layerData: LayerDataset[] | null = null,
+  /**
+   * Colours and type read off the host stylesheet (`resolveChartThemeFromElement`).
+   * Slots left unset fall back to the per-mode literals, so omitting it keeps
+   * the historical rendering.
+   */
+  chartTheme: ChartTheme = {},
 ) => {
   // A config with sub-layers renders as a Vega-Lite layer array; an ordinary
   // config resolves to exactly one layer and takes the path it always has.
@@ -194,40 +201,7 @@ export const generateVegaSpec = (
 
   // Create base spec
   let spec: any = createBaseSpec(localData)
-  const themeChartConfig =
-    currentTheme === 'light'
-      ? {
-          view: {
-            fill: '#ffffff',
-            stroke: null,
-          },
-          axis: {
-            domainColor: '#cfd6df',
-            tickColor: '#cfd6df',
-            gridColor: '#e5e9ef',
-            labelColor: '#475569',
-            titleColor: '#475569',
-          },
-          legend: {
-            labelColor: '#475569',
-            titleColor: '#334155',
-          },
-          header: {},
-        }
-      : {
-          axis: {
-            domainColor: '#2a2f37',
-            tickColor: '#2a2f37',
-            gridColor: '#1f242c',
-            labelColor: '#cbd5e1',
-            titleColor: '#cbd5e1',
-          },
-          legend: {
-            labelColor: '#cbd5e1',
-            titleColor: '#e5e7eb',
-          },
-          header: {},
-        }
+  const themeChartConfig = buildVegaThemeConfig(currentTheme, chartTheme)
 
   // Set up color encoding
   let encoding: any = {}
@@ -285,6 +259,7 @@ export const generateVegaSpec = (
         encoding,
         intChart,
         currentTheme,
+        chartTheme,
       )
       break
     case 'line':
@@ -322,11 +297,20 @@ export const generateVegaSpec = (
         currentTheme,
         isMobile,
         localData,
+        chartTheme,
       )
       break
 
     case 'headline':
-      chartSpec = createHeadlineSpec(config, localData, columns, currentTheme, isMobile, intChart)
+      chartSpec = createHeadlineSpec(
+        config,
+        localData,
+        columns,
+        currentTheme,
+        isMobile,
+        intChart,
+        chartTheme,
+      )
       break
 
     case 'heatmap':
@@ -392,6 +376,7 @@ export const generateVegaSpec = (
         {
           layerIndex: i,
           currentTheme,
+          chartTheme,
           isMobile,
           seriesLabel: useSeriesLegend ? layerSeriesLabel(layer, layerColumns, i) : undefined,
           hideLegend: root.hideLegend,
@@ -418,7 +403,7 @@ export const generateVegaSpec = (
     }
 
     for (const placement of root.placements || []) {
-      extraLayers.push(...createPlacementLayers(placement, currentTheme))
+      extraLayers.push(...createPlacementLayers(placement, currentTheme, chartTheme))
     }
 
     // `chartSpec` is layer 0. If its builder already produced a layer array,
@@ -469,7 +454,7 @@ export const generateVegaSpec = (
         text: resolvedTitle,
         anchor: 'start',
         offset: 12,
-        color: currentTheme === 'dark' ? '#FFFFFF' : '#000000',
+        color: chartTextColor(currentTheme, chartTheme, { light: '#000000', dark: '#FFFFFF' }),
       }
     }
   }

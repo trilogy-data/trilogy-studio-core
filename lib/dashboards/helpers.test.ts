@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   determineDefaultConfig,
+  mergeAuthoredChartConfig,
   determineEligibleChartTypes,
   filteredColumns,
   isNumericColumn,
@@ -949,5 +950,69 @@ describe('validateChartConfigForData with layers', () => {
 
     expect(result.valid).toBe(false)
     expect(result.fieldErrors.join(' ')).toContain('Trellis roles cannot be combined')
+  })
+})
+
+describe('mergeAuthoredChartConfig', () => {
+  const defaults = {
+    chartType: 'bar' as const,
+    xField: 'species',
+    yField: 'share_pct',
+    colorField: 'rank_bucket',
+    trellisRowField: 'region',
+  }
+
+  it('takes the defaults whole when nothing is authored', () => {
+    expect(mergeAuthoredChartConfig(defaults, {})).toEqual(defaults)
+    expect(mergeAuthoredChartConfig(defaults, { hideLegend: true })).toEqual({
+      ...defaults,
+      hideLegend: true,
+    })
+  })
+
+  it('lets an authored binding win and fills the roles left empty', () => {
+    const merged = mergeAuthoredChartConfig(defaults, {
+      chartType: 'bar',
+      xField: 'rank_by_count',
+      yField: '',
+    })
+    expect(merged.xField).toBe('rank_by_count')
+    expect(merged.yField).toBe('share_pct')
+    expect(merged.colorField).toBe('rank_bucket')
+  })
+
+  it('drops a default facet from an authored chart', () => {
+    const merged = mergeAuthoredChartConfig(defaults, { chartType: 'bar', xField: 'rank_by_count' })
+    expect(merged).not.toHaveProperty('trellisRowField')
+
+    // An empty authored key is kept empty rather than removed, so a controls
+    // panel bound to it keeps its field.
+    const emptied = mergeAuthoredChartConfig(defaults, {
+      chartType: 'bar',
+      xField: 'rank_by_count',
+      trellisRowField: '',
+    })
+    expect(emptied.trellisRowField).toBe('')
+  })
+
+  it('keeps a facet the author asked for', () => {
+    const merged = mergeAuthoredChartConfig(defaults, {
+      chartType: 'bar',
+      xField: 'rank_by_count',
+      trellisRowField: 'rank_bucket',
+    })
+    expect(merged.trellisRowField).toBe('rank_bucket')
+  })
+
+  it('never hands a column the author bound back in another role', () => {
+    // The defaults put species on x; the author put it on colour. Without the
+    // collision rule species would be both.
+    const merged = mergeAuthoredChartConfig(defaults, {
+      chartType: 'bar',
+      yField: 'share_pct',
+      colorField: 'species',
+    })
+    expect(merged.colorField).toBe('species')
+    expect(merged.xField).toBeUndefined()
   })
 })

@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import type { ChartConfig, ResultColumn, Row } from '../editors/results'
 import { isLayeredConfig } from '../editors/results'
-import { determineDefaultConfig } from '../dashboards/helpers'
+import { determineDefaultConfig, mergeAuthoredChartConfig } from '../dashboards/helpers'
 import { ChromaChartHelpers } from './chartHelpers'
 
 const DEFAULTABLE_CHART_TYPES = [
@@ -54,44 +54,6 @@ export class ChartControlsManager {
     return determineDefaultConfig(data, columns)
   }
 
-  private applyMissingDefaultsForCurrentChartType(
-    data: readonly Row[],
-    columns: Map<string, ResultColumn>,
-  ): void {
-    // A layered config binds its fields on the sub-layers; backfilling root
-    // field defaults here would write fields the renderer ignores into the
-    // persisted config.
-    if (isLayeredConfig(this.internalConfig.value)) {
-      return
-    }
-    const chartType = this.internalConfig.value.chartType
-    const defaults = this.getChartTypeDefaults(data, columns, chartType)
-    const fieldsToBackfill: Array<keyof ChartConfig> = [
-      'xField',
-      'yField',
-      'yField2',
-      'colorField',
-      'sizeField',
-      'groupField',
-      'trellisField',
-      'trellisRowField',
-      'geoField',
-      'annotationField',
-    ]
-
-    for (const field of fieldsToBackfill) {
-      const currentValue = this.internalConfig.value[field]
-      const defaultValue = defaults[field]
-      if (
-        (currentValue === undefined || currentValue === '') &&
-        typeof defaultValue === 'string' &&
-        defaultValue !== ''
-      ) {
-        this.internalConfig.value[field] = defaultValue as never
-      }
-    }
-  }
-
   // Hover event handlers
   onChartMouseEnter(): void {
     this.controlsVisible.value = true
@@ -121,13 +83,15 @@ export class ChartControlsManager {
       // ignores, so take it verbatim.
       this.internalConfig.value = { ...initialConfig }
     } else if (initialConfig && !force) {
+      // An authored config is overlaid on the type defaults, which fill the
+      // roles it left empty. Facets and columns it already bound stay its
+      // call: see `mergeAuthoredChartConfig` for why the defaults cannot just
+      // be spread underneath.
       const configDefaults = this.getChartTypeDefaults(data, columns, initialConfig.chartType)
       this.internalConfig.value = {
         ...this.internalConfig.value,
-        ...configDefaults,
-        ...initialConfig,
-      }
-      this.applyMissingDefaultsForCurrentChartType(data, columns)
+        ...mergeAuthoredChartConfig(configDefaults, initialConfig),
+      } as ChartConfig
     } else {
       // Auto select chart type and fields based on data types
       const configDefaults = this.getChartTypeDefaults(data, columns)

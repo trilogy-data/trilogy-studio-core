@@ -3,6 +3,7 @@ import { snakeCaseToCapitalizedWords } from './formatting'
 import { isImageColumn, getFormatHint, getVegaFieldType, HIGHLIGHT_COLOR } from './helpers'
 import { type ChartConfig } from '../editors/results'
 import { DateTime } from 'luxon'
+import { chartMutedTextColor, chartTextColor, type ChartTheme } from './chartTheme'
 
 const HEADLINE_MAX = 20
 
@@ -40,6 +41,7 @@ const createHeadlineLayer = (
   intChart: { [key: string]: string | number | Array<any> }[],
   maxValueLength: number = 10, // New parameter for max value text length
   maxLabelLength: number = 10, // New parameter for max label text length
+  chartTheme: ChartTheme = {},
 ) => {
   let xOffset = 0
   let yOffset = 0
@@ -171,7 +173,7 @@ const createHeadlineLayer = (
         },
         color: {
           condition: { param: `select_${index}`, value: HIGHLIGHT_COLOR, empty: false },
-          value: currentTheme === 'light' ? '#262626' : '#f0f0f0',
+          value: chartTextColor(currentTheme, chartTheme, { light: '#262626', dark: '#f0f0f0' }),
         },
       },
       params: [
@@ -199,7 +201,9 @@ const createHeadlineLayer = (
     },
     encoding: {
       text: { value: snakeCaseToCapitalizedWords(column) },
-      color: { value: currentTheme === 'light' ? '#595959' : '#d1d1d1' },
+      color: {
+        value: chartMutedTextColor(currentTheme, chartTheme, { light: '#595959', dark: '#d1d1d1' }),
+      },
     },
   }
   if (!datum) {
@@ -223,6 +227,7 @@ export const createHeadlineSpec = (
   currentTheme: string,
   isMobile: boolean = false,
   intChart: { [key: string]: string | number | Array<any> }[],
+  chartTheme: ChartTheme = {},
 ) => {
   let columnsArray = Array.from(columns.values())
   // Avoid trying to process too much
@@ -280,6 +285,7 @@ export const createHeadlineSpec = (
           filtered_display,
           maxValueLength,
           maxLabelLength,
+          chartTheme,
         )
       }),
     ]
@@ -310,6 +316,7 @@ export const createHeadlineSpec = (
           filtered_display,
           maxValueLength,
           maxLabelLength,
+          chartTheme,
         )
       })
     })
