@@ -203,3 +203,95 @@ describe('ChartControlsManager', () => {
     })
   })
 })
+
+describe('ChartControlsManager authored configs', () => {
+  // A dominance curve: a numeric rank on x, a cumulative share on y, a rank
+  // bucket on colour -- and the species name along for the tooltip. Two spare
+  // categorical columns are exactly what makes the type defaults reach for a
+  // facet.
+  const columns = new Map<string, ResultColumn>([
+    ['rank_by_count', { name: 'rank_by_count', type: ColumnType.INTEGER, traits: [] }],
+    ['species', { name: 'species', type: ColumnType.STRING, traits: [] }],
+    ['share_pct', { name: 'share_pct', type: ColumnType.FLOAT, traits: [] }],
+    ['rank_bucket', { name: 'rank_bucket', type: ColumnType.STRING, traits: [] }],
+  ])
+  const data: Row[] = [
+    { rank_by_count: 1, species: 'Sambucus nigra', share_pct: 5.8, rank_bucket: 'top-10' },
+    { rank_by_count: 2, species: 'Ficus soatensis', share_pct: 10.2, rank_bucket: 'top-10' },
+    { rank_by_count: 12, species: 'Acacia melanoxylon', share_pct: 48.1, rank_bucket: 'top-20' },
+  ]
+  const authored = (): ChartConfig =>
+    ({
+      chartType: 'bar',
+      xField: 'rank_by_count',
+      yField: 'share_pct',
+      colorField: 'rank_bucket',
+      annotationField: 'species',
+      hideLegend: true,
+      showTitle: false,
+    }) as ChartConfig
+
+  let manager: ChartControlsManager
+
+  beforeEach(() => {
+    manager = new ChartControlsManager(
+      new ChromaChartHelpers({
+        onDimensionClick: () => {},
+        onPointClick: () => {},
+        onBackgroundClick: () => {},
+        onDrilldownClick: () => {},
+      }),
+    )
+  })
+
+  it('does not facet a chart that bound its fields and asked for no facet', () => {
+    manager.initializeConfig(data, columns, authored())
+
+    const config = manager.internalConfig.value
+    expect(config.trellisRowField ?? '').toBe('')
+    expect(config.trellisField ?? '').toBe('')
+    // The author's bindings are untouched.
+    expect(config.xField).toBe('rank_by_count')
+    expect(config.yField).toBe('share_pct')
+    expect(config.colorField).toBe('rank_bucket')
+    expect(config.annotationField).toBe('species')
+  })
+
+  it('keeps a facet the author asked for', () => {
+    manager.initializeConfig(data, columns, { ...authored(), trellisRowField: 'rank_bucket' })
+
+    expect(manager.internalConfig.value.trellisRowField).toBe('rank_bucket')
+  })
+
+  it('still fills a role the author left empty', () => {
+    const config = authored()
+    config.colorField = ''
+    manager.initializeConfig(data, columns, config)
+
+    expect(manager.internalConfig.value.colorField).toBe('rank_bucket')
+    expect(manager.internalConfig.value.trellisRowField ?? '').toBe('')
+  })
+
+  it('leaves a role empty rather than fill it with a column the author bound elsewhere', () => {
+    // The type defaults would put the numeric rank on y; the author has it on
+    // x. Plotting rank against rank is worse than reporting the missing field.
+    const config = authored()
+    config.yField = ''
+    manager.initializeConfig(data, columns, config)
+
+    expect(manager.internalConfig.value.yField).toBe('')
+    expect(manager.internalConfig.value.xField).toBe('rank_by_count')
+  })
+
+  it('still auto-facets when no config is authored at all', () => {
+    manager.initializeConfig(data, columns)
+
+    const config = manager.internalConfig.value
+    // The auto path owns every role, so a spare categorical column may well
+    // become a facet; what matters is that it never reuses a bound one.
+    const bound = [config.xField, config.yField, config.colorField].filter(Boolean)
+    if (config.trellisRowField) {
+      expect(bound).not.toContain(config.trellisRowField)
+    }
+  })
+})

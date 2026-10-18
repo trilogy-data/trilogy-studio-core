@@ -2,6 +2,7 @@ import { createFieldEncoding, createColorEncoding, createSizeEncoding } from './
 import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
 import { lightDefaultColor, darkDefaultColor } from './constants'
+import { chartMutedTextColor, type ChartTheme } from './chartTheme'
 
 interface VegaTransform {
   type: string
@@ -113,6 +114,7 @@ export const createPointChartSpec = (
   currentTheme: string = 'light',
   isMobile: boolean = false,
   data: readonly Row[] = [],
+  chartTheme: ChartTheme = {},
 ) => {
   const color = currentTheme === 'light' ? lightDefaultColor : darkDefaultColor
 
@@ -174,7 +176,12 @@ export const createPointChartSpec = (
       },
       encoding: {
         text: { field: config.annotationField, type: 'nominal' },
-        color: { value: currentTheme === 'light' ? '#333333' : '#dddddd' },
+        color: {
+          value: chartMutedTextColor(currentTheme, chartTheme, {
+            light: '#333333',
+            dark: '#dddddd',
+          }),
+        },
       },
     })
   }

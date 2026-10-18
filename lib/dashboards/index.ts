@@ -1,5 +1,11 @@
 export type { Dashboard } from './base'
 export { DashboardModel } from './base'
+export type { ChartTheme, ChartThemeVariable } from './chartTheme'
+export {
+  CHART_THEME_VARIABLES,
+  resolveChartThemeFromElement,
+  buildVegaThemeConfig,
+} from './chartTheme'
 export type {
   DashboardTheme,
   DashboardThemePreset,
