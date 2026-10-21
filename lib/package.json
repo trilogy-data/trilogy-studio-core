@@ -1,6 +1,6 @@
 {
   "name": "@trilogy-data/trilogy-studio-components",
-  "version": "0.1.29",
+  "version": "0.1.30",
   "private": false,
   "publishConfig": {
     "access": "public"
@@ -28,6 +28,11 @@
       "import": "./dist/llm.js",
       "default": "./dist/llm.js"
     },
+    "./agent": {
+      "types": "./dist/entry.agent.d.ts",
+      "import": "./dist/agent.js",
+      "default": "./dist/agent.js"
+    },
     "./stores": {
       "types": "./dist/stores.d.ts",
       "import": "./dist/stores.js",
@@ -52,7 +57,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "pnpm build:grammar && pnpm sync:trilogy-ai && vite build",
+    "build": "pnpm build:grammar && pnpm sync:trilogy-ai && vite build && vite build -c vite.agent.config.ts",
     "build:grammar": "pnpm -C ../prism-trilogy install --frozen-lockfile && pnpm -C ../prism-trilogy build",
     "sync:trilogy-ai": "node ../scripts/generate-trilogy-ai-guidance.mjs",
     "check:trilogy-ai": "node ../scripts/generate-trilogy-ai-guidance.mjs --check",
