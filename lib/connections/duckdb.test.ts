@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { DateTime } from 'luxon'
-import DuckDBConnection from './duckdb'
+import DuckDBConnection, { duckdbFilesystemOptions } from './duckdb'
 import { Results, ColumnType } from '../editors/results'
 import { AssetType } from './base' // Ensure AssetType is imported correctly
 import { mapArrowTypeIdToColumnType } from './arrowResults'
@@ -74,6 +74,26 @@ describe('DuckDBConnection', () => {
     it('should set model if provided', () => {
       const connectionWithModel = new DuckDBConnection('test-connection', 'test-model')
       expect(connectionWithModel.model).toBe('test-model')
+    })
+  })
+
+  describe('duckdbFilesystemOptions', () => {
+    const forceFullReadsOf = (opts: ReturnType<typeof duckdbFilesystemOptions>) =>
+      (opts as { filesystem?: { forceFullHTTPReads?: boolean } }).filesystem?.forceFullHTTPReads
+
+    it('never leaves forceFullHTTPReads unset (duckdb-wasm >= 1.31 defaults it to true)', () => {
+      expect(forceFullReadsOf(duckdbFilesystemOptions(true))).toBe(false)
+      expect(forceFullReadsOf(duckdbFilesystemOptions(false))).toBe(false)
+    })
+
+    it('keeps the permissive flags in compatibility mode', () => {
+      expect(duckdbFilesystemOptions(true)).toEqual({
+        filesystem: {
+          reliableHeadRequests: false,
+          allowFullHTTPReads: true,
+          forceFullHTTPReads: false,
+        },
+      })
     })
   })
 

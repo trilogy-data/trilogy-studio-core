@@ -46,12 +46,18 @@ const connectionCache: Record<string, { db: AsyncDuckDB; connection: AsyncDuckDB
 // faster but breaks on Firefox + some CDNs (notably GitHub Pages) that report
 // inconsistent Content-Length on HEAD vs GET. Compatibility mode falls back
 // to the older permissive flags for those cases.
-function duckdbFilesystemOptions(useCompatibleFetch: boolean) {
+//
+// forceFullHTTPReads must be set explicitly: since duckdb-wasm 1.31 an unset
+// flag is treated as true, which downloads every remote file in full before
+// the first byte is read. Compatibility mode keeps reliableHeadRequests off so
+// the ranged-HEAD fallback still sizes gzip-encoded responses correctly.
+export function duckdbFilesystemOptions(useCompatibleFetch: boolean) {
   if (useCompatibleFetch) {
     return {
       filesystem: {
         reliableHeadRequests: false,
         allowFullHTTPReads: true,
+        forceFullHTTPReads: false,
       },
     }
   }
@@ -64,7 +70,11 @@ function duckdbFilesystemOptions(useCompatibleFetch: boolean) {
       },
     }
   }
-  return {}
+  return {
+    filesystem: {
+      forceFullHTTPReads: false,
+    },
+  }
 }
 
 // Drop the cached AsyncDuckDB so the next createDuckDB() rebuilds with fresh
