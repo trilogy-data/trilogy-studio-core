@@ -212,6 +212,8 @@ export const chartConfigGuidance = `Chart type is auto-detected based on data sh
 
 [Important!] Hiding fields used only for filtering/query structure from output - such as ranks - with the "--" trilogy select syntax may be useful to get the right auto-formatting. 
 
+Readability floors the auto-detection holds to, and that a chartConfig should too: a bar/heatmap axis column should have at most 50 distinct values, a colorField or donut category at most 20, a trellis field at most 12; ids, free text (names, addresses, comments) and other near-unique columns never belong on an axis, legend or facet. A detail-level result with two numeric columns reads better as a point (scatter) than as a bar that folds many rows into each mark.
+
 [Important] To get deterministic coloring, if there is a hex field available that maps to a dimension it can be pulled in to automatically be used as the relevant color when dimension is set as colorField.
 You DO NOT need to specify colorField as the hexField if it is included; it will automatically be used to populate the color range for the dimension field.
 You can also add a default available Trilogy import "import std.color;" at the top of a query and cast a string case statement of hex values to ::string::hex to create mappings yourself.
