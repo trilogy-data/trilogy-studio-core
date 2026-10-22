@@ -1,5 +1,5 @@
-import { type CompletionItem } from '../stores/resolver'
-import { type ModelConceptInput } from './data/models'
+import type { CompletionItem } from '../stores/resolver'
+import type { ModelConceptInput } from './data/models'
 /**
  * Configuration options for retry operations
  */

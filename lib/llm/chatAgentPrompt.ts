@@ -9,6 +9,7 @@ import { conceptsToFieldPrompt } from './data/prompts'
 import type { ModelConceptInput } from './data/models'
 import type { ChatImport } from '../chats/chat'
 import type { LLMToolDefinition } from './base'
+import { RETURN_TO_USER_TOOL } from './returnToUserTool'
 import type { ToolCallResult } from './sharedToolHelpers'
 import {
   chartConfigSchema,
@@ -63,21 +64,7 @@ export function buildCustomTrilogyPrompt(
 }
 
 // Flow-control tool — exported standalone so embedding apps can include it in their own tool lists
-export const RETURN_TO_USER_TOOL = {
-  name: 'return_to_user',
-  description:
-    "Signal that you are done and return control to the user. You MUST call this tool when you have completed all requested tasks and are ready for the user's next input. Provide a brief summary of what was accomplished. Never end a turn with plain text — always call this tool when finished.",
-  input_schema: {
-    type: 'object',
-    properties: {
-      message: {
-        type: 'string',
-        description: 'A brief summary of what was accomplished or a response to the user.',
-      },
-    },
-    required: ['message'],
-  },
-} as const
+export { RETURN_TO_USER_TOOL }
 
 // Tool definitions in JSON Schema format (Anthropic/OpenAI compatible)
 export const CHAT_TOOLS = [

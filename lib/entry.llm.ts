@@ -1,5 +1,5 @@
 export * from './llm/index'
-export { runToolLoop } from './llm/toolLoopCore'
+export { runToolLoop, providerAdapter } from './llm/toolLoopCore'
 export type {
   LLMAdapter,
   MessagePersistence,

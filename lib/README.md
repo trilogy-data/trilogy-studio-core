@@ -29,6 +29,7 @@ Available public subpaths:
 - `@trilogy-data/trilogy-studio-components/stores`
 - `@trilogy-data/trilogy-studio-components/connections`
 - `@trilogy-data/trilogy-studio-components/llm`
+- `@trilogy-data/trilogy-studio-components/agent` — providers + `runToolLoop` only; no vue/pinia/DuckDB. For apps that drive their own tools.
 
 There is no root package export. Import one of the explicit subpaths above so bundle-splitting stays predictable.
 

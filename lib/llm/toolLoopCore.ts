@@ -31,6 +31,19 @@ export interface LLMAdapter {
   ): Promise<LLMResponse>
 }
 
+/**
+ * Adapt a single provider instance to LLMAdapter. Hosts with a connection
+ * registry route by name; a host holding one provider ignores the name.
+ */
+export function providerAdapter(provider: {
+  generateCompletion(options: LLMRequestOptions, history: LLMMessage[] | null): Promise<LLMResponse>
+}): LLMAdapter {
+  return {
+    generateCompletion: (_connectionName, options, messages) =>
+      provider.generateCompletion(options, messages),
+  }
+}
+
 /** Interface for persisting messages during tool loop execution */
 export interface MessagePersistence {
   /** Add a message to the conversation history */
