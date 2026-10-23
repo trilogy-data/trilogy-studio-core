@@ -4,6 +4,13 @@ import { ColumnType } from '../editors/results'
 import { Charts, Controls, LAYERABLE_CHART_TYPES } from './constants'
 import { snakeCaseToCapitalizedWords } from './formatting'
 import { type FieldEncodingOutput } from './types'
+import {
+  type DiscreteRole,
+  MAX_TRELLIS_CELLS,
+  MAX_VERTICAL_BAR_CATEGORIES,
+  cardinalityMap,
+  fitsRole,
+} from './chartCardinality'
 
 export const HIGHLIGHT_COLOR = '#FF7F7F'
 
@@ -293,20 +300,122 @@ export const mergeAuthoredChartConfig = (
   return merged
 }
 
+export type DefaultableChartType =
+  | 'line'
+  | 'bar'
+  | 'barh'
+  | 'point'
+  | 'geo-map'
+  | 'tree'
+  | 'area'
+  | 'heatmap'
+  | 'headline'
+  | 'donut'
+
+interface ColumnPool {
+  categorical: ResultColumn[]
+  numeric: ResultColumn[]
+  cardinality: Map<string, number>
+}
+
+const boundFields = (config: Partial<ChartConfig>): Set<string> => {
+  const bound = new Set<string>()
+  for (const role of CHART_FIELD_ROLES) {
+    const column = boundColumn(config, role)
+    if (column) bound.add(column)
+  }
+  return bound
+}
+
+const unboundCategorical = (pool: ColumnPool, config: Partial<ChartConfig>): ResultColumn[] => {
+  const bound = boundFields(config)
+  return pool.categorical.filter((col) => !bound.has(col.name))
+}
+
+/** First unbound categorical column within the role's capacity, in select order. */
+const pickDiscrete = (
+  pool: ColumnPool,
+  config: Partial<ChartConfig>,
+  role: DiscreteRole,
+): ResultColumn | undefined =>
+  unboundCategorical(pool, config).find((col) => fitsRole(pool.cardinality, col.name, role))
+
+/** Narrowest unbound categorical column, for a role the chart cannot do without. */
+const pickLeastDiscrete = (
+  pool: ColumnPool,
+  config: Partial<ChartConfig>,
+): ResultColumn | undefined => {
+  let best: ResultColumn | undefined
+  for (const col of unboundCategorical(pool, config)) {
+    if (!best || pool.cardinality.get(col.name)! < pool.cardinality.get(best.name)!) best = col
+  }
+  return best
+}
+
+const pickCategoryAxis = (
+  pool: ColumnPool,
+  config: Partial<ChartConfig>,
+  role: DiscreteRole = 'axis',
+): ResultColumn | undefined => pickDiscrete(pool, config, role) ?? pickLeastDiscrete(pool, config)
+
+const pickNumeric = (pool: ColumnPool, config: Partial<ChartConfig>): ResultColumn | undefined => {
+  const bound = boundFields(config)
+  return pool.numeric.find((col) => !bound.has(col.name))
+}
+
+const assignColor = (pool: ColumnPool, config: Partial<ChartConfig>, numericFallback: boolean) => {
+  const column =
+    pickDiscrete(pool, config, 'legend') ??
+    (numericFallback ? pickNumeric(pool, config) : undefined)
+  if (column) config.colorField = column.name
+}
+
+const assignTrellis = (pool: ColumnPool, config: Partial<ChartConfig>) => {
+  const row = pickDiscrete(pool, config, 'facet')
+  if (!row) return
+  config.trellisRowField = row.name
+  const rowCells = pool.cardinality.get(row.name) ?? 1
+  const column = unboundCategorical(pool, config).find(
+    (col) =>
+      fitsRole(pool.cardinality, col.name, 'facet') &&
+      rowCells * (pool.cardinality.get(col.name) ?? 1) <= MAX_TRELLIS_CELLS,
+  )
+  if (column) config.trellisField = column.name
+}
+
+/** Distinct marks the bound categorical roles can tell apart. */
+const markCapacity = (pool: ColumnPool, config: Partial<ChartConfig>): number => {
+  let capacity = 1
+  for (const field of boundFields(config)) {
+    const cardinality = pool.cardinality.get(field)
+    if (cardinality !== undefined) capacity *= Math.max(cardinality, 1)
+  }
+  return capacity
+}
+
+/**
+ * Bar, horizontal bar or scatter for categorical + numeric data.
+ *
+ * A bar chart aggregates every row that lands on the same mark, so it is only
+ * a faithful default when the discrete roles it can fill account for the rows.
+ * A detail-level result (rows well past what axis, legend and facets can
+ * separate) with two numeric columns plots as a scatter instead; with one
+ * numeric column the bar is the only reading and stays.
+ */
+const pickCategoricalChartType = (rows: number, pool: ColumnPool): 'bar' | 'barh' | 'point' => {
+  const axis = pickDiscrete(pool, {}, 'axis')
+  if (!axis) return pool.numeric.length >= 2 ? 'point' : 'barh'
+  const probe: Partial<ChartConfig> = { xField: axis.name }
+  assignColor(pool, probe, false)
+  assignTrellis(pool, probe)
+  if (rows > markCapacity(pool, probe) && pool.numeric.length >= 2) return 'point'
+  return (pool.cardinality.get(axis.name) ?? 0) > MAX_VERTICAL_BAR_CATEGORIES ? 'barh' : 'bar'
+}
+
 export const determineDefaultConfig = (
   data: readonly Row[],
   columns: Map<string, ResultColumn>,
-  chartType?:
-    | 'line'
-    | 'bar'
-    | 'barh'
-    | 'point'
-    | 'geo-map'
-    | 'tree'
-    | 'area'
-    | 'heatmap'
-    | 'headline'
-    | 'donut',
+  chartType?: DefaultableChartType,
 ): Partial<ChartConfig> => {
   const defaults: Partial<ChartConfig> = {
     // `showTitle` used to be a no-op wherever no `chartTitle` was supplied --
@@ -322,7 +431,7 @@ export const determineDefaultConfig = (
   const numericColumns = filteredColumns('numeric', columns)
   // Filter out hex columns from categorical - hex columns are used for color mapping, not as categorical dimensions
   const categoricalColumns = filteredColumns('categorical', columns).filter(
-    (col) => !isHexColumn(col),
+    (col) => !isHexColumn(col) && !isImageColumn(col),
   )
   const temporalColumns = filteredColumns('temporal', columns)
   const latitudeColumns = filteredColumns('latitude', columns)
@@ -342,6 +451,12 @@ export const determineDefaultConfig = (
   ) {
     defaults.chartType = 'headline'
     return defaults
+  }
+
+  const pool: ColumnPool = {
+    categorical: categoricalColumns,
+    numeric: numericColumns,
+    cardinality: cardinalityMap(data, categoricalColumns),
   }
 
   // Categorical columns with a discrete time trait (e.g. decade) are ordered time
@@ -366,157 +481,52 @@ export const determineDefaultConfig = (
     // (line remains eligible via determineEligibleChartTypes).
     defaults.chartType = 'bar'
   } else if (categoricalColumns.length > 0 && numericColumns.length > 0) {
-    // Categorical vs numeric - check category count for bar orientation
-    const firstCatField = categoricalColumns[0].name
-    const uniqueCategories = new Set()
-
-    for (let i = 0; i < Math.min(data.length, 50); i++) {
-      if (data[i] && data[i][firstCatField] !== undefined) {
-        uniqueCategories.add(data[i][firstCatField])
-      }
-    }
-
-    if (uniqueCategories.size > 7) {
-      // Many categories - use horizontal bar
-      defaults.chartType = 'barh'
-    } else {
-      // Few categories - use vertical bar
-      defaults.chartType = 'bar'
-    }
+    defaults.chartType = pickCategoricalChartType(data.length, pool)
   } else if (numericColumns.length >= 2) {
     // Multiple numeric columns - use scatter plot
-    if (data.length === 1) {
-      defaults.chartType = 'headline'
-    } else {
-      defaults.chartType = 'point'
-    }
-  } else if (categoricalColumns.length >= 2 && numericColumns.length > 0) {
-    // Two categorical dimensions and a numeric - use heatmap
-    defaults.chartType = 'heatmap'
-  } else if (numericColumns.length > 0 && categoricalColumns.length == 0) {
+    defaults.chartType = data.length === 1 ? 'headline' : 'point'
+  } else if (numericColumns.length > 0) {
     defaults.chartType = 'headline'
   }
 
   // now set defaults for each chart type
   if (defaults.chartType === 'barh') {
-    defaults.yField = at(categoricalColumns, 0)?.name
+    defaults.yField = pickCategoryAxis(pool, defaults)?.name
     if (numericColumns.length > 0) {
       defaults.xField = firstNonCategoricalNumericColumn(defaults, numericColumns).name
     }
-    const nonAssignedCategorical = categoricalColumns.filter(
-      (col) => col.name !== defaults.yField && col.name !== defaults.xField,
-    )
-    if (nonAssignedCategorical.length > 0) {
-      defaults.colorField = nonAssignedCategorical[0].name
-    }
-    if (numericColumns.length > 1 && !defaults.colorField) {
-      defaults.colorField = numericColumns[1].name
-    }
-    // Use extra categorical columns for trellising
-    const trellisableCategorical = categoricalColumns.filter(
-      (col) =>
-        col.name !== defaults.yField &&
-        col.name !== defaults.xField &&
-        col.name !== defaults.colorField,
-    )
-    if (trellisableCategorical.length > 0) {
-      defaults.trellisRowField = trellisableCategorical[0].name
-    }
-    if (trellisableCategorical.length > 1) {
-      defaults.trellisField = trellisableCategorical[1].name
-    }
+    assignColor(pool, defaults, true)
+    assignTrellis(pool, defaults)
   } else if (defaults.chartType === 'donut') {
-    defaults.yField = at(categoricalColumns, 0)?.name
+    defaults.yField = pickCategoryAxis(pool, defaults, 'legend')?.name
     defaults.xField = at(numericColumns, 0)?.name
-    const nonAssignedCategorical = categoricalColumns.filter(
-      (col) => col.name !== defaults.yField && col.name !== defaults.xField,
-    )
-    if (nonAssignedCategorical.length > 0) {
-      defaults.colorField = nonAssignedCategorical[0].name
-    }
-    if (numericColumns.length > 1 && !defaults.colorField) {
-      defaults.colorField = numericColumns[1].name
-    }
+    assignColor(pool, defaults, true)
   } else if (defaults.chartType === 'point') {
     defaults.xField = at(numericColumns, 0)?.name
     defaults.yField = at(numericColumns, 1)?.name
-
-    // If we have a categorical column, use it for color
-    const nonAssignedCategorical = categoricalColumns.filter(
-      (col) => col.name !== defaults.yField && col.name !== defaults.xField,
-    )
-    if (nonAssignedCategorical.length > 0) {
-      defaults.colorField = nonAssignedCategorical[0].name
+    assignColor(pool, defaults, false)
+    defaults.sizeField = pickNumeric(pool, defaults)?.name
+    if (!defaults.colorField) {
+      assignColor(pool, defaults, true)
     }
-    // if we have another numeric column, use it for size
-    const nonAssignedNumeric = numericColumns.filter(
-      (col) => col.name !== defaults.yField && col.name !== defaults.xField,
-    )
-    if (nonAssignedNumeric.length > 0) {
-      defaults.sizeField = nonAssignedNumeric[0].name
-    }
-    // if we still don't have a color field and we have another numeric column, use it
-    if (!defaults.colorField && nonAssignedNumeric.length > 1) {
-      defaults.colorField = nonAssignedNumeric[1].name
-    }
-    // Use extra categorical columns for trellising
-    const trellisableCategorical = categoricalColumns.filter(
-      (col) =>
-        col.name !== defaults.yField &&
-        col.name !== defaults.xField &&
-        col.name !== defaults.colorField,
-    )
-    if (trellisableCategorical.length > 0) {
-      defaults.trellisRowField = trellisableCategorical[0].name
-    }
-    if (trellisableCategorical.length > 1) {
-      defaults.trellisField = trellisableCategorical[1].name
-    }
+    assignTrellis(pool, defaults)
   } else if (defaults.chartType === 'heatmap') {
-    defaults.xField = at(categoricalColumns, 0)?.name
-    defaults.yField = at(categoricalColumns, 1)?.name
+    defaults.xField = pickCategoryAxis(pool, defaults)?.name
+    defaults.yField = pickCategoryAxis(pool, defaults)?.name
     defaults.colorField = at(numericColumns, 0)?.name
-    // Use extra categorical columns for trellising
-    const trellisableCategorical = categoricalColumns.filter(
-      (col) => col.name !== defaults.yField && col.name !== defaults.xField,
-    )
-    if (trellisableCategorical.length > 0) {
-      defaults.trellisRowField = trellisableCategorical[0].name
-    }
-    if (trellisableCategorical.length > 1) {
-      defaults.trellisField = trellisableCategorical[1].name
-    }
+    assignTrellis(pool, defaults)
   } else if (defaults.chartType === 'bar') {
     // Prefer a discrete time trait column (e.g. decade) as xField so bar charts
     // render time buckets along the x-axis by default.
-    defaults.xField = at(discreteTimeCategoricalColumns, 0)?.name ?? at(categoricalColumns, 0)?.name
+    defaults.xField =
+      at(discreteTimeCategoricalColumns, 0)?.name ?? pickCategoryAxis(pool, defaults)?.name
     let nonDateNumeric = numericColumns.filter(
       (col) => !isTemporalColumn(col) && col.name !== defaults.xField,
     )
     defaults.yField =
       nonDateNumeric.length > 0 ? nonDateNumeric[0].name : at(numericColumns, 0)?.name
-    const nonAssignedCategorical = categoricalColumns.filter(
-      (col) => col.name !== defaults.yField && col.name !== defaults.xField,
-    )
-    if (nonAssignedCategorical.length > 0) {
-      defaults.colorField = nonAssignedCategorical[0].name
-    }
-    if (numericColumns.length > 1 && !defaults.colorField) {
-      defaults.colorField = numericColumns[1].name
-    }
-    // Use extra categorical columns for trellising
-    const trellisableCategorical = categoricalColumns.filter(
-      (col) =>
-        col.name !== defaults.yField &&
-        col.name !== defaults.xField &&
-        col.name !== defaults.colorField,
-    )
-    if (trellisableCategorical.length > 0) {
-      defaults.trellisRowField = trellisableCategorical[0].name
-    }
-    if (trellisableCategorical.length > 1) {
-      defaults.trellisField = trellisableCategorical[1].name
-    }
+    assignColor(pool, defaults, true)
+    assignTrellis(pool, defaults)
   } else if (defaults.chartType === 'headline') {
     defaults.xField = at(numericColumns, 0)?.name
   } else if (['line', 'area'].includes(defaults.chartType || '')) {
@@ -533,26 +543,8 @@ export const determineDefaultConfig = (
         : at(numericColumns, 0)?.name
     defaults.yField2 =
       nonTemporalNumericColumns.length > 1 ? nonTemporalNumericColumns[1].name : undefined
-    // If we have a categorical column, use it for color
-    const nonAssignedCategorical = categoricalColumns.filter(
-      (col) => col.name !== defaults.yField && col.name !== defaults.xField,
-    )
-    if (nonAssignedCategorical.length > 0) {
-      defaults.colorField = nonAssignedCategorical[0].name
-    }
-    // Use extra categorical columns for trellising
-    const trellisableCategorical = categoricalColumns.filter(
-      (col) =>
-        col.name !== defaults.yField &&
-        col.name !== defaults.xField &&
-        col.name !== defaults.colorField,
-    )
-    if (trellisableCategorical.length > 0) {
-      defaults.trellisRowField = trellisableCategorical[0].name
-    }
-    if (trellisableCategorical.length > 1) {
-      defaults.trellisField = trellisableCategorical[1].name
-    }
+    assignColor(pool, defaults, false)
+    assignTrellis(pool, defaults)
   } else if (defaults.chartType === 'geo-map') {
     // For USA map, we need:
     // 1. A field to join with geographic data (state codes/names)
@@ -578,31 +570,11 @@ export const determineDefaultConfig = (
       }
     }
     // if we have a non-used categorical column, use it for default
-    const nonAssignedCategorical = categoricalColumns.filter(
-      (col) =>
-        col.name !== defaults.colorField &&
-        col.name !== defaults.xField &&
-        col.name !== defaults.yField &&
-        col.name !== defaults.geoField,
-    )
-    if (nonAssignedCategorical.length > 0 && !defaults.annotationField) {
-      defaults.annotationField = nonAssignedCategorical[0].name
+    const annotation = unboundCategorical(pool, defaults)[0]
+    if (annotation && !defaults.annotationField) {
+      defaults.annotationField = annotation.name
     }
-    // Use extra categorical columns for trellising
-    const trellisableCategorical = categoricalColumns.filter(
-      (col) =>
-        col.name !== defaults.geoField &&
-        col.name !== defaults.xField &&
-        col.name !== defaults.yField &&
-        col.name !== defaults.colorField &&
-        col.name !== defaults.annotationField,
-    )
-    if (trellisableCategorical.length > 0) {
-      defaults.trellisRowField = trellisableCategorical[0].name
-    }
-    if (trellisableCategorical.length > 1) {
-      defaults.trellisField = trellisableCategorical[1].name
-    }
+    assignTrellis(pool, defaults)
   }
 
   return defaults
