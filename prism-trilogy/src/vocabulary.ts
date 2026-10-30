@@ -78,6 +78,7 @@ export const KEYWORDS = [
   'incremental',
   'freshness',
   'extends',
+  'storage',
   'assert',
   // definitions
   'def',
@@ -227,6 +228,11 @@ export const MATH_FUNCTIONS = [
   'abs',
   'sqrt',
   'random',
+  'bit_and',
+  'bit_or',
+  'bit_xor',
+  'bit_shift_left',
+  'bit_shift_right',
 ] as const
 
 export const STRING_FUNCTIONS = [
@@ -300,6 +306,7 @@ export const ARRAY_FUNCTIONS = [
   'array_sort',
   'array_transform',
   'array_filter',
+  'array_reduce',
   'generate_array',
 ] as const
 
