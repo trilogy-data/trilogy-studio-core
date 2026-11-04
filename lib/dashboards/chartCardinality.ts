@@ -51,3 +51,19 @@ export const fitsRole = (
   field: string,
   role: DiscreteRole,
 ): boolean => (cardinality.get(field) ?? 0) <= ROLE_CAPACITY[role]
+
+/** Count observed combinations, not the Cartesian product of correlated columns. */
+export const discreteMarkCount = (data: readonly Row[], fields: readonly string[]): number => {
+  const combinations = new Set<string>()
+  for (const row of data.slice(0, CARDINALITY_SAMPLE_ROWS)) {
+    combinations.add(
+      JSON.stringify(
+        fields.map((field) => {
+          const value = row[field]
+          return value == null ? null : [typeof value, String(value)]
+        }),
+      ),
+    )
+  }
+  return combinations.size
+}

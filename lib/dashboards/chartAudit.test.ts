@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { ColumnType, type ChartConfig, type ResultColumn, type Row } from '../editors/results'
 import {
@@ -123,6 +124,24 @@ describe('cardinality-aware defaults', () => {
     const { config, issues } = auditDefault(data, columns)
     expect(issues).toEqual([])
     expect(config).toMatchObject({ chartType: 'point', colorField: 'region' })
+  })
+
+  it('counts actual category combinations when dimensions are correlated', () => {
+    const columns = new Map([
+      column('supplier', ColumnType.STRING),
+      column('address', ColumnType.STRING),
+      column('balance', ColumnType.FLOAT),
+      column('cost', ColumnType.FLOAT),
+    ])
+    const data = generate(50, columns, (name, i) =>
+      name === 'supplier' || name === 'address' ? `${name}${i % 10}` : i,
+    )
+    // Ten suppliers with ten addresses are ten groups, not 100 independent bars.
+    expect(auditDefault(data, columns).config.chartType).toBe('point')
+    const forced = determineDefaultConfig(data, columns, 'bar') as ChartConfig
+    expect(auditChartConfig(data, columns, forced).map((issue) => issue.rule)).toContain(
+      'detail-aggregation',
+    )
   })
 
   it('ranks by the narrowest column when nothing fits the axis and only one value exists', () => {
@@ -352,6 +371,8 @@ const FORCEABLE: DefaultableChartType[] = [
   'heatmap',
   'headline',
   'donut',
+  'boxplot',
+  'beeswarm',
 ]
 
 /** Rules a user's explicit chart type is still held to; volume is their call. */

@@ -2,23 +2,28 @@
 import { ref } from 'vue'
 import type { ChartConfig, ResultColumn, Row } from '../editors/results'
 import { isLayeredConfig } from '../editors/results'
-import { determineDefaultConfig, mergeAuthoredChartConfig } from '../dashboards/helpers'
+import {
+  determineDefaultConfig,
+  mergeAuthoredChartConfig,
+  DEFAULTABLE_CHART_TYPES,
+  type DefaultableChartType,
+} from '../dashboards/helpers'
 import { ChromaChartHelpers } from './chartHelpers'
 
-const DEFAULTABLE_CHART_TYPES = [
-  'bar',
-  'line',
-  'barh',
-  'point',
-  'geo-map',
-  'tree',
-  'area',
-  'headline',
-  'donut',
-  'heatmap',
-] as const
-
-type DefaultableChartType = (typeof DEFAULTABLE_CHART_TYPES)[number]
+const emptyConfig = (): ChartConfig => ({
+  chartType: 'bar',
+  xField: '',
+  yField: '',
+  yField2: '',
+  colorField: '',
+  sizeField: '',
+  groupField: '',
+  trellisField: '',
+  geoField: '',
+  annotationField: '',
+  hideLegend: false,
+  showTitle: false,
+})
 
 export class ChartControlsManager {
   // Controls visibility state
@@ -26,20 +31,7 @@ export class ChartControlsManager {
   public showingControls = ref(false)
 
   // Internal configuration that merges provided config with defaults
-  public internalConfig = ref<ChartConfig>({
-    chartType: 'bar',
-    xField: '',
-    yField: '',
-    yField2: '',
-    colorField: '',
-    sizeField: '',
-    groupField: '',
-    trellisField: '',
-    geoField: '',
-    annotationField: '',
-    hideLegend: false,
-    showTitle: false,
-  })
+  public internalConfig = ref<ChartConfig>(emptyConfig())
 
   constructor(private chartHelpers: ChromaChartHelpers) {}
 
@@ -89,13 +81,13 @@ export class ChartControlsManager {
       // be spread underneath.
       const configDefaults = this.getChartTypeDefaults(data, columns, initialConfig.chartType)
       this.internalConfig.value = {
-        ...this.internalConfig.value,
+        ...emptyConfig(),
         ...mergeAuthoredChartConfig(configDefaults, initialConfig),
       } as ChartConfig
     } else {
       // Auto select chart type and fields based on data types
       const configDefaults = this.getChartTypeDefaults(data, columns)
-      this.internalConfig.value = { ...this.internalConfig.value, ...configDefaults }
+      this.internalConfig.value = { ...emptyConfig(), ...configDefaults }
       if (onChartConfigChange) {
         onChartConfigChange({ ...this.internalConfig.value })
       }
@@ -124,7 +116,7 @@ export class ChartControlsManager {
       )
 
       // Update all config fields
-      Object.assign(this.internalConfig.value, configDefaults)
+      this.internalConfig.value = { ...emptyConfig(), ...configDefaults }
     }
 
     // Notify parent component if the callback is provided
