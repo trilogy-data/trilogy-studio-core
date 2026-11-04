@@ -294,4 +294,40 @@ describe('ChartControlsManager authored configs', () => {
       expect(bound).not.toContain(config.trellisRowField)
     }
   })
+
+  it('replaces stale bindings and layers when resetting to automatic defaults', () => {
+    manager.initializeConfig(data, columns, {
+      chartType: 'bar',
+      layers: [authored(), authored()],
+      trellisRowField: 'species',
+      yField2: 'share_pct',
+    })
+    manager.initializeConfig(data, columns, null, undefined, true)
+    expect(manager.internalConfig.value.layers).toBeUndefined()
+    expect(manager.internalConfig.value.yField2 ?? '').toBe('')
+    expect(manager.internalConfig.value.trellisRowField).not.toBe('species')
+  })
+
+  it('does not carry an old facet into a newly authored config', () => {
+    manager.initializeConfig(data, columns, { ...authored(), trellisRowField: 'species' })
+    manager.initializeConfig(data, columns, authored())
+    expect(manager.internalConfig.value.trellisRowField).toBeUndefined()
+  })
+
+  it('fills boxplot roles and removes scatter bindings on a type switch', () => {
+    manager.initializeConfig(data, columns, {
+      chartType: 'point',
+      xField: 'rank_by_count',
+      yField: 'share_pct',
+      sizeField: 'rank_by_count',
+    })
+    manager.updateConfig('chartType', 'boxplot', data, columns)
+    expect(manager.internalConfig.value).toMatchObject({
+      chartType: 'boxplot',
+      groupField: 'species',
+      yField: 'rank_by_count',
+    })
+    expect(manager.internalConfig.value.sizeField ?? '').toBe('')
+    expect(manager.internalConfig.value.xField ?? '').toBe('')
+  })
 })

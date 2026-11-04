@@ -9,6 +9,8 @@ import {
   MAX_TRELLIS_CELLS,
   MAX_VERTICAL_BAR_CATEGORIES,
   cardinalityMap,
+  discreteMarkCount,
+  CARDINALITY_SAMPLE_ROWS,
   fitsRole,
 } from './chartCardinality'
 
@@ -300,17 +302,21 @@ export const mergeAuthoredChartConfig = (
   return merged
 }
 
-export type DefaultableChartType =
-  | 'line'
-  | 'bar'
-  | 'barh'
-  | 'point'
-  | 'geo-map'
-  | 'tree'
-  | 'area'
-  | 'heatmap'
-  | 'headline'
-  | 'donut'
+export const DEFAULTABLE_CHART_TYPES = [
+  'line',
+  'bar',
+  'barh',
+  'point',
+  'geo-map',
+  'tree',
+  'area',
+  'heatmap',
+  'headline',
+  'donut',
+  'boxplot',
+  'beeswarm',
+] as const
+export type DefaultableChartType = (typeof DEFAULTABLE_CHART_TYPES)[number]
 
 interface ColumnPool {
   categorical: ResultColumn[]
@@ -371,6 +377,8 @@ const assignColor = (pool: ColumnPool, config: Partial<ChartConfig>, numericFall
 }
 
 const assignTrellis = (pool: ColumnPool, config: Partial<ChartConfig>) => {
+  // A secondary measure is normalized to layers, which cannot be faceted.
+  if (config.yField2) return
   const row = pickDiscrete(pool, config, 'facet')
   if (!row) return
   config.trellisRowField = row.name
@@ -383,16 +391,6 @@ const assignTrellis = (pool: ColumnPool, config: Partial<ChartConfig>) => {
   if (column) config.trellisField = column.name
 }
 
-/** Distinct marks the bound categorical roles can tell apart. */
-const markCapacity = (pool: ColumnPool, config: Partial<ChartConfig>): number => {
-  let capacity = 1
-  for (const field of boundFields(config)) {
-    const cardinality = pool.cardinality.get(field)
-    if (cardinality !== undefined) capacity *= Math.max(cardinality, 1)
-  }
-  return capacity
-}
-
 /**
  * Bar, horizontal bar or scatter for categorical + numeric data.
  *
@@ -402,13 +400,21 @@ const markCapacity = (pool: ColumnPool, config: Partial<ChartConfig>): number =>
  * separate) with two numeric columns plots as a scatter instead; with one
  * numeric column the bar is the only reading and stays.
  */
-const pickCategoricalChartType = (rows: number, pool: ColumnPool): 'bar' | 'barh' | 'point' => {
+const pickCategoricalChartType = (
+  data: readonly Row[],
+  pool: ColumnPool,
+): 'bar' | 'barh' | 'point' => {
   const axis = pickDiscrete(pool, {}, 'axis')
   if (!axis) return pool.numeric.length >= 2 ? 'point' : 'barh'
   const probe: Partial<ChartConfig> = { xField: axis.name }
   assignColor(pool, probe, false)
   assignTrellis(pool, probe)
-  if (rows > markCapacity(pool, probe) && pool.numeric.length >= 2) return 'point'
+  const fields = [...boundFields(probe)]
+  if (
+    pool.numeric.length >= 2 &&
+    discreteMarkCount(data, fields) < Math.min(data.length, CARDINALITY_SAMPLE_ROWS)
+  )
+    return 'point'
   return (pool.cardinality.get(axis.name) ?? 0) > MAX_VERTICAL_BAR_CATEGORIES ? 'barh' : 'bar'
 }
 
@@ -481,7 +487,7 @@ export const determineDefaultConfig = (
     // (line remains eligible via determineEligibleChartTypes).
     defaults.chartType = 'bar'
   } else if (categoricalColumns.length > 0 && numericColumns.length > 0) {
-    defaults.chartType = pickCategoricalChartType(data.length, pool)
+    defaults.chartType = pickCategoricalChartType(data, pool)
   } else if (numericColumns.length >= 2) {
     // Multiple numeric columns - use scatter plot
     defaults.chartType = data.length === 1 ? 'headline' : 'point'
@@ -510,6 +516,12 @@ export const determineDefaultConfig = (
       assignColor(pool, defaults, true)
     }
     assignTrellis(pool, defaults)
+  } else if (defaults.chartType === 'boxplot') {
+    defaults.groupField = pickCategoryAxis(pool, defaults)?.name
+    defaults.yField = at(numericColumns, 0)?.name
+  } else if (defaults.chartType === 'beeswarm') {
+    defaults.xField = pickCategoryAxis(pool, defaults)?.name
+    assignColor(pool, defaults, false)
   } else if (defaults.chartType === 'heatmap') {
     defaults.xField = pickCategoryAxis(pool, defaults)?.name
     defaults.yField = pickCategoryAxis(pool, defaults)?.name
@@ -780,21 +792,8 @@ export const validateChartConfigForData = (
   // Compute defaults scoped to the user's requested chart type so the suggested
   // config can auto-fill missing required fields without discarding the user's
   // other choices (e.g. keep their colorField, fill in the missing xField/yField).
-  const defaultableChartTypes = [
-    'line',
-    'bar',
-    'barh',
-    'point',
-    'geo-map',
-    'tree',
-    'area',
-    'heatmap',
-    'headline',
-    'donut',
-  ] as const
-  type DefaultableChartType = (typeof defaultableChartTypes)[number]
   const scopedChartType: DefaultableChartType | undefined = (
-    defaultableChartTypes as readonly string[]
+    DEFAULTABLE_CHART_TYPES as readonly string[]
   ).includes(config.chartType)
     ? (config.chartType as DefaultableChartType)
     : undefined

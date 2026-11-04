@@ -14,6 +14,8 @@ import {
   MAX_TRELLIS_CELLS,
   ROLE_CAPACITY,
   cardinalityMap,
+  discreteMarkCount,
+  CARDINALITY_SAMPLE_ROWS,
   fitsRole,
 } from './chartCardinality'
 
@@ -185,13 +187,11 @@ export const auditChartConfig = (
   }
 
   if ((config.chartType === 'bar' || config.chartType === 'barh') && numericCount >= 2) {
-    let capacity = 1
-    for (const [role, name] of bound) {
-      if (role === 'yField2') continue
-      const count = cardinality.get(name)
-      if (count !== undefined) capacity *= Math.max(count, 1)
-    }
-    if (data.length > capacity) {
+    const fields = [...bound]
+      .filter(([role, name]) => role !== 'yField2' && cardinality.has(name))
+      .map(([, name]) => name)
+    const capacity = discreteMarkCount(data, fields)
+    if (Math.min(data.length, CARDINALITY_SAMPLE_ROWS) > capacity) {
       issues.push({
         rule: 'detail-aggregation',
         message: `${data.length} rows fold into ${capacity} bars; a scatter of the numeric columns keeps each row`,
