@@ -18,7 +18,7 @@ import { createHeatmapSpec } from './heatmapSpec'
 import { createLineChartSpec, createAreaChartSpec } from './lineAreaSpec'
 import { createPointChartSpec, addLabelTransformToTextMarks } from './pointSpec'
 import { createBeeSwarmSpec } from './beeSwarmSpec'
-import { TRELLIS_ELIGIBLE, NO_AXES_CHARTS } from './constants'
+import { TRELLIS_ELIGIBLE } from './constants'
 import { toJsonSafeRows, toJsonSafeValue } from '../utility/jsonSerialization'
 
 import {
@@ -508,13 +508,16 @@ export const generateVegaSpec = (
       )
     }
 
-    // Charts without axes need less horizontal padding since they don't have axis labels
-    const horizontalPadding = NO_AXES_CHARTS.includes(config.chartType) ? 10 : 70
-
+    // Start with the available space. The render manager fits these plot areas
+    // after Vega has measured the actual axes, headers, title and legend.
+    spec.usermeta = {
+      ...spec.usermeta,
+      trilogyFacetLayout: { rows: uniqueRowValues, columns: uniqueColumnValues },
+    }
     spec.spec = {
       ...spec.spec,
-      width: (containerWidth - uniqueColumnValues * horizontalPadding) / uniqueColumnValues - 20,
-      height: (containerHeight - uniqueRowValues * 10) / uniqueRowValues - 20,
+      width: Math.max(1, containerWidth / Math.max(1, uniqueColumnValues)),
+      height: Math.max(1, containerHeight / Math.max(1, uniqueRowValues)),
     }
   }
 
