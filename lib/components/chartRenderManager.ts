@@ -6,6 +6,7 @@ import type { ChartConfig, ResultColumn } from '../editors/results'
 import { ChromaChartHelpers } from './chartHelpers'
 import type { LayerBinding } from '../dashboards/layerSpec'
 import { safeJsonStringify } from '../utility/jsonSerialization'
+import { fitFacetView } from './chartSizing'
 
 // Type for tracking render operations
 export interface RenderOperation {
@@ -158,6 +159,19 @@ export class ChartRenderManager {
         theme: currentTheme === 'dark' ? 'dark' : undefined,
         renderer: 'canvas',
       })
+
+      if (!renderOp.aborted) {
+        await fitFacetView(
+          result.view,
+          result.vgSpec,
+          { width: targetContainer.clientWidth, height: targetContainer.clientHeight },
+          () => {
+            const surface = targetContainer.querySelector('canvas, svg')
+            const bounds = surface?.getBoundingClientRect()
+            return { width: bounds?.width ?? 0, height: bounds?.height ?? 0 }
+          },
+        )
+      }
 
       // Check for abort after async operation
       if (renderOp.aborted) {

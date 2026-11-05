@@ -771,6 +771,9 @@ export default defineComponent({
 }
 
 .vega-container.vega-active {
+  /* Very small panes or many facets can exceed the minimum plot
+     size. Keep their axes reachable instead of clipping the rendered canvas. */
+  overflow: auto;
   opacity: 1;
   pointer-events: auto;
 }

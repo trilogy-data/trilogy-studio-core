@@ -514,8 +514,8 @@ describe('generateVegaSpec', () => {
       expect(spec.facet).toBeDefined()
       expect(spec.facet.column.field).toBe('region')
       expect(spec.spec).toBeDefined()
-      expect(spec.spec.width).toBe(60) //based on test shape
-      expect(spec.spec.height).toBe(370) // adjusted for row calculation (10px padding)
+      expect(spec.spec.width).toBe(150) // initial plot budget, fitted after rendering
+      expect(spec.spec.height).toBe(400) // initial budget; measured chrome is subtracted at render
     })
 
     it('should generate valid faceted line chart spec with row split', () => {
