@@ -106,6 +106,15 @@ add a `SyntaxExample` to pytrilogy's `trilogy/ai/syntax_examples.py`. `pnpm chec
 CI on drift. Note it is embedded in three frozen agent prompts, so regenerating busts the Anthropic
 prompt cache once; batch it with other prompt changes.
 
+### Haybarn build
+
+`--mode haybarn` (`pnpm dev:haybarn` / `build:haybarn` / `local:haybarn`) builds the same studio on
+Query.Farm's `@haybarn/haybarn-wasm` fork of duckdb-wasm, whose extension repo carries `vgi` (VGI
+models in trilogy-public-models). It is a `mergeConfig` overlay at the bottom of `vite.config.ts`:
+an import alias, base `/trilogy-studio-core-haybarn/`, its own optimizer `cacheDir`, a CDN root
+(unpkg — the package is over jsDelivr's 150MB limit) and extra CSP `connect-src` origins. Keep lib
+free of Haybarn branches; the APIs are identical. Deployed by `.github/workflows/deploy_haybarn.yml`.
+
 ## CI
 
 Deployed on github CI

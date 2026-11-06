@@ -15,8 +15,8 @@ const pythonProcess = spawn('python', ['pyserver/main.py'], {
   shell: true,
 })
 
-// Start the npm dev process
-const npmProcess = spawn('npm', ['run', 'dev'], {
+// Start the npm dev process. Extra args go to vite, e.g. `--mode haybarn`.
+const npmProcess = spawn('npm', ['run', 'dev', '--', ...process.argv.slice(2)], {
   stdio: ['pipe', 'inherit', 'inherit'],
   shell: true,
 })
