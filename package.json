@@ -54,7 +54,7 @@
     "yargs": "^18.2.0"
   },
   "dependencies": {
-    "@duckdb/duckdb-wasm": "1.32.0",
+    "@duckdb/duckdb-wasm": "1.33.1-dev110.0",
     "@fontsource/inter": "^5.3.0",
     "@google/genai": "^2.24.0",
     "@mdi/js": "^7.4.47",

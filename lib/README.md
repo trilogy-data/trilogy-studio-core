@@ -81,14 +81,16 @@ import {
 } from '@trilogy-data/trilogy-studio-components/connections'
 
 const duckdbAssets: DuckDBAssetUrls = {
-  mvp: {
-    mainModule: '/duckdb/duckdb-mvp.wasm',
-    mainWorker: '/duckdb/duckdb-browser-mvp.worker.js',
+  base: {
+    mainModule: '/duckdb/duckdb-base.wasm',
+    mainWorker: '/duckdb/duckdb-browser-base.worker.js',
   },
-  eh: {
-    mainModule: '/duckdb/duckdb-eh.wasm',
-    mainWorker: '/duckdb/duckdb-browser-eh.worker.js',
-  },
+  // Optional; only selected on a cross-origin-isolated page.
+  // threads: {
+  //   mainModule: '/duckdb/duckdb-threads.wasm',
+  //   mainWorker: '/duckdb/duckdb-browser-threads.worker.js',
+  //   pthreadWorker: '/duckdb/duckdb-browser-threads.pthread.worker.js',
+  // },
 }
 
 configureDuckDBAssets(duckdbAssets)
