@@ -13,7 +13,7 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
-    "@duckdb/duckdb-wasm": "1.33.1-dev110.0",
+    "@duckdb/duckdb-wasm": "1.32.0",
     "@google/genai": "^2.28.0",
     "@mdi/js": "^7.4.47",
     "@tauri-apps/api": "^2.12.3",

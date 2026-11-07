@@ -16,8 +16,8 @@ importers:
   .:
     dependencies:
       '@duckdb/duckdb-wasm':
-        specifier: 1.33.1-dev110.0
-        version: 1.33.1-dev110.0
+        specifier: 1.32.0
+        version: 1.32.0
       '@google/genai':
         specifier: ^2.24.0
         version: 2.24.0
@@ -199,8 +199,8 @@ packages:
     resolution: {integrity: sha512-OoKoR0f76dCY666JlcbhmVTs2drYj1GUXZTYTcbUgJjh9Nv41aFfZ21bPQTERm5+L5cBDo466NltB2lplS5GBw==}
     engines: {node: '>=20.19.0'}
 
-  '@duckdb/duckdb-wasm@1.33.1-dev110.0':
-    resolution: {integrity: sha512-3HobxStH3PoBphOAzlrD4abt90nuX4npVRN+2co3wFS0i/FCGTrdihEGLJhfw65s7i8mIz553yuZqIjBXr50vg==}
+  '@duckdb/duckdb-wasm@1.32.0':
+    resolution: {integrity: sha512-IewXTNYEjsZCPE9weUWgtjGxUlMRo7qhX0GF6tq/KjK8bnY+RAl4cyUdYUfcdzbyb4b9ZxPC+FOsCcxgaKFWMg==}
 
   '@exodus/bytes@1.16.0':
     resolution: {integrity: sha512-IcpW84uEn3N7ETtNZMlxKhfl6Pec8rUNGOTBtWbK1FKhJxIFAptZyVrvVRVBimAJxJCgc3PxepxkdWWG4DVzfA==}
@@ -2406,10 +2406,9 @@ snapshots:
 
   '@csstools/css-tokenizer@4.0.2': {}
 
-  '@duckdb/duckdb-wasm@1.33.1-dev110.0':
+  '@duckdb/duckdb-wasm@1.32.0':
     dependencies:
       apache-arrow: 17.0.0
-      qs: 6.16.0
 
   '@exodus/bytes@1.16.0': {}
 

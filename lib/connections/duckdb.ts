@@ -20,18 +20,14 @@ function isFirefox(): boolean {
   return typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('firefox')
 }
 
-// Mirrors duckdb-wasm's DuckDBBundles. Since the DuckDB 2.0 builds there are two
-// platforms: `base` (runs anywhere) and `threads`, which selectBundle only picks
-// on a cross-origin-isolated page, so it is optional.
 export interface DuckDBAssetUrls {
-  base: {
+  mvp: {
     mainModule: string
     mainWorker: string
   }
-  threads?: {
+  eh: {
     mainModule: string
     mainWorker: string
-    pthreadWorker: string
   }
 }
 
@@ -107,17 +103,27 @@ async function createDuckDB(
     bundle = await selectBundle(configuredAssets as DuckDBBundles)
     worker = new Worker(bundle.mainWorker!)
   } else if (useBundledAssets) {
-    // Load bundled assets - no fallback. Only the base build is bundled: the
-    // threads build needs a cross-origin-isolated page, which no host sets.
-    const [{ default: base_wasm }, { default: base_worker }] = await Promise.all([
-      import('@duckdb/duckdb-wasm/dist/duckdb-base.wasm?url'),
-      import('@duckdb/duckdb-wasm/dist/duckdb-browser-base.worker.js?url'),
+    // Load bundled assets - no fallback
+    const [
+      { default: duckdb_wasm },
+      { default: mvp_worker },
+      { default: duckdb_wasm_eh },
+      { default: eh_worker },
+    ] = await Promise.all([
+      import('@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url'),
+      import('@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url'),
+      import('@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url'),
+      import('@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url'),
     ])
 
     const bundledAssets: DuckDBBundles = {
-      base: {
-        mainModule: base_wasm,
-        mainWorker: base_worker,
+      mvp: {
+        mainModule: duckdb_wasm,
+        mainWorker: mvp_worker,
+      },
+      eh: {
+        mainModule: duckdb_wasm_eh,
+        mainWorker: eh_worker,
       },
     }
     bundle = await selectBundle(bundledAssets)

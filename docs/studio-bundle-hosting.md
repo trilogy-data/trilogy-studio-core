@@ -54,7 +54,7 @@ The tarball holds the app only. DuckDB wasm is **not** in it: this build compile
 - **`basePath` is mandatory.** The bundle is built with an absolute Vite base, so assets resolve to `/trilogy-studio-core/assets/…`. Mounting anywhere else 404s every asset. Read the value from the manifest rather than hardcoding it.
 - **No SPA history fallback needed.** There is no client-side router — the app is a single `index.html` and all state travels in hash params. Plain static file serving is sufficient.
 - **Serve `.wasm` as `application/wasm`.** DuckDB uses streaming instantiation and will fail on a wrong content type. Python's `mimetypes` does not always register `.wasm`; add it explicitly.
-- **No cross-origin isolation required.** The bundle ships the `base` DuckDB build, not the `threads` build, so no COOP/COEP headers and no `SharedArrayBuffer`.
+- **No cross-origin isolation required.** The bundle ships the `mvp` and `eh` DuckDB builds, not the threaded `coi` build, so no COOP/COEP headers and no `SharedArrayBuffer`.
 
 ## Deep link format
 

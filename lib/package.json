@@ -91,7 +91,7 @@
     "vue-tsc": "^3.3.11"
   },
   "dependencies": {
-    "@duckdb/duckdb-wasm": "1.33.1-dev110.0",
+    "@duckdb/duckdb-wasm": "1.32.0",
     "@google/genai": "^2.24.0",
     "@mdi/js": "^7.4.47",
     "@motherduck/wasm-client": "^0.8.1",
