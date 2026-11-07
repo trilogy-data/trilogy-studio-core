@@ -1,4 +1,4 @@
-pytrilogy==0.3.446
+pytrilogy==0.3.464
 fastapi
 click-default-group
 uvicorn
