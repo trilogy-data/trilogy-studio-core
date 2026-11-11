@@ -64,6 +64,22 @@ export function convertTimestampToISODate(timestamp: number): Date {
   return date
 }
 
+/**
+ * The calendar year a chart datum stands for, for a column with the `year`
+ * trait. A mark's datum carries the column as the query returned it, a plain
+ * year such as 1994; a brush over a temporal scale reports epoch milliseconds.
+ * Reading the first as the second gives 1970 (1969 west of Greenwich) for
+ * every year, so a plain year is returned as it is.
+ */
+export function yearFromChartValue(value: unknown): number {
+  if (value instanceof Date) return value.getFullYear()
+  const numeric = typeof value === 'string' && value.trim() !== '' ? Number(value) : value
+  if (typeof numeric === 'number' && Number.isInteger(numeric) && Math.abs(numeric) < 10000) {
+    return numeric
+  }
+  return new Date(numeric as number | string).getFullYear()
+}
+
 export const getColumnHasTrait = (
   fieldName: string | undefined,
   columns: Map<string, ResultColumn>,

@@ -8,7 +8,12 @@ import {
 } from '../dashboards/layerSpec'
 import { ColumnType } from '../editors/results'
 import type { ScenegraphEvent, SignalValue } from 'vega'
-import { convertTimestampToISODate, filteredColumns, isHexColumn } from '../dashboards/helpers'
+import {
+  convertTimestampToISODate,
+  filteredColumns,
+  isHexColumn,
+  yearFromChartValue,
+} from '../dashboards/helpers'
 import type { CrossFilterEntry, CrossFilterValueMap } from '../dashboards/crossFilters'
 
 const DATETIME_COLS = [ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP]
@@ -178,8 +183,8 @@ export class ChromaChartHelpers {
               [timeAddress]: {
                 op: 'range',
                 value: [
-                  convertTimestampToISODate(start).getFullYear(),
-                  convertTimestampToISODate(end).getFullYear(),
+                  yearFromChartValue(start),
+                  yearFromChartValue(end),
                 ],
               } as CrossFilterEntry,
             } as CrossFilterValueMap,
@@ -329,7 +334,7 @@ export class ChromaChartHelpers {
           if (config.chartType === 'area') {
             return
           }
-          filterValue = convertTimestampToISODate(item.datum[field]).getFullYear()
+          filterValue = yearFromChartValue(item.datum[field])
         }
 
         baseFilters = {
