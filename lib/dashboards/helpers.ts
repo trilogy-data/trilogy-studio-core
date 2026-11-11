@@ -994,6 +994,64 @@ export const getSortOrder = (
 }
 
 /**
+ * Sort for the category axis of a bar chart, honouring the config's explicit
+ * choice before the trait- and measure-driven default of `getSortOrder`.
+ *
+ * `sort: null` is Vega-Lite's "leave the domain in data order", which is how a
+ * query's ORDER BY survives to the axis.
+ */
+export const getCategorySortOrder = (
+  config: Pick<ChartConfig, 'categorySort' | 'categorySortField' | 'categorySortOrder'>,
+  fieldName: string,
+  columns: Map<string, ResultColumn>,
+  valueColumn: string | null = null,
+): any => {
+  if (config.categorySortField) {
+    return {
+      sort: {
+        field: config.categorySortField,
+        op: 'min',
+        order: config.categorySortOrder ?? 'ascending',
+      },
+    }
+  }
+  if (config.categorySort === 'data') {
+    return { sort: null }
+  }
+  return getSortOrder(fieldName, columns, valueColumn)
+}
+
+/**
+ * Apply `xAxisTitle` / `yAxisTitle` / `hideXAxisTitle` / `hideYAxisTitle` to a
+ * built Vega-Lite spec, walking nested layers. Done after the per-type
+ * builders rather than inside each so every chart with positional axes gets it
+ * the same way. A channel with no field (or a spec that is not Vega-Lite, such
+ * as the beeswarm) is left alone.
+ */
+export const applyAxisTitleOverrides = (
+  spec: any,
+  config: Pick<ChartConfig, 'xAxisTitle' | 'yAxisTitle' | 'hideXAxisTitle' | 'hideYAxisTitle'>,
+  channels: ReadonlyArray<'x' | 'y'> = ['x', 'y'],
+): void => {
+  if (!spec || typeof spec !== 'object') return
+  const titles: Record<'x' | 'y', string | null | undefined> = {
+    x: config.hideXAxisTitle ? null : config.xAxisTitle,
+    y: config.hideYAxisTitle ? null : config.yAxisTitle,
+  }
+  for (const channel of channels) {
+    const title = titles[channel]
+    if (title === undefined) continue
+    const enc = spec.encoding?.[channel]
+    if (enc && typeof enc === 'object' && enc.field) {
+      enc.title = title
+    }
+  }
+  if (Array.isArray(spec.layer)) {
+    for (const layer of spec.layer) applyAxisTitleOverrides(layer, config, channels)
+  }
+}
+
+/**
  * Get Vega field type based on column type
  */
 export const getVegaFieldType = (

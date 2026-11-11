@@ -9,6 +9,8 @@
  *   --trilogy-chart-text-muted  -> --text-color-muted  axis and legend labels, annotations
  *   --trilogy-chart-axis        -> --border-color      axis domain and ticks
  *   --trilogy-chart-grid        -> --border-light      gridlines
+ *   --trilogy-chart-mark        -> (none)              bars and points with no colour field;
+ *                                                      unset keeps the built-in default
  *
  * The plot area is always transparent; the card behind it supplies the colour.
  */
