@@ -109,6 +109,38 @@ export interface ChartConfig {
   linkY2?: boolean
 
   /**
+   * Replace the x / y axis title, which otherwise echoes the bound column's
+   * description or name. Positional: on a `barh` the x axis is the measure.
+   */
+  xAxisTitle?: string
+  yAxisTitle?: string
+  /** Drop the x / y axis title altogether. Wins over the override above. */
+  hideXAxisTitle?: boolean
+  hideYAxisTitle?: boolean
+
+  /**
+   * Order of the category axis on `bar` / `barh`.
+   * - `'auto'` (default): the historical rule -- ordinal and time-like
+   *   categories ascending, everything else by the measure, descending.
+   * - `'data'`: keep the order the rows arrived in, i.e. the query's ORDER BY.
+   * `categorySortField` instead orders the categories by another column of
+   * the result (its minimum per category) and wins over `categorySort`.
+   */
+  categorySort?: 'auto' | 'data'
+  categorySortField?: string
+  /** Direction for `categorySortField`. Defaults to `'ascending'`. */
+  categorySortOrder?: 'ascending' | 'descending'
+
+  /**
+   * Where a donut names its slices.
+   * - `'arc'` (default): the category name drawn on each slice over 5%.
+   * - `'legend'`: nothing on the ring; the legend lists every category with
+   *   its share of the total. `hideLegend` still hides that legend.
+   * - `'none'`: nothing on the ring, legend unchanged.
+   */
+  donutLabels?: 'arc' | 'legend' | 'none'
+
+  /**
    * Sub-layers, each a chart config in its own right. Present and non-empty
    * means this config is a *container*: its own field bindings are ignored and
    * only its statement-level settings (title, legend, scales, placements)

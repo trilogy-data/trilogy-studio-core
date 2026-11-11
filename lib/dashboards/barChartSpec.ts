@@ -4,10 +4,10 @@ import {
   getFormatHint,
   createFieldEncoding,
   createInteractionEncodings,
-  getSortOrder,
+  getCategorySortOrder,
   hasDiscreteTimeTrait,
 } from './helpers'
-import { lightDefaultColor, darkDefaultColor } from './constants'
+import { chartMarkColor, type ChartTheme } from './chartTheme'
 
 export const createBarChartSpec = (
   config: ChartConfig,
@@ -17,6 +17,7 @@ export const createBarChartSpec = (
   data: readonly Row[] | null,
   intChart: Array<Partial<ChartConfig>>,
   currentTheme: 'light' | 'dark' | '' = 'light',
+  chartTheme: ChartTheme = {},
 ) => {
   // Determine the number of unique values in the x-field
   let xValueCount = 0
@@ -42,7 +43,7 @@ export const createBarChartSpec = (
   const buildXEncoding = (angle: number) => {
     const enc: any = {
       ...createFieldEncoding(xField, columns, { axis: { labelAngle: angle } }),
-      ...getSortOrder(xField, columns, config.yField),
+      ...getCategorySortOrder(config, xField, columns, config.yField),
     }
     if (xIsDiscreteTime) {
       enc.type = 'ordinal'
@@ -86,7 +87,7 @@ export const createBarChartSpec = (
     ],
     mark: {
       type: 'bar',
-      color: currentTheme === 'light' ? lightDefaultColor : darkDefaultColor,
+      color: chartMarkColor(currentTheme, chartTheme),
     },
     encoding: {
       x: buildXEncoding(labelAngle),

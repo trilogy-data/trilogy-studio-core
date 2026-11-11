@@ -25,13 +25,14 @@ import {
   createInteractionEncodings,
   getFormatHint,
   getSortOrder,
+  getCategorySortOrder,
   hasDiscreteTimeTrait,
   layerParamSuffix,
   paramName,
 } from './helpers'
-import { LAYERABLE_CHART_TYPES, lightDefaultColor, darkDefaultColor } from './constants'
+import { LAYERABLE_CHART_TYPES } from './constants'
 import { snakeCaseToCapitalizedWords } from './formatting'
-import { chartMutedTextColor, type ChartTheme } from './chartTheme'
+import { chartMarkColor, chartMutedTextColor, type ChartTheme } from './chartTheme'
 
 /** Thrown when a config asks for a chart type that can't be a Vega-Lite layer. */
 export class UnlayerableChartTypeError extends Error {
@@ -229,6 +230,7 @@ const layerMark = (
   layer: ChartConfig,
   currentTheme: 'light' | 'dark' | '',
   seriesColored: boolean,
+  chartTheme?: ChartTheme,
 ): any => {
   const type = MARK_TYPE_BY_CHART[layer.chartType]
   const mark: any = { type }
@@ -250,7 +252,7 @@ const layerMark = (
   // A series-coloured layer takes its colour from the shared colour scale; a
   // lone layer keeps the theme's default mark colour.
   if (!seriesColored && !layer.colorField) {
-    mark.color = currentTheme === 'light' ? lightDefaultColor : darkDefaultColor
+    mark.color = chartMarkColor(currentTheme, chartTheme)
   }
   return mark
 }
@@ -304,7 +306,9 @@ export const createLayerMarkSpec = (
   const categoryIsDiscreteTime = hasDiscreteTimeTrait(categoryField, columns)
   const categoryEncoding: any = {
     ...createFieldEncoding(categoryField, columns, {}),
-    ...getSortOrder(categoryField, columns, valueField),
+    ...(layer.chartType === 'bar' || layer.chartType === 'barh'
+      ? getCategorySortOrder(layer, categoryField, columns, valueField)
+      : getSortOrder(categoryField, columns, valueField)),
   }
   if (categoryIsDiscreteTime) {
     categoryEncoding.type = 'ordinal'
@@ -398,7 +402,7 @@ export const createLayerMarkSpec = (
     },
   }
 
-  const mark = layerMark(layer, currentTheme, Boolean(seriesLabel))
+  const mark = layerMark(layer, currentTheme, Boolean(seriesLabel), chartTheme)
 
   // `line` and `area` render as a brush-linked pair: a grey base showing the
   // whole series for context, and a coloured copy filtered to the brushed

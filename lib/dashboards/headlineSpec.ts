@@ -29,6 +29,14 @@ const valueToString = (column: string, value: any): string => {
   return `datum.${column} === ${JSON.stringify(value)}`
 }
 
+/**
+ * A plain number reads as `1,695,266`, not `1695266`. Only a quantitative
+ * column gets the grouping, and a typed one (currency, percent, a date part)
+ * keeps the format `getFormatHint` gives it, which is spread after this.
+ */
+const headlineNumberFormat = (column: string, columns: Map<string, ResultColumn>) =>
+  getVegaFieldType(column, columns) === 'quantitative' ? { format: ',' } : {}
+
 const createHeadlineLayer = (
   column: string,
   index: number,
@@ -169,6 +177,7 @@ const createHeadlineLayer = (
         text: {
           field: column,
           type: getVegaFieldType(column, columns),
+          ...headlineNumberFormat(column, columns),
           ...getFormatHint(column, columns),
         },
         color: {

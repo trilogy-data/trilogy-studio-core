@@ -1,8 +1,7 @@
 import { createFieldEncoding, createColorEncoding, createSizeEncoding } from './helpers'
 import { type Row, type ResultColumn } from '../editors/results'
 import { type ChartConfig } from '../editors/results'
-import { lightDefaultColor, darkDefaultColor } from './constants'
-import { chartMutedTextColor, type ChartTheme } from './chartTheme'
+import { chartMarkColor, chartMutedTextColor, type ChartTheme } from './chartTheme'
 
 interface VegaTransform {
   type: string
@@ -116,7 +115,7 @@ export const createPointChartSpec = (
   data: readonly Row[] = [],
   chartTheme: ChartTheme = {},
 ) => {
-  const color = currentTheme === 'light' ? lightDefaultColor : darkDefaultColor
+  const color = chartMarkColor(currentTheme, chartTheme)
 
   let baseLayer = {
     params: [

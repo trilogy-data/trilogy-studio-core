@@ -20,6 +20,8 @@
  * any themed container (and every existing test) byte-identical.
  */
 
+import { lightDefaultColor, darkDefaultColor } from './constants'
+
 export interface ChartTheme {
   /** Vega `config.font`: axis and legend labels, headline text, annotations. */
   font?: string
@@ -31,6 +33,8 @@ export interface ChartTheme {
   axis?: string
   /** Gridlines. */
   grid?: string
+  /** Default mark colour: bars and points that no colour field drives. */
+  mark?: string
 }
 
 export interface ChartThemeVariable {
@@ -46,6 +50,9 @@ export const CHART_THEME_VARIABLES: readonly ChartThemeVariable[] = [
   { slot: 'textMuted', sources: ['--trilogy-chart-text-muted', '--text-color-muted'] },
   { slot: 'axis', sources: ['--trilogy-chart-axis', '--border-color'] },
   { slot: 'grid', sources: ['--trilogy-chart-grid', '--border-light'] },
+  // No chrome token behind this one: an unset mark colour keeps the builders'
+  // per-mode default rather than picking up, say, the host's link colour.
+  { slot: 'mark', sources: ['--trilogy-chart-mark'] },
 ]
 
 /**
@@ -144,4 +151,9 @@ export function chartMutedTextColor(
   literals: { light: string; dark: string },
 ): string {
   return theme?.textMuted ?? (currentTheme === 'light' ? literals.light : literals.dark)
+}
+
+/** Default colour of a mark no colour field drives, honouring the theme first. */
+export function chartMarkColor(currentTheme: string, theme: ChartTheme | undefined): string {
+  return theme?.mark ?? (currentTheme === 'light' ? lightDefaultColor : darkDefaultColor)
 }

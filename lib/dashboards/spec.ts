@@ -5,6 +5,7 @@ import { snakeCaseToCapitalizedWords } from './formatting'
 import {
   createColorEncoding,
   createFieldEncoding,
+  applyAxisTitleOverrides,
   getFormatHint,
   getVegaFieldType,
 } from './helpers'
@@ -236,6 +237,7 @@ export const generateVegaSpec = (
         localData,
         intChart,
         currentTheme,
+        chartTheme,
       )
 
       break
@@ -249,6 +251,7 @@ export const generateVegaSpec = (
         isMobile,
         intChart,
         currentTheme,
+        chartTheme,
       )
       break
     case 'donut':
@@ -260,6 +263,7 @@ export const generateVegaSpec = (
         intChart,
         currentTheme,
         chartTheme,
+        localData,
       )
       break
     case 'line':
@@ -352,6 +356,19 @@ export const generateVegaSpec = (
       break
   }
 
+  // Axis title overrides. Layer 0's own config speaks for both of its axes; a
+  // container's root may also set them. `headline`, `tree`, `geo-map` and the
+  // raw-Vega beeswarm have no positional axis encodings and pass through.
+  const axisTitleConfig = {
+    xAxisTitle: root.xAxisTitle ?? config.xAxisTitle,
+    yAxisTitle: root.yAxisTitle ?? config.yAxisTitle,
+    hideXAxisTitle: root.hideXAxisTitle ?? config.hideXAxisTitle,
+    hideYAxisTitle: root.hideYAxisTitle ?? config.hideYAxisTitle,
+  }
+  if (config.chartType !== 'headline' && config.chartType !== 'beeswarm') {
+    applyAxisTitleOverrides(chartSpec, axisTitleConfig)
+  }
+
   // Stitch the remaining layers on top of layer 0. Layer 0 keeps its full
   // per-type builder -- params, brush scaffolding and all -- so every existing
   // interaction keeps working; layers 1..n get the same hover/select params
@@ -393,6 +410,11 @@ export const generateVegaSpec = (
       if (dataset) {
         layerSpec.data = { values: layerRows }
       }
+      // Layers share one x axis, and Vega-Lite joins differing titles with a
+      // comma, so the x override has to reach every layer. The y axis may be
+      // independent per layer; a layer's own y title is its own config's.
+      applyAxisTitleOverrides(layerSpec, axisTitleConfig, ['x'])
+      applyAxisTitleOverrides(layerSpec, layer, ['y'])
       const annotation = layerSpec.__annotationLayer
       delete layerSpec.__annotationLayer
       if (annotation && dataset) {
