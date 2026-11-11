@@ -78,6 +78,10 @@ jobs:
           curl --fail http://localhost:8080/api/health
 
       - name: Install Playwright browsers
+        # Normally about two minutes. When the Ubuntu mirrors are unreachable
+        # apt retries every package, and without this the job runs to its
+        # 65 minute limit before saying so.
+        timeout-minutes: 10
         run: pnpm exec playwright install --with-deps
 
       - name: Run Playwright tests against Docker
