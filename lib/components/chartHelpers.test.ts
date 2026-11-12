@@ -260,6 +260,42 @@ describe('ChromaChartHelpers', () => {
       })
     })
 
+    it('filters on the year a bar shows, not on its value read as a timestamp', () => {
+      const onDimensionClick = vi.fn()
+      chartHelpers = new ChromaChartHelpers({
+        onDimensionClick,
+        onPointClick: () => {},
+        onBackgroundClick: () => {},
+        onDrilldownClick: () => {},
+      })
+
+      testColumns.set('plant_year', {
+        name: 'plant_year',
+        type: ColumnType.INTEGER,
+        address: 'local.plant_year',
+        traits: ['year'],
+      })
+
+      const config: ChartConfig = {
+        chartType: 'bar',
+        xField: 'plant_year',
+        yField: 'tree_count',
+        showTitle: false,
+      }
+
+      chartHelpers.handlePointClick(
+        { shiftKey: false, ctrlKey: false } as MouseEvent,
+        { datum: { plant_year: 1994, tree_count: 11496 } },
+        config,
+        testColumns,
+      )
+
+      expect(onDimensionClick).toHaveBeenCalledTimes(1)
+      expect(onDimensionClick.mock.calls[0][0].filters).toEqual({
+        'local.plant_year': { op: 'eq', value: 1994 },
+      })
+    })
+
     it('prunes property fields whose keys are already in the filter set', () => {
       const onDimensionClick = vi.fn()
       chartHelpers = new ChromaChartHelpers({

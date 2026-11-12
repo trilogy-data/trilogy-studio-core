@@ -180,6 +180,10 @@ jobs:
           restore-keys: duckdb-cdn-
 
       - name: Install Playwright Browsers
+        # Normally about two minutes. When the Ubuntu mirrors are unreachable
+        # apt retries every package, and without this the job runs to its
+        # 65 minute limit before saying so.
+        timeout-minutes: 10
         run: pnpm exec playwright install --with-deps
 
       - name: Run Playwright tests (Local)
