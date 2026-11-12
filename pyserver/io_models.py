@@ -1,7 +1,7 @@
 from enum import Enum
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
 from trilogy import Dialects
 from trilogy.authoring import (
     ArrayType,
@@ -14,6 +14,37 @@ from trilogy.authoring import (
     TraitDataType,
     ValidatedType,
 )  # , NumericType, TraitDataType
+
+import server_policy as policy
+
+
+def _max(limit: int) -> int | None:
+    """A pydantic max_length, where a limit of 0 means unlimited."""
+    return limit or None
+
+
+# Request-body building blocks. The bounds and the reasons for them live in
+# server_policy; these only attach them to the wire models.
+
+#: Trilogy source the parser will see: a query, a model file.
+TrilogyText = Annotated[str, AfterValidator(policy.check_nesting)]
+#: One filter expression. Short by nature, and the filter path makes several
+#: passes over each one per parameter.
+FilterText = Annotated[
+    str,
+    Field(max_length=_max(policy.MAX_FILTER_CHARS)),
+    AfterValidator(policy.check_nesting),
+]
+ExtraFilters = Annotated[
+    list[FilterText], Field(max_length=_max(policy.MAX_EXTRA_FILTERS))
+]
+ParameterName = Annotated[str, AfterValidator(policy.check_parameter_name)]
+Parameters = Annotated[
+    dict[ParameterName, str | int | float],
+    Field(max_length=_max(policy.MAX_PARAMETERS)),
+]
+ImportName = Annotated[str, AfterValidator(policy.check_import_name)]
+FileNames = Annotated[list[str], Field(max_length=_max(policy.MAX_FILES))]
 
 
 class TrilogyType(Enum):
@@ -83,38 +114,50 @@ class InputRequest(BaseModel):
 
 class ModelSourceInSchema(BaseModel):
     alias: str
-    contents: str
+    contents: TrilogyText
+
+
+ModelSources = Annotated[
+    list[ModelSourceInSchema], Field(max_length=_max(policy.MAX_MODEL_SOURCES))
+]
 
 
 class ModelInSchema(BaseModel):
     name: str
-    sources: list[ModelSourceInSchema]
+    sources: ModelSources
 
 
 class Import(BaseModel):
-    name: str
-    alias: str | None = None
+    # Spliced into `import <name> as <alias>;`, so held to identifier-safe
+    # characters (server_policy.check_import_name).
+    name: ImportName
+    alias: ImportName | None = None
+
+
+Imports = Annotated[list[Import], Field(max_length=_max(policy.MAX_IMPORTS))]
 
 
 class MultiQueryComponent(BaseModel):
-    query: str
+    query: TrilogyText
     label: str | None = None
-    extra_filters: list[str] | None = None
-    parameters: dict[str, str | int | float] | None = None
+    extra_filters: ExtraFilters | None = None
+    parameters: Parameters | None = None
 
 
 class MultiQueryInSchema(BaseModel):
-    imports: list[Import]
+    imports: Imports
     full_model: ModelInSchema
     dialect: Dialects
-    queries: list[MultiQueryComponent]
-    extra_filters: list[str] | None = None
-    parameters: dict[str, str | int | float] | None = None
+    queries: list[MultiQueryComponent] = Field(
+        max_length=_max(policy.MAX_QUERIES_PER_BATCH)
+    )
+    extra_filters: ExtraFilters | None = None
+    parameters: Parameters | None = None
     # Names (or paths) of files the client has registered locally. Lifted
     # into DictImportResolver.data_files so the parser treats matching
     # `file '…'` datasources as live even when the trilogy compiler runs
     # remotely and can't see the user's files on disk.
-    files: list[str] | None = None
+    files: FileNames | None = None
     # Optional absolute path to the user's project root (Tauri shell only).
     # Becomes Environment.working_path; file addresses resolve against it
     # so the rendered SQL points at the actual OS path the local DuckDB
@@ -124,15 +167,15 @@ class MultiQueryInSchema(BaseModel):
 
 
 class QueryInSchema(BaseModel):
-    imports: list[Import]
-    query: str
+    imports: Imports
+    query: TrilogyText
     dialect: Dialects
     full_model: ModelInSchema
     current_filename: str | None = None
-    extra_filters: list[str] | None = None
-    parameters: dict[str, str | int | float] | None = None
+    extra_filters: ExtraFilters | None = None
+    parameters: Parameters | None = None
     # See MultiQueryInSchema.files
-    files: list[str] | None = None
+    files: FileNames | None = None
     # See MultiQueryInSchema.working_path
     working_path: str | None = None
     # chart_type: ChartType | None = None
@@ -140,19 +183,19 @@ class QueryInSchema(BaseModel):
 
 class DrilldownQueryInSchema(QueryInSchema):
     drilldown_remove: str
-    drilldown_add: list[str]
-    drilldown_filter: str
+    drilldown_add: list[str] = Field(max_length=100)
+    drilldown_filter: FilterText
 
 
 class ValidateQueryInSchema(BaseModel):
-    query: str
-    imports: list[Import]
-    sources: list[ModelSourceInSchema]
+    query: TrilogyText
+    imports: Imports
+    sources: ModelSources
     current_filename: str | None = None
-    extra_filters: list[str] | None = None
-    parameters: dict[str, str | int | float] | None = None
+    extra_filters: ExtraFilters | None = None
+    parameters: Parameters | None = None
     # See MultiQueryInSchema.files
-    files: list[str] | None = None
+    files: FileNames | None = None
     # See MultiQueryInSchema.working_path
     working_path: str | None = None
 

@@ -8,6 +8,9 @@ os.environ.setdefault("ALLOWED_ORIGINS", "prod")
 os.environ.setdefault("ENVIRONMENT", "production")
 os.environ.setdefault("HOST", "testserver")
 os.environ.setdefault("ENABLE_PERF_LOGGING", "false")
+# TestClient sends `Host: testserver`; the local server otherwise answers only
+# to loopback names (see TrustedHostMiddleware in main.py).
+os.environ.setdefault("TRILOGY_ALLOWED_HOSTS", "testserver")
 
 from main import app
 

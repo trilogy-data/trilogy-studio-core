@@ -1,5 +1,6 @@
 import re
 import time
+from collections.abc import Iterable, Mapping
 from logging import getLogger
 
 from trilogy import Environment
@@ -54,6 +55,7 @@ from io_models import (
     QueryOut,
     QueryOutColumn,
 )
+from server_policy import reject_server_file_reads
 from utility import safe_percentage
 
 perf_logger = getLogger("trilogy.performance")
@@ -116,6 +118,55 @@ def _trilogy_type_for(value: str | float) -> str:
     return "int"
 
 
+# `<concept> <op> <name>` and `<concept> between <name> and <name>`, for any
+# name. Each alternative is anchored to the START of a concept (the
+# lookbehind): without it a failed match is retried from every character of a
+# long name, which is quadratic in the filter length and runs under the GIL.
+_FILTER_COMPARISON = re.compile(
+    r"(?<![\w.])([\w.]+)\s*(?:=|>=|<=|>|<)\s*(\w+)\b"
+    r"|(?<![\w.])([\w.]+)\s+between\s+(\w+)\s+and\s+(\w*)",
+    re.IGNORECASE,
+)
+_PARAM_TOKEN = re.compile(r":\w+")
+
+
+def _concepts_compared_to(
+    filter_strings: list[str], wanted: Iterable[str]
+) -> dict[str, list[str]]:
+    """For each wanted parameter name, the concept addresses it is compared
+    against: the first comparison in each filter, in filter order.
+
+    One pass over the filters for all parameters. This used to be one regex
+    search per parameter per filter, so an `in (...)` filter over N values
+    cost N searches of a string N tokens long: 2,000 values took 10s, and
+    5,000 held a worker (and the GIL) for over a minute.
+    """
+    wanted = set(wanted)
+    found: dict[str, list[str]] = {}
+    for fs in filter_strings:
+        seen: set[str] = set()
+        for match in _FILTER_COMPARISON.finditer(fs):
+            concept, name, between_concept, low, high = match.groups()
+            pairs = (
+                [(name, concept)]
+                if concept
+                else [(low, between_concept), (high, between_concept)]
+            )
+            for param, address in pairs:
+                if param in wanted and param not in seen:
+                    seen.add(param)
+                    found.setdefault(param, []).append(address)
+    return found
+
+
+def _param_type_from_concepts(addresses: list[str], env: "Environment") -> str | None:
+    for address in addresses:
+        concept = env.concepts.get(address) or env.concepts.get(f"local.{address}")
+        if concept and isinstance(concept.datatype, DataType):
+            return _DATATYPE_TO_TRILOGY_PARAM_TYPE.get(concept.datatype)
+    return None
+
+
 def _concept_type_for_param(
     param_name: str,
     filter_strings: list[str],
@@ -126,23 +177,17 @@ def _concept_type_for_param(
     Scans each filter string for comparisons involving param_name and looks up
     the concept on the other side to determine its DataType.
     """
-    pattern = re.compile(
-        rf"([\w.]+)\s*(?:=|>=|<=|>|<)\s*{re.escape(param_name)}\b"
-        rf"|([\w.]+)\s+between\s+[\w_]+\s+and\s+{re.escape(param_name)}\b"
-        rf"|([\w.]+)\s+between\s+{re.escape(param_name)}\s+and\s",
-        re.IGNORECASE,
+    compared = _concepts_compared_to(filter_strings, [param_name])
+    return _param_type_from_concepts(compared.get(param_name, []), env)
+
+
+def _strip_param_colons(filter_string: str, parameters: Mapping[str, object]) -> str:
+    """Replace each `:name` that is a parameter key with the bare `name`, in
+    one pass (a `str.replace` per parameter is parameters x filter length)."""
+    return _PARAM_TOKEN.sub(
+        lambda m: m.group(0)[1:] if m.group(0) in parameters else m.group(0),
+        filter_string,
     )
-    for fs in filter_strings:
-        m = pattern.search(fs)
-        if m:
-            concept_addr = next((g for g in m.groups() if g), None)
-            if concept_addr:
-                concept = env.concepts.get(concept_addr) or env.concepts.get(
-                    f"local.{concept_addr}"
-                )
-                if concept and isinstance(concept.datatype, DataType):
-                    return _DATATYPE_TO_TRILOGY_PARAM_TYPE.get(concept.datatype)
-    return None
 
 
 def prepare_filter_params(
@@ -157,38 +202,33 @@ def prepare_filter_params(
     - cleaned_filters: filter strings with ``:param`` tokens replaced by bare names
     - param_kwargs: parameter values keyed by bare name (for ``env.set_parameters``)
     """
-    param_declarations = ""
+    declarations: list[str] = []
     param_kwargs: dict[str, str | int | float] = {}
 
-    # Build a version of extra_filters with colons stripped so the concept-type
-    # lookup sees bare param names (matching what the filter will actually use).
-    stripped_filters = [fs for fs in extra_filters if fs.strip()]
-    for key in parameters:
-        stripped_filters = [fs.replace(key, key.lstrip(":")) for fs in stripped_filters]
+    # Colons stripped, so both the concept-type lookup and the parse see the
+    # bare param names the filter will actually use.
+    cleaned = [
+        _strip_param_colons(fs, parameters) for fs in extra_filters if fs.strip()
+    ]
+    names = {key: key.lstrip(":") for key in parameters}
+    compared = _concepts_compared_to(cleaned, names.values()) if env else {}
 
     for key, value in parameters.items():
         # keys arrive as :paramN — strip the colon for use in Trilogy source
-        name = key.lstrip(":")
+        name = names[key]
         # Prefer the type derived from the concept being filtered (most accurate);
         # fall back to inference from the value string.
         param_type = (
-            _concept_type_for_param(name, stripped_filters, env) if env else None
+            _param_type_from_concepts(compared.get(name, []), env) if env else None
         ) or _trilogy_type_for(value)
-        param_declarations += f"\nparameter {name} {param_type};"
+        declarations.append(f"\nparameter {name} {param_type};")
         # Normalize value to match the declared type — e.g. Luxon DateTime
         # serialises as a full ISO timestamp ('1992-12-20T22:19:57.462Z') but
         # set_parameters only accepts 'YYYY-MM-DD' for date parameters.
         if param_type == "date" and isinstance(value, str):
             value = _DATE_RE.match(value[:10]) and value[:10] or value
         param_kwargs[name] = value
-
-    cleaned: list[str] = []
-    for filter_string in extra_filters:
-        if not filter_string.strip():
-            continue
-        for key in parameters:
-            filter_string = filter_string.replace(key, key.lstrip(":"))
-        cleaned.append(filter_string)
+    param_declarations = "".join(declarations)
 
     return param_declarations, cleaned, param_kwargs
 
@@ -276,6 +316,8 @@ def generate_single_query(
     else:
         pre_concepts = {}
     env, parsed = parse_text(safe_format_query(query), env, parse_config=PARSE_CONFIG)
+    # Before anything is rendered: rendering is what opens a .sql datasource.
+    reject_server_file_reads(env)
     parse_time = time.time() - parse_start
     default_return: list[QueryOutColumn] = []
     default_values: list[dict] | None = None
