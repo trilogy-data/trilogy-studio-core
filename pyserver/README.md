@@ -29,7 +29,8 @@ Known gaps, not closed here:
 
 - pytrilogy's Rust parser has no recursion limit; deep nesting aborts the
   process. `server_policy.check_nesting` keeps the known shapes away from it,
-  but the fix belongs upstream.
+  but the fix belongs upstream
+  (trilogy-data/pytrilogy#946).
 - pytrilogy stats `file` datasource paths on the server while parsing, even
   under a `DictImportResolver`, so a caller can learn whether a path exists.
 - There is no per-client limit: one caller can fill the request gate's queue.
