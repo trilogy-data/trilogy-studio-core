@@ -6,6 +6,37 @@ fly deploy
 
 Docker build runs tests. Make sure they pass.
 
+## Security model
+
+The hosted resolver is public and unauthenticated: it compiles whatever model
+and query it is sent and returns SQL. It executes nothing and stores nothing,
+so what it defends is its own availability and the machine it runs on. The
+limits and the reasoning are in `server_policy.py`; tests are in
+`tests/test_hardening.py`.
+
+- **Hosted vs local.** `IN_DOCKER_IMAGE=1` (both Dockerfiles) or
+  `TRILOGY_HOSTED=1` marks a deployment whose callers do not share its disk.
+  Hosted, a `.sql`-file datasource is refused (rendering one inlines the
+  file's contents into the response) and `/terminate` is not routed.
+- **Local server.** `python main.py` and the desktop bundle bind
+  `127.0.0.1` (`TRILOGY_BIND_HOST` to change) and answer only to loopback
+  `Host` names (`TRILOGY_ALLOWED_HOSTS` adds names, `*` disables).
+- **Request bounds.** Body size (`TRILOGY_MAX_BODY_BYTES`, 5 MB), batch size,
+  filter count/length, parameter count, and expression nesting. Each is an
+  environment variable; `0` disables it.
+
+Known gaps, not closed here:
+
+- pytrilogy's Rust parser has no recursion limit; deep nesting aborts the
+  process. `server_policy.check_nesting` keeps the known shapes away from it,
+  but the fix belongs upstream.
+- pytrilogy stats `file` datasource paths on the server while parsing, even
+  under a `DictImportResolver`, so a caller can learn whether a path exists.
+- There is no per-client limit: one caller can fill the request gate's queue.
+- An admitted request cannot be cancelled (see the gate in
+  `studio_endpoints.py`), so a model that is pathologically slow to plan
+  holds a worker thread until it finishes.
+
 ## Tests/CI
 
 Pytest for most tests.

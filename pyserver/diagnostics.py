@@ -50,13 +50,17 @@ def user_repr(error: Exception) -> str:
 
 
 def truncate_to_last_semicolon(text: str) -> str:
-    last_semicolon_index = text.rfind(";")
-    if last_semicolon_index + 1 == len(text):
-        return truncate_to_last_semicolon(text[: last_semicolon_index - 1])
-    if last_semicolon_index != -1:
-        return text[: last_semicolon_index + 1]
-    else:
-        return text  # Return original string if no semicolon is found
+    # A loop, not recursion: a buffer of nothing but `;` used to recurse once
+    # per pair of characters and die on the interpreter's recursion limit.
+    while text:
+        last_semicolon_index = text.rfind(";")
+        if last_semicolon_index == -1:
+            return text  # no semicolon left to cut at
+        if last_semicolon_index + 1 != len(text):
+            return text[: last_semicolon_index + 1]
+        # Ends in `;`: drop the final statement and look again.
+        text = text[: max(last_semicolon_index - 1, 0)]
+    return text
 
 
 def syntax_error_position(text: str) -> tuple[int, int]:
