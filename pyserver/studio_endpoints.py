@@ -21,6 +21,7 @@ from trilogy.parser import parse_text
 from trilogy.parsing.render import Renderer
 from trilogy.render import get_dialect_generator
 
+import access_log
 from diagnostics import get_diagnostics
 from env_helpers import (
     model_to_response,
@@ -154,7 +155,19 @@ def _slots_available() -> int:
     return slots._value  # BoundedSemaphore has no public getter
 
 
+def _note_request(args: tuple[Any, ...]) -> None:
+    """Record the dialect and batch size on the access-log row. Never the
+    model or the query text: those are the caller's."""
+    data = args[0] if args and isinstance(args[0], dict) else {}
+    queries = data.get("queries")
+    access_log.note(
+        dialect=data.get("dialect"),
+        query_count=len(queries) if isinstance(queries, list) else None,
+    )
+
+
 async def _run_gated(task_name: str, task: Callable[..., dict], *args: Any) -> dict:
+    _note_request(args)
     executor, slots = _gate()
     if not slots.acquire(blocking=False):
         logger.warning(
@@ -168,10 +181,12 @@ async def _run_gated(task_name: str, task: Callable[..., dict], *args: Any) -> d
             headers={"Retry-After": "1"},
         )
     queued_at = time.perf_counter()
+    started_at: list[float] = []
 
     def _work() -> dict:
         try:
             started = time.perf_counter()
+            started_at.append(started)
             payload = task(*args)
             perf_logger.info(
                 "Task completed - Task: %s | Queued: %.4fs | Run: %.4fs",
@@ -199,6 +214,9 @@ async def _run_gated(task_name: str, task: Callable[..., dict], *args: Any) -> d
         if future.cancel():
             slots.release()
         raise
+    finally:
+        if started_at:
+            access_log.note(queue_ms=(started_at[0] - queued_at) * 1000)
     return _raise_if_worker_error(payload)
 
 

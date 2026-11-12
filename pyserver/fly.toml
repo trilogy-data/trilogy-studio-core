@@ -21,6 +21,16 @@ primary_region = 'ewr'
 
 [build]
 
+# The access log (access_log.py): one row per request, streamed to BigQuery
+# in trilogy-cloud's prod project, where the daily platform report reads it.
+# The table and the writer's service account are trilogy-cloud terraform
+# (terraform/api_logs.tf); the key is the GCP_SA_KEY secret, taken from
+# Secret Manager `trilogy-resolver-sa-key-prod`. Without it the server logs
+# an error at boot and runs unlogged.
+[env]
+  ACCESS_LOG = 'bigquery'
+  ACCESS_LOG_TABLE = 'trilogy-data-prod.api_logs.resolver_requests'
+
 [http_service]
   internal_port = 8080
   force_https = true

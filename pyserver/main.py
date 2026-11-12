@@ -19,6 +19,8 @@ from starlette.background import BackgroundTask
 from trilogy import Environment, Executor, __version__
 from uvicorn.config import LOGGING_CONFIG
 
+import access_log
+
 # Import the reusable endpoints module
 from studio_endpoints import create_trilogy_router
 
@@ -125,6 +127,12 @@ app.add_middleware(
     allow_headers=["Authorization"],
     allow_origin_regex=allow_origin_regex,
 )
+
+# Outermost, so it sees every response, CORS preflights and refusals from
+# the request gate included. Off unless ACCESS_LOG=bigquery (fly.toml).
+_access_log = access_log.from_env()
+if _access_log is not None:
+    app.add_middleware(access_log.AccessLogMiddleware, log=_access_log)
 
 # Create a local router for server-specific endpoints
 server_router = APIRouter()
