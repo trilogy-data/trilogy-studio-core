@@ -4,3 +4,6 @@ click-default-group
 uvicorn
 gunicorn
 httpx
+# access_log.py: signs the BigQuery service-account token and reads DB-IP.
+PyJWT[crypto]>=2.8
+maxminddb>=2.6

@@ -34,6 +34,34 @@ COPY . .
 RUN pytest tests && touch /tmp/tests-passed
 
 # ---------------------------------------------------------------------------
+# geoip: DB-IP's free country and ASN databases, for the access log's
+# geolocation (access_log.py). CC BY 4.0: credit "IP geolocation by DB-IP"
+# (https://db-ip.com) wherever results are shown. Published monthly, so take
+# this month's and fall back to last month's while the new one is not out; a
+# build where neither downloads still succeeds and the geo columns stay NULL.
+# The slim base has no curl, so the download is Python.
+# ---------------------------------------------------------------------------
+FROM base AS geoip
+RUN mkdir -p /geoip && python - <<'EOF'
+import datetime, gzip, urllib.request
+today = datetime.date.today().replace(day=1)
+months = [today, (today - datetime.timedelta(days=1)).replace(day=1)]
+for db in ("country", "asn"):
+    for month in months:
+        url = f"https://download.db-ip.com/free/dbip-{db}-lite-{month:%Y-%m}.mmdb.gz"
+        try:
+            # urllib's default User-Agent is refused (403); curl's is not.
+            request = urllib.request.Request(url, headers={"User-Agent": "curl/8.5.0"})
+            data = urllib.request.urlopen(request, timeout=120).read()
+        except Exception as exc:
+            print(f"geoip: {db} {month:%Y-%m} unavailable ({exc})")
+            continue
+        open(f"/geoip/dbip-{db}-lite.mmdb", "wb").write(gzip.decompress(data))
+        print(f"geoip: {db} {month:%Y-%m}")
+        break
+EOF
+
+# ---------------------------------------------------------------------------
 # production: lean runtime image with prod-only dependencies.
 # ---------------------------------------------------------------------------
 FROM base AS production
@@ -67,6 +95,10 @@ COPY --from=deps /usr/local/bin /usr/local/bin
 
 # Build barrier: this fails the build unless `tester` ran pytest successfully.
 COPY --from=tester /tmp/tests-passed /tmp/tests-passed
+
+# Geolocation for the access log (off unless ACCESS_LOG is set; fly.toml).
+COPY --from=geoip /geoip /app/geoip
+ENV GEOIP_COUNTRY_DB=/app/geoip/dbip-country-lite.mmdb     GEOIP_ASN_DB=/app/geoip/dbip-asn-lite.mmdb
 
 # Application code (only the root *.py modules are needed at runtime).
 COPY *.py ./
