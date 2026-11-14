@@ -180,6 +180,8 @@ ALLOWED_ORIGIN_PATTERNS = [
     r"https://trilogy-data\.github\.io",
     r"https://trilogydata\.dev",
     r"https://greenmtnboy\.github\.io",
+    # The urban tree explorer, also served at arborary.world/explore/.
+    r"https://(www\.)?arborary\.world",
     r"app://\.",
     r"http://localhost:[0-9]+",
     r"http://127\.0\.0\.1:[0-9]+",
