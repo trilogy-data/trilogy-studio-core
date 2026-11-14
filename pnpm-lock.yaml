@@ -24,6 +24,9 @@ importers:
       '@google/genai':
         specifier: ^2.24.0
         version: 2.24.0
+      '@haybarn/haybarn-wasm':
+        specifier: 1.5.5-rc7
+        version: 1.5.5-rc7
       '@mdi/js':
         specifier: ^7.4.47
         version: 7.4.47
@@ -309,6 +312,9 @@ packages:
     peerDependenciesMeta:
       '@modelcontextprotocol/sdk':
         optional: true
+
+  '@haybarn/haybarn-wasm@1.5.5-rc7':
+    resolution: {integrity: sha512-aQt0Cba7fgjZsgKnzSbdGIekusgJDsk1A5BPeSlICWOKnHrlQLuATqzfqfBtfYLMs+6bpY/Hni/L0faWEeSckg==}
 
   '@interactjs/actions@1.10.28':
     resolution: {integrity: sha512-ulZ/N2U7QCQRrlCzyBGj9SmXnCbNaFWRz4d4Q39LEjyOVNz3NZUp0BFls4dYPJKqNygvbP3CMrS0ohems9IJaw==}
@@ -2825,6 +2831,11 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+
+  '@haybarn/haybarn-wasm@1.5.5-rc7':
+    dependencies:
+      apache-arrow: 17.0.0
+      qs: 6.16.0
 
   '@interactjs/actions@1.10.28(@interactjs/core@1.10.28(@interactjs/utils@1.10.28))(@interactjs/utils@1.10.28)':
     dependencies:

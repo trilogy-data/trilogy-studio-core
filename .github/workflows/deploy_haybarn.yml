@@ -1,0 +1,87 @@
+# Same studio, built on Query.Farm's Haybarn fork of duckdb-wasm (`--mode
+# haybarn` in vite.config.ts) so VGI-backed models can load the `vgi`
+# extension. Published next to the main build at
+# trilogydata.dev/trilogy-studio-core-haybarn/.
+#
+# Deliberately its own workflow rather than a job in prod_deploy.yml: it is an
+# experiment, so a red run here must never block the production deploy or the
+# studio release. workflow_dispatch lets a branch be published for a look.
+name: Build and Deploy Haybarn Studio
+on:
+  push:
+    branches:
+      - 'main'
+  workflow_dispatch:
+# FTP updates a shared directory in place; never interleave two uploads.
+concurrency:
+  group: haybarn-deploy
+  cancel-in-progress: false
+jobs:
+  deploy-haybarn:
+    name: Deploy Haybarn Studio
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    permissions:
+      contents: 'read'
+    steps:
+        - name: Checkout
+          uses: actions/checkout@v6
+
+        - uses: pnpm/action-setup@v6
+          with:
+            version: 10
+
+        - name: Set up Node
+          uses: actions/setup-node@v6
+          with:
+            node-version: 23
+            cache: 'pnpm'
+
+        - name: Set up Python
+          uses: actions/setup-python@v6
+          with:
+            python-version: '3.13'
+            cache: 'pip'
+            cache-dependency-path: pyserver/requirements.txt
+
+        - name: Install backend dependencies for AI guidance
+          run: python -m pip install -r pyserver/requirements.txt
+
+        - name: Install dependencies
+          run: pnpm install --frozen-lockfile
+
+        # Linked dependency of ./lib -- its dist has to exist before anything
+        # that imports the Prism grammar can run.
+        - name: Build Trilogy grammar package
+          run: pnpm run build:grammar
+
+        # No test step: the suite doesn't depend on the duckdb distribution,
+        # and prod_deploy.yml runs it against this same commit.
+        - name: Build
+          run: pnpm run build:haybarn
+
+        # The wasm vite emits (~93M for Haybarn) is never requested -- the
+        # engine loads from unpkg at runtime -- so don't push it over FTP.
+        # stats.html is the bundle-size report, not part of the app.
+        - name: Upload
+          uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+          with:
+              server: ${{ secrets.FTP_SERVER }}
+              username: ${{ secrets.FTP_USER }}
+              password: ${{ secrets.FTP_SECRET }}
+              local-dir: ./dist/
+              server-dir: /trilogy-studio-core-haybarn/
+              protocol: 'ftps'
+              exclude: |
+                **/*.wasm
+                stats.html
+
+        - name: Wait for deployment
+          run: |
+            timeout 300 bash -c '
+              until [ "$(curl -s -o /dev/null -w "%{http_code}" https://trilogydata.dev/trilogy-studio-core-haybarn/)" = "200" ]; do
+                echo "⏳ Waiting for trilogydata.dev/trilogy-studio-core-haybarn/ ..."
+                sleep 10
+              done
+            '

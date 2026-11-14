@@ -1,15 +1,16 @@
-import { defineConfig } from 'vite'
+import { defineConfig, mergeConfig, type UserConfig } from 'vite'
 // import { resolve } from 'path'
 import vue from '@vitejs/plugin-vue'
 import dts from 'vite-plugin-dts'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import prism from 'vite-plugin-prismjs'
 
+import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { visualizer } from 'rollup-plugin-visualizer'
 
 // https://vite.dev/config/
-export default defineConfig({
+const studioConfig = defineConfig({
   server: {
     headers: {
       'Cross-Origin-Embedder-Policy': 'unsafe-none',
@@ -111,3 +112,56 @@ export default defineConfig({
     },
   },
 })
+
+// `--mode haybarn` (pnpm dev:haybarn / build:haybarn) builds the same app on
+// Query.Farm's Haybarn fork of duckdb-wasm, whose extension repository carries
+// `vgi` -- what VGI-backed models need. Its API mirrors @duckdb/duckdb-wasm, so
+// the swap is an import alias and nothing in lib branches on which one it got.
+const HAYBARN_PACKAGE = '@haybarn/haybarn-wasm'
+
+// index.html's CSP is shared, so the origins only this build talks to are
+// appended here: the engine itself (unpkg), Haybarn's extension repository
+// (`INSTALL vgi FROM community`), and the Query.Farm VGI servers the
+// trilogy-public-models VGI models ATTACH.
+const HAYBARN_CONNECT_SRC = [
+  'https://unpkg.com',
+  'https://haybarn-extensions.query.farm',
+  'https://*.rusty-bb6.workers.dev',
+]
+
+// The worker JS and the wasm must be the same release, so the CDN root comes
+// from the installed package rather than a second hard-coded version. unpkg,
+// not jsDelivr: the package is over jsDelivr's 150MB limit and 403s there.
+function haybarnConfig(): UserConfig {
+  const { version } = JSON.parse(
+    readFileSync(resolve(__dirname, 'node_modules', HAYBARN_PACKAGE, 'package.json'), 'utf8'),
+  )
+  return {
+    define: {
+      'import.meta.env.VITE_DUCKDB_CDN_BASE': JSON.stringify(
+        `https://unpkg.com/${HAYBARN_PACKAGE}@${version}/dist/`,
+      ),
+    },
+    // A string key also rewrites subpaths (`.../dist/duckdb-eh.wasm?url`).
+    resolve: { alias: { '@duckdb/duckdb-wasm': HAYBARN_PACKAGE } },
+    plugins: [
+      {
+        name: 'haybarn-csp',
+        transformIndexHtml(html) {
+          if (!html.includes('connect-src ')) {
+            throw new Error('haybarn-csp: no connect-src directive in index.html')
+          }
+          return html.replace('connect-src ', `connect-src ${HAYBARN_CONNECT_SRC.join(' ')} `)
+        },
+      },
+    ],
+    base: '/trilogy-studio-core-haybarn/',
+    // Own dep-optimizer cache, so switching modes (or running both dev servers
+    // at once) doesn't re-bundle over the other mode's pre-bundled duckdb.
+    cacheDir: 'node_modules/.vite-haybarn',
+  }
+}
+
+export default defineConfig(({ mode }) =>
+  mode === 'haybarn' ? mergeConfig(studioConfig, haybarnConfig()) : studioConfig,
+)
