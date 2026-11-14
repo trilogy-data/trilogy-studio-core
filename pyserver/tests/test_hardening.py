@@ -393,6 +393,10 @@ def test_local_server_ignores_foreign_host_headers(test_client: TestClient):
         ("https://trilogydata.dev", True),
         ("app://.", True),
         ("http://localhost:5173", True),
+        ("https://arborary.world", True),
+        ("https://www.arborary.world", True),
+        ("https://arborary.world.evil.example", False),
+        ("http://arborary.world", False),
         # The dots used to be regex wildcards.
         ("https://trilogydataxdev", False),
         ("https://trilogy-data.github.io.evil.example", False),
