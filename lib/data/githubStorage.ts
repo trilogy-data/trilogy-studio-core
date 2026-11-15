@@ -5,6 +5,7 @@ import {
   DuckDBConnection,
   MotherDuckConnection,
   SnowflakeJwtConnection,
+  SnowflakePatConnection,
   SQLiteConnection,
 } from '../connections'
 import {
@@ -223,7 +224,11 @@ export default class GitHubStorage extends AbstractStorage {
           break
         case 'snowflake':
           // @ts-ignore
-          connections[connection.name] = reactive(SnowflakeConnection.fromJSON(connection))
+          connections[connection.name] = reactive(SnowflakeJwtConnection.fromJSON(connection))
+          break
+        case 'snowflake-pat':
+          // @ts-ignore
+          connections[connection.name] = reactive(SnowflakePatConnection.fromJSON(connection))
           break
       }
     }

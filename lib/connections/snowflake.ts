@@ -38,9 +38,10 @@ export interface SnowflakeJwtConfig extends SnowflakeConfigBase {
   privateKeyPassphrase?: string
 }
 
-// Interface for Basic Auth connection config
-export interface SnowflakeBasicConfig extends SnowflakeConfigBase {
-  password: string
+// Interface for Programmatic Access Token connection config. The token
+// identifies the user, so `username` is unused and left empty.
+export interface SnowflakePatConfig extends SnowflakeConfigBase {
+  token: string
 }
 
 // Interface for statement status response
@@ -456,8 +457,161 @@ export abstract class SnowflakeConnectionBase extends BaseConnection {
   }
 }
 
+// Shared plumbing for connections that talk to the Snowflake SQL API (v2)
+// directly from the browser. Subclasses differ only in how they authenticate.
+export abstract class SnowflakeSqlApiConnection extends SnowflakeConnectionBase {
+  // @ts-ignore
+  cancelQuery(identifier: string): Promise<boolean> {
+    throw new Error('Method not implemented.')
+  }
+
+  setAccount(account: string): void {
+    if (this.config.account === account) {
+      return
+    }
+    this.changed = true
+    this.config.account = account
+  }
+
+  setUsername(username: string): void {
+    if (this.config.username === username) {
+      return
+    }
+    this.changed = true
+    this.config.username = username
+  }
+
+  // Appended to the error when the SQL API rejects our credentials (HTTP 401).
+  protected authFailureHint(): string {
+    return ''
+  }
+
+  protected async fetchQueryResults(statementHandle: string): Promise<SnowflakeQueryResult> {
+    // Fetch the results of the query using the statement handle
+    const response = await fetch(`${this.baseURL()}/api/v2/statements/${statementHandle}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(`Query result fetch failed: ${errorData.message || response.statusText}`)
+    }
+
+    return await response.json()
+  }
+
+  protected async executeQuery(
+    sql: string,
+    bindings?: Record<string, { type: string; value: string }>,
+  ): Promise<any> {
+    // Submit the SQL statement (v2 API)
+    const body: Record<string, any> = {
+      statement: sql,
+      timeout: this.maxTotalWaitTimeMs / 1000,
+      database: this.config.database,
+      schema: this.config.schema,
+      warehouse: this.config.warehouse,
+      role: this.config.role,
+      parameters: {
+        MULTI_STATEMENT_COUNT: '0',
+      },
+    }
+    if (bindings && Object.keys(bindings).length > 0) {
+      body.bindings = bindings
+    }
+    const submitResponse = await fetch(`${this.baseURL()}/api/v2/statements/`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(body),
+    })
+
+    if (!submitResponse.ok) {
+      const errorData = await submitResponse.json().catch(() => ({}))
+      const hint = submitResponse.status === 401 ? this.authFailureHint() : ''
+      throw new Error(
+        `Query execution failed: ${errorData.message || submitResponse.statusText}${hint}`,
+      )
+    }
+
+    const submitData = await submitResponse.json()
+    const statementHandle = submitData.statementHandle
+
+    // Poll for query completion
+    let statementStatus: StatementStatus = {
+      status: 'running',
+      code: 202,
+    }
+    let currentPollingIntervalMs = this.pollingInterval
+    let totalWaitTimeMs = 0
+    let lastTimePolled = Date.now()
+    let pollCount = 0
+    let errorCount = 0
+    do {
+      await new Promise((resolve) => setTimeout(resolve, currentPollingIntervalMs))
+      pollCount++
+      lastTimePolled = Date.now()
+      try {
+        const statusResponse = await fetch(
+          `${this.baseURL()}/api/v2/statements/${statementHandle}`,
+          {
+            method: 'GET',
+            headers: this.getAuthHeaders(),
+          },
+        )
+        // if the response isn't okay, we just poll again, with some sanity
+        if (statusResponse.ok) {
+          errorCount = 0
+          statementStatus = await statusResponse.json()
+          statementStatus.code = statusResponse.status
+        } else {
+          errorCount++
+          if (errorCount > 5) {
+            throw new Error(
+              `Query execution failed: ${statusResponse.status} - ${statusResponse.statusText}`,
+            )
+          }
+        }
+      } catch (error) {
+        errorCount++
+        if (errorCount > 5) {
+          throw new Error(`Query execution failed: ${error}`)
+        }
+      }
+      // Calculate next polling interval with exponential backoff
+      currentPollingIntervalMs = Math.min(
+        currentPollingIntervalMs * this.backoffFactor,
+        this.maxPollingIntervalMs,
+      )
+      const actualTimeWaited = Date.now() - lastTimePolled
+      totalWaitTimeMs += actualTimeWaited
+      if (totalWaitTimeMs > this.maxTotalWaitTimeMs) {
+        throw new Error('Query execution timed out')
+      }
+    } while (statementStatus.code === 202)
+
+    if (statementStatus.status === 'failed') {
+      throw new Error(`Query execution failed: ${statementStatus.message || 'Unknown error'}`)
+    }
+
+    return statementStatus
+  }
+
+  protected extractMetadata(resultData: any): any[] {
+    return resultData.resultSetMetaData?.rowType || []
+  }
+
+  protected extractRows(resultData: any): any[][] {
+    return resultData.data || []
+  }
+
+  protected getSchema(): string | undefined {
+    return this.config.schema
+  }
+}
+
 // JWT-based Connection (v2 API)
-export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
+export class SnowflakeJwtConnection extends SnowflakeSqlApiConnection {
   config: SnowflakeJwtConfig
   private auth: SnowflakeJwtAuth = {}
 
@@ -526,33 +680,12 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
     }
   }
 
-  // @ts-ignore
-  cancelQuery(identifier: string): Promise<boolean> {
-    throw new Error('Method not implemented.')
-  }
-
   setPrivateKey(privateKey: string): void {
     if (this.config.privateKey === privateKey) {
       return
     }
     this.changed = true
     this.config.privateKey = privateKey
-  }
-
-  setAccount(account: string): void {
-    if (this.config.account === account) {
-      return
-    }
-    this.changed = true
-    this.config.account = account
-  }
-
-  setUsername(username: string): void {
-    if (this.config.username === username) {
-      return
-    }
-    this.changed = true
-    this.config.username = username
   }
 
   // integrate with generic interface
@@ -670,128 +803,122 @@ export class SnowflakeJwtConnection extends SnowflakeConnectionBase {
     }
   }
 
-  protected async fetchQueryResults(statementHandle: string): Promise<SnowflakeQueryResult> {
-    // Fetch the results of the query using the statement handle
-    const response = await fetch(`${this.baseURL()}/api/v2/statements/${statementHandle}`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(`Query result fetch failed: ${errorData.message || response.statusText}`)
-    }
-
-    return await response.json()
-  }
-
-  protected async executeQuery(
-    sql: string,
-    bindings?: Record<string, { type: string; value: string }>,
-  ): Promise<any> {
-    // Submit the SQL statement (v2 API)
-    const body: Record<string, any> = {
-      statement: sql,
-      timeout: this.maxTotalWaitTimeMs / 1000,
-      database: this.config.database,
-      schema: this.config.schema,
-      warehouse: this.config.warehouse,
-      role: this.config.role,
-      parameters: {
-        MULTI_STATEMENT_COUNT: '0',
-      },
-    }
-    if (bindings && Object.keys(bindings).length > 0) {
-      body.bindings = bindings
-    }
-    const submitResponse = await fetch(`${this.baseURL()}/api/v2/statements/`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(body),
-    })
-
-    if (!submitResponse.ok) {
-      const errorData = await submitResponse.json()
-      throw new Error(`Query execution failed: ${errorData.message || submitResponse.statusText}`)
-    }
-
-    const submitData = await submitResponse.json()
-    const statementHandle = submitData.statementHandle
-
-    // Poll for query completion
-    let statementStatus: StatementStatus = {
-      status: 'running',
-      code: 202,
-    }
-    let currentPollingIntervalMs = this.pollingInterval
-    let totalWaitTimeMs = 0
-    let lastTimePolled = Date.now()
-    let pollCount = 0
-    let errorCount = 0
-    do {
-      await new Promise((resolve) => setTimeout(resolve, currentPollingIntervalMs))
-      pollCount++
-      lastTimePolled = Date.now()
-      try {
-        const statusResponse = await fetch(
-          `${this.baseURL()}/api/v2/statements/${statementHandle}`,
-          {
-            method: 'GET',
-            headers: this.getAuthHeaders(),
-          },
-        )
-        // if the response isn't okay, we just poll again, with some sanity
-        if (statusResponse.ok) {
-          errorCount = 0
-          statementStatus = await statusResponse.json()
-          statementStatus.code = statusResponse.status
-        } else {
-          errorCount++
-          if (errorCount > 5) {
-            throw new Error(
-              `Query execution failed: ${statusResponse.status} - ${statusResponse.statusText}`,
-            )
-          }
-        }
-      } catch (error) {
-        errorCount++
-        if (errorCount > 5) {
-          throw new Error(`Query execution failed: ${error}`)
-        }
-      }
-      // Calculate next polling interval with exponential backoff
-      currentPollingIntervalMs = Math.min(
-        currentPollingIntervalMs * this.backoffFactor,
-        this.maxPollingIntervalMs,
-      )
-      const actualTimeWaited = Date.now() - lastTimePolled
-      totalWaitTimeMs += actualTimeWaited
-      if (totalWaitTimeMs > this.maxTotalWaitTimeMs) {
-        throw new Error('Query execution timed out')
-      }
-    } while (statementStatus.code === 202)
-
-    if (statementStatus.status === 'failed') {
-      throw new Error(`Query execution failed: ${statementStatus.message || 'Unknown error'}`)
-    }
-
-    return statementStatus
-  }
-
-  protected extractMetadata(resultData: any): any[] {
-    return resultData.resultSetMetaData?.rowType || []
-  }
-
-  protected extractRows(resultData: any): any[][] {
-    return resultData.data || []
-  }
-
-  protected getSchema(): string | undefined {
-    return this.config.schema
-  }
-
   async close(): Promise<void> {
     // Clear auth data
     this.auth = {}
+  }
+}
+
+// Programmatic Access Token connection (v2 API). The token is sent as the
+// bearer credential, so there is no signing step and no username to supply.
+export class SnowflakePatConnection extends SnowflakeSqlApiConnection {
+  config: SnowflakePatConfig
+  // account:token pair that last passed the SELECT 1 check, so connect() only
+  // round-trips when the credentials actually change.
+  private verifiedKey: string | null = null
+
+  constructor(
+    name: string,
+    config: SnowflakePatConfig,
+    model?: string,
+    saveCredential: boolean = false,
+  ) {
+    super(name, 'snowflake-pat', config.account, model, saveCredential)
+    this.config = config
+  }
+
+  static fromJSON(fields: {
+    name: string
+    model: string | null
+    saveCredential: boolean
+    account: string
+    token: string
+    warehouse?: string
+    role?: string
+    database?: string
+    schema?: string
+  }): SnowflakePatConnection {
+    return new SnowflakePatConnection(
+      fields.name,
+      {
+        account: fields.account,
+        username: '',
+        token: fields.token,
+        warehouse: fields.warehouse || '',
+        role: fields.role,
+        database: fields.database,
+        schema: fields.schema,
+      },
+      fields.model ? fields.model : undefined,
+      fields.saveCredential,
+    )
+  }
+
+  toJSON(): object {
+    return {
+      id: this.id,
+      name: this.name,
+      type: this.type,
+      model: this.model,
+      account: this.config.account,
+      warehouse: this.config.warehouse,
+      role: this.config.role,
+      database: this.config.database,
+      schema: this.config.schema,
+      saveCredential: this.saveCredential,
+      token: this.saveCredential ? 'saved' : '',
+    }
+  }
+
+  setToken(token: string): void {
+    if (this.config.token === token) {
+      return
+    }
+    this.changed = true
+    this.config.token = token
+  }
+
+  // integrate with generic interface
+  getSecret(): string | null {
+    return this.config.token
+  }
+
+  setSecret(secret: string): void {
+    this.setToken(secret)
+  }
+
+  async connect(): Promise<boolean> {
+    if (!this.config.token) {
+      throw new Error('No Snowflake access token set for this connection.')
+    }
+    const key = `${this.config.account}:${this.config.token}`
+    if (this.verifiedKey === key) {
+      return true
+    }
+    try {
+      await this.query_core('SELECT 1', {}, null, true)
+    } catch (error) {
+      this.verifiedKey = null
+      throw new Error(`Authentication failed: ${error}`)
+    }
+    this.verifiedKey = key
+    return true
+  }
+
+  protected getAuthHeaders(): Record<string, string> {
+    return {
+      Authorization: `Bearer ${this.config.token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'X-Snowflake-Authorization-Token-Type': 'PROGRAMMATIC_ACCESS_TOKEN',
+    }
+  }
+
+  protected authFailureHint(): string {
+    return ' Check that the access token has not expired, that its role restriction matches this connection, and that your Snowflake user is covered by a network policy (required for programmatic access tokens by default).'
+  }
+
+  async close(): Promise<void> {
+    this.verifiedKey = null
   }
 }

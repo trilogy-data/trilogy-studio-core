@@ -136,6 +136,28 @@ export function buildConnectionTree(
           connection,
         })
       }
+      if (connection.type === 'snowflake-pat') {
+        list.push({
+          id: `${connKey}-account`,
+          name: 'Account',
+          indent: 1,
+          count: 0,
+          type: 'snowflake-account',
+          searchPath: connection.name,
+          connection,
+        })
+        // Same secret-input row as the key pair connection; the node's name
+        // is what the row is labelled with.
+        list.push({
+          id: `${connKey}-access-token`,
+          name: 'Access Token',
+          indent: 1,
+          count: 0,
+          type: 'snowflake-private-key',
+          searchPath: connection.name,
+          connection,
+        })
+      }
       if (connection.type === 'snowflake') {
         list.push({
           id: `${connKey}-account`,
@@ -165,7 +187,7 @@ export function buildConnectionTree(
           connection,
         })
       }
-      if (['snowflake', 'motherduck'].includes(connection.type)) {
+      if (['snowflake', 'snowflake-pat', 'motherduck'].includes(connection.type)) {
         list.push({
           id: `${connKey}-toggle-save-credential`,
           name: 'Toggle Credential Saving',

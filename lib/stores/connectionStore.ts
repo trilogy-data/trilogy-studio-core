@@ -5,6 +5,7 @@ import {
   BigQueryOauthConnection,
   MotherDuckConnection,
   SnowflakeJwtConnection,
+  SnowflakePatConnection,
   SQLiteConnection,
   RemoteWorkerConnection,
 } from '../connections'
@@ -56,8 +57,8 @@ export const connectionTypes = [
   { label: 'DuckDB', value: 'duckdb' },
   { label: 'BigQuery (OAuth)', value: 'bigquery-oauth' },
   { label: 'BigQuery (Service Account)', value: 'bigquery' },
-  // { label: 'Snowflake (Basic Auth)', value: 'snowflake-basic' },
   { label: 'Snowflake (Key Pair Auth)', value: 'snowflake' },
+  { label: 'Snowflake (Access Token)', value: 'snowflake-pat' },
   { label: 'SQLite', value: 'sqlite' },
   { label: 'MotherDuck (Token)', value: 'motherduck' },
   // Tauri-only — requires a registered RemoteWorkerHost (Trilogy Explorer
@@ -278,6 +279,16 @@ const useConnectionStore = defineStore('connections', {
           role: options.role,
           database: options.database,
           schema: options.schema,
+        })
+      } else if (type === 'snowflake-pat') {
+        connection = new SnowflakePatConnection(name, {
+          account: options.account,
+          username: '',
+          token: options.token,
+          warehouse: options.warehouse || '',
+          role: options.role || undefined,
+          database: options.database || undefined,
+          schema: options.schema || undefined,
         })
       } else if (type === 'motherduck') {
         connection = new MotherDuckConnection(name, options.mdToken, options.saveCredential)
