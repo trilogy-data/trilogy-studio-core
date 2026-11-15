@@ -6,6 +6,7 @@ import {
   DuckDBConnection,
   MotherDuckConnection,
   SnowflakeJwtConnection,
+  SnowflakePatConnection,
   SQLiteConnection,
   RemoteWorkerConnection,
 } from '../connections'
@@ -192,6 +193,10 @@ export default class LocalStorage extends AbstractStorage {
         case 'snowflake':
           // @ts-ignore
           connections[connection.name] = reactive(SnowflakeJwtConnection.fromJSON(connection))
+          break
+        case 'snowflake-pat':
+          // @ts-ignore
+          connections[connection.name] = reactive(SnowflakePatConnection.fromJSON(connection))
           break
         // Uncomment if needed:
         // case "sqlserver":

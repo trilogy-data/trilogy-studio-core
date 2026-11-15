@@ -124,6 +124,10 @@ export const documentation: DocumentationNode[] = [
         'Snowflake',
         'Snowflake is supported with private key authentication. Read more at this link: <a href="https://docs.snowflake.com/en/user-guide/key-pair-auth" target="_blank">Snowflake Private Key Pairs</a>. Configure your Snowflake user with the public key, then provide the private key when connecting. Use caution when choosing whether to save this credential.',
       ),
+      new Paragraph(
+        'Access Tokens',
+        'Snowflake can also be connected with a programmatic access token, using the "Snowflake (Access Token)" connection type. Generate a token for your user in Snowsight, then provide your account identifier and the token; no username or key pair is needed. Read more at this link: <a href="https://docs.snowflake.com/en/user-guide/programmatic-access-tokens" target="_blank">Snowflake Programmatic Access Tokens</a>. Tokens expire, and by default Snowflake only accepts them for users covered by a network policy, so check both if authentication fails. If the token is restricted to a role, set the same role on the connection. Username and password sign-in is not supported.',
+      ),
     ]),
   ]),
   Reference,
@@ -225,6 +229,10 @@ export const documentation: DocumentationNode[] = [
       new Paragraph(
         'Google Account',
         'Trilogy Studio supports private key authentication for Snowflake. You will need to provide the private key to connect after configuring your user with the public key portion in Snowflake directly. The rest of the authentication header can be derived from this.',
+      ),
+      new Paragraph(
+        'Access Tokens',
+        'Snowflake connections can alternatively use a programmatic access token. Like the private key, the token stays in your browser and is only sent directly to Snowflake as the authorization header on SQL API requests.',
       ),
     ]),
     new Article('Telemetry Details', [

@@ -340,7 +340,7 @@ const datasourcePreview = computed(() => {
   let address = props.table.name
   if (props.connection.type === 'bigquery-oauth') {
     address = `\`${props.table.database}.${props.table.schema}.${props.table.name}\``
-  } else if (props.connection.type == 'snowflake') {
+  } else if (props.connection.type == 'snowflake' || props.connection.type == 'snowflake-pat') {
     address = `${props.table.database}.${props.table.schema}.${props.table.name}`
   }
 

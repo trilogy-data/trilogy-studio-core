@@ -102,6 +102,7 @@ import type {
   Connection,
   MotherDuckConnection,
   SnowflakeJwtConnection,
+  SnowflakePatConnection,
 } from '../../connections'
 import { KeySeparator } from '../../data/constants'
 import ConnectionListItem from './ConnectionListItem.vue'
@@ -169,16 +170,23 @@ export default {
       }
     }
 
-    const updateSnowflakePrivateKey = async (connection: SnowflakeJwtConnection, token: string) => {
-      if (connection.type === 'snowflake') {
-        connection.setPrivateKey(token)
+    // Shared by the key pair (private key) and access token connections.
+    const updateSnowflakePrivateKey = async (
+      connection: SnowflakeJwtConnection | SnowflakePatConnection,
+      token: string,
+    ) => {
+      if (connection.type === 'snowflake' || connection.type === 'snowflake-pat') {
+        connection.setSecret(token)
         await saveConnections()
         await connectionStore.resetConnection(connection.id)
       }
     }
 
-    const updateSnowflakeAccount = async (connection: SnowflakeJwtConnection, account: string) => {
-      if (connection.type === 'snowflake') {
+    const updateSnowflakeAccount = async (
+      connection: SnowflakeJwtConnection | SnowflakePatConnection,
+      account: string,
+    ) => {
+      if (connection.type === 'snowflake' || connection.type === 'snowflake-pat') {
         connection.setAccount(account)
         await saveConnections()
         connectionStore.resetConnection(connection.id)

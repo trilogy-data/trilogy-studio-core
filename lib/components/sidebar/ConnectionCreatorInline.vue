@@ -26,9 +26,8 @@
           <!-- Need to figure out CORS to support this and bigquery-->
           <!-- <option value="motherduck">MotherDuck</option> -->
           <option value="bigquery">Bigquery Oauth</option>
-          <option value="snowflake">Snowflake</option>
-          <!-- CORS blocks this in a browser -->
-          <!-- <option value="snowflake-basic">Snowflake Username/PW</option> -->
+          <option value="snowflake">Snowflake (Key Pair)</option>
+          <option value="snowflake-pat">Snowflake (Access Token)</option>
         </select>
       </div>
       <!-- Dynamic Fields Based on Type -->
@@ -80,19 +79,51 @@
           required
         />
       </div>
-      <!-- <div v-if="connectionDetails.type === 'snowflake-basic'" class="form-row">
-        <label for="account">Account</label>
-        <input type="text" v-model="connectionDetails.options.account" id="account" required />
-        <label for="username">Username</label>
-        <input type="text" v-model="connectionDetails.options.username" id="username" required />
-        <label for="password">Password</label>
-        <input
-          type="password"
-          v-model="connectionDetails.options.password"
-          id="username"
-          required
-        />
-      </div> -->
+      <template v-if="connectionDetails.type === 'snowflake-pat'">
+        <div class="form-row">
+          <label for="pat-account">Account</label>
+          <input
+            type="text"
+            v-model="connectionDetails.options.account"
+            class="sidebar-control-input"
+            id="pat-account"
+            data-testid="connection-creator-snowflake-pat-account"
+            required
+          />
+        </div>
+        <div class="form-row">
+          <label for="pat-token">Access Token</label>
+          <input
+            type="password"
+            v-model="connectionDetails.options.token"
+            class="sidebar-control-input"
+            id="pat-token"
+            data-testid="connection-creator-snowflake-pat-token"
+            placeholder="Programmatic access token"
+            required
+          />
+        </div>
+        <div class="form-row">
+          <label for="pat-warehouse">Warehouse</label>
+          <input
+            type="text"
+            v-model="connectionDetails.options.warehouse"
+            class="sidebar-control-input"
+            id="pat-warehouse"
+            placeholder="Optional (user default)"
+          />
+        </div>
+        <div class="form-row">
+          <label for="pat-role">Role</label>
+          <input
+            type="text"
+            v-model="connectionDetails.options.role"
+            class="sidebar-control-input"
+            id="pat-role"
+            placeholder="Optional (user default)"
+          />
+        </div>
+      </template>
       <template v-if="connectionDetails.type === 'snowflake'">
         <div class="form-row">
           <label for="account">Account</label>
@@ -173,6 +204,9 @@ export default defineComponent({
         username: '',
         password: '',
         privateKey: '',
+        token: '',
+        warehouse: '',
+        role: '',
         saveCredential: false,
       },
     })
@@ -195,6 +229,9 @@ export default defineComponent({
         username: '',
         password: '',
         privateKey: '',
+        token: '',
+        warehouse: '',
+        role: '',
         saveCredential: false,
       } // Reset options
     }

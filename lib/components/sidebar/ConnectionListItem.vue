@@ -121,7 +121,7 @@
           class="bq-project-container"
           @click.stop
         >
-          <label class="input-label">Private Key</label>
+          <label class="input-label">{{ item.name }}</label>
           <span>
             <transition name="fade">
               <i v-if="showPrivateKeySuccess" class="mdi mdi-check-circle success-icon"></i>
@@ -129,7 +129,7 @@
             <input
               type="password"
               v-model="snowflakePrivateKey"
-              placeholder="Private Key"
+              :placeholder="item.name"
               class="bq-project-input sidebar-control-input"
               @input="debouncedUpdateSnowflakePrivateKey"
             />
@@ -296,6 +296,7 @@ interface BigQueryLikeConnection {
 interface SnowflakeLikeConnection {
   config?: {
     privateKey?: string
+    token?: string
     account?: string
     username?: string
   }
@@ -538,7 +539,9 @@ export default {
     )
     const mdToken = ref((props.item.connection as any as MotherDuckConnection).mdToken || '')
     const snowflakePrivateKey = ref(
-      (props.item.connection as any as SnowflakeLikeConnection).config?.privateKey || '',
+      (props.item.connection as any as SnowflakeLikeConnection).config?.privateKey ||
+        (props.item.connection as any as SnowflakeLikeConnection).config?.token ||
+        '',
     )
     const snowflakeAccount = ref(
       (props.item.connection as any as SnowflakeLikeConnection).config?.account || '',
