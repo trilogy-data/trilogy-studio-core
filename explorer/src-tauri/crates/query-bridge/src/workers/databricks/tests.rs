@@ -10,6 +10,8 @@ use std::net::TcpListener;
 use std::sync::atomic::AtomicUsize;
 
 use arrow_array::{Int64Array, RecordBatch, StringArray};
+use arrow_ipc::reader::StreamReader;
+use arrow_ipc::writer::StreamWriter;
 
 const TOKEN: &str = "dapi-test-secret";
 const WAREHOUSE: &str = "abc123";
@@ -19,6 +21,8 @@ struct Seen {
     method: String,
     path: String,
     authorization: Option<String>,
+    /// Every request header, names lowercased.
+    headers: Vec<(String, String)>,
     body: String,
 }
 
@@ -49,6 +53,7 @@ impl MockServer {
                 let path = parts.next().unwrap_or("").to_string();
                 let mut len = 0usize;
                 let mut authorization = None;
+                let mut headers = Vec::new();
                 loop {
                     let mut h = String::new();
                     reader.read_line(&mut h).unwrap();
@@ -57,6 +62,7 @@ impl MockServer {
                         break;
                     }
                     let (k, v) = h.split_once(':').unwrap();
+                    headers.push((k.to_ascii_lowercase(), v.trim().to_string()));
                     match k.to_ascii_lowercase().as_str() {
                         "content-length" => len = v.trim().parse().unwrap(),
                         "authorization" => authorization = Some(v.trim().to_string()),
@@ -69,12 +75,21 @@ impl MockServer {
                     method,
                     path,
                     authorization,
+                    headers,
                     body: String::from_utf8_lossy(&body).into_owned(),
                 };
                 seen2.lock().push(req.clone());
-                let (status, payload) = handler(&req);
+                let (status, mut payload) = handler(&req);
+                // A 3xx's body is its Location.
+                let location = if (300..400).contains(&status) {
+                    let l = String::from_utf8_lossy(&payload).into_owned();
+                    payload.clear();
+                    format!("Location: {l}\r\n")
+                } else {
+                    String::new()
+                };
                 let head = format!(
-                    "HTTP/1.1 {status} X\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    "HTTP/1.1 {status} X\r\n{location}Content-Length: {}\r\nConnection: close\r\n\r\n",
                     payload.len()
                 );
                 let _ = stream.write_all(head.as_bytes());
@@ -176,7 +191,16 @@ fn normalizes_workspace_hosts() {
 
 #[test]
 fn api_paths_cannot_change_the_authority() {
-    let c = Client::new("https://dbc-1.cloud.databricks.com".into(), TOKEN.into());
+    let settings = DatabricksSettings::new(
+        Some("dbc-1.cloud.databricks.com"),
+        None,
+        Some(WAREHOUSE),
+        Some(TOKEN),
+        None,
+        None,
+    )
+    .unwrap();
+    let c = Client::new(settings.clone(), EgressPolicy::permissive()).unwrap();
     assert_eq!(
         c.url("/api/2.0/sql/statements/s/result/chunks/1").unwrap(),
         "https://dbc-1.cloud.databricks.com/api/2.0/sql/statements/s/result/chunks/1"
@@ -184,6 +208,16 @@ fn api_paths_cannot_change_the_authority() {
     assert!(c.url("@evil.example/api").is_err());
     assert!(c.url("//evil.example/api").is_err());
     assert!(c.url(".evil.example/api").is_err());
+    // A strict client also keeps response-supplied paths under the SQL API.
+    let strict = Client::new(
+        settings,
+        EgressPolicy::strict()
+            .with_resolver(Arc::new(|_, _| Ok(vec!["52.1.2.3".parse().unwrap()]))),
+    )
+    .unwrap();
+    assert!(strict.url("/api/2.0/sql/statements/s").is_ok());
+    assert!(strict.url("/api/2.0/token/create").is_err());
+    assert!(normalize_base_url("https://user@dbc-1.cloud.databricks.com").is_err());
 }
 
 #[test]
@@ -535,4 +569,175 @@ fn maps_databricks_types() {
     assert_eq!(map_databricks_type("timestamp_ntz"), "datetime");
     assert_eq!(map_databricks_type("map<string,int>"), "map");
     assert_eq!(map_databricks_type("variant"), "unknown");
+}
+
+// --- engine paths: redirects, size caps, out-of-band cancel -----------------
+
+fn client_for(base: &str) -> Client {
+    let settings =
+        DatabricksSettings::new(Some(base), None, Some(WAREHOUSE), Some(TOKEN), None, None)
+            .unwrap();
+    Client::new(settings, EgressPolicy::permissive()).unwrap()
+}
+
+fn link_response(link: &str) -> Value {
+    json!({
+        "statement_id": "st",
+        "status": { "state": "SUCCEEDED" },
+        "result": { "external_links": [{
+            "external_link": link,
+            "http_headers": { "x-ms-blob-type": "BlockBlob" }
+        }]}
+    })
+}
+
+fn header<'a>(req: &'a Seen, name: &str) -> Option<&'a str> {
+    req.headers
+        .iter()
+        .find(|(k, _)| k == name)
+        .map(|(_, v)| v.as_str())
+}
+
+#[test]
+fn downloads_follow_redirects_hop_by_hop() {
+    let server = MockServer::start(|req| match req.path.as_str() {
+        // Relative, as Databricks-managed storage answers.
+        "/storage/big" => (307, b"/storage/big-part".to_vec()),
+        "/storage/big-part" => (200, arrow_chunk(&[1, 2, 3], &["a", "b", "c"])),
+        _ => (404, b"{}".to_vec()),
+    });
+    let client = client_for(&server.base);
+    let resp = link_response(&format!("{}/storage/big", server.base));
+    let (bytes, rows) = client.collect_arrow(&resp, 0, &|| false).unwrap();
+    assert_eq!(rows, 3);
+    assert_eq!(decode(&bytes).1, 3);
+    let reqs = server.requests();
+    assert_eq!(reqs.len(), 2);
+    for r in &reqs {
+        assert_eq!(r.authorization, None, "token leaked to {}", r.path);
+        // Same host: the link's own headers go along.
+        assert_eq!(header(r, "x-ms-blob-type"), Some("BlockBlob"));
+    }
+}
+
+#[test]
+fn link_headers_stay_with_the_host_databricks_named() {
+    let other = MockServer::start(|_| (200, arrow_chunk(&[1], &["a"])));
+    // `localhost` vs `127.0.0.1`: a different host, still loopback.
+    let target = other.base.replace("127.0.0.1", "localhost") + "/elsewhere";
+    let first = MockServer::start(move |_| (302, target.clone().into_bytes()));
+    let client = client_for(&first.base);
+    let resp = link_response(&format!("{}/storage/c", first.base));
+    let (_, rows) = client.collect_arrow(&resp, 0, &|| false).unwrap();
+    assert_eq!(rows, 1);
+    assert_eq!(
+        header(&first.requests()[0], "x-ms-blob-type"),
+        Some("BlockBlob")
+    );
+    assert_eq!(header(&other.requests()[0], "x-ms-blob-type"), None);
+}
+
+#[test]
+fn redirect_loops_and_bad_hops_are_refused() {
+    let looping = MockServer::start(|_| (307, b"/storage/again".to_vec()));
+    let client = client_for(&looping.base);
+    let err = client
+        .collect_arrow(
+            &link_response(&format!("{}/storage/x", looping.base)),
+            0,
+            &|| false,
+        )
+        .unwrap_err();
+    assert!(err.to_string().contains("too many"), "{err}");
+    assert_eq!(looping.requests().len(), MAX_REDIRECTS_PLUS_ONE);
+
+    // A hop to plain http off loopback fails the egress check.
+    let off_box = MockServer::start(|_| (307, b"http://example.com/x".to_vec()));
+    let client = client_for(&off_box.base);
+    let err = client
+        .collect_arrow(
+            &link_response(&format!("{}/storage/x", off_box.base)),
+            0,
+            &|| false,
+        )
+        .unwrap_err();
+    assert!(matches!(err, BridgeError::EgressDenied(_)), "{err:?}");
+}
+
+const MAX_REDIRECTS_PLUS_ONE: usize = client::MAX_DOWNLOAD_REDIRECTS + 1;
+
+#[test]
+fn result_size_cap_uses_manifest_and_bytes() {
+    let server = MockServer::start(|_| (200, arrow_chunk(&[1, 2, 3, 4, 5, 6], &["a"; 6])));
+    let client = client_for(&server.base);
+    let mut resp = link_response(&format!("{}/storage/c", server.base));
+    resp["manifest"] = json!({ "total_byte_count": 10_000 });
+    let err = client.collect_arrow(&resp, 1_000, &|| false).unwrap_err();
+    assert!(matches!(err, BridgeError::TooLarge(_)), "{err:?}");
+    // Refused on the manifest alone: nothing downloaded.
+    assert!(server.requests().is_empty());
+
+    // An undeclared size is caught while downloading.
+    resp["manifest"] = json!({});
+    let err = client.collect_arrow(&resp, 64, &|| false).unwrap_err();
+    assert!(matches!(err, BridgeError::TooLarge(_)), "{err:?}");
+    assert!(client.collect_arrow(&resp, 1 << 20, &|| false).is_ok());
+}
+
+#[test]
+fn stateless_wait_returns_running_and_maps_cancel() {
+    let polls = Arc::new(AtomicUsize::new(0));
+    let p = polls.clone();
+    let server = MockServer::start(move |req| match req.path.as_str() {
+        "/api/2.0/sql/statements/s-run" => {
+            p.fetch_add(1, Ordering::SeqCst);
+            ok(json!({ "statement_id": "s-run", "status": { "state": "RUNNING" } }))
+        }
+        _ => ok(json!({ "statement_id": "s-gone", "status": { "state": "CANCELED" } })),
+    });
+    let client = client_for(&server.base);
+    // Past the deadline the last (still running) response comes back.
+    let running = json!({ "statement_id": "s-run", "status": { "state": "PENDING" } });
+    let out = client
+        .wait(running, Instant::now() + Duration::from_millis(700), None)
+        .unwrap();
+    assert_eq!(statement_state(&out), "RUNNING");
+    assert!(polls.load(Ordering::SeqCst) >= 1);
+    // Without a local flag, CANCELED is the user's own (out-of-band) cancel.
+    let canceled = client.status("s-gone").unwrap();
+    assert!(matches!(
+        client.wait(canceled, no_deadline(), None),
+        Err(BridgeError::Canceled)
+    ));
+    assert!(check_statement_id("../warehouses").is_err());
+    assert!(check_statement_id("01ef-ab").is_ok());
+}
+
+#[test]
+fn server_settings_are_never_mixed_with_caller_credentials() {
+    let server = DatabricksSettings::new(
+        Some("dbc-srv.cloud.databricks.com"),
+        Some("/sql/1.0/warehouses/srv"),
+        None,
+        Some("server-token"),
+        Some("main"),
+        None,
+    )
+    .unwrap();
+    // No connection keys: the server's warehouse, caller's catalog/schema.
+    let s = DatabricksSettings::resolve(&json!({ "schema": "sales" }), Some(&server)).unwrap();
+    assert_eq!(s.base_url, "https://dbc-srv.cloud.databricks.com");
+    assert_eq!(s.catalog.as_deref(), Some("main"));
+    assert_eq!(s.schema.as_deref(), Some("sales"));
+    // A caller host without a token never inherits the server's token.
+    let err = DatabricksSettings::resolve(
+        &json!({ "host": "dbc-mine.cloud.databricks.com", "warehouseId": "w" }),
+        Some(&server),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("token"), "{err}");
+    // And a token alone doesn't borrow the server's host.
+    assert!(DatabricksSettings::resolve(&json!({ "token": "t" }), Some(&server)).is_err());
+    assert!(DatabricksSettings::resolve(&json!({}), None).is_err());
+    assert!(!format!("{s:?}").contains("server-token"));
 }

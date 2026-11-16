@@ -5,11 +5,11 @@
 //
 //   TRILOGY_ENGINE_API_KEYS="dev:<sha256 of key>" DATABRICKS_HOST=... \
 //   DATABRICKS_HTTP_PATH=... DATABRICKS_TOKEN=... \
-//     uvicorn app:app --port 5680           (in engine/)
+//     cargo run --manifest-path engine/Cargo.toml     (listens on 127.0.0.1:5680)
 //   E2E_ENGINE_KEY=<key> pnpm exec playwright test databricks-remote-engine --project chromium
 //
 // E2E_ENGINE_URL overrides the engine address (default http://127.0.0.1:5680).
-// `python engine/remote_engine.py new-key dev` mints a key and its digest.
+// `cargo run --manifest-path engine/Cargo.toml -- new-key dev` mints a key and its digest.
 import { test, expect } from './console-capture'
 import {
   drillMobileTree,

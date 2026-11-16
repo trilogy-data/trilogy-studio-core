@@ -381,7 +381,7 @@ provide('jobsApiStore', props.jobsApiStore)
 provide('chatStore', props.chatStore)
 
 // Remote-worker connections (e.g. Databricks) with no in-process bridge run on
-// the remote engine: its own service, not the resolver (engine/app.py). A
+// the remote engine: its own service, not the resolver (engine/). A
 // shell that registers its own host (the Tauri explorer) still wins: this is
 // only the fallback. A connection's `engineUrl` overrides it per connection.
 setDefaultRemoteWorkerHost(

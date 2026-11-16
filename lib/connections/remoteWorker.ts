@@ -155,7 +155,7 @@ export function getRemoteWorkerHost(): RemoteWorkerHost | null {
 }
 
 // Fallback used only when no shell registered a host. The web studio installs
-// an HTTP host here (the remote engine service, engine/app.py), so a shell's
+// an HTTP host here (the remote engine service, engine/), so a shell's
 // in-process bridge, registered by Tauri at boot, always wins regardless of
 // which runs first.
 let defaultHost: RemoteWorkerHost | null = null

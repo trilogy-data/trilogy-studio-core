@@ -50,7 +50,7 @@ Fields:
     - `bigquery` → `{ projectId? }`
     - `snowflake` → `{ account, username, warehouse?, role?, database?, schema? }` (no `privateKey` — that's a secret)
     - `motherduck` → `{}` (token is a secret, supplied per-user)
-    - `databricks` → `{ catalog?, schema? }`. Unlike every other type, the **server** runs the queries: the browser can't call the Databricks Statement API (no CORS). A store advertising `databricks` must also serve the remote engine at `<baseUrl>/engine` (the router in `engine/remote_engine.py`, mounted behind the store's own `X-Trilogy-Token` check) and run it on its own `[engine.config]` credentials. The client builds a `RemoteWorkerConnection` against that engine and sends the serve token; it holds no warehouse secret. See `docs/remote-worker-service.md`.
+    - `databricks` → `{ catalog?, schema? }`. Unlike every other type, the **server** runs the queries: the browser can't call the Databricks Statement API (no CORS). A store advertising `databricks` must also serve the remote engine at `<baseUrl>/engine` (the `trilogy-engine` binary from `engine/`, run as a subprocess and proxied behind the store's own `X-Trilogy-Token` check) and run it on its own `[engine.config]` credentials. The client builds a `RemoteWorkerConnection` against that engine and sends the serve token; it holds no warehouse secret. See `docs/remote-worker-service.md`.
   - **Never** includes secrets — tokens, passwords, private keys stay in the client's per-user credential storage.
 
 #### How the server fills `connection`

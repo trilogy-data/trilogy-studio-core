@@ -1,11 +1,16 @@
-# The remote query engine. A separate app from `trilogy-service` (pyserver,
-# the resolver) on purpose: the resolver is CPU-bound and wants dedicated
-# cores; the engine is I/O-bound (waiting on Databricks) but memory-heavy,
-# since it holds a result while it re-encodes and sends it. They scale on
-# different signals and must not share a process, secrets or failure modes.
+# The remote query engine: a Rust server (engine/) over the explorer's
+# query-bridge crate. A separate app from `trilogy-service` (pyserver, the
+# resolver) on purpose: the resolver is CPU-bound and wants dedicated cores;
+# the engine is I/O-bound (waiting on Databricks) but memory-heavy, since it
+# holds a result while it re-encodes and sends it. They scale on different
+# signals and must not share a process, secrets or failure modes.
+#
+# Deploy from the REPO ROOT (the image needs the query-bridge crate):
+#
+#   fly deploy . --config engine/fly.toml
 #
 # Secrets (fly secrets set -a trilogy-engine ...):
-#   TRILOGY_ENGINE_API_KEYS   keyId:sha256,...  (`python remote_engine.py new-key <id>`)
+#   TRILOGY_ENGINE_API_KEYS   keyId:sha256,...  (`trilogy-engine new-key <id>`)
 #   DATABRICKS_HOST / DATABRICKS_HTTP_PATH / DATABRICKS_TOKEN
 #                             the server's warehouse (optional: without them a
 #                             caller must bring its own workspace and token)
@@ -15,16 +20,19 @@ app = 'trilogy-engine'
 primary_region = 'ewr'
 
 [build]
+  dockerfile = 'Dockerfile'
+  ignorefile = 'Dockerfile.dockerignore'
 
 [env]
   # Memory budget: up to MAX_INFLIGHT results of MAX_RESULT_BYTES, roughly
   # doubled while chunks are re-encoded into one stream. 6 x 128 MiB x 2 is
   # ~1.5 GB of the 2 GB below; past it the engine answers 503 + Retry-After
-  # and the proxy's soft_limit has already woken another machine.
+  # and the proxy's soft_limit has already woken another machine. (These are
+  # also the binary's defaults; set here so the budget is visible.)
   TRILOGY_ENGINE_MAX_INFLIGHT = '6'
   TRILOGY_ENGINE_MAX_RESULT_BYTES = '134217728'
-  # Fly's proxy drops a request idle for 60 s. Connect, describe and scripts
-  # finish within one request, so keep their budget under that. Queries are
+  # Fly's proxy drops a request idle for 60 s. Describe and scripts finish
+  # within one request, so keep their budget under that. Queries are
   # unaffected: they submit and poll (TRILOGY_ENGINE_POLL_SECONDS, 10).
   TRILOGY_ENGINE_SYNC_SECONDS = '50'
 
@@ -42,7 +50,7 @@ primary_region = 'ewr'
     hard_limit = 12
 
   [[http_service.checks]]
-    grace_period = '10s'
+    grace_period = '5s'
     interval = '30s'
     method = 'GET'
     path = '/health'

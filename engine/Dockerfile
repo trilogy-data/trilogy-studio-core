@@ -1,47 +1,39 @@
 # syntax=docker/dockerfile:1
-# The remote engine (Fly app `trilogy-engine`). Separate from pyserver: no
-# pytrilogy, a different machine shape, its own secrets. See app.py.
+# The remote query engine (Fly app `trilogy-engine`). Separate from pyserver:
+# its own image, machines and secrets. See src/lib.rs.
+#
+# Build from the REPO ROOT: the engine depends on the explorer's query-bridge
+# crate by path.
+#
+#   docker build -f engine/Dockerfile -t trilogy-engine .
+#
+# Dockerfile.dockerignore (next to this file) limits the context to the two
+# crates.
 
-ARG UV_IMAGE=ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+ARG RUST_IMAGE=rust:1.97-slim-bookworm
 
-FROM ${UV_IMAGE} AS base
-WORKDIR /app
-ENV UV_COMPILE_BYTECODE=1 \
-    UV_LINK_MODE=copy
+FROM ${RUST_IMAGE} AS build
+WORKDIR /src
+COPY explorer/src-tauri/crates/query-bridge/Cargo.toml explorer/src-tauri/crates/query-bridge/Cargo.toml
+COPY explorer/src-tauri/crates/query-bridge/src explorer/src-tauri/crates/query-bridge/src
+COPY engine/Cargo.toml engine/Cargo.lock engine/
+COPY engine/src engine/src
+COPY engine/tests engine/tests
+WORKDIR /src/engine
+# Offline tests gate the image (the live suite skips without DATABRICKS_*).
+# Same profile for both, so the build reuses the test compile.
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/src/engine/target \
+    cargo test --release --locked \
+    && cargo build --release --locked \
+    && cp target/release/trilogy-engine /usr/local/bin/trilogy-engine
 
-FROM base AS deps
-COPY requirements.txt ./
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install -r requirements.txt --system
-
-# Offline tests only: the live suite skips without DATABRICKS_* in the build.
-FROM deps AS tester
-COPY requirements-test.txt ./
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install -r requirements-test.txt --system
-COPY . .
-RUN pytest tests && touch /tmp/tests-passed
-
-FROM base AS production
-RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
-ENV PYTHONPATH=. \
-    PYTHONUNBUFFERED=1 \
+# glibc + libgcc, no shell, no package manager, non-root. TLS roots are
+# compiled in (rustls + webpki-roots), so no ca-certificates are needed.
+FROM gcr.io/distroless/cc-debian12:nonroot
+COPY --from=build /usr/local/bin/trilogy-engine /usr/local/bin/trilogy-engine
+ENV HOST=0.0.0.0 \
     PORT=8080
-
-COPY --from=deps /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
-COPY --from=deps /usr/local/bin /usr/local/bin
-# Build barrier: fails unless `tester` passed.
-COPY --from=tester /tmp/tests-passed /tmp/tests-passed
-COPY *.py ./
-RUN chown -R appuser:appuser /app
-
-USER appuser
 EXPOSE 8080
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()" || exit 1
-
-# One process. The work is waiting on Databricks, not CPU: requests run on the
-# threadpool and TRILOGY_ENGINE_MAX_INFLIGHT bounds how many hold a result in
-# memory at once. More capacity means more machines (fly.toml), not workers.
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers", "--timeout-graceful-shutdown", "30"]
+USER nonroot
+ENTRYPOINT ["/usr/local/bin/trilogy-engine"]

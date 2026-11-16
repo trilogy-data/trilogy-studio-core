@@ -1,0 +1,34 @@
+[package]
+name = "trilogy-engine"
+version = "0.1.0"
+edition = "2021"
+description = "Hosted remote query engine for the Trilogy studio: runs warehouse queries the browser can't reach"
+publish = false
+
+# The drivers are the explorer's query-bridge crate, the same code the desktop
+# app runs in-process. Only Databricks is enabled: DuckDB would run on the
+# server's own filesystem and network, which a shared engine must not offer.
+[dependencies]
+query-bridge = { path = "../explorer/src-tauri/crates/query-bridge", default-features = false, features = ["databricks"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "sync", "time"] }
+tower-http = { version = "0.6", features = ["cors"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+subtle = "2.6"
+hex = "0.4"
+getrandom = "0.2"
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
+arrow-ipc = "55"
+arrow-array = "55"
+arrow-schema = "55"
+lz4_flex = { version = "=0.11.6", default-features = false, features = ["std", "frame"] }
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+strip = true

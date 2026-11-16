@@ -3,7 +3,7 @@
 // in-process bridge. This is how the web studio reaches warehouses the browser
 // can't call directly; Databricks sends no CORS headers.
 //
-// The server is stateless (see engine/remote_engine.py): every call carries
+// The server is stateless (see engine/src/lib.rs): every call carries
 // the connection config. The "session" lives here instead, as a sessionId →
 // config map, so the RemoteWorkerHost interface is unchanged and a server
 // restart or scale-to-zero costs nothing.
