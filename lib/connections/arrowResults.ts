@@ -145,9 +145,16 @@ export function processArrowRow(row: any, headers: Map<string, ResultColumn>): R
           out[key] = null
           break
         }
-        out[key] = arrayData.map((item: any) =>
-          processArrowRow({ [ARRAY_IMPLICIT_COLUMN]: item }, column.children!),
-        )
+        // Producers name the list's child field differently: DuckDB uses
+        // `l`, Arrow's default is `item`, Databricks/Spark use `element`.
+        // Decode with the real child name, then re-key each item under
+        // ARRAY_IMPLICIT_COLUMN, which downstream consumers read.
+        const childName = column.children?.keys().next().value ?? ARRAY_IMPLICIT_COLUMN
+        out[key] = arrayData.map((item: any) => ({
+          [ARRAY_IMPLICIT_COLUMN]: processArrowRow({ [childName]: item }, column.children!)[
+            childName
+          ],
+        }))
         break
       }
       case ColumnType.STRUCT:

@@ -8,8 +8,11 @@ description = "Driver-agnostic query session manager for the Trilogy Explorer Ta
 # Default to bundling DuckDB so a fresh `cargo build` produces a working
 # explorer binary out of the box. Add more drivers behind their own features
 # (postgres, sqlite, …) without bloating builds that don't need them.
-default = ["duckdb"]
+default = ["duckdb", "databricks"]
 duckdb = ["dep:duckdb", "dep:arrow-ipc", "dep:arrow-schema"]
+# Databricks SQL warehouses over the Statement Execution API (HTTP). Pure
+# Rust: no native driver, rustls for TLS.
+databricks = ["dep:ureq", "dep:lz4_flex", "dep:arrow-ipc", "dep:arrow-schema"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -26,7 +29,13 @@ uuid = { version = "1", features = ["v4"] }
 arrow-ipc = { version = "55", optional = true }
 arrow-schema = { version = "55", optional = true }
 duckdb = { version = "=1.3.2", optional = true, features = ["bundled"] }
+# Pinned to long-published releases (supply-chain quarantine). ureq is the
+# blocking client on purpose: workers are sync, and reqwest::blocking panics
+# when called from inside a tokio runtime.
+ureq = { version = "=2.12.1", optional = true, default-features = false, features = ["tls", "proxy-from-env"] }
+lz4_flex = { version = "=0.11.6", optional = true, default-features = false, features = ["std", "frame", "safe-decode"] }
 
 [dev-dependencies]
+arrow-array = "55"
 tempfile = "3"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }

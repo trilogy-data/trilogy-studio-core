@@ -269,6 +269,57 @@ describe('RemoteWorkerConnection', () => {
     expect(rehydrated.query_type).toBe('postgres')
   })
 
+  describe('secret config fields', () => {
+    const databricks = (saveCredential = false) =>
+      new RemoteWorkerConnection('dbx', {
+        driver: 'databricks',
+        config: { host: 'dbc-1.cloud.databricks.com', token: 'dapi-secret', catalog: 'main' },
+        queryType: 'databricks',
+        secretFields: ['token'],
+        saveCredential,
+      })
+
+    it('never serializes the secret', () => {
+      const json = databricks().toJSON() as any
+      expect(json.config).toEqual({
+        host: 'dbc-1.cloud.databricks.com',
+        token: '',
+        catalog: 'main',
+      })
+      expect(JSON.stringify(json)).not.toContain('dapi-secret')
+      const saved = databricks(true).toJSON() as any
+      expect(saved.config.token).toBe('saved')
+      expect(JSON.stringify(saved)).not.toContain('dapi-secret')
+    })
+
+    it('does not strip the in-memory config while serializing', () => {
+      const conn = databricks()
+      conn.toJSON()
+      expect(conn.config.token).toBe('dapi-secret')
+    })
+
+    it('restores the secret through setSecret after fromJSON', async () => {
+      const state = freshState()
+      const rehydrated = RemoteWorkerConnection.fromJSON(databricks(true).toJSON() as any)
+      expect(rehydrated.getSecret()).toBe('saved')
+      expect(rehydrated.saveCredential).toBe(true)
+      rehydrated.setSecret('dapi-restored')
+      expect(rehydrated.changed).toBe(true)
+
+      registerRemoteWorkerHost(makeHost(state))
+      await rehydrated.connect()
+      expect(state.connectArgs.config.token).toBe('dapi-restored')
+    })
+
+    it('refuses to connect with a missing or placeholder secret', async () => {
+      const state = freshState()
+      registerRemoteWorkerHost(makeHost(state))
+      const rehydrated = RemoteWorkerConnection.fromJSON(databricks(true).toJSON() as any)
+      await expect(rehydrated.connect()).rejects.toThrow(/No token set/)
+      expect(state.connectArgs).toBeNull()
+    })
+  })
+
   it('uses the registered host when no explicit host is passed', async () => {
     const state = freshState()
     registerRemoteWorkerHost(makeHost(state))

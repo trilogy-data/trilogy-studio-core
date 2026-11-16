@@ -165,7 +165,16 @@ export interface RemoteWorkerConnectionOptions {
   // when rehydrating offline.
   queryType?: string
   host?: RemoteWorkerHost
+  // Keys of `config` that hold credentials (e.g. a Databricks access token).
+  // They never reach toJSON: persisted as 'saved' when `saveCredential` is on
+  // (the credential manager restores them through setSecret, like the
+  // MotherDuck / Snowflake connections) and '' otherwise.
+  secretFields?: string[]
+  saveCredential?: boolean
 }
+
+// Placeholder written over a secret config field in persisted JSON.
+const SAVED_SECRET = 'saved'
 
 function fromColumnDTO(dto: RemoteColumnDTO): Column {
   return new Column(
@@ -215,10 +224,13 @@ export default class RemoteWorkerConnection extends BaseConnection {
   // (idle reap, worker restart) re-applies it transparently.
   private pendingWorkingDirectory: string | null = null
 
+  secretFields: string[]
+
   constructor(name: string, opts: RemoteWorkerConnectionOptions, model?: string) {
-    super(name, `remote-worker:${opts.driver}`, false, model)
+    super(name, `remote-worker:${opts.driver}`, false, model, opts.saveCredential ?? false)
     this.driver = opts.driver
     this.config = opts.config ?? {}
+    this.secretFields = opts.secretFields ?? []
     this.query_type = opts.queryType || opts.driver
     this.explicitHost = opts.host ?? null
   }
@@ -258,6 +270,8 @@ export default class RemoteWorkerConnection extends BaseConnection {
     config?: Record<string, any>
     queryType?: string
     model?: string | null
+    secretFields?: string[]
+    saveCredential?: boolean
   }): RemoteWorkerConnection {
     return new RemoteWorkerConnection(
       fields.name,
@@ -265,13 +279,15 @@ export default class RemoteWorkerConnection extends BaseConnection {
         driver: fields.driver,
         config: fields.config ?? {},
         queryType: fields.queryType,
+        secretFields: fields.secretFields,
+        saveCredential: fields.saveCredential,
       },
       fields.model || undefined,
     )
   }
 
   toJSON(): object {
-    return {
+    const base = {
       id: this.id,
       name: this.name,
       type: this.type,
@@ -280,6 +296,33 @@ export default class RemoteWorkerConnection extends BaseConnection {
       config: this.config,
       queryType: this.query_type,
     }
+    // Secret-free drivers keep the original shape exactly.
+    if (this.secretFields.length === 0) return base
+    const config = { ...this.config }
+    for (const key of this.secretFields) {
+      if (key in config) config[key] = this.saveCredential ? SAVED_SECRET : ''
+    }
+    return {
+      ...base,
+      config,
+      secretFields: this.secretFields,
+      saveCredential: this.saveCredential,
+    }
+  }
+
+  // The first secret field is the connection's credential for the generic
+  // credential-store flow (Manager.vue saves getSecret(), restores via
+  // setSecret() when it sees the 'saved' placeholder).
+  getSecret(): string | null {
+    const key = this.secretFields[0]
+    return key ? (this.config[key] ?? null) : null
+  }
+
+  setSecret(secret: string): void {
+    const key = this.secretFields[0]
+    if (!key || this.config[key] === secret) return
+    this.config = { ...this.config, [key]: secret }
+    this.changed = true
   }
 
   private resolveHost(): RemoteWorkerHost {
@@ -318,6 +361,14 @@ export default class RemoteWorkerConnection extends BaseConnection {
   }
 
   async connect(): Promise<boolean> {
+    for (const key of this.secretFields) {
+      const value = this.config[key]
+      if (!value || value === SAVED_SECRET) {
+        throw new Error(
+          `No ${key} set for connection "${this.name}". Enter it again: credentials are not stored unless saving is enabled.`,
+        )
+      }
+    }
     const host = this.resolveHost()
     const res = await host.connect({
       connectionId: this.id,

@@ -30,13 +30,10 @@ pub trait QueryWorker: Send {
     fn describe_databases(&self) -> Result<Vec<DatabaseDTO>>;
     fn describe_schemas(&self, database: &str) -> Result<Vec<SchemaDTO>>;
     fn describe_tables(&self, database: &str, schema: Option<&str>) -> Result<Vec<TableDTO>>;
-    fn describe_columns(&self, database: &str, schema: &str, table: &str) -> Result<Vec<ColumnDTO>>;
-    fn describe_table(
-        &self,
-        database: &str,
-        schema: Option<&str>,
-        table: &str,
-    ) -> Result<TableDTO>;
+    fn describe_columns(&self, database: &str, schema: &str, table: &str)
+        -> Result<Vec<ColumnDTO>>;
+    fn describe_table(&self, database: &str, schema: Option<&str>, table: &str)
+        -> Result<TableDTO>;
 
     /// Set the directory the engine should resolve relative file references
     /// against. The explorer pushes its project's `directoryPath` here so
@@ -83,3 +80,6 @@ pub struct BuildOutput {
 
 #[cfg(feature = "duckdb")]
 pub mod duckdb;
+
+#[cfg(feature = "databricks")]
+pub mod databricks;
