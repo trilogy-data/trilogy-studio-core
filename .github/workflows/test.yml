@@ -84,6 +84,37 @@ jobs:
         working-directory: ./explorer/src-tauri/crates/query-bridge
         run: cargo test --no-default-features --features databricks
 
+  # The remote query engine (engine/): a Rust server over query-bridge, its
+  # own service. Offline only: the live suite skips without DATABRICKS_* set.
+  engine-tests:
+    name: Remote Engine Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: ./engine
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: engine
+
+      - name: Lint
+        run: |
+          cargo fmt --check
+          cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --locked
+
   integration-tests-local:
     name: Integration Tests (Local)
     runs-on: ubuntu-latest

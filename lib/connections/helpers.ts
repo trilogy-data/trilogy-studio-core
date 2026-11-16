@@ -20,6 +20,7 @@ export const CONNECTION_CONFIG_NODE_TYPES = new Set([
   'snowflake-account',
   'snowflake-username',
   'snowflake-private-key',
+  'remote-worker-secret',
   'toggle-save-credential',
   'duckdb-toggle-compatible-fetch',
   'loading',
@@ -27,6 +28,11 @@ export const CONNECTION_CONFIG_NODE_TYPES = new Set([
 ])
 
 /** Node types whose children are browsable — i.e. worth drilling into. */
+const REMOTE_SECRET_LABELS: Record<string, string> = {
+  engineKey: 'Engine Key',
+  token: 'Access Token',
+}
+
 export const CONNECTION_BRANCH_NODE_TYPES = new Set(['connection', 'database', 'schema', 'table'])
 
 export function buildConnectionTree(
@@ -188,6 +194,33 @@ export function buildConnectionTree(
         })
       }
       if (['snowflake', 'snowflake-pat', 'motherduck'].includes(connection.type)) {
+        list.push({
+          id: `${connKey}-toggle-save-credential`,
+          name: 'Toggle Credential Saving',
+          indent: 1,
+          count: 0,
+          type: 'toggle-save-credential',
+          searchPath: connection.name,
+          connection,
+        })
+      }
+      // Remote-worker connections (e.g. Databricks on the remote engine): one
+      // input per secret, since an unsaved secret must be re-entered after a
+      // reload before the connection can connect.
+      const secretFields: string[] = (connection as any).secretFields ?? []
+      if (connection.type.startsWith('remote-worker:') && secretFields.length > 0) {
+        for (const key of secretFields) {
+          list.push({
+            id: `${connKey}-secret-${key}`,
+            name: REMOTE_SECRET_LABELS[key] ?? key,
+            indent: 1,
+            count: 0,
+            type: 'remote-worker-secret',
+            searchPath: connection.name,
+            connection,
+            object: { secretKey: key },
+          })
+        }
         list.push({
           id: `${connKey}-toggle-save-credential`,
           name: 'Toggle Credential Saving',

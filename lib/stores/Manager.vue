@@ -52,6 +52,8 @@ import {
 } from '../data/credentialHelpers'
 import { useAnalyticsStore } from '../stores/analyticsStore.ts'
 import QueryResolver from './resolver'
+import { setDefaultRemoteWorkerHost } from '../connections/remoteWorker'
+import { createHttpRemoteWorkerHost } from '../connections/httpRemoteWorkerHost'
 import { repairDashboardConnectionRefs } from '../dashboards/connectionResolution'
 import { provide, computed, ref, defineAsyncComponent, onMounted, onBeforeUnmount } from 'vue'
 import type { PropType } from 'vue'
@@ -377,6 +379,21 @@ provide('dashboardStore', props.dashboardStore)
 provide('communityApiStore', props.communityApiStore)
 provide('jobsApiStore', props.jobsApiStore)
 provide('chatStore', props.chatStore)
+
+// Remote-worker connections (e.g. Databricks) with no in-process bridge run on
+// the remote engine: its own service, not the resolver (engine/). A
+// shell that registers its own host (the Tauri explorer) still wins: this is
+// only the fallback. A connection's `engineUrl` overrides it per connection.
+setDefaultRemoteWorkerHost(
+  createHttpRemoteWorkerHost({
+    getBaseUrl: () =>
+      String(
+        props.userSettingsStore.settings.remoteEngineUrl ||
+          props.userSettingsStore.defaults.remoteEngineUrl ||
+          '',
+      ),
+  }),
+)
 const { setActiveScreen, setActiveEditor, setActiveDashboard } = useScreenNavigation()
 provide('setActiveScreen', setActiveScreen)
 provide('setActiveEditor', setActiveEditor)

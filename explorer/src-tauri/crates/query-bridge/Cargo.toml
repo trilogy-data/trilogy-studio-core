@@ -12,7 +12,7 @@ default = ["duckdb", "databricks"]
 duckdb = ["dep:duckdb", "dep:arrow-ipc", "dep:arrow-schema"]
 # Databricks SQL warehouses over the Statement Execution API (HTTP). Pure
 # Rust: no native driver, rustls for TLS.
-databricks = ["dep:ureq", "dep:lz4_flex", "dep:arrow-ipc", "dep:arrow-schema"]
+databricks = ["dep:ureq", "dep:url", "dep:lz4_flex", "dep:arrow-ipc", "dep:arrow-schema"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -33,6 +33,7 @@ duckdb = { version = "=1.3.2", optional = true, features = ["bundled"] }
 # blocking client on purpose: workers are sync, and reqwest::blocking panics
 # when called from inside a tokio runtime.
 ureq = { version = "=2.12.1", optional = true, default-features = false, features = ["tls", "proxy-from-env"] }
+url = { version = "2.5", optional = true }
 lz4_flex = { version = "=0.11.6", optional = true, default-features = false, features = ["std", "frame", "safe-decode"] }
 
 [dev-dependencies]

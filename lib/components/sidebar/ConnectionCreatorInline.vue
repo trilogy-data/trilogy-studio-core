@@ -28,6 +28,7 @@
           <option value="bigquery">Bigquery Oauth</option>
           <option value="snowflake">Snowflake (Key Pair)</option>
           <option value="snowflake-pat">Snowflake (Access Token)</option>
+          <option value="databricks">Databricks (Remote Engine)</option>
         </select>
       </div>
       <!-- Dynamic Fields Based on Type -->
@@ -124,6 +125,98 @@
           />
         </div>
       </template>
+      <template v-if="connectionDetails.type === 'databricks'">
+        <p class="form-hint" data-testid="connection-creator-databricks-hint">
+          Databricks can't be queried from a browser directly, so queries run on a private remote
+          engine (the hosted Trilogy engine unless you set an engine URL). Leave the workspace
+          fields empty to use the engine's own warehouse. A token you enter is sent to the engine
+          with each query and never stored there.
+        </p>
+        <div class="form-row">
+          <label for="dbx-engine-key">Engine Key</label>
+          <input
+            type="password"
+            v-model="connectionDetails.options.engineKey"
+            class="sidebar-control-input"
+            id="dbx-engine-key"
+            data-testid="connection-creator-databricks-engine-key"
+            placeholder="Remote engine API key"
+            required
+          />
+        </div>
+        <div class="form-row">
+          <label for="dbx-host">Host</label>
+          <input
+            type="text"
+            v-model="connectionDetails.options.host"
+            class="sidebar-control-input"
+            id="dbx-host"
+            data-testid="connection-creator-databricks-host"
+            placeholder="Optional: dbc-1234.cloud.databricks.com"
+          />
+        </div>
+        <div class="form-row">
+          <label for="dbx-http-path">HTTP Path</label>
+          <input
+            type="text"
+            v-model="connectionDetails.options.httpPath"
+            class="sidebar-control-input"
+            id="dbx-http-path"
+            data-testid="connection-creator-databricks-http-path"
+            placeholder="Optional: /sql/1.0/warehouses/<id>"
+          />
+        </div>
+        <div class="form-row">
+          <label for="dbx-token">Token</label>
+          <input
+            type="password"
+            v-model="connectionDetails.options.token"
+            class="sidebar-control-input"
+            id="dbx-token"
+            data-testid="connection-creator-databricks-token"
+            placeholder="Optional: personal access token"
+          />
+        </div>
+        <div class="form-row">
+          <label for="dbx-catalog">Catalog</label>
+          <input
+            type="text"
+            v-model="connectionDetails.options.catalog"
+            class="sidebar-control-input"
+            id="dbx-catalog"
+            placeholder="Optional"
+          />
+        </div>
+        <div class="form-row">
+          <label for="dbx-schema">Schema</label>
+          <input
+            type="text"
+            v-model="connectionDetails.options.schema"
+            class="sidebar-control-input"
+            id="dbx-schema"
+            placeholder="Optional"
+          />
+        </div>
+        <div class="form-row">
+          <label for="dbx-engine-url">Engine URL</label>
+          <input
+            type="text"
+            v-model="connectionDetails.options.engineUrl"
+            class="sidebar-control-input"
+            id="dbx-engine-url"
+            data-testid="connection-creator-databricks-engine-url"
+            placeholder="Optional: defaults to the hosted engine"
+          />
+        </div>
+        <div class="form-row">
+          <label for="dbx-save-credential">Save Credential?</label>
+          <input
+            type="checkbox"
+            id="dbx-save-credential"
+            v-model="connectionDetails.options.saveCredential"
+          />
+        </div>
+      </template>
       <template v-if="connectionDetails.type === 'snowflake'">
         <div class="form-row">
           <label for="account">Account</label>
@@ -169,6 +262,12 @@
 .creator-container {
   --creator-label-width: 88px;
 }
+.form-hint {
+  margin: 4px 0 8px;
+  font-size: 0.8em;
+  opacity: 0.8;
+  line-height: 1.35;
+}
 </style>
 
 <script lang="ts">
@@ -207,6 +306,12 @@ export default defineComponent({
         token: '',
         warehouse: '',
         role: '',
+        engineKey: '',
+        engineUrl: '',
+        host: '',
+        httpPath: '',
+        catalog: '',
+        schema: '',
         saveCredential: false,
       },
     })
@@ -232,6 +337,12 @@ export default defineComponent({
         token: '',
         warehouse: '',
         role: '',
+        engineKey: '',
+        engineUrl: '',
+        host: '',
+        httpPath: '',
+        catalog: '',
+        schema: '',
         saveCredential: false,
       } // Reset options
     }

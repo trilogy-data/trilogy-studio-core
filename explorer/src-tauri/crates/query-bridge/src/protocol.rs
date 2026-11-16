@@ -123,4 +123,14 @@ pub enum BridgeError {
     /// user" instead of treating cancel as a generic driver error.
     #[error("query canceled by user")]
     Canceled,
+    /// The egress policy refused a destination (strict mode: non-Databricks
+    /// host, non-https, or an address in a private range).
+    #[error("{0}")]
+    EgressDenied(String),
+    /// A result exceeded the caller's byte cap.
+    #[error("{0}")]
+    TooLarge(String),
+    /// A call that must finish within one request ran out of time.
+    #[error("{0}")]
+    Timeout(String),
 }

@@ -1,0 +1,8 @@
+# Context is the repo root; only the two crates go in.
+*
+!engine/Cargo.toml
+!engine/Cargo.lock
+!engine/src
+!engine/tests
+!explorer/src-tauri/crates/query-bridge/Cargo.toml
+!explorer/src-tauri/crates/query-bridge/src
