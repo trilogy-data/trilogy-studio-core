@@ -78,6 +78,12 @@ jobs:
         working-directory: ./explorer/src-tauri/crates/query-bridge
         run: cargo test --features duckdb
 
+      - name: Run cargo test on query-bridge (databricks only)
+        # Builds without the default features so a driver that only compiles
+        # alongside duckdb (shared optional deps, missing cfg gates) fails here.
+        working-directory: ./explorer/src-tauri/crates/query-bridge
+        run: cargo test --no-default-features --features databricks
+
   integration-tests-local:
     name: Integration Tests (Local)
     runs-on: ubuntu-latest

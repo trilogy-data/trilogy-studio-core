@@ -139,9 +139,15 @@ fn fs_read_text(path: String) -> Result<String, String> {
 // returns the full Arrow IPC stream as a raw byte buffer via
 // `tauri::ipc::Response::new` so it skips JSON serialization. Phase 5 will
 // swap this for a streamed channel.
+//
+// All remote_* commands are `#[tauri::command(async)]`: a plain sync command
+// runs on the main thread, which would freeze the UI for the length of a
+// query (minutes, for a cold Databricks warehouse) and queue remote_cancel
+// behind the very execute it is meant to interrupt. The workers stay
+// synchronous; Tauri runs each call on its async runtime's thread pool.
 // ---------------------------------------------------------------------------
 
-#[tauri::command]
+#[tauri::command(async)]
 fn remote_connect(
     state: State<'_, SessionManager>,
     connection_id: String,
@@ -157,7 +163,7 @@ fn remote_connect(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn remote_execute(
     state: State<'_, SessionManager>,
     session_id: String,
@@ -176,7 +182,7 @@ fn remote_execute(
     Ok(tauri::ipc::Response::new(bytes))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn remote_execute_script(
     state: State<'_, SessionManager>,
     session_id: String,
@@ -187,7 +193,7 @@ fn remote_execute_script(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn remote_cancel(
     state: State<'_, SessionManager>,
     session_id: String,
@@ -198,7 +204,7 @@ fn remote_cancel(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn remote_disconnect(
     state: State<'_, SessionManager>,
     session_id: String,
@@ -206,7 +212,7 @@ fn remote_disconnect(
     state.disconnect(&session_id).map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn remote_describe_databases(
     state: State<'_, SessionManager>,
     session_id: String,
@@ -216,7 +222,7 @@ fn remote_describe_databases(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn remote_describe_schemas(
     state: State<'_, SessionManager>,
     session_id: String,
@@ -227,7 +233,7 @@ fn remote_describe_schemas(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn remote_describe_tables(
     state: State<'_, SessionManager>,
     session_id: String,
@@ -239,7 +245,7 @@ fn remote_describe_tables(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn remote_describe_columns(
     state: State<'_, SessionManager>,
     session_id: String,
@@ -252,7 +258,7 @@ fn remote_describe_columns(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn remote_describe_table(
     state: State<'_, SessionManager>,
     session_id: String,
@@ -265,7 +271,7 @@ fn remote_describe_table(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn remote_set_working_directory(
     state: State<'_, SessionManager>,
     session_id: String,

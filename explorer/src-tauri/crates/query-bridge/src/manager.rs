@@ -30,6 +30,11 @@ impl SessionManager {
             let f: Arc<dyn WorkerFactory> = Arc::new(crate::workers::duckdb::DuckDbFactory);
             factories.insert(f.name(), f);
         }
+        #[cfg(feature = "databricks")]
+        {
+            let f: Arc<dyn WorkerFactory> = Arc::new(crate::workers::databricks::DatabricksFactory);
+            factories.insert(f.name(), f);
+        }
         Self {
             factories,
             sessions: Mutex::new(HashMap::new()),
@@ -198,7 +203,10 @@ mod tests {
 
         // describe_databases is callable on a fresh duckdb (defaults: "memory")
         let dbs = mgr.describe_databases(&session_id).expect("describe");
-        assert!(!dbs.is_empty(), "duckdb should expose at least one database");
+        assert!(
+            !dbs.is_empty(),
+            "duckdb should expose at least one database"
+        );
 
         mgr.disconnect(&session_id).expect("disconnect");
         // After disconnect, the session is gone.

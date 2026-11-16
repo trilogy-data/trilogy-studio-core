@@ -14,7 +14,7 @@ import useEditorStore from '@lib/stores/editorStore'
 import useProjectStore from '@lib/stores/projectStore'
 import { isTauri } from '../storage/tauriKvBackend'
 
-type EngineKind = 'duckdb' | 'sqlite' | 'motherduck' | 'bigquery-oauth' | 'snowflake'
+type EngineKind = 'duckdb' | 'sqlite' | 'motherduck' | 'bigquery-oauth' | 'snowflake' | 'databricks'
 
 interface EngineOption {
   value: EngineKind
@@ -33,6 +33,9 @@ const ENGINES: EngineOption[] = [
   { value: 'motherduck', label: 'MotherDuck' },
   { value: 'bigquery-oauth', label: 'BigQuery' },
   { value: 'snowflake', label: 'Snowflake' },
+  // Native only: runs through the Rust query-bridge. The Databricks SQL API
+  // sends no CORS headers, so a browser shell can't call it.
+  ...(isTauri() ? [{ value: 'databricks' as const, label: 'Databricks' }] : []),
 ]
 
 const selectedEngine = ref<EngineKind>('duckdb')
@@ -45,6 +48,11 @@ const snowflakeRole = ref('')
 const snowflakeDatabase = ref('')
 const snowflakeSchema = ref('')
 const snowflakePrivateKey = ref('')
+const databricksHost = ref('')
+const databricksHttpPath = ref('')
+const databricksToken = ref('')
+const databricksCatalog = ref('')
+const databricksSchema = ref('')
 const error = ref('')
 const busy = ref(false)
 
@@ -59,7 +67,7 @@ const engineLabel = computed(
 )
 
 const needsConfig = computed(() =>
-  ['motherduck', 'bigquery-oauth', 'snowflake'].includes(selectedEngine.value),
+  ['motherduck', 'bigquery-oauth', 'snowflake', 'databricks'].includes(selectedEngine.value),
 )
 
 const canApply = computed(() => {
@@ -72,6 +80,13 @@ const canApply = computed(() => {
       snowflakeUsername.value.trim().length > 0 &&
       snowflakeWarehouse.value.trim().length > 0 &&
       snowflakePrivateKey.value.trim().length > 0
+    )
+  }
+  if (selectedEngine.value === 'databricks') {
+    return (
+      databricksHost.value.trim().length > 0 &&
+      databricksHttpPath.value.trim().length > 0 &&
+      databricksToken.value.trim().length > 0
     )
   }
   return true
@@ -118,6 +133,21 @@ function createConnection(kind: EngineKind): Connection {
   if (kind === 'bigquery-oauth') {
     return new BigQueryOauthConnection(name, bigQueryProjectId.value.trim())
   }
+  if (kind === 'databricks') {
+    return new RemoteWorkerConnection(name, {
+      driver: 'databricks',
+      queryType: 'databricks',
+      config: {
+        host: databricksHost.value.trim(),
+        httpPath: databricksHttpPath.value.trim(),
+        token: databricksToken.value.trim(),
+        catalog: databricksCatalog.value.trim(),
+        schema: databricksSchema.value.trim(),
+      },
+      // Kept out of persisted JSON; re-entered after a restart.
+      secretFields: ['token'],
+    })
+  }
   return new SnowflakeJwtConnection(name, {
     account: snowflakeAccount.value.trim(),
     username: snowflakeUsername.value.trim(),
@@ -139,6 +169,8 @@ function syncFormFromConnection(conn: Connection | null) {
   // option on rehydration.
   if (conn.type === 'remote-worker:duckdb') {
     selectedEngine.value = 'duckdb'
+  } else if (conn.type === 'remote-worker:databricks') {
+    selectedEngine.value = 'databricks'
   } else {
     selectedEngine.value = conn.type as EngineKind
   }
@@ -147,6 +179,13 @@ function syncFormFromConnection(conn: Connection | null) {
     mdToken.value = conn.mdToken && conn.mdToken !== 'saved' ? conn.mdToken : mdToken.value
   } else if (conn instanceof BigQueryOauthConnection) {
     bigQueryProjectId.value = conn.projectId || ''
+  } else if (conn instanceof RemoteWorkerConnection && conn.driver === 'databricks') {
+    const cfg = conn.config
+    databricksHost.value = cfg.host || ''
+    databricksHttpPath.value = cfg.httpPath || ''
+    databricksCatalog.value = cfg.catalog || ''
+    databricksSchema.value = cfg.schema || ''
+    databricksToken.value = cfg.token && cfg.token !== 'saved' ? cfg.token : databricksToken.value
   } else if (conn instanceof SnowflakeJwtConnection) {
     snowflakeAccount.value = conn.config.account || ''
     snowflakeUsername.value = conn.config.username || ''
@@ -290,6 +329,39 @@ watch(connection, syncFormFromConnection, { immediate: true })
       <label>
         Private key
         <textarea v-model="snowflakePrivateKey" autocomplete="off" rows="3" />
+      </label>
+    </div>
+
+    <div v-else-if="selectedEngine === 'databricks'" class="engine-fields">
+      <label>
+        Workspace host
+        <input
+          v-model="databricksHost"
+          type="text"
+          autocomplete="off"
+          placeholder="dbc-1234abcd.cloud.databricks.com"
+        />
+      </label>
+      <label>
+        SQL warehouse HTTP path
+        <input
+          v-model="databricksHttpPath"
+          type="text"
+          autocomplete="off"
+          placeholder="/sql/1.0/warehouses/..."
+        />
+      </label>
+      <label>
+        Access token
+        <input v-model="databricksToken" type="password" autocomplete="off" placeholder="dapi..." />
+      </label>
+      <label>
+        Catalog
+        <input v-model="databricksCatalog" type="text" autocomplete="off" placeholder="main" />
+      </label>
+      <label>
+        Schema
+        <input v-model="databricksSchema" type="text" autocomplete="off" placeholder="default" />
       </label>
     </div>
 
