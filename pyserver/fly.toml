@@ -42,9 +42,20 @@ primary_region = 'ewr'
   # Count in-flight requests, not connections, so a fan-out on one machine
   # wakes the second (soft_limit) before the app's own queue (see
   # TRILOGY_MAX_QUEUED_REQUESTS in the Dockerfile) has to shed load.
+  #
+  # soft_limit = 2, one per core: two in-flight requests already saturate a
+  # machine (two GIL-bound gunicorn workers on two cores), so a third should
+  # go to the other machine rather than queue behind them. At 8 it never did:
+  # a request is one in-flight unit however many queries it batches, so a CI
+  # sweep's 42-45-query batches (29-65 s each) held both workers while the
+  # proxy saw "2 of 8" and kept routing here. On 2026-11-15 a one-query
+  # request queued 6.4 s behind them (access log `queue_ms`), where booting
+  # the idle second machine costs ~6 s once and then serves at full speed.
+  # The fleet is two machines, so this raises cost only while load really
+  # overlaps; the second stops again ~15 s after it goes quiet.
   [http_service.concurrency]
     type = 'requests'
-    soft_limit = 8
+    soft_limit = 2
     hard_limit = 100
 
 [[vm]]
