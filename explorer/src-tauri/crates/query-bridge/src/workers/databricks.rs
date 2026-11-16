@@ -567,11 +567,48 @@ fn schema_from_manifest(manifest: &Value) -> Schema {
     Schema::new(fields)
 }
 
-/// Translate the resolver's named-parameter map into Statement API
-/// parameters. Arrays and objects are rejected: the Statement API only binds
-/// scalars, and pytrilogy's Databricks dialect renders collection constants
-/// inline for the same reason.
-fn to_statement_params(parameters: Option<&Value>) -> Result<Vec<Value>> {
+/// Names of the `:name` markers in a statement. `::type` casts are skipped.
+/// Markers inside string literals are picked up too, which only means an
+/// unused name is kept; it never drops a real one.
+fn referenced_param_names(sql: &str) -> std::collections::HashSet<String> {
+    let chars: Vec<char> = sql.chars().collect();
+    let mut names = std::collections::HashSet::new();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == ':' && chars.get(i + 1) == Some(&':') {
+            i += 2;
+            continue;
+        }
+        if chars[i] == ':'
+            && chars
+                .get(i + 1)
+                .map_or(false, |c| c.is_ascii_alphabetic() || *c == '_')
+        {
+            let start = i + 1;
+            let mut end = start;
+            while end < chars.len() && (chars[end].is_ascii_alphanumeric() || chars[end] == '_') {
+                end += 1;
+            }
+            names.insert(chars[start..end].iter().collect());
+            i = end;
+            continue;
+        }
+        i += 1;
+    }
+    names
+}
+
+/// Translate the studio's named-parameter map into Statement API parameters.
+///
+/// The studio merges its own map (keys like `:p0`) with the resolver's (keys
+/// like `p0`), so the same value can arrive under both spellings. Like the
+/// DuckDB and BigQuery connections, accept either, and bind only names the
+/// statement references: the API rejects a name with a leading colon.
+///
+/// Arrays and objects are rejected: the Statement API only binds scalars,
+/// and pytrilogy's Databricks dialect renders collection constants inline
+/// for the same reason.
+fn to_statement_params(sql: &str, parameters: Option<&Value>) -> Result<Vec<Value>> {
     let map = match parameters {
         None | Some(Value::Null) => return Ok(Vec::new()),
         Some(Value::Object(m)) => m,
@@ -581,8 +618,15 @@ fn to_statement_params(parameters: Option<&Value>) -> Result<Vec<Value>> {
             ))
         }
     };
-    let mut out = Vec::with_capacity(map.len());
-    for (name, v) in map {
+    let referenced = referenced_param_names(sql);
+    let mut out = Vec::with_capacity(referenced.len());
+    let mut names: Vec<&String> = referenced.iter().collect();
+    names.sort();
+    for name in names {
+        // The bare spelling wins when both are present.
+        let Some(v) = map.get(name).or_else(|| map.get(&format!(":{name}"))) else {
+            continue;
+        };
         let p = match v {
             // An omitted value binds NULL.
             Value::Null => json!({ "name": name }),
@@ -720,7 +764,7 @@ impl QueryWorker for DatabricksWorker {
         parameters: Option<&serde_json::Value>,
         identifier: &str,
     ) -> Result<(Vec<u8>, ExecuteSummary)> {
-        let params = to_statement_params(parameters)?;
+        let params = to_statement_params(sql, parameters)?;
 
         struct CancelGuard<'a> {
             handle: &'a Arc<DatabricksCancelHandle>,

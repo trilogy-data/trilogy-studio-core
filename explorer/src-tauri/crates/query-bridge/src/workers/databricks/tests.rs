@@ -497,12 +497,33 @@ fn splits_statements_outside_quotes_and_comments() {
 
 #[test]
 fn maps_parameters_and_rejects_collections() {
-    let p = to_statement_params(Some(&json!({ "b": true, "f": 1.5, "z": null }))).unwrap();
+    let sql = "SELECT :b, :f, :z";
+    let p = to_statement_params(sql, Some(&json!({ "b": true, "f": 1.5, "z": null }))).unwrap();
     assert!(p.contains(&json!({ "name": "b", "value": "true", "type": "BOOLEAN" })));
     assert!(p.contains(&json!({ "name": "f", "value": "1.5", "type": "DOUBLE" })));
     assert!(p.contains(&json!({ "name": "z" })));
-    assert!(to_statement_params(Some(&json!({ "l": [1, 2] }))).is_err());
-    assert!(to_statement_params(None).unwrap().is_empty());
+    assert!(to_statement_params("SELECT :l", Some(&json!({ "l": [1, 2] }))).is_err());
+    assert!(to_statement_params(sql, None).unwrap().is_empty());
+}
+
+#[test]
+fn binds_studio_parameter_spellings_once() {
+    // The studio merges `{":p0": …}` with the resolver's `{"p0": …}`.
+    let p = to_statement_params(
+        "SELECT * FROM t WHERE a = :p0 AND b > :p1 AND c::string = :p2",
+        Some(&json!({ ":p0": "FRANCE", "p0": "FRANCE", ":p1": 9000, ":unused": 1, "p2": "x" })),
+    )
+    .unwrap();
+    assert_eq!(
+        p,
+        vec![
+            json!({ "name": "p0", "value": "FRANCE", "type": "STRING" }),
+            json!({ "name": "p1", "value": "9000", "type": "BIGINT" }),
+            json!({ "name": "p2", "value": "x", "type": "STRING" }),
+        ]
+    );
+    // A `::type` cast is not a parameter marker.
+    assert!(referenced_param_names("SELECT '1'::int, x:: string").is_empty());
 }
 
 #[test]
