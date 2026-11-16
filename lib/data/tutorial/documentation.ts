@@ -91,6 +91,10 @@ export const documentation: DocumentationNode[] = [
         'Remote Databases',
         'BigQuery and Snowflake connect to externally hosted databases and require authentication. Queries run against the remote service, while Trilogy Studio manages the connection configuration, SQL dialect, schema browser, and query results in the interface. Use narrowly scoped credentials and review the Stored Info documentation before saving secrets.',
       ),
+      new Paragraph(
+        'Server-Side Engines (Beta)',
+        'Databricks is the exception: browsers cannot call the Databricks SQL API directly, so its queries run on a Trilogy remote engine and the results pass through that server. See the Databricks article for what that means and its current limits.',
+      ),
     ]),
     new Article('DuckDB', [
       new Paragraph(
@@ -129,11 +133,34 @@ export const documentation: DocumentationNode[] = [
         'Snowflake can also be connected with a programmatic access token, using the "Snowflake (Access Token)" connection type. Generate a token for your user in Snowsight, then provide your account identifier and the token; no username or key pair is needed. Read more at this link: <a href="https://docs.snowflake.com/en/user-guide/programmatic-access-tokens" target="_blank">Snowflake Programmatic Access Tokens</a>. Tokens expire, and by default Snowflake only accepts them for users covered by a network policy, so check both if authentication fails. If the token is restricted to a role, set the same role on the connection. Username and password sign-in is not supported.',
       ),
     ]),
+    new Article('Databricks (Beta)', [
+      new Paragraph(
+        'Databricks (Beta)',
+        'Databricks SQL warehouses are supported in beta through the "Databricks (Beta)" connection type. Browsers cannot call the Databricks SQL Statement Execution API directly (it does not allow cross-origin requests), so unlike the other remote databases, queries run on a Trilogy remote engine: a server that submits your SQL to Databricks and returns the results to your browser.',
+      ),
+      new Paragraph(
+        'Access',
+        'The hosted engine is private. Using it requires an engine key, which is currently issued by invitation. Enter it as the Engine Key when creating the connection. You can also point the connection at an engine you run yourself with the Engine URL field.',
+      ),
+      new Paragraph(
+        'Which Warehouse',
+        "Leave Host, HTTP Path and Token empty to run on the warehouse the engine is configured with. To use your own workspace, provide all three: the workspace host, the SQL warehouse HTTP path (/sql/1.0/warehouses/&lt;id&gt;, from the warehouse's Connection details tab) and a personal access token. The engine never combines your workspace with its own credentials. Catalog and Schema set the defaults for unqualified table names.",
+      ),
+      new Paragraph(
+        'Your Data Passes Through the Engine',
+        'Your SQL, its results and, if you provide one, your Databricks token are sent to the engine on every request. The engine does not store or log queries, results or tokens, but they do transit a server operated by Trilogy (hosted on fly.io in the US). If that is not acceptable for your data, run your own engine or use the Trilogy desktop app, which connects to Databricks directly.',
+        'tip',
+      ),
+      new Paragraph(
+        'Limitations',
+        "SQL warehouses only: all-purpose cluster HTTP paths are not supported by the Statement Execution API. Results are capped (currently 128 MiB per query); add a LIMIT or aggregate if you hit it. The schema browser reads Unity Catalog's information_schema, so legacy hive_metastore-only workspaces cannot be browsed (queries still run). Each query runs on its own, so temporary views and USE statements do not carry over between queries. Query parameters must be single values, not lists. A stopped warehouse can take a minute or two to start on the first query.",
+      ),
+    ]),
   ]),
   Reference,
   new DocumentationNode('Privacy And Data', [
     new Article('Privacy Policy', [
-      new Paragraph('Last Updated', 'February 22, 2025'),
+      new Paragraph('Last Updated', 'November 16, 2026'),
       new Paragraph(
         'Introduction',
         'This Privacy Policy explains how Trilogy Studio handles your information. While most processing occurs in your browser, we utilize some external services to enhance your development experience.',
@@ -146,17 +173,17 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'Query Processing',
-        'We process Trilogy queries to transform them to SQL based on your model inputs if you use the default query service. Results are returned to your browser for execution. No actual database connections or credentials are transmitted.',
+        'We process Trilogy queries to transform them to SQL based on your model inputs if you use the default query service. Results are returned to your browser for execution. No actual database connections or credentials are transmitted, except for Databricks (Beta) connections as described under Data Processing.',
         'subsection',
       ),
       new Paragraph(
         "What We Don't Collect",
-        'We do not collect database credentials, database contents, query results, personal information, full source code, or authentication tokens, or any other personal information. Please report any issues with this to the github repository.',
+        'We do not collect database credentials, database contents, query results, personal information, full source code, or authentication tokens, or any other personal information. Data that transits the Databricks remote engine is processed only to answer your request and is not stored. Please report any issues with this to the github repository.',
         'section',
       ),
       new Paragraph(
         'Data Processing',
-        'Query Execution: All database execution happens between your browser and remote service. Query results never pass through our servers.',
+        'Query Execution: Database execution happens between your browser and the remote service, and query results do not pass through our servers, with one exception. Databricks (Beta) connections run on the Trilogy remote engine because browsers cannot call Databricks directly: the SQL, its results, your engine key and any Databricks token you provide are sent to that server for each request. The engine does not store or log them. See Supported Databases → Databricks (Beta).',
         'section',
       ),
       new Paragraph(
@@ -171,7 +198,7 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'International Data',
-        'Telemetry data may cross borders. SQL compilation happens in the US with default query service (fly.io).',
+        'Telemetry data may cross borders. SQL compilation happens in the US with default query service (fly.io), as does Databricks (Beta) query execution on the default remote engine.',
         'section',
       ),
       new Paragraph(
@@ -195,7 +222,7 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'Effective Date',
-        'This policy is effective as of February 22, 2025.',
+        'This policy is effective as of November 16, 2026.',
         'conclusion',
       ),
     ]),
@@ -206,7 +233,7 @@ export const documentation: DocumentationNode[] = [
       ),
       new Paragraph(
         'Secret Storage',
-        'For databases and LLM connections that require credentials (password, API Key) to access, Trilogy Studio can optionally also store them locally for reuse. [They will never be sent to a remote server]. It will attempt to use secure browser credential storage but will fall back to storing the secret in local browser storage encrypted with a pass phrase if the browser APIs are not available. Be careful storing credentials and be prepared to rotate - consider using a password manager.',
+        'For databases and LLM connections that require credentials (password, API Key) to access, Trilogy Studio can optionally also store them locally for reuse. [They will never be sent to a remote server, except that a Databricks (Beta) engine key and token are sent to the remote engine with each request; see Databricks below]. It will attempt to use secure browser credential storage but will fall back to storing the secret in local browser storage encrypted with a pass phrase if the browser APIs are not available. Be careful storing credentials and be prepared to rotate - consider using a password manager.',
       ),
       new Paragraph(
         'Secret Storage',
@@ -233,6 +260,12 @@ export const documentation: DocumentationNode[] = [
       new Paragraph(
         'Access Tokens',
         'Snowflake connections can alternatively use a programmatic access token. Like the private key, the token stays in your browser and is only sent directly to Snowflake as the authorization header on SQL API requests.',
+      ),
+    ]),
+    new Article('Databricks (Beta)', [
+      new Paragraph(
+        'Remote Engine',
+        "Databricks connections run on a Trilogy remote engine, because browsers cannot call the Databricks API directly. Your engine key, the SQL you run, its results and any Databricks token you enter are sent to the engine with each request and used only to answer it; the engine does not store or log them. Saved credentials stay in your browser's secret storage like any other. Use a narrowly scoped Databricks token, or leave the workspace fields empty to use the engine's own warehouse.",
       ),
     ]),
     new Article('Telemetry Details', [

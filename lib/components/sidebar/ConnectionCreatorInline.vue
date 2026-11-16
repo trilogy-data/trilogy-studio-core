@@ -28,7 +28,7 @@
           <option value="bigquery">Bigquery Oauth</option>
           <option value="snowflake">Snowflake (Key Pair)</option>
           <option value="snowflake-pat">Snowflake (Access Token)</option>
-          <option value="databricks">Databricks (Remote Engine)</option>
+          <option value="databricks">Databricks (Beta)</option>
         </select>
       </div>
       <!-- Dynamic Fields Based on Type -->
@@ -127,10 +127,11 @@
       </template>
       <template v-if="connectionDetails.type === 'databricks'">
         <p class="form-hint" data-testid="connection-creator-databricks-hint">
-          Databricks can't be queried from a browser directly, so queries run on a private remote
-          engine (the hosted Trilogy engine unless you set an engine URL). Leave the workspace
-          fields empty to use the engine's own warehouse. A token you enter is sent to the engine
-          with each query and never stored there.
+          Beta. Databricks can't be queried from a browser directly, so queries and their results
+          pass through a private remote engine (the hosted Trilogy engine unless you set an engine
+          URL), which needs an engine key. Leave the workspace fields empty to use the engine's own
+          warehouse. A token you enter is sent to the engine with each query and never stored there.
+          See Supported Databases → Databricks in the docs for limits.
         </p>
         <div class="form-row">
           <label for="dbx-engine-key">Engine Key</label>

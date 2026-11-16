@@ -65,7 +65,7 @@ export const connectionTypes = [
   { label: 'MotherDuck (Token)', value: 'motherduck' },
   // Runs on a remote engine (pyserver's /engine, or `trilogy serve`): the
   // Databricks Statement API has no CORS, so the browser can't call it.
-  { label: 'Databricks (Remote Engine)', value: 'databricks' },
+  { label: 'Databricks (Beta)', value: 'databricks' },
   // Tauri-only — requires a registered RemoteWorkerHost (Trilogy Explorer
   // installs one at boot). In a plain browser shell this connection
   // surfaces a "no host registered" error on connect.
