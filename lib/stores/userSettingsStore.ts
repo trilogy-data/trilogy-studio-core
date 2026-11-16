@@ -5,6 +5,8 @@ import { type ModalItem } from '../data/tips'
 export interface UserSettings {
   theme: 'dark' | 'light' | ''
   trilogyResolver: string
+  /** The remote query engine (Databricks). A separate service from the resolver. */
+  remoteEngineUrl: string
   telemetryEnabled: boolean | null
   tipsRead: string[]
   skipAllTips: boolean
@@ -18,6 +20,7 @@ export const useUserSettingsStore = defineStore('userSettings', {
     settings: {
       theme: '',
       trilogyResolver: '',
+      remoteEngineUrl: '',
       telemetryEnabled: null,
       tipsRead: [] as string[],
       skipAllTips: false,
@@ -25,6 +28,7 @@ export const useUserSettingsStore = defineStore('userSettings', {
     defaults: {
       theme: 'dark',
       trilogyResolver: 'https://trilogy-service.fly.dev',
+      remoteEngineUrl: 'https://trilogy-engine.fly.dev',
       telemetryEnabled: true,
       tipsRead: [] as string[],
       skipAllTips: false,

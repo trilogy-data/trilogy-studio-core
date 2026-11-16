@@ -136,6 +136,27 @@
           </span>
         </div>
 
+        <div
+          v-else-if="item.type === 'remote-worker-secret'"
+          class="bq-project-container"
+          @click.stop
+        >
+          <label class="input-label">{{ item.name }}</label>
+          <span>
+            <transition name="fade">
+              <i v-if="showRemoteSecretSuccess" class="mdi mdi-check-circle success-icon"></i>
+            </transition>
+            <input
+              type="password"
+              v-model="remoteSecret"
+              :placeholder="item.name"
+              :data-testid="`remote-worker-secret-${item.object?.secretKey}`"
+              class="bq-project-input sidebar-control-input"
+              @input="debouncedUpdateRemoteSecret"
+            />
+          </span>
+        </div>
+
         <div v-else-if="item.type === 'snowflake-account'" class="bq-project-container" @click.stop>
           <label class="input-label">Account</label>
           <span>
@@ -353,6 +374,7 @@ export default {
     'updateSnowflakePrivateKey',
     'updateSnowflakeAccount',
     'updateSnowflakeUsername',
+    'updateRemoteWorkerSecret',
     'toggleSaveCredential',
     'toggleDuckdbCompatibleFetch',
     'deleteConnection',
@@ -390,6 +412,7 @@ export default {
         'bigquery-browsing-project',
         'motherduck-token',
         'snowflake-private-key',
+        'remote-worker-secret',
         'snowflake-account',
         'snowflake-username',
         'toggle-save-credential',
@@ -608,6 +631,17 @@ export default {
     const debouncedUpdateSnowflakeAccount = debounce(updateSnowflakeAccountInternal, 500)
     const debouncedUpdateSnowflakeUsername = debounce(updateSnowflakeUsernameInternal, 500)
 
+    // Starts empty: the stored value may be the 'saved' placeholder, and a
+    // secret is never echoed back into the page.
+    const remoteSecret = ref('')
+    const showRemoteSecretSuccess = ref(false)
+    const debouncedUpdateRemoteSecret = debounce(() => {
+      const key = (props.item as any).object?.secretKey
+      if (!key) return
+      emit('updateRemoteWorkerSecret', props.item.connection, key, remoteSecret.value)
+      showSuccessIndicator(showRemoteSecretSuccess)
+    }, 500)
+
     const updateMotherDuckToken = (connection: MotherDuckConnection, token: string) => {
       emit('updateMotherDuckToken', connection, token)
     }
@@ -640,6 +674,9 @@ export default {
       snowflakePrivateKey,
       snowflakeAccount,
       snowflakeUsername,
+      remoteSecret,
+      showRemoteSecretSuccess,
+      debouncedUpdateRemoteSecret,
       // Success indicators
       showBillingSuccess,
       showBrowsingSuccess,

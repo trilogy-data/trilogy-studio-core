@@ -8,6 +8,8 @@ import {
   SnowflakePatConnection,
   SQLiteConnection,
   RemoteWorkerConnection,
+  ENGINE_KEY_FIELD,
+  ENGINE_URL_FIELD,
 } from '../connections'
 import { EditorTag } from '../editors'
 import useEditorStore from './editorStore'
@@ -61,12 +63,42 @@ export const connectionTypes = [
   { label: 'Snowflake (Access Token)', value: 'snowflake-pat' },
   { label: 'SQLite', value: 'sqlite' },
   { label: 'MotherDuck (Token)', value: 'motherduck' },
+  // Runs on a remote engine (pyserver's /engine, or `trilogy serve`): the
+  // Databricks Statement API has no CORS, so the browser can't call it.
+  { label: 'Databricks (Remote Engine)', value: 'databricks' },
   // Tauri-only — requires a registered RemoteWorkerHost (Trilogy Explorer
   // installs one at boot). In a plain browser shell this connection
   // surfaces a "no host registered" error on connect.
   { label: 'DuckDB (Native)', value: 'remote-worker-duckdb' },
   // { label: 'SQL Server (Basic Auth)', value: 'sqlserver' },
 ]
+
+/**
+ * A Databricks connection for the web studio: a RemoteWorkerConnection whose
+ * host is the remote engine (see httpRemoteWorkerHost.ts). Empty workspace
+ * fields mean "the engine's own warehouse", so only the secrets actually
+ * entered become secret fields; connect() demands every one of them.
+ */
+export function newDatabricksConnection(
+  name: string,
+  options: Record<string, any>,
+): RemoteWorkerConnection {
+  const clean = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
+  const config: Record<string, string> = {}
+  for (const key of ['host', 'httpPath', 'token', 'catalog', 'schema']) {
+    if (clean(options[key])) config[key] = clean(options[key])
+  }
+  if (clean(options.engineKey)) config[ENGINE_KEY_FIELD] = clean(options.engineKey)
+  if (clean(options.engineUrl)) config[ENGINE_URL_FIELD] = clean(options.engineUrl)
+  const secretFields = [ENGINE_KEY_FIELD, 'token'].filter((key) => key in config)
+  return new RemoteWorkerConnection(name, {
+    driver: 'databricks',
+    queryType: 'databricks',
+    config,
+    secretFields,
+    saveCredential: Boolean(options.saveCredential),
+  })
+}
 
 const useConnectionStore = defineStore('connections', {
   state: () => ({
@@ -292,6 +324,8 @@ const useConnectionStore = defineStore('connections', {
         })
       } else if (type === 'motherduck') {
         connection = new MotherDuckConnection(name, options.mdToken, options.saveCredential)
+      } else if (type === 'databricks') {
+        connection = newDatabricksConnection(name, options)
       } else if (type === 'remote-worker-duckdb') {
         connection = new RemoteWorkerConnection(name, {
           driver: 'duckdb',

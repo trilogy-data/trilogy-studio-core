@@ -11,7 +11,15 @@ export {
   default as RemoteWorkerConnection,
   registerRemoteWorkerHost,
   getRemoteWorkerHost,
+  setDefaultRemoteWorkerHost,
 } from './remoteWorker'
+export {
+  createHttpRemoteWorkerHost,
+  EngineRequestError,
+  ENGINE_KEY_FIELD,
+  ENGINE_URL_FIELD,
+} from './httpRemoteWorkerHost'
+export type { HttpRemoteWorkerHostOptions } from './httpRemoteWorkerHost'
 export type {
   RemoteWorkerHost,
   RemoteWorkerCapabilities,

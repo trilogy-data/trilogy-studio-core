@@ -1,6 +1,136 @@
-# Remote Worker Service (`query-bridge-server`): Scope
+# Remote Worker Service: Scope and Status
 
-Status: **proposal**. Nothing in this document is built yet.
+Status: **v0 built, in Python.** The section below describes what shipped. Sections 1-11
+are the original Rust/axum proposal. They are kept because their threat model (§4), limits
+(§5) and driver reasoning (§6) still apply. Where the build departs from them, §0 says so.
+
+## 0. What was built
+
+### Why Python and not a Rust `query-bridge-server`
+
+- **One implementation, two hosts.** The engine is a FastAPI router (`engine/remote_engine.py`
+  over `engine/databricks_engine.py`). The `engine/` service (`engine/app.py`) mounts it for the
+  hosted studio, and `trilogy serve` can mount the same router behind its serve token. A Rust
+  binary would give `trilogy serve` nothing to mount.
+- **Its own service, not part of the resolver.** `engine/` is a separate Fly app
+  (`trilogy-engine`) with its own image, machines and secrets, and no pytrilogy. pyserver (the
+  resolver) is CPU-bound and wants dedicated cores; the engine is I/O-bound but memory-heavy and
+  is an outbound proxy to customer warehouses. They scale on different signals, and the engine's
+  network position and Databricks secrets stay out of the resolver's process. Neither imports
+  the other.
+- **Stateless, not session-based.** The engine scales to zero and wakes more machines under load.
+  A session table (§2) would need sticky routing. Instead, every call carries the connection
+  config and the warehouse holds the statement. The browser
+  keeps the "session" (`lib/connections/httpRemoteWorkerHost.ts`), so `RemoteWorkerHost` is
+  unchanged, and there is no reaper, no ownership table, and nothing lost on a restart.
+- **Submit, then poll.** Execute never holds a request open longer than `poll_seconds`
+  (default 10). This settles open question 3: no request comes near the Fly proxy's 60 s idle
+  timeout.
+
+The Python worker mirrors the Rust worker: same config keys, parameter binding, script splitting
+and type mapping, all from `databricks.rs`.
+
+### Wire contract (`/v1` on the engine service, `/engine/v1` under `trilogy serve`; every route requires auth)
+
+| Route | Body | Response |
+| --- | --- | --- |
+| `GET /info` | none | drivers, whether a server warehouse is configured, limits |
+| `POST /connect` | `{driver, config}` | `{queryType, capabilities}`; a warehouse metadata call, which doesn't start the warehouse |
+| `POST /statements` | `{driver, config, sql, parameters}` | `200` Arrow IPC (`X-Row-Count`, `X-Duration-Ms`, `X-Statement-Id`) or `202 {statementId}` |
+| `POST /statements/{id}` | `{driver, config}` | same as above (a poll) |
+| `POST /statements/{id}/cancel` | `{driver, config}` | `{canceled: true}` |
+| `POST /script` | `{driver, config, sql}` | `204` |
+| `POST /describe/{kind}` (`databases`, `schemas`, `tables`, `columns`, `table`) | `{driver, config, database, schema, table}` | the existing camelCase DTOs |
+
+Errors are `{code, message, detail}`, with the codes from §2: `invalid_request` 400, `canceled`
+409, `too_large` 413, `overloaded` 503 + `Retry-After`, `driver_error` / `upstream_unreachable`
+502, `timeout` 504.
+
+### Credentials
+
+A call either names its own workspace (`host`, `httpPath` / `warehouseId`, `token`) or names none
+of them and runs on the server's warehouse (`DATABRICKS_HOST` / `DATABRICKS_HTTP_PATH` /
+`DATABRICKS_TOKEN`, optional `DATABRICKS_CATALOG` / `DATABRICKS_SCHEMA`). The two are **never
+mixed**: a caller-supplied host must come with a caller-supplied token, so the server's token
+can't be sent to a host the caller picked. `catalog` / `schema` can always be overridden. Setting
+`TRILOGY_ENGINE_ALLOW_CALLER_CREDENTIALS=0` pins the engine to the server warehouse.
+
+### Auth and configuration (`engine/`)
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `TRILOGY_ENGINE_API_KEYS` | unset | `keyId:sha256hex,...`. **Unset means only `/health` is served.** Keys are compared in constant time. `python remote_engine.py new-key <id>` mints a key and its entry. |
+| `TRILOGY_ENGINE_STRICT_EGRESS` | on | the §4 policy: Databricks host suffixes, https/443 only, no private or loopback resolution, API paths under `/api/2.0/sql/` |
+| `TRILOGY_ENGINE_DATABRICKS_HOST_SUFFIXES` | the four cloud suffixes | override the allowlist |
+| `TRILOGY_ENGINE_ALLOW_PRIVATE_EGRESS` | off | let a self-host reach private-link workspaces |
+| `TRILOGY_ENGINE_POLL_SECONDS` / `TRILOGY_ENGINE_SYNC_SECONDS` | 10 / 90 (fly.toml: 50) | per-request wait; budget for connect, describe and scripts |
+| `TRILOGY_ENGINE_MAX_RESULT_BYTES` | 256 MiB (fly.toml: 128 MiB) | checked against the manifest and while downloading |
+| `TRILOGY_ENGINE_MAX_INFLIGHT` | 16 (fly.toml: 6) | per process; past it, 503 immediately |
+
+Deploying (from `engine/`): `fly launch --copy-config --no-deploy` once to create the
+`trilogy-engine` app, then `fly secrets set TRILOGY_ENGINE_API_KEYS=... DATABRICKS_HOST=...
+DATABRICKS_HTTP_PATH=... DATABRICKS_TOKEN=...` and `fly deploy`. `python remote_engine.py new-key
+<id>` mints a key. `fly.toml` explains the memory budget behind its limits. CORS allows the studio
+origins and exposes the engine's result headers.
+
+### Egress finding: result links redirect
+
+Live testing showed that results on Databricks-managed storage
+(`*.storage.cloud.databricks.com`) answer **`307` to a sibling path** once they are larger than a
+few MB. §4.4's `redirects(0)` would therefore break every large query. Downloads follow redirects
+**by hand** (at most 5 hops), re-running the egress check on every hop. The link's own headers go
+only to the host Databricks named, and the token is never attached. API calls still follow no
+redirects. The Rust worker currently relies on ureq following redirects implicitly; a strict mode
+there would need the same treatment.
+
+### Studio
+
+- **`createHttpRemoteWorkerHost`** implements `RemoteWorkerHost` over the wire contract.
+  `engineKey` (bearer) and `engineUrl` (base override) are host fields, stripped from the config
+  before it is sent.
+- **Fallback host.** `Manager.vue` installs it with `setDefaultRemoteWorkerHost`, pointing at
+  the `remoteEngineUrl` user setting (default `https://trilogy-engine.fly.dev`;
+  `VITE_ENGINE_URL` overrides the default, and dev builds use `http://127.0.0.1:5680`). It is
+  independent of `trilogyResolver`. A connection's `engineUrl` overrides it, and a host
+  registered by a shell (Tauri) still wins.
+- **Connection.** "Databricks (Remote Engine)" in the connection creator makes a
+  `remote-worker:databricks` connection: the same type the explorer uses.
+  - Only the secrets the user actually entered become `secretFields`. Several are stored as one
+    JSON credential.
+  - The sidebar gets a re-entry row per secret, plus a save-credential toggle.
+- **`trilogy serve` stores** advertising `connection.type = databricks` get a
+  `RemoteWorkerConnection` with an explicit HTTP host at `<store>/engine`. It sends the store's
+  `X-Trilogy-Token` and holds no warehouse secret (see `remote-store-contract.md`).
+
+### `trilogy serve` (pytrilogy side, not yet done)
+
+`remote_engine` and `databricks_engine` import nothing from the engine app, so they can move
+into pytrilogy as they are. Serve then needs to:
+
+1. Mount `create_engine_router(settings, auth=<its X-Trilogy-Token dependency>)` at `/engine`.
+   - `settings.server_databricks` comes from `[engine.config]` (`DatabricksConfig`).
+   - The policy is permissive, since serve runs on the user's own machine.
+2. Map `Dialects.DATABRICKS` to `databricks` in `connection_spec.py`, publishing `catalog` / `schema`.
+3. Add `X-Row-Count`, `X-Duration-Ms` and `X-Statement-Id` to its CORS `expose_headers`.
+
+Once the module ships in pytrilogy, `engine/` should import it from there instead of keeping a copy.
+
+### Tests
+
+- **`engine/tests/test_remote_engine.py`** (offline, against a scripted Databricks): auth;
+  credential separation; chunking with LZ4; empty results; submit/poll; cancel; parameters; size
+  cap; load shedding; describe; egress policy; redirect hops; IP classification.
+- **`engine/tests/test_app.py`**: the service is private without keys, CORS and exposed headers.
+- **`engine/tests/test_remote_engine_live.py`** (skipped without `DATABRICKS_*`): strict
+  policy, typed parameters, 4M rows across redirecting chunks, describe, error passthrough.
+- **`lib/connections/httpRemoteWorkerHost.test.ts`**: wire behaviour, cancel, error mapping, the
+  multi-secret credential round trip, host precedence.
+- **`e2e/databricks-remote-engine.spec.ts`** (opt-in via `E2E_ENGINE_KEY`): create the connection
+  in the UI and run a query.
+
+---
+
+## Original proposal
 
 This is the design scope for an authenticated, deployable HTTP service that hosts the Rust
 `query-bridge` crate. It would let the **web** Trilogy Studio run queries against warehouses the

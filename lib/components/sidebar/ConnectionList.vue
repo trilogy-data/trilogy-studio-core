@@ -64,6 +64,7 @@
           @update-snowflake-private-key="updateSnowflakePrivateKey"
           @update-snowflake-account="updateSnowflakeAccount"
           @update-snowflake-username="updateSnowflakeUsername"
+          @update-remote-worker-secret="updateRemoteWorkerSecret"
           @toggle-save-credential="toggleSaveCredential"
           @toggle-duckdb-compatible-fetch="toggleDuckdbCompatibleFetch"
           @toggle-mobile-menu="toggleMobileMenu"
@@ -222,6 +223,15 @@ export default {
         await connection.getDatabases()
       }
     }
+    const updateRemoteWorkerSecret = async (connection: any, key: string, value: string) => {
+      if (!connection?.type?.startsWith('remote-worker:')) return
+      if (!(connection.secretFields ?? []).includes(key)) return
+      connection.config = { ...connection.config, [key]: value }
+      connection.changed = true
+      await saveConnections()
+      await connectionStore.resetConnection(connection.id)
+    }
+
     const toggleSaveCredential = (connection: any) => {
       connection.saveCredential = !connection.saveCredential
       connectionStore.resetConnection(connection.id)
@@ -426,6 +436,7 @@ export default {
       connectionModelVisible,
       updateMotherDuckToken,
       updateSnowflakePrivateKey,
+      updateRemoteWorkerSecret,
       updateSnowflakeAccount,
       updateSnowflakeUsername,
       toggleSaveCredential,

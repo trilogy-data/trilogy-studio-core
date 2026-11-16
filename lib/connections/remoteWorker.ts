@@ -154,6 +154,16 @@ export function getRemoteWorkerHost(): RemoteWorkerHost | null {
   return registeredHost
 }
 
+// Fallback used only when no shell registered a host. The web studio installs
+// an HTTP host here (the remote engine service, engine/app.py), so a shell's
+// in-process bridge, registered by Tauri at boot, always wins regardless of
+// which runs first.
+let defaultHost: RemoteWorkerHost | null = null
+
+export function setDefaultRemoteWorkerHost(host: RemoteWorkerHost | null): void {
+  defaultHost = host
+}
+
 // --- Connection ------------------------------------------------------------
 
 export interface RemoteWorkerConnectionOptions {
@@ -251,7 +261,7 @@ export default class RemoteWorkerConnection extends BaseConnection {
       console.log(`[setWorkingDirectory] cached (not connected yet)`)
       return
     }
-    const host = this.explicitHost ?? registeredHost
+    const host = this.explicitHost ?? registeredHost ?? defaultHost
     if (!host || typeof host.setWorkingDirectory !== 'function') {
       console.log(`[setWorkingDirectory] host has no setWorkingDirectory — skipping`)
       return
@@ -310,23 +320,51 @@ export default class RemoteWorkerConnection extends BaseConnection {
     }
   }
 
-  // The first secret field is the connection's credential for the generic
-  // credential-store flow (Manager.vue saves getSecret(), restores via
-  // setSecret() when it sees the 'saved' placeholder).
+  // The connection's credential for the generic credential-store flow
+  // (Manager.vue saves getSecret(), restores via setSecret() when it sees the
+  // 'saved' placeholder). One secret field is stored as-is. Several (an engine
+  // API key plus a warehouse token) are stored together as one JSON object,
+  // since the credential store holds one value per connection.
   getSecret(): string | null {
-    const key = this.secretFields[0]
-    return key ? (this.config[key] ?? null) : null
+    if (this.secretFields.length <= 1) {
+      const key = this.secretFields[0]
+      return key ? (this.config[key] ?? null) : null
+    }
+    const present = this.secretFields.filter((key) => this.config[key])
+    if (present.length === 0) return null
+    if (present.every((key) => this.config[key] === SAVED_SECRET)) return SAVED_SECRET
+    return JSON.stringify(Object.fromEntries(present.map((key) => [key, this.config[key]])))
   }
 
   setSecret(secret: string): void {
-    const key = this.secretFields[0]
-    if (!key || this.config[key] === secret) return
-    this.config = { ...this.config, [key]: secret }
+    if (this.secretFields.length <= 1) {
+      const key = this.secretFields[0]
+      if (!key || this.config[key] === secret) return
+      this.config = { ...this.config, [key]: secret }
+      this.changed = true
+      return
+    }
+    let values: Record<string, unknown> = {}
+    try {
+      const parsed = JSON.parse(secret)
+      if (parsed && typeof parsed === 'object') values = parsed
+    } catch {
+      // Not JSON: treat as the first field (credential saved before the
+      // connection had a second secret).
+      values = { [this.secretFields[0]]: secret }
+    }
+    const next = { ...this.config }
+    for (const key of this.secretFields) {
+      // A field missing from the stored blob was never saved: clear the
+      // placeholder so connect() asks for it instead of sending 'saved'.
+      next[key] = typeof values[key] === 'string' ? values[key] : ''
+    }
+    this.config = next
     this.changed = true
   }
 
   private resolveHost(): RemoteWorkerHost {
-    const host = this.explicitHost ?? registeredHost
+    const host = this.explicitHost ?? registeredHost ?? defaultHost
     if (!host) {
       throw new Error(
         `RemoteWorkerConnection "${this.name}" has no host. Call registerRemoteWorkerHost() before connecting.`,
@@ -539,7 +577,7 @@ export default class RemoteWorkerConnection extends BaseConnection {
     const sessionId = this.sessionId
     this.sessionId = null
     if (!sessionId) return
-    const host = this.explicitHost ?? registeredHost
+    const host = this.explicitHost ?? registeredHost ?? defaultHost
     if (!host) return
     host.disconnect(sessionId).catch((err) => {
       console.warn(`RemoteWorkerConnection disconnect failed: ${err}`)

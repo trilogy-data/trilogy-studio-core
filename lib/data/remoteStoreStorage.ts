@@ -16,6 +16,8 @@ import {
   SnowflakeJwtConnection,
   SQLiteConnection,
   RemoteProjectConnection,
+  RemoteWorkerConnection,
+  createHttpRemoteWorkerHost,
 } from '../connections'
 import { fetchFromStore, fetchGenericStoreIndex } from '../remotes/storeService'
 import {
@@ -135,6 +137,30 @@ export default class RemoteStoreStorage extends AbstractStorage {
             role: options.role as string | undefined,
             database: options.database as string | undefined,
             schema: options.schema as string | undefined,
+          },
+          modelName,
+        )
+        break
+      case 'databricks':
+        // `trilogy serve` runs Databricks itself, on its own [engine.config]
+        // credentials, through the remote engine it mounts at /engine. The
+        // browser holds no warehouse secret: the serve token gates the engine
+        // exactly as it gates the store. Only catalog/schema are advertised.
+        connection = new RemoteWorkerConnection(
+          connectionName,
+          {
+            driver: 'databricks',
+            queryType: 'databricks',
+            config: Object.fromEntries(
+              ['catalog', 'schema']
+                .filter((key) => typeof options[key] === 'string' && options[key])
+                .map((key) => [key, options[key]]),
+            ),
+            host: createHttpRemoteWorkerHost({
+              getBaseUrl: () => `${store.baseUrl.replace(/\/+$/, '')}/engine`,
+              getHeaders: (): Record<string, string> =>
+                store.token ? { 'X-Trilogy-Token': store.token } : {},
+            }),
           },
           modelName,
         )

@@ -42,7 +42,7 @@ Fields:
 - **`name`** *(optional string)* — display name. If absent, the client falls back to the hostname of `baseUrl`.
 - **`project_name`** *(optional string | null)* — canonical project identifier from `trilogy.toml`. Client may surface this in UI; no contract-level requirement today.
 - **`connection`** *(optional | null)* — declares the runtime connection the client should construct for editors bound to this store. Present only when the store owner configured it in `trilogy.toml`.
-  - **`type`** *(string, required when present)* — one of `duckdb`, `bigquery`, `snowflake`, `motherduck`, `sqlite`.
+  - **`type`** *(string, required when present)* — one of `duckdb`, `bigquery`, `snowflake`, `motherduck`, `sqlite`, `databricks`.
 
     OAuth vs service-account for BigQuery is **not** a type distinction — the server always emits `bigquery`. Whether the client uses an OAuth flow or a service-account key is determined client-side from per-user credential state (or a flag inside `options` in the future). See *Client implications* below.
   - **`options`** *(object, optional)* — non-secret connection fields. Server-side enforced key sets per type; anything else is ignored:
@@ -50,6 +50,7 @@ Fields:
     - `bigquery` → `{ projectId? }`
     - `snowflake` → `{ account, username, warehouse?, role?, database?, schema? }` (no `privateKey` — that's a secret)
     - `motherduck` → `{}` (token is a secret, supplied per-user)
+    - `databricks` → `{ catalog?, schema? }`. Unlike every other type, the **server** runs the queries: the browser can't call the Databricks Statement API (no CORS). A store advertising `databricks` must also serve the remote engine at `<baseUrl>/engine` (the router in `engine/remote_engine.py`, mounted behind the store's own `X-Trilogy-Token` check) and run it on its own `[engine.config]` credentials. The client builds a `RemoteWorkerConnection` against that engine and sends the serve token; it holds no warehouse secret. See `docs/remote-worker-service.md`.
   - **Never** includes secrets — tokens, passwords, private keys stay in the client's per-user credential storage.
 
 #### How the server fills `connection`

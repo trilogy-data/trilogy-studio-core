@@ -37,6 +37,14 @@ const apiUrl = import.meta.env.VITE_RESOLVER_URL
   ? import.meta.env.VITE_RESOLVER_URL
   : defaultResolver
 
+// The remote engine is a separate service from the resolver. Only the default
+// moves here (never the saved setting), so a later default change still lands.
+if (import.meta.env.VITE_ENGINE_URL) {
+  userSettingsStore.defaults.remoteEngineUrl = import.meta.env.VITE_ENGINE_URL
+} else if (import.meta.env.DEV) {
+  userSettingsStore.defaults.remoteEngineUrl = 'http://127.0.0.1:5680'
+}
+
 const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
 if (!userSettingsStore.settings.theme) {
   userSettingsStore.updateSetting('theme', systemPrefersDark ? 'dark' : 'light')

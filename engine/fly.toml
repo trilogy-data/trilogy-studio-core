@@ -1,0 +1,54 @@
+# The remote query engine. A separate app from `trilogy-service` (pyserver,
+# the resolver) on purpose: the resolver is CPU-bound and wants dedicated
+# cores; the engine is I/O-bound (waiting on Databricks) but memory-heavy,
+# since it holds a result while it re-encodes and sends it. They scale on
+# different signals and must not share a process, secrets or failure modes.
+#
+# Secrets (fly secrets set -a trilogy-engine ...):
+#   TRILOGY_ENGINE_API_KEYS   keyId:sha256,...  (`python remote_engine.py new-key <id>`)
+#   DATABRICKS_HOST / DATABRICKS_HTTP_PATH / DATABRICKS_TOKEN
+#                             the server's warehouse (optional: without them a
+#                             caller must bring its own workspace and token)
+# Without TRILOGY_ENGINE_API_KEYS the app serves /health only.
+
+app = 'trilogy-engine'
+primary_region = 'ewr'
+
+[build]
+
+[env]
+  # Memory budget: up to MAX_INFLIGHT results of MAX_RESULT_BYTES, roughly
+  # doubled while chunks are re-encoded into one stream. 6 x 128 MiB x 2 is
+  # ~1.5 GB of the 2 GB below; past it the engine answers 503 + Retry-After
+  # and the proxy's soft_limit has already woken another machine.
+  TRILOGY_ENGINE_MAX_INFLIGHT = '6'
+  TRILOGY_ENGINE_MAX_RESULT_BYTES = '134217728'
+  # Fly's proxy drops a request idle for 60 s. Connect, describe and scripts
+  # finish within one request, so keep their budget under that. Queries are
+  # unaffected: they submit and poll (TRILOGY_ENGINE_POLL_SECONDS, 10).
+  TRILOGY_ENGINE_SYNC_SECONDS = '50'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+  [http_service.concurrency]
+    type = 'requests'
+    soft_limit = 4
+    hard_limit = 12
+
+  [[http_service.checks]]
+    grace_period = '10s'
+    interval = '30s'
+    method = 'GET'
+    path = '/health'
+    timeout = '5s'
+
+[[vm]]
+  memory = '2gb'
+  cpu_kind = 'shared'
+  cpus = 1

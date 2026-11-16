@@ -37,6 +37,8 @@ const tooltipContent = computed(() => {
     'bigquery-oauth': 'BigQuery',
     snowflake: 'Snowflake',
     'snowflake-pat': 'Snowflake',
+    'remote-worker:databricks': 'Databricks',
+    'remote-worker:duckdb': 'DuckDB (Native)',
     remote: 'Remote Project',
     default: 'Database Connection',
   }
