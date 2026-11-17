@@ -102,7 +102,7 @@ the desktop worker too, so both hosts behave the same.
   `VITE_ENGINE_URL` overrides the default, and dev builds use `http://127.0.0.1:5680`). It is
   independent of `trilogyResolver`. A connection's `engineUrl` overrides it, and a host
   registered by a shell (Tauri) still wins.
-- **Connection.** "Databricks (Remote Engine)" in the connection creator makes a
+- **Connection.** "Databricks (Beta)" in the connection creator makes a
   `remote-worker:databricks` connection: the same type the explorer uses.
   - Only the secrets the user actually entered become `secretFields`. Several are stored as one
     JSON credential.
