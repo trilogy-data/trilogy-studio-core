@@ -210,7 +210,8 @@ customStoreDescribe('Custom Model Store', () => {
 
     await page.getByTestId('import-example-duckdb-model').click()
 
-    await page.getByTestId('model-creator-connection').selectOption('New DuckDB')
+    await page.getByTestId('model-creator-connection').click()
+    await page.getByTestId('model-creator-connection-option-new-duckdb').click()
 
     await page.getByTestId('model-creation-submit').click()
 
