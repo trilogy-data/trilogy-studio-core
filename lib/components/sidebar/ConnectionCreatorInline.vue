@@ -263,12 +263,6 @@
 .creator-container {
   --creator-label-width: 88px;
 }
-.form-hint {
-  margin: 4px 0 8px;
-  font-size: 0.8em;
-  opacity: 0.8;
-  line-height: 1.35;
-}
 </style>
 
 <script lang="ts">
