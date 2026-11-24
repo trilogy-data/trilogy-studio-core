@@ -316,6 +316,7 @@ export const GEO_FUNCTIONS = [
   'geo_from_text',
   'geo_point',
   'geo_distance',
+  'geo_contains',
   'geo_x',
   'geo_y',
   'geo_centroid',
