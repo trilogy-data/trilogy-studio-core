@@ -346,6 +346,12 @@ export const GENERIC_FUNCTIONS = [
   'union',
   'except',
   'intersect',
+  // `select *rollup(...)` / `*cube(...)` / `*grouping_sets(...)`: multi-level
+  // grouping as a TVF over a relation. The `by rollup` / `by cube` /
+  // `by grouping sets` clause forms are contextual patterns below.
+  'rollup',
+  'cube',
+  'grouping_sets',
 ] as const
 
 /** Constant functions -- always written with empty parens. */
